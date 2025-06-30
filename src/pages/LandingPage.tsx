@@ -19,7 +19,43 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFFBF4] to-[#F5F0ED]">
-      <div className="container mx-auto px-4 py-8 sm:py-16 flex flex-col items-center justify-center min-h-screen">
+      {/* Header Navigation */}
+      <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b-2 border-black z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#8B5CF6] rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black flex items-center justify-center">
+                <span className="text-lg font-bold text-white">A</span>
+              </div>
+              <span className="text-xl font-bold">Apply</span>
+            </div>
+            <nav className="hidden sm:flex items-center gap-6">
+              <button
+                onClick={() => navigate('/pricing')}
+                className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+              >
+                Pricing
+              </button>
+              <Button
+                onClick={() => navigate('/login')}
+                size="sm"
+                className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+              >
+                Sign In
+              </Button>
+            </nav>
+            <Button
+              onClick={() => navigate('/login')}
+              size="sm"
+              className="sm:hidden bg-[#8B5CF6] hover:bg-[#7C3AED] text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 pt-24 pb-8 sm:py-24 flex flex-col items-center justify-center min-h-screen">
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12">
           <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-8 bg-[#8B5CF6] rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black flex items-center justify-center">
