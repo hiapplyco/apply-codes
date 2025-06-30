@@ -1030,6 +1030,7 @@ vercel --prod
 3. **Component Modularity**: Small, focused, reusable components
 4. **Performance Aware**: Optimize for search speed and UI responsiveness
 5. **Security by Design**: Never expose API keys or sensitive candidate data
+6. **UX Stickiness**: Keep users within the platform - display search results in-app rather than redirecting to external sites (LinkedIn, etc.). This maintains engagement and allows for value-added features like contact enrichment and candidate tracking
 
 ### Code Style
 - **TypeScript**: Strict mode enabled

@@ -143,15 +143,9 @@ export const ChatStyleInput = forwardRef<HTMLTextAreaElement, ChatStyleInputProp
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
-                  disabled={disabled || isLoading}
-                >
+                <div className="h-8 w-8 flex items-center justify-center text-gray-400 cursor-help">
                   <Info className="h-4 w-4" />
-                </Button>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="top" align="end" className="max-w-sm bg-gray-900 text-white border-gray-700">
                 <div className="space-y-2 text-sm">
@@ -173,7 +167,7 @@ export const ChatStyleInput = forwardRef<HTMLTextAreaElement, ChatStyleInputProp
         
         {/* Character count (optional) */}
         {value.length > 100 && (
-          <div className="absolute -bottom-5 right-0 text-xs text-gray-400">
+          <div className="absolute bottom-1 right-1 text-xs text-gray-400 bg-white/80 backdrop-blur-sm px-1.5 py-0.5 rounded">
             {value.length} characters
           </div>
         )}
