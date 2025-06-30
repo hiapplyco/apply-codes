@@ -23,6 +23,7 @@ interface Participant {
 
 const ScreeningRoom = () => {
   const navigate = useNavigate();
+  const { selectedProjectId } = useProjectContext();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [meetingId, setMeetingId] = useState<number | null>(null);
   const startTimeRef = useRef<Date>(new Date());
@@ -35,7 +36,6 @@ const ScreeningRoom = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [hasJoinedMeeting, setHasJoinedMeeting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { selectedProjectId } = useProjectContext();
   
   const { sessionId } = useScreeningSession();
   useWebSocket(sessionId);

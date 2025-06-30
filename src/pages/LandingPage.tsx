@@ -1,10 +1,10 @@
 
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Search, FileScan, Video, Workflow } from "lucide-react";
+import { Search, FileScan, Video, Workflow, ArrowRight } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { AuthForm } from "@/components/auth/AuthForm";
+import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -33,11 +33,27 @@ const LandingPage = () => {
           </p>
         </div>
 
-        {/* Auth Section */}
-        <div className="w-full max-w-md mb-16">
-          <div className="bg-white p-8 rounded-lg border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            <AuthForm redirectTo="/dashboard" />
-          </div>
+        {/* CTA Buttons */}
+        <div className="flex gap-4 mb-16">
+          <Button
+            onClick={() => navigate('/login')}
+            className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5"
+          >
+            Get Started
+            <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+          <Button
+            onClick={() => navigate('/login')}
+            variant="outline"
+            className="bg-white hover:bg-gray-50 text-[#8B5CF6] px-8 py-6 text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5"
+          >
+            Sign In
+          </Button>
+        </div>
+
+        {/* Platform Preview Carousel */}
+        <div className="w-full mb-16">
+          <PlatformCarousel />
         </div>
 
         {/* Features Section */}

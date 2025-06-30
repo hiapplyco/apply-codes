@@ -31,6 +31,7 @@ import ResetPasswordRequest from "@/pages/ResetPasswordRequest";
 import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
+import Login from "@/pages/Login";
 
 function App() {
   // Remove the basename configuration to let React Router handle paths naturally
@@ -43,6 +44,7 @@ function App() {
             <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
             <Route path="/reset-password" element={<PasswordReset />} />
             

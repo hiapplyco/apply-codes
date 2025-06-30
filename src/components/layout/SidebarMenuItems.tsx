@@ -10,19 +10,65 @@ export type MenuItem = {
   path: string;
   icon: React.ComponentType<any>;
   disabled?: boolean;
+  tooltip?: string;
 };
 
 // Memoize menu items array to prevent recreation on each render
 export const menuItems: MenuItem[] = [
-  { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
-  { title: 'Sourcing', path: '/sourcing', icon: Search },
-  { title: 'Search History', path: '/search-history', icon: Clock },
-  { title: 'Screening Room', path: '/screening-room', icon: Video },
-  { title: 'Interview Prep', path: '/interview-prep', icon: Theater },
-  { title: 'Kickoff Call', path: '/kickoff-call', icon: PhoneCall },
-  { title: 'Profile', path: '/profile', icon: User },
-  { title: 'Chat', path: '/chat', icon: MessageSquare },
+  { 
+    title: 'Sourcing', 
+    path: '/sourcing', 
+    icon: Search,
+    tooltip: 'Generate powerful boolean searches to find perfect candidates across LinkedIn, Indeed, and other platforms'
+  },
+  { 
+    title: 'Search History', 
+    path: '/search-history', 
+    icon: Clock,
+    tooltip: 'View your search database, saved candidates, and manage recruitment projects'
+  },
+  { 
+    title: 'Dashboard', 
+    path: '/dashboard', 
+    icon: LayoutDashboard,
+    tooltip: 'Access all recruitment tools and see your activity overview'
+  },
+  { 
+    title: 'Screening Room', 
+    path: '/screening-room', 
+    icon: Video,
+    tooltip: 'Conduct AI-assisted video interviews and get instant candidate evaluations'
+  },
+  { 
+    title: 'Interview Prep', 
+    path: '/interview-prep', 
+    icon: Theater,
+    tooltip: 'Prepare role-specific interview questions and structured evaluation frameworks'
+  },
+  { 
+    title: 'Kickoff Call', 
+    path: '/kickoff-call', 
+    icon: PhoneCall,
+    tooltip: 'Transform hiring manager meetings into clear requirements and search strategies'
+  },
+  { 
+    title: 'Create Content', 
+    path: '/content-creation', 
+    icon: PlusCircle,
+    tooltip: 'Generate engaging LinkedIn posts and job postings to attract top talent'
+  },
+  { 
+    title: 'Chat', 
+    path: '/chat', 
+    icon: MessageSquare,
+    tooltip: 'Your AI recruitment copilot for real-time guidance and task automation'
+  },
+  { 
+    title: 'Profile', 
+    path: '/profile', 
+    icon: User,
+    tooltip: 'Manage your account settings and view usage analytics'
+  },
 ];
 
 // Custom SidebarMenuItem component to handle disabled state
@@ -76,18 +122,30 @@ export const SidebarMenuItemWithDisabled = memo(({
               {buttonContent}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right">
-            {item.title} {item.disabled && "(Disabled)"}
+          <TooltipContent side="right" className="max-w-xs">
+            <div className="space-y-1">
+              <p className="font-semibold">{item.title} {item.disabled && "(Disabled)"}</p>
+              {item.tooltip && <p className="text-xs text-gray-600">{item.tooltip}</p>}
+            </div>
           </TooltipContent>
         </Tooltip>
       ) : (
-        <button
-          className={buttonClasses}
-          onClick={() => !item.disabled && navigate(item.path)}
-          disabled={item.disabled}
-        >
-          {buttonContent}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={buttonClasses}
+              onClick={() => !item.disabled && navigate(item.path)}
+              disabled={item.disabled}
+            >
+              {buttonContent}
+            </button>
+          </TooltipTrigger>
+          {item.tooltip && (
+            <TooltipContent side="right" className="max-w-xs">
+              <p className="text-sm">{item.tooltip}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
       )}
     </li>
   );

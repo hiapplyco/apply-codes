@@ -14,6 +14,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
@@ -21,35 +22,21 @@ const Dashboard = () => {
 
   const toolCards = [
     {
-      title: "Search History & Projects",
-      description: "View your search database, saved candidates, and manage recruitment projects",
-      icon: Clock,
-      path: "/search-history",
-      gradient: "from-indigo-500 to-purple-600",
-      badge: "Your Database",
-      isPrimary: true
-    },
-    {
       title: "Sourcing Assistant",
       description: "Generate powerful boolean searches to find perfect candidates across LinkedIn and other platforms",
       icon: FileSearch,
       path: "/sourcing",
       gradient: "from-blue-500 to-cyan-500",
-      badge: "Most Popular"
+      badge: "Most Popular",
+      isPrimary: true
     },
     {
-      title: "Post a Job",
-      description: "Create compelling job postings with AI-powered optimization and market insights",
-      icon: Briefcase,
-      path: "/job-post",
-      gradient: "from-red-500 to-pink-500"
-    },
-    {
-      title: "Create LinkedIn Post",
-      description: "Generate engaging recruitment content that attracts top talent to your opportunities",
-      icon: PlusCircle,
-      path: "/linkedin-post",
-      gradient: "from-purple-500 to-violet-600"
+      title: "Search History & Projects",
+      description: "View your search database, saved candidates, and manage recruitment projects",
+      icon: Clock,
+      path: "/search-history",
+      gradient: "from-indigo-500 to-purple-600",
+      badge: "Your Database"
     },
     {
       title: "Screening Room",
@@ -73,18 +60,33 @@ const Dashboard = () => {
       gradient: "from-orange-500 to-red-500"
     },
     {
+      title: "Create LinkedIn Post",
+      description: "Generate engaging recruitment content that attracts top talent to your opportunities",
+      icon: PlusCircle,
+      path: "/linkedin-post",
+      gradient: "from-purple-500 to-violet-600"
+    },
+    {
       title: "Chat Assistant",
       description: "Your AI recruitment copilot for real-time guidance and task automation",
       icon: MessageSquare,
       path: "/chat",
       gradient: "from-pink-500 to-rose-500",
       badge: "AI Assistant"
+    },
+    {
+      title: "Post a Job",
+      description: "Create compelling job postings with AI-powered optimization and market insights",
+      icon: Briefcase,
+      path: "/job-post",
+      gradient: "from-red-500 to-pink-500"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <TooltipProvider>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-8 md:mb-12 text-center px-4">
           <div className="flex justify-center mb-6">
@@ -118,15 +120,16 @@ const Dashboard = () => {
         {/* Tools Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {toolCards.map((tool) => (
-            <Card
-              key={tool.path}
-              className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
-                tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
-              } ${
-                tool.isPrimary ? 'md:col-span-2 lg:col-span-1' : ''
-              }`}
-              onClick={() => !tool.disabled && navigate(tool.path)}
-            >
+            <Tooltip key={tool.path}>
+              <TooltipTrigger asChild>
+                <Card
+                  className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
+                    tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
+                  } ${
+                    tool.isPrimary ? 'md:col-span-2 lg:col-span-1' : ''
+                  }`}
+                  onClick={() => !tool.disabled && navigate(tool.path)}
+                >
               {/* Gradient Background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
               
@@ -169,7 +172,12 @@ const Dashboard = () => {
 
               {/* Hover Border Effect */}
               <div className={`absolute inset-0 border-2 border-transparent group-hover:border-gradient-to-r group-hover:${tool.gradient} rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300`} />
-            </Card>
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm">{tool.description}</p>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
@@ -203,6 +211,7 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

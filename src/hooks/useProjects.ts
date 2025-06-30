@@ -38,7 +38,9 @@ export const useProjects = () => {
                            error?.message?.toLowerCase().includes('permission') ||
                            error?.message?.toLowerCase().includes('policy') ||
                            error?.code === 'PGRST301' || // JWT required
-                           error?.code === '42501'; // Insufficient privilege
+                           error?.code === '42501' || // Insufficient privilege
+                           error?.code === 'PGRST116' || // Table not found
+                           error?.code === '42P01'; // Undefined table
         
         if (!isAuthError) {
           toast.error('Failed to load projects. Please try refreshing the page.');

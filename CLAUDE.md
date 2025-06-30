@@ -43,13 +43,15 @@ Task: "Find all boolean search implementations" prompt="List and analyze search 
 2. [Recent Updates](#recent-updates)
 3. [Development Environment](#development-environment)
 4. [Architecture & Core Features](#architecture--core-features)
-5. [Authentication System](#authentication-system)
-6. [AI Agent System & Migration](#ai-agent-system--migration)
-7. [External Integrations](#external-integrations)
-8. [Testing & Quality Assurance](#testing--quality-assurance)
-9. [Deployment & Operations](#deployment--operations)
-10. [Development Workflows](#development-workflows)
-11. [Strategic Update Points](#strategic-update-points)
+5. [Component Patterns](#component-patterns)
+6. [Authentication System](#authentication-system)
+7. [AI Agent System](#ai-agent-system)
+8. [External Integrations](#external-integrations)
+9. [Testing & Quality](#testing--quality)
+10. [Deployment & Operations](#deployment--operations)
+11. [Development Workflows](#development-workflows)
+12. [Troubleshooting](#troubleshooting)
+13. [Strategic Updates](#strategic-updates)
 
 ---
 
@@ -91,6 +93,22 @@ blind-nut/
 ---
 
 ## 📋 Recent Updates
+
+### Landing Page Platform Carousel (January 2025)
+- ✅ **Interactive Platform Preview Carousel**
+  - New `PlatformCarousel` component showcasing Apply platform pages
+  - Features:
+    - Auto-rotating preview of 4 key platform pages (Dashboard, Search, Chat, Profile)
+    - Manual navigation with arrow buttons and dot indicators
+    - Smooth fade transitions between slides
+    - Mock screenshots with realistic UI representations
+    - Responsive design with brutalist styling
+  - Technical implementation:
+    - Component: `/src/components/landing/PlatformCarousel.tsx`
+    - Auto-play with 4-second intervals
+    - Pause on user interaction
+    - Fully typed with TypeScript
+  - Location: Integrated into landing page between auth form and features section
 
 ### Apply Rebranding & Enhanced Dashboard (January 2025)
 - ✅ **Complete Rebranding to "Apply"**
@@ -471,6 +489,33 @@ blind-nut/
 - **Single Responsibility**: Each component has one clear purpose
 - **Props Interface**: All components have typed props interfaces
 
+### Component Patterns
+
+#### Carousel Components
+```typescript
+// Example: PlatformCarousel pattern
+interface CarouselProps {
+  items: Array<{ id: string; content: ReactNode }>
+  autoPlay?: boolean
+  interval?: number
+  onSlideChange?: (index: number) => void
+}
+
+// Key features for carousels:
+// - Auto-play with pause on interaction
+// - Keyboard navigation support
+// - Touch/swipe support (mobile)
+// - Dot indicators and arrow navigation
+// - Smooth transitions
+```
+
+#### Brutalist UI Components
+- **Border Style**: `border-2 border-black` or `border-4 border-black`
+- **Shadow Style**: `shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]`
+- **Hover Effects**: Scale transforms and shadow depth changes
+- **Color Palette**: Purple-600 primary, neon green accents
+- **Typography**: Bold, high contrast, sans-serif
+
 ### State Management
 - **Local State**: useState for component-specific state
 - **Context API**: For cross-component state (auth, theme)
@@ -547,11 +592,11 @@ public.profiles (
 
 ---
 
-## 🤖 AI Agent System & Migration
+## 🤖 AI Agent System
 
-### Current Architecture (Phase 8 - Completed)
+### Current Architecture
 
-The platform now uses an advanced multi-agent orchestration system with specialized agents for different tasks.
+The platform uses an advanced multi-agent orchestration system with specialized agents for different tasks.
 
 ### Agent Types
 
@@ -613,18 +658,6 @@ interface WorkflowDefinition {
 }
 ```
 
-### Migration Timeline (Completed)
-
-| Phase | Description | Status | Duration |
-|-------|-------------|--------|----------|
-| 1 | Project Setup & Base Agent | ✅ Complete | Week 1 |
-| 2 | Recruitment Agent & Tools | ✅ Complete | Week 1-2 |
-| 3 | Compensation Analysis | ✅ Complete | Week 2-3 |
-| 4 | Profile Enrichment | ✅ Complete | Week 3-4 |
-| 5 | Workflow Engine | ✅ Complete | Week 4-5 |
-| 6 | Integration & Migration | ✅ Complete | Week 5-6 |
-| 7 | Testing & Optimization | ✅ Complete | Week 6-7 |
-| 8 | Production Deployment | ✅ Complete | Week 7-8 |
 
 ### Key Improvements Achieved
 1. **Modularity**: Clean separation of concerns between agents
@@ -727,7 +760,7 @@ const workflow = await orchestrator.runWorkflow({
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 🧪 Testing & Quality
 
 ### Testing Strategy
 
@@ -1244,7 +1277,7 @@ npm run build         # Build verification
 
 ---
 
-## 📍 Strategic Update Points
+## 📍 Strategic Updates
 
 When making significant changes, update this document:
 
@@ -1397,7 +1430,14 @@ Task: "Add quality scoring" prompt="Rate profile completeness"
 - Run quality checks before completing any task
 
 **Last Updated**: January 2025
-**Version**: 2.2
+**Version**: 2.3
+
+**Recent Changes**:
+- Added Landing Page Platform Carousel documentation
+- Reorganized table of contents for better navigation
+- Added Component Patterns section for UI components
+- Removed completed migration timeline
+- Streamlined section titles for clarity
 
 **Quick Model Reference**:
 - 🧠 Complex/Creative = Opus
