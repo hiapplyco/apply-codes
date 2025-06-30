@@ -32,6 +32,7 @@ import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
 import Login from "@/pages/Login";
+import AuthCallback from "@/pages/AuthCallback";
 
 function App() {
   // Remove the basename configuration to let React Router handle paths naturally
@@ -45,6 +46,7 @@ function App() {
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
             <Route path="/reset-password" element={<PasswordReset />} />
             

@@ -1,4 +1,5 @@
 import { GoogleSignIn } from './GoogleSignIn';
+import { LinkedInSignIn } from './LinkedInSignIn';
 
 interface SocialAuthButtonsProps {
   onSuccess?: () => void;
@@ -21,10 +22,10 @@ export function SocialAuthButtons({ onSuccess, redirectTo }: SocialAuthButtonsPr
       {/* Social login buttons */}
       <div className="space-y-3">
         <GoogleSignIn onSuccess={onSuccess} redirectTo={redirectTo} />
+        <LinkedInSignIn onSuccess={onSuccess} redirectTo={redirectTo} />
         
         {/* Future social providers can be added here */}
         {/* <GitHubSignIn /> */}
-        {/* <LinkedInSignIn /> */}
       </div>
     </div>
   );
