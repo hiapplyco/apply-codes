@@ -94,6 +94,7 @@ export function GoogleSignIn({ onSuccess, redirectTo = '/dashboard' }: GoogleSig
             use_fedcm_for_prompt: true, // Chrome third-party cookie phase-out support
             auto_select: false,
             cancel_on_tap_outside: true,
+            auto_prompt: false, // Disable automatic prompt
           });
 
           // Render the button
@@ -106,6 +107,7 @@ export function GoogleSignIn({ onSuccess, redirectTo = '/dashboard' }: GoogleSig
               size: 'large',
               logo_alignment: 'left',
               width: '100%',
+              state: 'signin', // Force signin state (not continue)
             });
           }
 
@@ -118,6 +120,10 @@ export function GoogleSignIn({ onSuccess, redirectTo = '/dashboard' }: GoogleSig
 
       // Cleanup
       return () => {
+        // Revoke Google session to ensure fresh state
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.disableAutoSelect();
+        }
         // Remove the script when component unmounts
         if (script.parentNode) {
           script.parentNode.removeChild(script);
