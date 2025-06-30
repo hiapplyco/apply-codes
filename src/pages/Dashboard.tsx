@@ -118,7 +118,7 @@ const Dashboard = () => {
         </div>
 
         {/* Tools Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-8">
           {toolCards.map((tool) => (
             <Tooltip key={tool.path}>
               <TooltipTrigger asChild>
@@ -130,6 +130,18 @@ const Dashboard = () => {
                   }`}
                   onClick={() => !tool.disabled && navigate(tool.path)}
                 >
+              {/* Badge - Positioned above the card */}
+              {tool.badge && (
+                <div className="absolute -top-3 left-4 z-10">
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-xs px-3 py-1 ${tool.isPrimary ? 'bg-purple-600 text-white' : 'bg-gray-700 text-white'} whitespace-nowrap`}
+                  >
+                    {tool.badge}
+                  </Badge>
+                </div>
+              )}
+              
               {/* Gradient Background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
               
@@ -139,19 +151,9 @@ const Dashboard = () => {
               </div>
 
               <CardHeader className="pb-6 pt-6 pr-16 sm:pr-20">
-                <div className="flex items-start justify-between mb-3">
-                  <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-[#8B5CF6] transition-colors duration-300">
-                    {tool.title}
-                  </CardTitle>
-                  {tool.badge && (
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs ${tool.isPrimary ? 'bg-purple-100 text-purple-700' : ''}`}
-                    >
-                      {tool.badge}
-                    </Badge>
-                  )}
-                </div>
+                <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-[#8B5CF6] transition-colors duration-300 mb-3">
+                  {tool.title}
+                </CardTitle>
                 <CardDescription className="text-gray-600 text-sm leading-relaxed mb-4">
                   {tool.description}
                 </CardDescription>
