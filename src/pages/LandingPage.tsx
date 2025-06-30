@@ -23,34 +23,21 @@ const LandingPage = () => {
       <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b-2 border-black z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#8B5CF6] rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black flex items-center justify-center">
-                <span className="text-lg font-bold text-white">A</span>
-              </div>
-              <span className="text-xl font-bold">Apply</span>
+            <div className="flex items-center">
+              <img 
+                src="/assets/APPLYFullwordlogo2025.png" 
+                alt="Apply" 
+                className="h-8 w-auto"
+              />
             </div>
-            <nav className="hidden sm:flex items-center gap-6">
+            <nav className="flex items-center gap-6">
               <button
                 onClick={() => navigate('/pricing')}
                 className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
               >
                 Pricing
               </button>
-              <Button
-                onClick={() => navigate('/login')}
-                size="sm"
-                className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
-              >
-                Sign In
-              </Button>
             </nav>
-            <Button
-              onClick={() => navigate('/login')}
-              size="sm"
-              className="sm:hidden bg-[#8B5CF6] hover:bg-[#7C3AED] text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-            >
-              Sign In
-            </Button>
           </div>
         </div>
       </header>
@@ -58,9 +45,11 @@ const LandingPage = () => {
       <div className="container mx-auto px-4 pt-24 pb-8 sm:py-24 flex flex-col items-center justify-center min-h-screen">
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-8 bg-[#8B5CF6] rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black flex items-center justify-center">
-            <span className="text-xl sm:text-2xl font-bold text-white">A</span>
-          </div>
+          <img 
+            src="/assets/APPLYFullwordlogo2025.png" 
+            alt="Apply" 
+            className="h-16 sm:h-20 w-auto mx-auto mb-4 sm:mb-8"
+          />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
             Hi, welcome to Apply...
           </h1>
@@ -69,21 +58,14 @@ const LandingPage = () => {
           </p>
         </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-8 sm:mb-16 w-full sm:w-auto px-4 sm:px-0">
+        {/* CTA Button */}
+        <div className="flex justify-center mb-8 sm:mb-16 w-full sm:w-auto px-4 sm:px-0">
           <Button
             onClick={() => navigate('/login')}
             className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5 w-full sm:w-auto"
           >
             Get Started
             <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-          <Button
-            onClick={() => navigate('/login')}
-            variant="outline"
-            className="bg-white hover:bg-gray-50 text-[#8B5CF6] px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5 w-full sm:w-auto"
-          >
-            Sign In
           </Button>
         </div>
 

@@ -16,9 +16,6 @@ export function AuthForm({ redirectTo, onSuccess }: AuthFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Social Auth Buttons - Google, etc. */}
-      <SocialAuthButtons onSuccess={onSuccess} redirectTo={redirectTo} />
-      
       {/* Tab Buttons for Email/Phone */}
       <div className="flex rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         <button
@@ -100,14 +97,14 @@ export function AuthForm({ redirectTo, onSuccess }: AuthFormProps) {
               sign_in: {
                 email_label: 'Email address',
                 password_label: 'Password',
-                button_label: 'Sign in with Email',
+                button_label: 'Sign in',
                 loading_button_label: 'Signing in...',
                 social_provider_text: 'Sign in with {{provider}}',
                 link_text: "Don't have an account? Sign up",
               },
               sign_up: {
                 email_label: 'Email address',
-                password_label: 'Create a password',
+                password_label: 'Create password',
                 button_label: 'Sign up',
                 loading_button_label: 'Creating account...',
                 social_provider_text: 'Sign up with {{provider}}',
@@ -125,6 +122,9 @@ export function AuthForm({ redirectTo, onSuccess }: AuthFormProps) {
         /* Phone Authentication */
         <PhoneAuth onSuccess={onSuccess} redirectTo={redirectTo} />
       )}
+      
+      {/* Social Auth Buttons - Google, LinkedIn, etc. */}
+      <SocialAuthButtons onSuccess={onSuccess} redirectTo={redirectTo} />
     </div>
   );
 }

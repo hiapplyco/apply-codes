@@ -51,9 +51,9 @@ const PasswordReset = () => {
             console.error("Session check error:", error);
             setIsValidSession(false);
           } else if (session) {
-            // Check if this is a recovery session
-            const isRecoverySession = session.user?.recovery_sent_at ? true : false;
-            setIsValidSession(isRecoverySession);
+            // Always show reset form if we have any session on this page
+            // The user clicked the reset link, so they want to reset their password
+            setIsValidSession(true);
           } else {
             setIsValidSession(false);
           }

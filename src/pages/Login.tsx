@@ -16,16 +16,18 @@ const Login = () => {
   }, [session, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFFBF4] to-[#F5F0ED] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Back to home link */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to home
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-[#FFFBF4] to-[#F5F0ED] relative">
+      {/* Back to home link - positioned absolutely */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-4 left-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors z-10"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to home
+      </button>
+
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
 
         {/* Logo and Title */}
         <div className="text-center mb-8">
@@ -41,6 +43,7 @@ const Login = () => {
           <AuthForm redirectTo="/dashboard" />
         </div>
       </div>
+    </div>
     </div>
   );
 };

@@ -15,7 +15,7 @@ export function SocialAuthButtons({ onSuccess, redirectTo }: SocialAuthButtonsPr
           <div className="w-full border-t-2 border-black"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white text-gray-600 font-medium">Or continue with</span>
+          <span className="px-4 bg-white text-gray-600 font-medium">Or sign in with</span>
         </div>
       </div>
 
