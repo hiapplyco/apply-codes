@@ -873,6 +873,93 @@ export type Database = {
         }
         Relationships: []
       }
+      project_candidates: {
+        Row: {
+          added_at: string | null
+          added_by: string
+          candidate_id: number
+          id: string
+          notes: string | null
+          project_id: string
+          tags: string[] | null
+        }
+        Insert: {
+          added_at?: string | null
+          added_by: string
+          candidate_id: number
+          id?: string
+          notes?: string | null
+          project_id: string
+          tags?: string[] | null
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string
+          candidate_id?: number
+          id?: string
+          notes?: string | null
+          project_id?: string
+          tags?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_candidates_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "saved_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_candidates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          candidates_count: number | null
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_archived: boolean | null
+          metadata: Json | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          candidates_count?: number | null
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          metadata?: Json | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          candidates_count?: number | null
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          metadata?: Json | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       registrations: {
         Row: {
           created_at: string
@@ -1067,6 +1154,56 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_history: {
+        Row: {
+          boolean_query: string | null
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          platform: string | null
+          project_id: string | null
+          results_count: number | null
+          search_params: Json | null
+          search_query: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          boolean_query?: string | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          platform?: string | null
+          project_id?: string | null
+          results_count?: number | null
+          search_params?: Json | null
+          search_query: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          boolean_query?: string | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          platform?: string | null
+          project_id?: string | null
+          results_count?: number | null
+          search_params?: Json | null
+          search_query?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
