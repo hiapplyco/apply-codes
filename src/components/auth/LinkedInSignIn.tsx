@@ -43,16 +43,18 @@ export function LinkedInSignIn({ onSuccess, redirectTo = '/dashboard' }: LinkedI
     <button
       onClick={handleLinkedInSignIn}
       disabled={isLoading}
-      className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-black rounded-full bg-[#0077B5] text-white font-medium hover:bg-[#005885] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-start gap-3 px-6 py-2.5 border border-gray-300 rounded-full bg-white text-gray-700 font-medium text-sm hover:bg-gray-50 hover:shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isLoading ? (
         <>
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
           <span>Signing in...</span>
         </>
       ) : (
         <>
-          <Linkedin className="w-5 h-5" />
+          <div className="w-5 h-5 flex items-center justify-center">
+            <Linkedin className="w-4 h-4" style={{ color: '#0077B5' }} />
+          </div>
           <span>Sign in with LinkedIn</span>
         </>
       )}
