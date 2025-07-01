@@ -82,7 +82,7 @@ Task: "Find all boolean search implementations" prompt="List and analyze search 
 
 ### Architecture Overview
 ```
-blind-nut/
+apply-codes/
 ├── src/                    # Frontend React application
 ├── supabase/              # Backend functions and migrations
 ├── docs/                  # Project documentation
@@ -422,8 +422,8 @@ blind-nut/
 
 1. **Clone the repository**
 ```bash
-git clone [repository-url]
-cd blind-nut
+git clone https://github.com/hiapplyco/apply-codes.git
+cd apply-codes
 ```
 
 2. **Install dependencies**
@@ -468,7 +468,7 @@ npm test
 
 ### Project Structure
 ```
-blind-nut/
+apply-codes/
 ├── src/
 │   ├── components/       # React components
 │   ├── pages/           # Page components
