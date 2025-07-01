@@ -18,8 +18,8 @@ serve(async (req) => {
     console.log("Analyzing job posting:", schema?.substring(0, 50));
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    // Use gemini-2.0-flash instead of the deprecated model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // Use gemini-2.5-flash instead of the deprecated model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You're an AI assistant specialized in recruiting. I want you to analyze the job description below and extract key information in a structured JSON format:
 

@@ -1,6 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/context/AuthContext";
 import { ClarvidaAuthProvider } from "@/context/ClarvidaAuthContext";
 import { ProjectProvider } from "@/context/ProjectContext";
@@ -12,7 +13,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import "./utils/testNymeria";
 
 // Import components directly to avoid any potential lazy loading issues
-import LandingPage from "@/pages/LandingPage";
+import LandingPage from "@/pages/LandingPageEnhanced";
 import Dashboard from "@/pages/Dashboard";
 import { JobPostingPage } from "@/components/jobs/JobPostingPage";
 import { JobEditorPage } from "@/components/jobs/JobEditorPage";
@@ -37,12 +38,13 @@ import Pricing from "@/pages/Pricing";
 function App() {
   // Remove the basename configuration to let React Router handle paths naturally
   return (
-    <AuthProvider>
-      <ProjectProvider>
-        <ClarvidaAuthProvider>
-          <Router>
-            <Toaster position="top-center" />
-            <Routes>
+    <HelmetProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <ClarvidaAuthProvider>
+            <Router>
+              <Toaster position="top-center" />
+              <Routes>
             {/* Public routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
@@ -89,6 +91,7 @@ function App() {
       </ClarvidaAuthProvider>
       </ProjectProvider>
     </AuthProvider>
+    </HelmetProvider>
   );
 }
 

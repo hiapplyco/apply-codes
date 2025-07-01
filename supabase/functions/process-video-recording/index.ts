@@ -79,7 +79,7 @@ serve(async (req) => {
     // 5. Process with Gemini
     console.log('Processing with Gemini...')
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '')
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const vanityFairPrompt = `
       Please analyze this video recording in the style of a Vanity Fair article, focusing on the environment and setting. 

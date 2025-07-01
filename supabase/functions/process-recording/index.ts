@@ -15,7 +15,7 @@ serve(async (req) => {
     const { url, type } = await req.json()
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '')
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     const response = await fetch(url)
     const contentType = response.headers.get('content-type')

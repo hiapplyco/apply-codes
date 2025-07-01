@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from 'npm:@google/generative-ai';
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 const interviewFrameworks: Record<string, {name: string, tooltip: string}> = {
   'star': {

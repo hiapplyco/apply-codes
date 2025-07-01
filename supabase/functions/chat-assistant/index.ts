@@ -1,22 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { ToolRegistry } from "./tools.ts";
+import { IntentAnalyzer } from "./intent-analyzer.ts";
+import { StorageManager } from "./storage.ts";
+import { RequestBody, ChatResponse, ToolCall } from "./types.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface RequestBody {
-  message: string;
-  systemPrompt: string;
-  history: ChatMessage[];
-}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -25,48 +18,124 @@ serve(async (req) => {
   }
 
   try {
-    const { message, systemPrompt, history } = await req.json() as RequestBody;
+    const { message, systemPrompt, history, sessionId, userId, projectId } = await req.json() as RequestBody;
 
     if (!message) {
       throw new Error('Message is required');
     }
 
-    // Initialize Gemini
+    // Initialize services
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const toolRegistry = new ToolRegistry(supabaseUrl, supabaseKey);
+    const intentAnalyzer = new IntentAnalyzer(genAI, toolRegistry.getDescriptions());
+    const storage = new StorageManager(supabaseUrl, supabaseKey);
 
-    // Build conversation history
-    const conversationHistory = history.map(msg => `${msg.role}: ${msg.content}`).join('\n\n');
+    // Get session context if available
+    let sessionContext = { messages: [], session: null, agentOutputs: [] };
+    if (sessionId) {
+      sessionContext = await storage.getSessionContext(sessionId);
+    }
+
+    // Analyze user intent
+    console.log('Analyzing user intent...');
+    const intentAnalysis = await intentAnalyzer.analyzeIntent(message, history);
+    console.log('Intent analysis:', intentAnalysis);
+
+    // Execute suggested tools
+    const toolCalls: ToolCall[] = [];
     
-    // Create the full prompt
-    const fullPrompt = `${systemPrompt}
+    for (const toolName of intentAnalysis.suggestedTools) {
+      const tool = toolRegistry.get(toolName);
+      if (!tool) {
+        console.warn(`Tool ${toolName} not found`);
+        continue;
+      }
 
-Previous conversation:
-${conversationHistory}
+      const params = intentAnalysis.parameters[toolName] || {};
+      console.log(`Executing tool: ${toolName}`, params);
+      
+      try {
+        const result = await tool.execute(params);
+        toolCalls.push({
+          tool: toolName,
+          parameters: params,
+          result
+        });
+      } catch (error) {
+        console.error(`Tool ${toolName} failed:`, error);
+        toolCalls.push({
+          tool: toolName,
+          parameters: params,
+          result: { error: error.message }
+        });
+      }
+    }
 
-User: ${message}
+    // Generate contextual response
+    const response = await intentAnalyzer.generateContextualResponse(
+      message,
+      intentAnalysis,
+      toolCalls,
+      history
+    );
 
-Assistant: I'll help you with your recruitment needs based on your data and searches.`;
+    // Save agent output if user is authenticated
+    let agentOutputId = null;
+    if (userId) {
+      agentOutputId = await storage.saveAgentOutput({
+        userId,
+        sessionId,
+        projectId,
+        agentType: 'chat_assistant',
+        intent: intentAnalysis,
+        toolCalls,
+        response,
+        metadata: {
+          systemPrompt,
+          model: 'gemini-2.5-flash'
+        }
+      });
+    }
 
-    // Generate response
-    const result = await model.generateContent(fullPrompt);
-    const response = result.response;
-    const text = response.text();
+    // Save chat messages if session exists
+    if (sessionId) {
+      await storage.saveChatMessage({
+        sessionId,
+        role: 'user',
+        content: message,
+        metadata: { intentAnalysis }
+      });
+      
+      await storage.saveChatMessage({
+        sessionId,
+        role: 'assistant',
+        content: response,
+        metadata: { toolCalls, agentOutputId }
+      });
+    }
 
     // Return the response
+    const chatResponse: ChatResponse = {
+      response,
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      metadata: {
+        model: "gemini-2.5-flash",
+        timestamp: new Date().toISOString(),
+        intentAnalysis,
+        agentOutputId
+      }
+    };
+
     return new Response(
-      JSON.stringify({
-        response: text,
-        metadata: {
-          model: "gemini-2.0-flash",
-          timestamp: new Date().toISOString()
-        }
-      }),
+      JSON.stringify(chatResponse),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

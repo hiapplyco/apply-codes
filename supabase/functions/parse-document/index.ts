@@ -76,7 +76,7 @@ serve(async (req) => {
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     try {
       // Convert array buffer to base64 for Gemini processing

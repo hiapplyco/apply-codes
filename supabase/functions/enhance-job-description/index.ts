@@ -47,7 +47,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `As an experienced Talent Acquisition specialist, enhance this job description using clear headers and emphasis on key points that will attract top talent. Create a comprehensive, well-structured description that highlights:
 

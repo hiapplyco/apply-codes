@@ -436,7 +436,7 @@ export abstract class Agent<T extends PromptParams> {
 
     while (iterations < maxIterations) {
       const result = await this.model.getGenerativeModel({ 
-        model: "gemini-2.0-flash-exp" 
+        model: "gemini-2.5-flash" 
       }).generateContent(currentPrompt);
       
       const text = result.response.text();

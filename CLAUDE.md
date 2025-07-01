@@ -166,7 +166,7 @@ Bash: "npm run typecheck && npm run lint && npm run test"
 ### Tech Stack
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Supabase (PostgreSQL, Edge Functions)
-- **AI**: Google Gemini 2.0 Flash
+- **AI**: Google Gemini 2.5 Flash (gemini-2.5-flash)
 - **Deployment**: Vercel (Frontend), Supabase (Backend)
 
 ### Key Features

@@ -33,7 +33,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Extract and categorize key terms from this job description into specific categories. Format your response EXACTLY as a JSON object with these arrays:
 

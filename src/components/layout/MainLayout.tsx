@@ -69,9 +69,9 @@ const MainLayoutComponent = () => {
         sidebarOpen && "lg:pl-[20rem]" // Expanded width when open
       )}>
         <div className="w-full h-full overflow-x-hidden">
-          <div className="p-4 lg:p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between mb-2">
+          <div className="p-4 lg:p-6 h-screen flex flex-col">
+            <div className="flex flex-col gap-4 h-full">
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <button 
                   onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
                   className="lg:hidden h-10 w-10 rounded-md border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 flex items-center justify-center shadow-sm"
@@ -84,7 +84,7 @@ const MainLayoutComponent = () => {
                 />
               </div>
               <div 
-                className={`transition-opacity duration-300 ${
+                className={`transition-opacity duration-300 flex-1 min-h-0 ${
                   isNavigating ? 'opacity-50' : 'opacity-100'
                 }`}
               >

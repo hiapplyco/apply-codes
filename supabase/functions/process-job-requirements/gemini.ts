@@ -12,8 +12,8 @@ export function getGeminiModel() {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Using gemini-2.0-flash as the model name
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  // Using gemini-2.5-flash as the model name
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 }
 
 /**

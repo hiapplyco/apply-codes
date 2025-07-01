@@ -51,7 +51,7 @@ serve(async (req) => {
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '')
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
     // Convert resume to text and clean it
     const arrayBuffer = await (file as File).arrayBuffer()

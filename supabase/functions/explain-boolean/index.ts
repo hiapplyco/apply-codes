@@ -19,7 +19,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GOOGLE_AI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
 You are an expert recruiter explaining a boolean search string to a user. Analyze this boolean search string and provide a structured explanation.

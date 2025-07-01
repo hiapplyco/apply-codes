@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Given this job description, create:
 1. A concise, professional title (maximum 6 words) that summarizes the role

@@ -25,7 +25,7 @@ class MockGoogleGenerativeAI extends GoogleGenerativeAI {
     return {
       apiKey: this.apiKey,
       _requestOptions: {},
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {},
       safetySettings: [],
       tools: [],

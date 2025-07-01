@@ -205,8 +205,8 @@ Provide helpful, specific advice based on their data. Be conversational but prof
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-start mb-6">
+    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-start mb-6 flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             <Bot className="w-8 h-8 text-purple-600" />
@@ -226,10 +226,10 @@ Provide helpful, specific advice based on their data. Be conversational but prof
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
         {/* Main Chat Area */}
-        <div className="lg:col-span-3">
-          <Card className="h-[700px] flex flex-col border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)]">
+        <div className="lg:col-span-3 min-h-0">
+          <Card className="h-full flex flex-col border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)]">
             <ScrollArea className="flex-1 p-6">
               <div className="space-y-4">
                 {messages.map((message) => (
@@ -308,8 +308,8 @@ Provide helpful, specific advice based on their data. Be conversational but prof
         </div>
 
         {/* Context Panel */}
-        <div className={`lg:col-span-1 ${showContext ? 'block' : 'hidden lg:block'}`}>
-          <Card className="h-[700px] border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] overflow-hidden">
+        <div className={`lg:col-span-1 min-h-0 ${showContext ? 'block' : 'hidden lg:block'}`}>
+          <Card className="h-full border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] overflow-hidden">
             <CardContent className="p-6 h-full overflow-y-auto">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-600" />
@@ -389,7 +389,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
       </div>
 
       {/* Example Prompts */}
-      <div className="mt-6">
+      <div className="mt-6 flex-shrink-0">
         <h3 className="text-sm font-medium text-gray-600 mb-3">Try asking:</h3>
         <div className="flex flex-wrap gap-2">
           <Button
