@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai@0.21.0";
 import { IntentAnalysis } from "./types.ts";
 
 export class IntentAnalyzer {
@@ -6,7 +6,7 @@ export class IntentAnalyzer {
   private toolDescriptions: string;
 
   constructor(genAI: GoogleGenerativeAI, toolDescriptions: string) {
-    this.model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    this.model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     this.toolDescriptions = toolDescriptions;
   }
 

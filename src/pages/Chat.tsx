@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ProjectSelector } from "@/components/project/ProjectSelector";
 
 interface Message {
   id: string;
@@ -59,6 +60,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [showContext, setShowContext] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -174,7 +176,9 @@ Provide helpful, specific advice based on their data. Be conversational but prof
           history: messages.slice(-10).map(m => ({
             role: m.role,
             content: m.content
-          }))
+          })),
+          projectId: selectedProjectId,
+          userId: user?.id
         }
       });
 
@@ -216,14 +220,21 @@ Provide helpful, specific advice based on their data. Be conversational but prof
             Your intelligent copilot for recruitment insights and automation
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowContext(!showContext)}
-        >
-          <Info className="w-4 h-4 mr-2" />
-          {showContext ? 'Hide' : 'Show'} Context
-        </Button>
+        <div className="flex items-center gap-3">
+          <ProjectSelector 
+            onProjectChange={setSelectedProjectId}
+            className="w-64"
+            placeholder="Select a project (optional)"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowContext(!showContext)}
+          >
+            <Info className="w-4 h-4 mr-2" />
+            {showContext ? 'Hide' : 'Show'} Context
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">

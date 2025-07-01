@@ -1,4 +1,4 @@
-import { Check, Zap, Users, Building2, Sparkles } from 'lucide-react';
+import { Check, X, Zap, Users, Building2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -134,8 +134,17 @@ const Pricing = () => {
               <ul className="space-y-3 mb-8">
                 {tier.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-700">{feature}</span>
+                    {feature.included ? (
+                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <X className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                    )}
+                    <span className={`${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                      {feature.text}
+                      {feature.limit && feature.included && (
+                        <span className="text-gray-500 ml-1">({feature.limit})</span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai@0.21.0";
 import { ToolRegistry } from "./tools.ts";
 import { IntentAnalyzer } from "./intent-analyzer.ts";
 import { StorageManager } from "./storage.ts";
@@ -25,9 +25,9 @@ serve(async (req) => {
     }
 
     // Initialize services
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
+    const apiKey = Deno.env.get('GEMINI_API_KEY') || Deno.env.get('GOOGLE_AI_API_KEY');
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+      throw new Error('GEMINI_API_KEY or GOOGLE_AI_API_KEY is not configured');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -100,7 +100,7 @@ serve(async (req) => {
         response,
         metadata: {
           systemPrompt,
-          model: 'gemini-2.5-flash'
+          model: 'gemini-1.5-flash'
         }
       });
     }
@@ -127,7 +127,7 @@ serve(async (req) => {
       response,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       metadata: {
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         timestamp: new Date().toISOString(),
         intentAnalysis,
         agentOutputId

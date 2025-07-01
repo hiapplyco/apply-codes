@@ -7,6 +7,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { Menu, X } from "lucide-react";
 import { SidebarNew } from "./SidebarNew";
 import { cn } from "@/lib/utils";
+import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 
 const MainLayoutComponent = () => {
   const { isNavigating, progress, handleNavigation, currentPath } = useNavigation();
@@ -83,6 +84,7 @@ const MainLayoutComponent = () => {
                   progress={progress} 
                 />
               </div>
+              <SubscriptionBanner />
               <div 
                 className={`transition-opacity duration-300 flex-1 min-h-0 ${
                   isNavigating ? 'opacity-50' : 'opacity-100'

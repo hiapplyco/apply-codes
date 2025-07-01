@@ -376,17 +376,6 @@ const LandingPageEnhanced = () => {
             </div>
           </div>
 
-          {/* Customer Logos */}
-          <div className="mt-16 text-center">
-            <p className="text-sm text-gray-500 mb-6">Trusted by teams at</p>
-            <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-              <span className="text-2xl font-bold text-gray-400">TechCorp</span>
-              <span className="text-2xl font-bold text-gray-400">FinanceHub</span>
-              <span className="text-2xl font-bold text-gray-400">HealthTech</span>
-              <span className="text-2xl font-bold text-gray-400">StartupInc</span>
-              <span className="text-2xl font-bold text-gray-400">GlobalCo</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -416,7 +405,7 @@ const LandingPageEnhanced = () => {
             </Button>
           </div>
           <p className="mt-6 text-sm opacity-75">
-            No credit card required • 14-day free trial • Cancel anytime
+            No credit card required • 21-day free trial • Cancel anytime
           </p>
         </div>
       </section>
