@@ -79,14 +79,24 @@ export function InterviewPrepEnhanced({ onPrepComplete }: InterviewPrepEnhancedP
     if (!file) return;
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please sign in to upload files');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('userId', user.id);
 
       const { data, error } = await supabase.functions.invoke('parse-document', {
         body: formData,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`Error from parse-document:`, error);
+        throw error;
+      }
 
       const extractedText = data.text || '';
       
@@ -115,7 +125,17 @@ export function InterviewPrepEnhanced({ onPrepComplete }: InterviewPrepEnhancedP
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} file processed successfully`);
     } catch (error) {
       console.error(`Error processing ${type} file:`, error);
-      toast.error(`Failed to process ${type} file`);
+      
+      // Provide more specific error messages
+      if (error?.message?.includes('size')) {
+        toast.error(`File too large. Please use a file smaller than 2MB.`);
+      } else if (error?.message?.includes('type')) {
+        toast.error(`Unsupported file type. Please use PDF, DOC, DOCX, or TXT files.`);
+      } else if (error?.details) {
+        toast.error(`Failed to process file: ${error.details}`);
+      } else {
+        toast.error(`Failed to process ${type} file. Please try again.`);
+      }
     }
   };
 

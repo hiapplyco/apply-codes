@@ -76,7 +76,7 @@ serve(async (req) => {
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     try {
       // Convert array buffer to base64 for Gemini processing
@@ -130,11 +130,30 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error processing document:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', {
+      fileName: (file as File)?.name,
+      fileType: (file as File)?.type,
+      fileSize: arrayBuffer?.byteLength
+    })
+    
+    // Provide more detailed error messages
+    let errorMessage = 'Failed to process document';
+    if (error.message?.includes('base64')) {
+      errorMessage = 'File encoding error - file may be too large';
+    } else if (error.message?.includes('Gemini') || error.message?.includes('model')) {
+      errorMessage = 'AI processing error - please try again';
+    } else if (error.message?.includes('storage')) {
+      errorMessage = 'File storage error - please check permissions';
+    } else if (error.message?.includes('size')) {
+      errorMessage = 'File too large - please use a smaller file';
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage 
+        error: errorMessage,
+        details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
         headers: { 
