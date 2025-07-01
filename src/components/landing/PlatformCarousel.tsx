@@ -45,7 +45,7 @@ export function PlatformCarousel() {
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % platformPreviews.length);
-    }, 4000); // Change slide every 4 seconds
+    }, 2500); // Change slide every 2.5 seconds
 
     return () => clearInterval(interval);
   }, [isAutoPlaying]);

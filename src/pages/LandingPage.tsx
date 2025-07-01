@@ -42,24 +42,24 @@ const LandingPage = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 pt-24 pb-8 sm:py-24 flex flex-col items-center justify-center min-h-screen">
+      <div className="container mx-auto px-4 pt-20 pb-4 flex flex-col items-center justify-center">
         {/* Hero Section */}
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center mb-4 sm:mb-6">
           <img 
             src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
             alt="Apply" 
-            className="h-24 sm:h-32 w-auto mx-auto mb-4 sm:mb-8"
+            className="h-24 sm:h-32 w-auto mx-auto mb-2 sm:mb-4"
           />
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
             Hi, welcome to Apply...
           </h1>
-          <p className="text-gray-600 text-base sm:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
+          <p className="text-gray-600 text-base sm:text-lg mb-4 sm:mb-6 max-w-2xl mx-auto px-4">
             Revolutionize your recruiting with AI-powered sourcing, screening, and candidate qualification
           </p>
         </div>
 
         {/* CTA Button */}
-        <div className="flex justify-center mb-8 sm:mb-16 w-full sm:w-auto px-4 sm:px-0">
+        <div className="flex justify-center mb-6 sm:mb-8 w-full sm:w-auto px-4 sm:px-0">
           <Button
             onClick={() => navigate('/login')}
             className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5 w-full sm:w-auto"
@@ -70,7 +70,7 @@ const LandingPage = () => {
         </div>
 
         {/* Platform Preview Carousel */}
-        <div className="w-full mb-8 sm:mb-16">
+        <div className="w-full mb-6 sm:mb-10">
           <PlatformCarousel />
         </div>
 
