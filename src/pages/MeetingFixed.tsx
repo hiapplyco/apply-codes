@@ -1,0 +1,590 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { VideoCallFrame } from '@/components/video/VideoCallFrame';
+import { TranscriptionProcessor } from '@/components/video/TranscriptionProcessor';
+import { MeetingDataManager } from '@/components/video/MeetingDataManager';
+import { ProjectSelector } from '@/components/project/ProjectSelector';
+import { useProjectContext } from '@/context/ProjectContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { useScreeningSession } from '@/hooks/useScreeningSession';
+import { useInterviewCoPilot } from '@/hooks/useInterviewCoPilot';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Video, 
+  Users, 
+  MessageSquare, 
+  Settings,
+  Loader2,
+  ChevronRight,
+  Phone,
+  PhoneOff,
+  Mic,
+  MicOff,
+  VideoIcon,
+  VideoOff,
+  X,
+  Maximize2,
+  Minimize2,
+  PanelRightOpen,
+  PanelRightClose,
+  AlertCircle
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InterviewPrepEnhanced } from '@/components/interview/InterviewPrepEnhanced';
+import { InterviewDashboard } from '@/components/interview/InterviewDashboard';
+import { QuestionSuggestions } from '@/components/interview/QuestionSuggestions';
+import { InterviewChat } from '@/components/interview/InterviewChat';
+import { InterviewContext, TranscriptEntry } from '@/types/interview';
+import { Resizable } from 're-resizable';
+
+type MeetingType = 'kickoff' | 'interview' | 'screening';
+
+interface MeetingConfig {
+  type: MeetingType;
+  title: string;
+  description: string;
+  features: {
+    fileUpload: boolean;
+    urlCrawling: boolean;
+    videoCall: boolean;
+    interviewPrep: boolean;
+    transcription: boolean;
+    recording: boolean;
+    coPilot: boolean;
+  };
+}
+
+const meetingConfigs: Record<MeetingType, MeetingConfig> = {
+  kickoff: {
+    type: 'kickoff',
+    title: 'Kickoff Meeting',
+    description: 'Initial meeting to understand project requirements and goals',
+    features: {
+      fileUpload: true,
+      urlCrawling: true,
+      videoCall: true,
+      interviewPrep: false,
+      transcription: true,
+      recording: true,
+      coPilot: false,
+    },
+  },
+  interview: {
+    type: 'interview',
+    title: 'Interview Session',
+    description: 'AI-powered interview with real-time guidance and analysis',
+    features: {
+      fileUpload: true,
+      urlCrawling: true,
+      videoCall: true,
+      interviewPrep: true,
+      transcription: true,
+      recording: true,
+      coPilot: true,
+    },
+  },
+  screening: {
+    type: 'screening',
+    title: 'Screening Call',
+    description: 'Quick screening calls to evaluate candidates',
+    features: {
+      fileUpload: false,
+      urlCrawling: false,
+      videoCall: true,
+      interviewPrep: false,
+      transcription: true,
+      recording: true,
+      coPilot: false,
+    },
+  },
+};
+
+interface Participant {
+  id: string;
+  name?: string;
+}
+
+export default function MeetingFixed() {
+  const navigate = useNavigate();
+  const { selectedProjectId } = useProjectContext();
+  const { sessionId } = useScreeningSession();
+  
+  // Meeting state
+  const [meetingType, setMeetingType] = useState<MeetingType>('interview');
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [isInMeeting, setIsInMeeting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('setup');
+  
+  // Interview context
+  const [interviewContext, setInterviewContext] = useState<InterviewContext | null>(null);
+  
+  // Video call state
+  const [callFrame, setCallFrame] = useState<any>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const startTimeRef = useRef<Date>(new Date());
+  
+  // Transcription
+  const [whisperTranscript, setWhisperTranscript] = useState('');
+  const transcriptionProcessor = TranscriptionProcessor();
+  const meetingDataManager = MeetingDataManager(selectedProjectId);
+  
+  // UI state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isDashboardMinimized, setIsDashboardMinimized] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  // WebSocket for real-time features
+  useWebSocket(sessionId);
+  
+  const currentConfig = meetingConfigs[meetingType];
+
+  // Interview Co-Pilot hook - only initialize if we have interview context
+  const coPilotConfig = interviewContext && sessionId ? {
+    context: interviewContext,
+    sessionId: sessionId,
+    onTranscriptionUpdate: (entry: TranscriptEntry) => {
+      setWhisperTranscript(prev => prev + ' ' + entry.text);
+    },
+    onAnalysisUpdate: () => {},
+    onSuggestion: () => {},
+    onFlag: () => {},
+  } : null;
+
+  const coPilot = coPilotConfig ? useInterviewCoPilot(coPilotConfig) : null;
+
+  useEffect(() => {
+    document.title = `Meeting Room - ${currentConfig.title} | Apply`;
+    return () => {
+      document.title = 'Apply';
+    };
+  }, [currentConfig]);
+
+  const handleInterviewPrepComplete = (context: InterviewContext) => {
+    setInterviewContext({
+      ...context,
+      projectId: selectedProjectId || '',
+    });
+    setMeetingTitle(`${context.position} - ${context.candidateName}`);
+    toast.success('Interview preparation complete! You can now start the meeting.');
+  };
+
+  const startMeeting = async () => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
+      return;
+    }
+
+    if (!meetingTitle.trim()) {
+      toast.error('Please enter a meeting title');
+      return;
+    }
+
+    if (meetingType === 'interview' && !interviewContext) {
+      toast.error('Please complete interview preparation first');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      setIsInMeeting(true);
+      setActiveTab('meeting');
+      startTimeRef.current = new Date();
+      toast.success('Meeting started successfully');
+    } catch (error) {
+      console.error('Failed to start meeting:', error);
+      toast.error('Failed to start meeting');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const endMeeting = async () => {
+    const endTime = new Date();
+    
+    try {
+      if (meetingType === 'interview' && interviewContext && coPilot) {
+        // Generate interview report
+        const report = await coPilot.endInterview();
+        if (report) {
+          toast.success('Interview report generated successfully');
+        }
+      } else {
+        // Save regular meeting data
+        await meetingDataManager.saveMeetingData({
+          startTime: startTimeRef.current,
+          endTime,
+          participants,
+          transcription: whisperTranscript,
+          meetingType,
+          title: meetingTitle,
+        });
+      }
+
+      // Update session status if exists
+      if (sessionId) {
+        await supabase
+          .from('chat_sessions')
+          .update({ status: 'completed' })
+          .eq('id', sessionId);
+      }
+
+      toast.success('Meeting ended successfully');
+      setIsInMeeting(false);
+      setActiveTab('analysis');
+    } catch (error) {
+      console.error('Failed to end meeting:', error);
+      toast.error('Failed to save meeting data');
+    }
+  };
+
+  const handleTranscriptionUpdate = (text: string, speaker: 'interviewer' | 'candidate' = 'candidate') => {
+    if (meetingType === 'interview' && interviewContext && coPilot) {
+      coPilot.addTranscriptEntry(speaker, text);
+    } else {
+      transcriptionProcessor.addTranscription(text);
+      setWhisperTranscript(prev => prev + ' ' + text);
+    }
+  };
+
+  const toggleMute = () => {
+    if (callFrame) {
+      callFrame.setLocalAudio(!isMuted);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (callFrame) {
+      callFrame.setLocalVideo(!isVideoOff);
+      setIsVideoOff(!isVideoOff);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (callFrame) {
+      if (isRecording) {
+        callFrame.stopRecording();
+      } else {
+        callFrame.startRecording();
+      }
+      setIsRecording(!isRecording);
+    }
+  };
+
+  return (
+    <div className="flex-1 overflow-hidden bg-gradient-to-br from-[#FFFBF4] to-white">
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b bg-white">
+          <div className="max-w-7xl mx-auto">
+            <h1 className="text-2xl font-black bg-gradient-to-r from-[#8B5CF6] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
+              Meeting Room
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {isInMeeting ? meetingTitle : 'AI-powered meetings with real-time assistance'}
+            </p>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden">
+          {!isInMeeting ? (
+            // Setup View
+            <div className="h-full overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto">
+              {/* Meeting Type Selector */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                {Object.values(meetingConfigs).map((config) => (
+                  <Card
+                    key={config.type}
+                    className={cn(
+                      "cursor-pointer transition-all duration-200 border-4 border-black",
+                      "hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1",
+                      meetingType === config.type
+                        ? "shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-purple-50"
+                        : "shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    )}
+                    onClick={() => setMeetingType(config.type)}
+                  >
+                    <div className="p-6">
+                      <h3 className="font-bold text-xl mb-2">{config.title}</h3>
+                      <p className="text-gray-600 text-sm mb-4">{config.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {config.features.videoCall && (
+                          <Badge variant="secondary" className="bg-purple-100">
+                            <Video className="w-3 h-3 mr-1" />
+                            Video
+                          </Badge>
+                        )}
+                        {config.features.coPilot && (
+                          <Badge variant="secondary" className="bg-yellow-100">
+                            AI Co-Pilot
+                          </Badge>
+                        )}
+                        {config.features.transcription && (
+                          <Badge variant="secondary" className="bg-blue-100">
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            Transcript
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Setup Content */}
+              <Card className="border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                <div className="p-6">
+                  {/* Project Selector - Now inside the setup area */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2">Select Project</label>
+                    <ProjectSelector />
+                    {!selectedProjectId && (
+                      <Alert className="mt-2 border-2 border-yellow-400 bg-yellow-50">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Please select a project before starting the meeting
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+
+                  {meetingType === 'interview' && currentConfig.features.interviewPrep ? (
+                    <InterviewPrepEnhanced onPrepComplete={handleInterviewPrepComplete} />
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Meeting Title</label>
+                        <Input
+                          value={meetingTitle}
+                          onChange={(e) => setMeetingTitle(e.target.value)}
+                          placeholder={`Enter ${currentConfig.title.toLowerCase()} title`}
+                          className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={startMeeting}
+                        disabled={!selectedProjectId || !meetingTitle.trim() || isLoading}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 
+                                 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
+                                 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-200"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Starting Meeting...
+                          </>
+                        ) : (
+                          <>
+                            Start {currentConfig.title}
+                            <ChevronRight className="w-4 h-4 ml-2" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          ) : (
+            // Meeting View
+            <div className="h-full flex">
+              {/* Main Content Area */}
+              <div className="flex-1 flex flex-col">
+                {/* Video Area */}
+                <div className="flex-1 relative bg-gray-900">
+                  {currentConfig.features.videoCall && (
+                    <VideoCallFrame
+                      onJoinMeeting={() => {
+                        toast.success('Joined meeting successfully');
+                      }}
+                      onParticipantJoined={setParticipants}
+                      onParticipantLeft={(p) => {
+                        setParticipants(prev => prev.filter(participant => participant.id !== p.id));
+                      }}
+                      onTranscriptionUpdate={(text) => handleTranscriptionUpdate(text)}
+                      onCallFrameCreated={setCallFrame}
+                    />
+                  )}
+
+                  {/* Meeting Controls */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 
+                                bg-white rounded-full border-2 border-black 
+                                shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={toggleMute}
+                        variant={isMuted ? "destructive" : "default"}
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        onClick={toggleVideo}
+                        variant={isVideoOff ? "destructive" : "default"}
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        {isVideoOff ? <VideoOff className="w-4 h-4" /> : <VideoIcon className="w-4 h-4" />}
+                      </Button>
+                      {currentConfig.features.recording && (
+                        <Button
+                          onClick={toggleRecording}
+                          variant={isRecording ? "destructive" : "default"}
+                          size="icon"
+                          className="rounded-full"
+                        >
+                          <div className={cn(
+                            "w-3 h-3 rounded-full",
+                            isRecording ? "bg-white animate-pulse" : "bg-red-500"
+                          )} />
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => setIsChatOpen(!isChatOpen)}
+                        variant="outline"
+                        size="icon"
+                        className="rounded-full"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        onClick={endMeeting}
+                        variant="destructive"
+                        className="rounded-full px-4"
+                      >
+                        <PhoneOff className="w-4 h-4 mr-2" />
+                        End Meeting
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Participants List */}
+                  {participants.length > 0 && (
+                    <div className="absolute top-4 right-4 bg-white rounded-lg border-2 border-black 
+                                  shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-4 h-4" />
+                        <span className="font-medium text-sm">Participants ({participants.length})</span>
+                      </div>
+                      <div className="space-y-1">
+                        {participants.map((p) => (
+                          <div key={p.id} className="text-sm text-gray-600">
+                            {p.name || 'Anonymous'}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dashboard Toggle */}
+                  {meetingType === 'interview' && currentConfig.features.coPilot && (
+                    <div className="absolute top-4 left-4">
+                      <Button
+                        onClick={() => setIsDashboardMinimized(!isDashboardMinimized)}
+                        variant="outline"
+                        size="icon"
+                        className="bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      >
+                        {isDashboardMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Interview Dashboard (Bottom) */}
+                {meetingType === 'interview' && currentConfig.features.coPilot && interviewContext && coPilot && (
+                  <div className={cn(
+                    "border-t bg-white transition-all duration-300",
+                    isDashboardMinimized ? "h-20" : "h-80"
+                  )}>
+                    <div className="h-full p-4 overflow-y-auto">
+                      <InterviewDashboard
+                        session={coPilot.session}
+                        context={interviewContext}
+                        onSuggestionAccept={coPilot.acceptSuggestion}
+                        onFlagAction={coPilot.dismissFlag}
+                        isMinimized={isDashboardMinimized}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar */}
+              {meetingType === 'interview' && currentConfig.features.coPilot && interviewContext && coPilot && (
+                <Resizable
+                  defaultSize={{ width: isSidebarCollapsed ? 60 : 400, height: '100%' }}
+                  minWidth={isSidebarCollapsed ? 60 : 300}
+                  maxWidth={600}
+                  enable={{ left: !isSidebarCollapsed }}
+                  className={cn(
+                    "border-l bg-white transition-all duration-300",
+                    isSidebarCollapsed && "w-[60px]"
+                  )}
+                >
+                  <div className="h-full flex flex-col">
+                    <div className="p-4 border-b flex items-center justify-between">
+                      {!isSidebarCollapsed && (
+                        <h3 className="font-bold">AI Assistant</h3>
+                      )}
+                      <Button
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        variant="ghost"
+                        size="icon"
+                      >
+                        {isSidebarCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    {!isSidebarCollapsed && (
+                      <div className="flex-1 overflow-hidden p-4">
+                        <QuestionSuggestions
+                          suggestions={coPilot.session.suggestions}
+                          competencies={interviewContext.companyRubric?.competencies || []}
+                          currentCategory="general"
+                          onQuestionSelect={(question) => {
+                            toast.info('Question copied to clipboard');
+                          }}
+                          onGenerateMore={coPilot.generateQuestions}
+                          isGenerating={coPilot.isProcessing}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </Resizable>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Chat Sheet */}
+        {isInMeeting && (
+          <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
+            <SheetContent className="w-full sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Meeting Chat</SheetTitle>
+              </SheetHeader>
+              <div className="h-full flex flex-col pt-4">
+                <InterviewChat />
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+      </div>
+    </div>
+  );
+}

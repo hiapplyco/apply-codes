@@ -29,7 +29,7 @@ import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
 import Integrations from "@/pages/IntegrationsEnhanced";
-import Meeting from "@/pages/MeetingEnhanced";
+import Meeting from "@/pages/MeetingFixed";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
