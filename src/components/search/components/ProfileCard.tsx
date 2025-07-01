@@ -34,6 +34,7 @@ import { SearchResult } from '../types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { NoContactInfoDialog } from './NoContactInfoDialog';
 
 interface ContactInfo {
   work_email?: string;
@@ -75,6 +76,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [projects, setProjects] = useState<Array<{ id: string; name: string; color: string; icon: string }>>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectId);
+  const [showNoContactDialog, setShowNoContactDialog] = useState(false);
 
   // Update local contact info when prop changes
   React.useEffect(() => {
@@ -330,29 +332,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       setLocalContactInfo(contactData);
       
       if (!contactData) {
-        // Profile not found in Nymeria
-        const shouldSearch = await new Promise<boolean>((resolve) => {
-          toast('No contact information found', {
-            description: 'Would you like to search for this person manually?',
-            action: {
-              label: 'Search',
-              onClick: () => {
-                resolve(true);
-              }
-            },
-            cancel: {
-              label: 'Cancel',
-              onClick: () => {
-                resolve(false);
-              }
-            },
-            duration: 10000
-          });
-        });
-        
-        if (shouldSearch) {
-          onSearchContacts(name, company, location);
-        }
+        // Profile not found in Nymeria - show custom dialog
+        setShowNoContactDialog(true);
       }
     } catch (error) {
       console.error('Error enriching profile:', error);
@@ -586,12 +567,17 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 <div className="space-y-3">
                   <h4 className="font-medium text-gray-900 flex items-center gap-2">
                     <Star className="w-4 h-4" />
-                    Profile Details
+                    LinkedIn Profile Info
                   </h4>
                   
                   <div className="pl-6 space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">Profile Completeness:</span>
+                      <span className="text-sm text-gray-500">
+                        Profile Data Available:
+                        <span className="block text-xs text-gray-400">
+                          (How much info LinkedIn shows)
+                        </span>
+                      </span>
                       <span className="text-sm font-medium text-gray-600">
                         {profileCompleteness}%
                       </span>
@@ -658,6 +644,16 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                     )}
                   </Button>
                 )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => toast.info('Compare to Job Description feature coming soon!')}
+                  className="border-green-200 text-green-700 hover:bg-green-50"
+                >
+                  <Briefcase className="w-4 h-4 mr-2" />
+                  Compare to Job Description
+                </Button>
 
                 {localContactInfo && (localContactInfo.work_email || localContactInfo.personal_emails?.length || localContactInfo.mobile_phone) && (
                   <Button
@@ -737,6 +733,14 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
         </CollapsibleContent>
       </Collapsible>
+      
+      {/* No Contact Info Dialog */}
+      <NoContactInfoDialog
+        isOpen={showNoContactDialog}
+        onClose={() => setShowNoContactDialog(false)}
+        onSearch={() => onSearchContacts(name, company, location)}
+        candidateName={name}
+      />
     </Card>
   );
 };

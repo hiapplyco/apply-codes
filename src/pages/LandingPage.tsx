@@ -25,7 +25,7 @@ const LandingPage = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <img 
-                src="/assets/APPLYFullwordlogo2025.png" 
+                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
                 alt="Apply" 
                 className="h-8 w-auto"
               />
@@ -46,7 +46,7 @@ const LandingPage = () => {
         {/* Hero Section */}
         <div className="text-center mb-8 sm:mb-12">
           <img 
-            src="/assets/APPLYFullwordlogo2025.png" 
+            src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
             alt="Apply" 
             className="h-16 sm:h-20 w-auto mx-auto mb-4 sm:mb-8"
           />
