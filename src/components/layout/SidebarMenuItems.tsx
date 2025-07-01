@@ -1,6 +1,6 @@
 
 import { memo } from "react";
-import { Home, Video, Theater, PhoneCall, MessageSquare, Search, PlusCircle, LayoutDashboard, Clock, User } from "lucide-react";
+import { Home, Video, Theater, PhoneCall, MessageSquare, Search, PlusCircle, LayoutDashboard, Clock, User, Users } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar/context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -40,16 +40,10 @@ export const menuItems: MenuItem[] = [
     tooltip: 'Conduct AI-assisted video interviews and get instant candidate evaluations'
   },
   { 
-    title: 'Interview Prep', 
-    path: '/interview-prep', 
-    icon: Theater,
-    tooltip: 'Prepare role-specific interview questions and structured evaluation frameworks'
-  },
-  { 
-    title: 'Kickoff Call', 
-    path: '/kickoff-call', 
-    icon: PhoneCall,
-    tooltip: 'Transform hiring manager meetings into clear requirements and search strategies'
+    title: 'Meeting', 
+    path: '/meeting', 
+    icon: Users,
+    tooltip: 'All-in-one space for kickoffs, interviews, and screening calls with AI assistance'
   },
   { 
     title: 'Create Content', 

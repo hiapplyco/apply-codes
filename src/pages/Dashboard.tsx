@@ -9,7 +9,8 @@ import {
   ArrowRight,
   Clock,
   Sparkles,
-  Bot
+  Bot,
+  Users
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,20 +50,12 @@ const Dashboard = () => {
       gradient: "from-green-500 to-emerald-500"
     },
     {
-      title: "Interview Prep",
-      description: "Prepare role-specific interview questions and structured evaluation frameworks",
-      tooltip: "Generate customized interview questions and evaluation criteria for any role",
-      icon: UserCheck,
-      path: "/interview-prep",
+      title: "Meeting",
+      description: "All-in-one space for kickoffs, interviews, and screening calls with AI assistance",
+      tooltip: "Conduct kickoff meetings, structured interviews, or screening calls with transcription and AI support",
+      icon: Users,
+      path: "/meeting",
       gradient: "from-yellow-500 to-orange-500"
-    },
-    {
-      title: "Kickoff Call",
-      description: "Transform hiring manager meetings into clear requirements and search strategies",
-      tooltip: "Use AI to extract job requirements from your hiring manager conversations",
-      icon: PhoneCall,
-      path: "/kickoff-call",
-      gradient: "from-orange-500 to-red-500"
     },
     {
       title: "Create LinkedIn Post",

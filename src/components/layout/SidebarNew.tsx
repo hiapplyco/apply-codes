@@ -10,10 +10,12 @@ import {
   LayoutDashboard, 
   Clock, 
   User,
+  Users,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Plug
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,8 +35,8 @@ const menuItems: MenuItem[] = [
   { title: 'Sourcing', path: '/sourcing', icon: Search },
   { title: 'Search History', path: '/search-history', icon: Clock },
   { title: 'Screening Room', path: '/screening-room', icon: Video },
-  { title: 'Interview Prep', path: '/interview-prep', icon: Theater },
-  { title: 'Kickoff Call', path: '/kickoff-call', icon: PhoneCall },
+  { title: 'Meeting', path: '/meeting', icon: Users },
+  { title: 'Integrations', path: '/integrations', icon: Plug },
   { title: 'Profile', path: '/profile', icon: User },
   { title: 'Chat', path: '/chat', icon: MessageSquare },
 ];

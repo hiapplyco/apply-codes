@@ -19,9 +19,6 @@ import { JobEditorPage } from "@/components/jobs/JobEditorPage";
 import ContentCreationPage from "@/pages/ContentCreationPage";
 import Sourcing from "@/pages/Sourcing";
 import ScreeningRoom from "@/pages/ScreeningRoom";
-import InterviewPrep from "@/pages/InterviewPrep";
-import KickoffCall from "@/pages/KickoffCall";
-import { KickoffCallPage } from "@/components/interview/KickoffCallPage";
 import Chat from "@/pages/Chat";
 import Report from "@/pages/Report";
 import Clarvida from "@/pages/Clarvida";
@@ -31,6 +28,8 @@ import ResetPasswordRequest from "@/pages/ResetPasswordRequest";
 import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
+import Integrations from "@/pages/Integrations";
+import Meeting from "@/pages/MeetingEnhanced";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
@@ -73,12 +72,12 @@ function App() {
                 <Route path="/content-creation" element={<ContentCreationPage />} />
                 <Route path="/sourcing" element={<Sourcing />} />
                 <Route path="/screening-room" element={<ScreeningRoom />} />
-                <Route path="/interview-prep" element={<InterviewPrep />} />
-                <Route path="/kickoff-call" element={<KickoffCall />} />
+                <Route path="/meeting" element={<Meeting />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/report/:jobId" element={<Report />} />
                 <Route path="/search-history" element={<SearchHistory />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
+                <Route path="/integrations" element={<Integrations />} />
                 <Route path="/profile" element={<Profile />} />
               </Route>
             </Route>
