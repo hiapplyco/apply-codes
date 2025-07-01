@@ -118,29 +118,28 @@ const Dashboard = () => {
         </div>
 
         {/* Tools Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-8 pt-3">
           {toolCards.map((tool) => (
             <Tooltip key={tool.path}>
               <TooltipTrigger asChild>
-                <Card
-                  className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
-                    tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
-                  } ${
-                    tool.isPrimary ? 'md:col-span-2 lg:col-span-1' : ''
-                  }`}
-                  onClick={() => !tool.disabled && navigate(tool.path)}
-                >
-              {/* Badge - Positioned above the card */}
-              {tool.badge && (
-                <div className="absolute -top-3 left-4 z-10">
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs px-3 py-1 ${tool.isPrimary ? 'bg-purple-600 text-white' : 'bg-gray-700 text-white'} whitespace-nowrap`}
+                <div className={`relative ${tool.isPrimary ? 'md:col-span-2 lg:col-span-1' : ''}`}>
+                  {/* Badge - Positioned above the card */}
+                  {tool.badge && (
+                    <div className="absolute -top-2 left-4 z-10">
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs px-3 py-1 ${tool.isPrimary ? 'bg-purple-600 text-white' : 'bg-gray-700 text-white'} whitespace-nowrap`}
+                      >
+                        {tool.badge}
+                      </Badge>
+                    </div>
+                  )}
+                  <Card
+                    className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
+                      tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                    onClick={() => !tool.disabled && navigate(tool.path)}
                   >
-                    {tool.badge}
-                  </Badge>
-                </div>
-              )}
               
               {/* Gradient Background */}
               <div className={`absolute inset-0 bg-gradient-to-br ${tool.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
@@ -174,7 +173,8 @@ const Dashboard = () => {
 
               {/* Hover Border Effect */}
               <div className={`absolute inset-0 border-2 border-transparent group-hover:border-gradient-to-r group-hover:${tool.gradient} rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300`} />
-                </Card>
+                  </Card>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs">
                 <p className="text-sm">{tool.description}</p>

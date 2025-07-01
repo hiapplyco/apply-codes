@@ -195,11 +195,19 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
       };
 
       // Create or update the job record
+      console.log("Attempting to save job with data:", jobData);
       const { data: jobResult, error: jobError } = await (jobId ? 
         supabase.from("jobs").update(jobData).eq("id", Number(jobId)).select('id').single() : 
         supabase.from("jobs").insert(jobData).select('id').single());
 
-      if (jobError) throw jobError;
+      if (jobError) {
+        console.error("Supabase error saving job:", jobError);
+        // Check if it's a table not found error
+        if (jobError.message?.includes('relation "public.jobs" does not exist')) {
+          throw new Error("Database table 'jobs' not found. Please contact support.");
+        }
+        throw jobError;
+      }
       if (!jobResult) throw new Error("No data returned from job creation/update");
       
       const newJobId = jobResult.id;

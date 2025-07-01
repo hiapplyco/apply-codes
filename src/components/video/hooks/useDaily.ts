@@ -40,21 +40,20 @@ export const useDaily = (
         console.error('Error creating Daily.co room:', err);
         setError(err instanceof Error ? err : new Error('Unknown error occurred'));
         
-        // Only show toast on first attempt to avoid multiple notifications
-        if (retryCount === 0) {
-          toast.error('Failed to create video room. Trying again...');
-        }
-        
         // Retry if we haven't reached max retries
         if (retryCount < 2) {
+          console.log(`Retrying room creation (attempt ${retryCount + 2}/3)...`);
           setRetryCount(prev => prev + 1);
           setTimeout(() => createRoom(), 2000); // Retry after 2 seconds
         } else {
+          // Only show error if all retries fail
+          toast.error('Failed to create video room after multiple attempts');
+          
           // Use fallback room if all retries fail
           console.log("Using fallback demo room:", DEMO_ROOM_URL);
           setRoomUrl(DEMO_ROOM_URL);
           setUsingFallback(true);
-          toast.warning("Using demo video room due to connection issues");
+          toast.info("Using demo video room instead");
         }
       } finally {
         setIsLoading(false);
