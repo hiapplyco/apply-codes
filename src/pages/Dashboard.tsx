@@ -24,6 +24,7 @@ const Dashboard = () => {
     {
       title: "Sourcing Assistant",
       description: "Generate powerful boolean searches to find perfect candidates across LinkedIn and other platforms",
+      tooltip: "Click to start creating AI-powered boolean searches for LinkedIn, Indeed, and other platforms",
       icon: FileSearch,
       path: "/sourcing",
       gradient: "from-blue-500 to-cyan-500",
@@ -33,6 +34,7 @@ const Dashboard = () => {
     {
       title: "Search History & Projects",
       description: "View your search database, saved candidates, and manage recruitment projects",
+      tooltip: "Access your complete search history, saved candidates, and organize them into projects",
       icon: Clock,
       path: "/search-history",
       gradient: "from-indigo-500 to-purple-600",
@@ -41,6 +43,7 @@ const Dashboard = () => {
     {
       title: "Screening Room",
       description: "Conduct AI-assisted video interviews and get instant candidate evaluations",
+      tooltip: "Start a video interview session with real-time AI analysis and candidate insights",
       icon: Video,
       path: "/screening-room",
       gradient: "from-green-500 to-emerald-500"
@@ -48,6 +51,7 @@ const Dashboard = () => {
     {
       title: "Interview Prep",
       description: "Prepare role-specific interview questions and structured evaluation frameworks",
+      tooltip: "Generate customized interview questions and evaluation criteria for any role",
       icon: UserCheck,
       path: "/interview-prep",
       gradient: "from-yellow-500 to-orange-500"
@@ -55,6 +59,7 @@ const Dashboard = () => {
     {
       title: "Kickoff Call",
       description: "Transform hiring manager meetings into clear requirements and search strategies",
+      tooltip: "Use AI to extract job requirements from your hiring manager conversations",
       icon: PhoneCall,
       path: "/kickoff-call",
       gradient: "from-orange-500 to-red-500"
@@ -62,6 +67,7 @@ const Dashboard = () => {
     {
       title: "Create LinkedIn Post",
       description: "Generate engaging recruitment content that attracts top talent to your opportunities",
+      tooltip: "Create compelling LinkedIn posts to promote your job openings and employer brand",
       icon: PlusCircle,
       path: "/linkedin-post",
       gradient: "from-purple-500 to-violet-600"
@@ -69,6 +75,7 @@ const Dashboard = () => {
     {
       title: "Chat Assistant",
       description: "Your AI recruitment copilot for real-time guidance and task automation",
+      tooltip: "Chat with your AI assistant for recruiting tips, strategies, and insights",
       icon: MessageSquare,
       path: "/chat",
       gradient: "from-pink-500 to-rose-500",
@@ -77,6 +84,7 @@ const Dashboard = () => {
     {
       title: "Post a Job",
       description: "Create compelling job postings with AI-powered optimization and market insights",
+      tooltip: "Write job descriptions that get analyzed for market fit and candidate appeal",
       icon: Briefcase,
       path: "/job-post",
       gradient: "from-red-500 to-pink-500"
@@ -135,7 +143,7 @@ const Dashboard = () => {
                     </div>
                   )}
                   <Card
-                    className={`group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
+                    className={`group relative h-full flex flex-col overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer bg-white ${
                       tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                     onClick={() => !tool.disabled && navigate(tool.path)}
@@ -149,11 +157,11 @@ const Dashboard = () => {
                 <tool.icon className="h-6 w-6 text-gray-600 group-hover:text-gray-800 transition-colors duration-300" />
               </div>
 
-              <CardHeader className="pb-6 pt-6 pr-16 sm:pr-20">
-                <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-[#8B5CF6] transition-colors duration-300 mb-3">
+              <CardHeader className="flex-1 flex flex-col pb-6 pt-6 pr-16 sm:pr-20">
+                <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-[#8B5CF6] transition-colors duration-300 mb-3">
                   {tool.title}
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-sm leading-relaxed mb-4">
+                <CardDescription className="text-gray-600 text-sm leading-relaxed flex-1">
                   {tool.description}
                 </CardDescription>
                 
@@ -176,8 +184,8 @@ const Dashboard = () => {
                   </Card>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <p className="text-sm">{tool.description}</p>
+              <TooltipContent side="top" className="max-w-xs bg-gray-900 text-white px-4 py-2">
+                <p className="text-sm">{tool.tooltip || tool.description}</p>
               </TooltipContent>
             </Tooltip>
           ))}
