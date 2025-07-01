@@ -27,7 +27,7 @@ const LandingPage = () => {
               <img 
                 src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
                 alt="Apply" 
-                className="h-8 w-auto"
+                className="h-10 w-auto"
               />
             </div>
             <nav className="flex items-center gap-6">
@@ -48,7 +48,7 @@ const LandingPage = () => {
           <img 
             src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
             alt="Apply" 
-            className="h-16 sm:h-20 w-auto mx-auto mb-4 sm:mb-8"
+            className="h-24 sm:h-32 w-auto mx-auto mb-4 sm:mb-8"
           />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
             Hi, welcome to Apply...
