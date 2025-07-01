@@ -10,7 +10,8 @@ import {
   Clock,
   Sparkles,
   Bot,
-  Users
+  Users,
+  Link2
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,14 @@ const Dashboard = () => {
       icon: Briefcase,
       path: "/job-post",
       gradient: "from-red-500 to-pink-500"
+    },
+    {
+      title: "Integrations",
+      description: "Connect your existing tools to transform recruitment with unified access to 20+ platforms",
+      tooltip: "Browse and connect ATS, HRIS, and sourcing integrations",
+      icon: Link2,
+      path: "/integrations",
+      gradient: "from-teal-500 to-cyan-500"
     }
   ];
 

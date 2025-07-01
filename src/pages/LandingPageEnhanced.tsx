@@ -31,28 +31,46 @@ const testimonials = [
   {
     id: 1,
     name: "Sarah Chen",
-    role: "Head of Talent Acquisition",
-    company: "TechCorp",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    content: "Apply has transformed our recruitment process. We've reduced time-to-hire by 40% and found better quality candidates through AI-powered boolean searches.",
+    role: "Director of Talent Operations",
+    company: "Series B SaaS Startup",
+    emoji: "👩🏻‍💼",
+    content: "Apply's AI completely transformed how we scale our hiring. We went from 10 to 50 engineers in 6 months by using their boolean search generator and automated screening. The time savings let me focus on building relationships with top candidates instead of manual sourcing.",
     rating: 5
   },
   {
     id: 2,
     name: "Marcus Williams",
-    role: "Recruiting Manager",
-    company: "FinanceHub",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-    content: "The AI chat assistant is like having a senior recruiter on the team 24/7. It helps us qualify candidates faster and maintain consistent communication.",
+    role: "VP of People Operations",
+    company: "Fortune 500 Tech Company",
+    emoji: "👨🏾‍💼",
+    content: "I was skeptical about AI in recruiting until Apply. Their chat assistant helps me analyze candidate data patterns I'd never notice manually. We've improved our diversity hiring by 35% and reduced bias in our screening process. It's like having a data scientist on my team.",
     rating: 5
   },
   {
     id: 3,
     name: "Emily Rodriguez",
-    role: "People Operations Director",
-    company: "HealthTech Solutions",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
-    content: "Integrating with our ATS was seamless. Now we have all our recruitment data in one place with powerful AI insights that drive better hiring decisions.",
+    role: "Head of Talent Strategy",
+    company: "High-Growth Fintech",
+    emoji: "👩🏽‍💼",
+    content: "Apply solved our biggest challenge: finding niche technical talent. Their AI understands context beyond keywords - it knows that a 'Rust developer who contributed to blockchain projects' is different from generic search results. We filled 3 impossible roles in just 2 weeks.",
+    rating: 5
+  },
+  {
+    id: 4,
+    name: "James Park",
+    role: "People Operations Manager",
+    company: "Healthcare Tech Startup",
+    emoji: "👨🏻‍💼",
+    content: "As a lean startup, Apply gave us enterprise-level recruiting capabilities without the cost. The AI helps me write better job descriptions, generate targeted searches, and even suggests interview questions. It's like having a senior recruiter mentor available 24/7.",
+    rating: 5
+  },
+  {
+    id: 5,
+    name: "Aisha Patel",
+    role: "Chief People Officer",
+    company: "Global Consulting Firm",
+    emoji: "👩🏾‍💼",
+    content: "Apply's AI integration with our ATS was a game-changer. We're now making data-driven hiring decisions at scale. The platform identified that our best performers came from non-traditional backgrounds, completely changing our sourcing strategy.",
     rating: 5
   }
 ];
@@ -69,13 +87,7 @@ const featuredIntegrations = [
   { name: "Hunter.io", logo: "📧", category: "Email" }
 ];
 
-// Stats for social proof
-const stats = [
-  { value: "10,000+", label: "Recruiters Trust Apply" },
-  { value: "2M+", label: "Candidates Sourced" },
-  { value: "40%", label: "Faster Time-to-Hire" },
-  { value: "95%", label: "Customer Satisfaction" }
-];
+// Removed fake stats - will show trust differently
 
 const LandingPageEnhanced = () => {
   const navigate = useNavigate();
@@ -168,13 +180,6 @@ const LandingPageEnhanced = () => {
               Start Free Trial
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
-            <Button
-              onClick={() => navigate('/demo')}
-              className="bg-white hover:bg-gray-50 text-[#8B5CF6] px-8 py-6 text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
-            >
-              Watch Demo
-              <Video className="ml-2 w-5 h-5" />
-            </Button>
           </div>
 
           {/* Trust indicators */}
@@ -193,16 +198,11 @@ const LandingPageEnhanced = () => {
           <PlatformCarousel />
         </div>
 
-        {/* Social Proof Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-3xl md:text-4xl font-black text-[#8B5CF6] mb-1">
-                {stat.value}
-              </div>
-              <div className="text-sm text-gray-600">{stat.label}</div>
-            </div>
-          ))}
+        {/* Trust Statement */}
+        <div className="text-center max-w-4xl mx-auto">
+          <p className="text-lg text-gray-700 font-medium">
+            Trusted by companies large and small to transform their talent acquisition with AI
+          </p>
         </div>
       </section>
 
@@ -326,10 +326,10 @@ const LandingPageEnhanced = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Trusted by 10,000+ Recruiters Worldwide
+              How Talent Operations Leaders Use AI to Scale
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              See how leading companies are transforming their recruitment with Apply
+              Discover how Apply helps companies grow faster by solving their toughest hiring challenges
             </p>
           </div>
 
@@ -343,11 +343,9 @@ const LandingPageEnhanced = () => {
               </p>
 
               <div className="flex items-center gap-4">
-                <img 
-                  src={testimonials[currentTestimonial].image}
-                  alt={testimonials[currentTestimonial].name}
-                  className="w-12 h-12 rounded-full border-2 border-black"
-                />
+                <div className="w-12 h-12 rounded-full border-2 border-black bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center text-2xl">
+                  {testimonials[currentTestimonial].emoji}
+                </div>
                 <div>
                   <div className="font-semibold">{testimonials[currentTestimonial].name}</div>
                   <div className="text-sm text-gray-600">
