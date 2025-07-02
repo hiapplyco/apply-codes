@@ -41,9 +41,22 @@ export const useAuthSession = () => {
     if (initialized.current) return;
     
     const initializeAuth = async () => {
+      // Set a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Auth initialization timeout - proceeding without session');
+        setState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          session: null,
+          isAuthenticated: false
+        }));
+      }, 5000); // 5 second timeout
+
       try {
         console.log('Initializing auth session...');
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        clearTimeout(timeoutId);
         
         if (error) {
           console.error('Error getting initial session:', error);
@@ -60,6 +73,7 @@ export const useAuthSession = () => {
         initialized.current = true;
         handleSessionChange(initialSession);
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Error initializing auth:', error);
         setState(prev => ({ 
           ...prev, 
