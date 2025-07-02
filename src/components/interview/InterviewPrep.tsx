@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, FileText, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { UploadRequirementsButton } from '@/components/url-scraper';
 
 interface Question {
   question: string;
@@ -216,13 +217,28 @@ export function InterviewPrep({ onInterviewStart }: InterviewPrepProps = {}) {
     <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Interview Preparation Room</h2>
       <div className="mb-4 space-y-4">
-        <Textarea
-          placeholder="Paste job description, resume, or any other relevant context here..."
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          className="min-h-[200px]"
-          rows={10}
-        />
+        <div className="flex gap-2 items-start">
+          <Textarea
+            placeholder="Paste job description, resume, or any other relevant context here..."
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            className="min-h-[200px] flex-1"
+            rows={10}
+          />
+          <UploadRequirementsButton
+            onScrapedContent={(scrapedData) => {
+              setContext(prev => 
+                prev 
+                  ? `${prev}\n\n--- Content from ${scrapedData.url} ---\n${scrapedData.text}`
+                  : scrapedData.text
+              );
+              toast.success('Successfully imported content from URL');
+            }}
+            context="interview"
+            size="sm"
+            variant="inline"
+          />
+        </div>
         
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
           <input

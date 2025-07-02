@@ -20,14 +20,28 @@ export function useJobEditor(jobId: string) {
           throw new Error('Invalid job ID');
         }
 
-        const { data, error } = await supabase
+        const { data: jobData, error: jobError } = await supabase
           .from('jobs')
           .select('*')
           .eq('id', jobIdNumber)
           .single();
 
-        if (error) throw error;
-        setJob(data);
+        if (jobError) throw jobError;
+
+        // Also fetch enhanced content from agent_outputs
+        const { data: agentData } = await supabase
+          .from('agent_outputs')
+          .select('enhanced_description')
+          .eq('job_id', jobIdNumber)
+          .single();
+
+        // Merge the data
+        const mergedData = {
+          ...jobData,
+          enhanced_content: agentData?.enhanced_description || null
+        };
+
+        setJob(mergedData);
       } catch (err) {
         console.error('Error fetching job:', err);
         setError(err);

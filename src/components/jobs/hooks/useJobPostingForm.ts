@@ -27,8 +27,26 @@ interface JobData {
 }
 
 export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFormProps) {
+  const STORAGE_KEY = 'jobPostingFormData';
+  
+  // Initialize form state with sessionStorage data if available
+  const getInitialContent = () => {
+    if (!jobId) {
+      const savedData = sessionStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          return parsed.content || "";
+        } catch {
+          return "";
+        }
+      }
+    }
+    return "";
+  };
+  
   const [formState, setFormState] = useState<FormState>({
-    content: "",
+    content: getInitialContent(),
     isSubmitting: false,
     isLoading: !!jobId, // Set initial loading state to true if we're editing an existing job
     error: null
@@ -109,6 +127,10 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
 
   const handleContentChange = (value: string) => {
     setFormState(prev => ({ ...prev, content: value }));
+    // Save to sessionStorage for persistence
+    if (!jobId) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ content: value }));
+    }
   };
 
   const validateSubmission = () => {
@@ -181,6 +203,49 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     } catch (error) {
       console.error("Error generating boolean search:", error);
       // Return null instead of throwing to prevent job save failure
+      return null;
+    }
+  };
+
+  const enhanceJobPosting = async (newJobId: number) => {
+    console.log("Enhancing job posting...");
+    try {
+      const { data: enhancedData, error: enhanceError } = await supabase.functions
+        .invoke('enhance-job-posting', {
+          body: { 
+            content: formState.content,
+            jobId: newJobId
+          }
+        });
+
+      if (enhanceError) {
+        console.error("Enhancement error:", enhanceError);
+        throw enhanceError;
+      }
+
+      console.log("Enhancement completed:", enhancedData);
+      
+      if (enhancedData?.content) {
+        // Store the enhanced content in agent_outputs table
+        const { error: insertError } = await supabase
+          .from("agent_outputs")
+          .upsert({ 
+            job_id: newJobId,
+            enhanced_description: enhancedData.content,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'job_id'
+          });
+
+        if (insertError) {
+          console.error("Error storing enhanced content:", insertError);
+        }
+      }
+
+      return enhancedData;
+    } catch (error) {
+      console.error("Error during enhancement:", error);
       return null;
     }
   };
@@ -275,6 +340,11 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
         console.error("Boolean search generation failed, but job was saved:", booleanError);
       }
 
+      // Generate enhanced content first (for the editor)
+      const enhancementPromise = enhanceJobPosting(newJobId).catch(error => {
+        console.warn("Enhancement failed, but job was saved:", error);
+      });
+
       // Then analyze the job posting (slower operation, don't block on it)
       const analysisPromise = analyzeJobPosting(newJobId).then(result => {
         analysisResult = result;
@@ -289,6 +359,9 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
 
       // If we're creating a new job and have a success callback
       if (!jobId && onSuccess) {
+        // Clear the sessionStorage after successful submission
+        sessionStorage.removeItem(STORAGE_KEY);
+        
         // Always call the onSuccess callback with available data
         onSuccess({
           id: newJobId,

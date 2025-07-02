@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Users, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Users, FileText, Loader2, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 interface JobEditorHeaderProps {
   onSourceCandidates: () => void;
@@ -10,6 +11,7 @@ interface JobEditorHeaderProps {
   isSourceLoading: boolean;
   isPostLoading: boolean;
   jobId: number;
+  jobContent?: string;
 }
 
 export function JobEditorHeader({ 
@@ -22,7 +24,8 @@ export function JobEditorHeader({
   const navigate = useNavigate();
   
   const handleNavigateBack = () => {
-    navigate(-1);
+    // Navigate back to content creation page
+    navigate('/content-creation');
   };
 
   const handleGoToSourcing = () => {
@@ -31,6 +34,13 @@ export function JobEditorHeader({
         jobId,
         autoRun: true
       } 
+    });
+  };
+
+  const handlePublish = () => {
+    toast({
+      title: "Coming Soon",
+      description: "Job publishing functionality will be available soon!",
     });
   };
 
@@ -48,6 +58,14 @@ export function JobEditorHeader({
         </Button>
         
         <div className="flex gap-4">
+          <Button 
+            onClick={handlePublish}
+            className="flex items-center gap-2 bg-[#8B5CF6] text-white hover:bg-[#7C3AED] border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
+          >
+            <Send className="h-4 w-4" />
+            Publish
+          </Button>
+          
           <Button 
             variant="outline" 
             onClick={handleGoToSourcing}

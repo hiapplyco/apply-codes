@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "apply-codebase": {
+      "command": "node",
+      "args": ["/Users/jms/Development/apply-codes/mcp-server/dist/index.js"],
+      "cwd": "/Users/jms/Development/apply-codes"
+    }
+  }
+}

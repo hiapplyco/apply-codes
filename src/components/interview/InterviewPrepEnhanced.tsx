@@ -11,6 +11,7 @@ import { FirecrawlService } from '@/utils/FirecrawlService';
 import { supabase } from '@/integrations/supabase/client';
 import { InterviewContext, CompanyRubric, InterviewFramework } from '@/types/interview';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UploadRequirementsButton } from '@/components/url-scraper';
 
 const interviewFrameworks: InterviewFramework[] = [
   {
@@ -280,13 +281,28 @@ export function InterviewPrepEnhanced({ onPrepComplete }: InterviewPrepEnhancedP
 
           <div>
             <label className="block text-sm font-medium mb-2">Job Description</label>
-            <Textarea
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Paste the job description here..."
-              rows={6}
-              className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-            />
+            <div className="flex gap-2 items-start">
+              <Textarea
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the job description here..."
+                rows={6}
+                className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex-1"
+              />
+              <UploadRequirementsButton
+                onScrapedContent={(scrapedData) => {
+                  setJobDescription(prev => 
+                    prev 
+                      ? `${prev}\n\n--- Content from ${scrapedData.url} ---\n${scrapedData.text}`
+                      : scrapedData.text
+                  );
+                  toast.success('Successfully imported job description from URL');
+                }}
+                context="interview"
+                size="sm"
+                variant="inline"
+              />
+            </div>
           </div>
 
           <div>

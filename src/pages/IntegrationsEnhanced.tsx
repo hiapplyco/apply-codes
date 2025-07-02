@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Check, 
@@ -747,6 +748,7 @@ const getStatusColor = (status: string) => {
 };
 
 export default function IntegrationsEnhanced() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'Unified' | 'Free' | 'CRM'>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'Enterprise' | 'Mid-Market' | 'SMB'>('all');
@@ -799,9 +801,56 @@ export default function IntegrationsEnhanced() {
     return { connected, available, enterprise, free };
   }, []);
 
+  // Handle Get Started click with fast auth check
+  const handleGetStarted = async () => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-orange-50 to-white">
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white">
+      {/* Header - same as landing page */}
+      <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b-2 border-black z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+              <img 
+                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
+                alt="Apply - AI-Powered Recruitment Platform" 
+                className="h-10 w-auto"
+              />
+            </div>
+            <nav className="hidden md:flex items-center gap-6">
+              <button
+                onClick={() => navigate('/')}
+                className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+              >
+                Home
+              </button>
+              <button
+                onClick={() => navigate('/pricing')}
+                className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+              >
+                Pricing
+              </button>
+              <Button
+                onClick={handleGetStarted}
+                className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+              >
+                Get Started
+              </Button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      <div className="pt-24 p-4 md:p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-gray-900 mb-2">Integration Marketplace</h1>

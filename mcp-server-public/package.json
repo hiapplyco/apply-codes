@@ -1,0 +1,47 @@
+{
+  "name": "apply-recruitment-tools",
+  "version": "1.0.0",
+  "description": "MCP server providing AI-powered recruitment tools for job posting creation, candidate analysis, and talent sourcing",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "apply-recruitment-tools": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "npx @modelcontextprotocol/cli test",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "recruitment",
+    "hiring",
+    "talent",
+    "job-posting",
+    "boolean-search",
+    "hr-tech"
+  ],
+  "author": "Apply Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hiapplyco/apply-recruitment-tools-mcp"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ]
+}

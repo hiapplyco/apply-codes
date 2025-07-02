@@ -1,0 +1,34 @@
+{
+  "name": "apply-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Apply AI-powered recruitment platform codebase",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "apply-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "npx @modelcontextprotocol/cli test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "recruitment",
+    "codebase"
+  ],
+  "author": "Apply Team",
+  "license": "MIT"
+}

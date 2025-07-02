@@ -40,7 +40,10 @@ export function JobEditorContent({ initialContent }: JobEditorContentProps) {
     if (editor) {
       let content = '';
       
-      if (initialContent?.analysis) {
+      if (initialContent?.enhanced_content) {
+        // We have enhanced content from AI, use it directly
+        content = initialContent.enhanced_content;
+      } else if (initialContent?.analysis) {
         // We have analysis data, format it
         content = formatAnalysisContent(initialContent.analysis);
       } else if (initialContent?.content) {
