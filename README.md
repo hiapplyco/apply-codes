@@ -104,7 +104,7 @@ apply-codes/
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Supabase (PostgreSQL, Edge Functions, Auth)
-- **AI**: Google Gemini 2.0 Flash
+- **AI**: Google Gemini 2.5 Flash
 - **UI Library**: shadcn/ui with custom brutalist design system
 - **State Management**: React Context + Tanstack Query
 - **Deployment**: Vercel (Frontend), Supabase (Backend)

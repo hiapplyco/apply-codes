@@ -3,7 +3,7 @@ import { PromptTemplate } from '../types';
 
 export const linkedinSearchPrompt: PromptTemplate = {
   name: "LinkedIn X-Ray Search",
-  version: "3.1.0", // Updated for Gemini 2.0 Flash
+  version: "3.1.0", // Updated for Gemini 2.5 Flash
   description: "Generates highly optimized LinkedIn X-Ray search strings using advanced AI reasoning for finding companies or candidates on LinkedIn. ONLY boolean string output.",
   parameters: ["content", "searchType", "companyName", "metroArea"],
   template: `{{#if searchType === 'companies'}}
@@ -57,7 +57,7 @@ Based on this description, construct a highly targeted boolean search string usi
 Output ONLY the boolean search string. No explanations or additional text.
 
 {{else}}
-You are a Boolean Blackbelt for general LinkedIn candidate sourcing, enhanced with Gemini 2.0 Flash reasoning capabilities. Your ONLY output is a highly effective boolean search string. Nothing else.
+You are a Boolean Blackbelt for general LinkedIn candidate sourcing, enhanced with Gemini 2.5 Flash reasoning capabilities. Your ONLY output is a highly effective boolean search string. Nothing else.
 
 Analyze the following description using advanced semantic understanding to identify the ideal candidate profile for sourcing candidates on LinkedIn using X-Ray search (site:linkedin.com/in/).
 

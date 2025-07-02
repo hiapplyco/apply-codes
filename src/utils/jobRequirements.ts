@@ -29,7 +29,7 @@ export const processJobRequirements = async (
     }
     
     // Otherwise use the regular process-job-requirements function for search string generation
-    // This ensures we're using the Gemini 2.0 Flash model from the Supabase edge function
+    // This ensures we're using the Gemini 2.5 Flash model from the Supabase edge function
     console.log('Calling process-job-requirements function with searchType:', searchType);
     const { data, error } = await supabase.functions.invoke('process-job-requirements', {
       body: { 

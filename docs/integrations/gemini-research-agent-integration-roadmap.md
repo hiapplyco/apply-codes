@@ -12,7 +12,7 @@ Supabase Edge Function (Proxy)
     ↓
 Gemini Research Agent API (Python/LangGraph)
     ↓
-Google Search API + Gemini LLM
+Google Search API + Gemini 2.5 Flash
 ```
 
 ## Phase 1: Infrastructure Setup (Week 1)

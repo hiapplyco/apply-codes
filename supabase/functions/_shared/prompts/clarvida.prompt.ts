@@ -3,8 +3,8 @@ import { PromptTemplate } from './types.ts';
 
 export const clarvidaPrompt: PromptTemplate = {
   name: 'clarvida-comprehensive-analysis',
-  version: '3.1.0', // Updated for Gemini 2.0 Flash
-  description: 'Comprehensive job analysis using Gemini 2.0 Flash advanced reasoning for talent acquisition insights',
+  version: '3.1.0', // Updated for Gemini 2.5 Flash
+  description: 'Comprehensive job analysis using Gemini 2.5 Flash advanced reasoning for talent acquisition insights',
   template: `You are an expert talent acquisition analyst powered by advanced AI reasoning capabilities. Analyze the job description below and provide a comprehensive JSON response with deep insights and actionable recommendations.
 
 Job Description:

@@ -100,7 +100,7 @@ serve(async (req) => {
         response,
         metadata: {
           systemPrompt,
-          model: 'gemini-1.5-flash'
+          model: 'gemini-2.5-flash'
         }
       });
     }
@@ -127,7 +127,7 @@ serve(async (req) => {
       response,
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       metadata: {
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         timestamp: new Date().toISOString(),
         intentAnalysis,
         agentOutputId

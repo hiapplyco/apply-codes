@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 /**
- * Creates and returns a Gemini model instance using 2.0 Flash
+ * Creates and returns a Gemini model instance using 2.5 Flash
  */
 function getGeminiModel() {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
@@ -24,14 +24,14 @@ function getGeminiModel() {
 }
 
 /**
- * Generates content using the Gemini 2.0 Flash API
+ * Generates content using the Gemini 2.5 Flash API
  */
 async function generateContent(promptText: string) {
-  console.log("Sending prompt to Gemini 2.0 Flash API");
+  console.log("Sending prompt to Gemini 2.5 Flash API");
   const model = getGeminiModel();
   const result = await model.generateContent(promptText);
   const responseText = result.response.text();
-  console.log("Received response from Gemini 2.0 Flash API");
+  console.log("Received response from Gemini 2.5 Flash API");
   return responseText;
 }
 

@@ -197,7 +197,7 @@ Create a seamless integration platform that connects talent sourcing, enrichment
 **Purpose**: AI-powered web research and analysis  
 **Architecture**:
 ```
-Apply.codes → Supabase Edge Function → Gemini Research API → Google Search + Gemini LLM
+Apply.codes → Supabase Edge Function → Gemini Research API → Google Search + Gemini 2.5 Flash
 ```
 
 **Key Features**:

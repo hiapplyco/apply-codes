@@ -22,7 +22,7 @@ export function getGeminiModel() {
  * @returns The generated content
  */
 export async function generateContent(promptText: string) {
-  console.log("Sending prompt to Gemini 2.0 Flash API");
+  console.log("Sending prompt to Gemini 2.5 Flash API");
   const model = getGeminiModel();
   
   // Add timeout to prevent hanging
@@ -33,7 +33,7 @@ export async function generateContent(promptText: string) {
     const result = await model.generateContent(promptText);
     clearTimeout(timeoutId);
     const responseText = result.response.text();
-    console.log("Received response from Gemini 2.0 Flash API:", responseText);
+    console.log("Received response from Gemini 2.5 Flash API:", responseText);
     return responseText;
   } catch (error) {
     clearTimeout(timeoutId);
