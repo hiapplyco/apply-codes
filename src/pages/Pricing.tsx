@@ -12,12 +12,18 @@ const Pricing = () => {
       period: 'month',
       description: 'Perfect for individual recruiters and small teams',
       features: [
-        '100 AI searches per month',
-        'Basic boolean search generation',
-        'LinkedIn & Indeed integration',
-        'Save up to 500 candidates',
-        'Basic contact enrichment',
-        'Email support',
+        { text: '100 AI searches per month', included: true },
+        { text: 'Basic boolean search generation', included: true },
+        { text: 'LinkedIn & Indeed integration', included: true },
+        { text: 'Save up to 500 candidates', included: true },
+        { text: 'Basic contact enrichment (50 credits)', included: true },
+        { text: '5 projects', included: true },
+        { text: 'Email support', included: true },
+        { text: 'Search history & analytics', included: true },
+        { text: 'AI chat assistant', included: false },
+        { text: 'Advanced platform integrations', included: false },
+        { text: 'Team collaboration', included: false },
+        { text: 'Interview tools & transcription', included: false },
       ],
       popular: false,
       cta: 'Start Free Trial',
@@ -28,15 +34,18 @@ const Pricing = () => {
       period: 'month',
       description: 'Ideal for growing recruiting teams',
       features: [
-        'Unlimited AI searches',
-        'Advanced boolean optimization',
-        'All platform integrations',
-        'Unlimited candidate storage',
-        'Full contact enrichment',
-        'AI chat assistant',
-        'Projects & collaboration',
-        'Priority support',
-        'Custom AI agents',
+        { text: 'Unlimited AI searches', included: true },
+        { text: 'Advanced boolean optimization', included: true },
+        { text: 'All platform integrations (10+ ATS/HRIS)', included: true },
+        { text: 'Unlimited candidate storage', included: true },
+        { text: 'Full contact enrichment (500 credits)', included: true },
+        { text: 'AI chat assistant with context', included: true },
+        { text: 'Unlimited projects & collaboration', included: true },
+        { text: 'Interview tools & transcription', included: true },
+        { text: 'Advanced analytics & reporting', included: true },
+        { text: 'Priority support', included: true },
+        { text: 'Team features (up to 10 users)', included: true },
+        { text: 'Custom AI agent development', included: false },
       ],
       popular: true,
       cta: 'Start Free Trial',
@@ -47,15 +56,18 @@ const Pricing = () => {
       period: '',
       description: 'For large teams with advanced needs',
       features: [
-        'Everything in Professional',
-        'Dedicated AI agent customization',
-        'API access',
-        'SSO & advanced security',
-        'Custom integrations',
-        'Dedicated success manager',
-        'SLA guarantees',
-        'Training & onboarding',
-        'White-label options',
+        { text: 'Everything in Professional', included: true },
+        { text: 'Custom AI agent development', included: true },
+        { text: 'Unlimited contact enrichment', included: true },
+        { text: 'API access with custom rate limits', included: true },
+        { text: 'SSO & advanced security', included: true },
+        { text: 'Custom integrations & development', included: true },
+        { text: 'Dedicated success manager', included: true },
+        { text: 'SLA guarantees & uptime', included: true },
+        { text: 'Training & onboarding', included: true },
+        { text: 'White-label options', included: true },
+        { text: 'Unlimited team members', included: true },
+        { text: 'On-premise deployment options', included: true },
       ],
       popular: false,
       cta: 'Contact Sales',
@@ -139,11 +151,8 @@ const Pricing = () => {
                     ) : (
                       <X className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     )}
-                    <span className={`${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                    <span className={`${feature.included ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
                       {feature.text}
-                      {feature.limit && feature.included && (
-                        <span className="text-gray-500 ml-1">({feature.limit})</span>
-                      )}
                     </span>
                   </li>
                 ))}
