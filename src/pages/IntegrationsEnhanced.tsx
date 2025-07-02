@@ -855,7 +855,7 @@ export default function IntegrationsEnhanced() {
         </div>
       </header>
 
-      <div className="pt-24 p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="pt-32 p-4 md:p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-gray-900 mb-2">Integration Marketplace</h1>
