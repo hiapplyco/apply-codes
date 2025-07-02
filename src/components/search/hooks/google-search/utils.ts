@@ -36,6 +36,52 @@ export const prepareSearchString = (searchString: string, searchType: string): s
 };
 
 /**
+ * Extracts years of experience from a snippet
+ */
+export const extractYearsOfExperience = (snippet: string): string => {
+  if (!snippet) return '';
+  
+  // Patterns for extracting years of experience
+  const experiencePatterns = [
+    /(\d+)\+?\s*years?\s+of\s+experience/gi,
+    /(\d+)\+?\s*yrs?\s+of\s+experience/gi,
+    /(\d+)\+?\s*years?\s+experience/gi,
+    /(\d+)\+?\s*yrs?\s+experience/gi,
+    /(\d+)\+?\s*years?\s+in\s+/gi,
+    /over\s+(\d+)\s+years?/gi,
+    /more\s+than\s+(\d+)\s+years?/gi,
+  ];
+  
+  for (const pattern of experiencePatterns) {
+    const match = snippet.match(pattern);
+    if (match && match[1]) {
+      const years = match[1];
+      const hasPlus = match[0].includes('+');
+      return hasPlus ? `${years}+ years` : `${years} years`;
+    }
+  }
+  
+  // Check for seniority level indicators as fallback
+  const seniorityIndicators: Record<string, string> = {
+    'senior': '5+ years',
+    'lead': '7+ years', 
+    'principal': '10+ years',
+    'staff': '8+ years',
+    'experienced': '5+ years',
+    'seasoned': '7+ years'
+  };
+  
+  const lowerSnippet = snippet.toLowerCase();
+  for (const [indicator, experience] of Object.entries(seniorityIndicators)) {
+    if (lowerSnippet.includes(indicator)) {
+      return experience;
+    }
+  }
+  
+  return '';
+};
+
+/**
  * Extracts location information from a snippet
  */
 export const extractLocationFromSnippet = (snippet: string): string => {

@@ -1,7 +1,6 @@
 import { memo, useCallback } from "react";
 import { 
   Home, 
-  Video, 
   Theater, 
   PhoneCall, 
   MessageSquare, 
@@ -34,7 +33,6 @@ const menuItems: MenuItem[] = [
   { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Sourcing', path: '/sourcing', icon: Search },
   { title: 'Search History', path: '/search-history', icon: Clock },
-  { title: 'Screening Room', path: '/screening-room', icon: Video },
   { title: 'Meeting', path: '/meeting', icon: Users },
   { title: 'Integrations', path: '/integrations', icon: Plug },
   { title: 'Profile', path: '/profile', icon: User },

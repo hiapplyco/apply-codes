@@ -36,6 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { NoContactInfoDialog } from './NoContactInfoDialog';
 import { EmailOutreachForm } from '@/components/email/EmailOutreachForm';
+import { extractYearsOfExperience } from '../hooks/google-search/utils';
 
 interface ContactInfo {
   work_email?: string;
@@ -216,16 +217,19 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                           jobTitle?.toLowerCase().includes('director') ? 'Director' :
                           jobTitle?.toLowerCase().includes('manager') ? 'Manager' : 'Mid-Level';
 
-    return { name, jobTitle, company, location, experience: '', seniorityLevel };
+    // Extract years of experience
+    const experience = extractYearsOfExperience(result.snippet || '');
+    
+    return { name, jobTitle, company, location, experience, seniorityLevel };
   };
 
-  const { name, jobTitle, company, location, seniorityLevel } = extractProfileInfo();
+  const { name, jobTitle, company, location, experience, seniorityLevel } = extractProfileInfo();
 
   // Only show match score if we have actual matching data (future feature)
   // For now, we'll show a profile completeness indicator instead
   const calculateProfileCompleteness = () => {
     let completeness = 0;
-    const fields = [jobTitle, company, location, result.snippet];
+    const fields = [jobTitle, company, location, experience, result.snippet];
     const filledFields = fields.filter(field => field && field.length > 0).length;
     completeness = Math.round((filledFields / fields.length) * 100);
     return completeness;
@@ -367,7 +371,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 </div>
 
                 {/* Title & Company Row */}
-                {(jobTitle || company) && (
+                {(jobTitle || company || experience) && (
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="w-4 h-4 text-gray-500 flex-shrink-0" />
                     <div className="flex items-center gap-2 text-sm text-gray-700 truncate">
@@ -379,7 +383,17 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                               {seniorityLevel}
                             </Badge>
                           )}
+                          {experience && (
+                            <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                              {experience}
+                            </Badge>
+                          )}
                         </>
+                      )}
+                      {!jobTitle && experience && (
+                        <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
+                          {experience}
+                        </Badge>
                       )}
                       {jobTitle && company && <span className="text-gray-400">at</span>}
                       {company && (

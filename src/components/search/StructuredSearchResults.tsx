@@ -11,6 +11,8 @@ import { ContactSearchModal } from './ContactSearchModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProfileCard } from './components/ProfileCard';
 import { SearchSummaryHeader } from './components/SearchSummaryHeader';
+import { SearchFiltersPanel } from './components/SearchFiltersPanel';
+import { useSearchFilters } from './hooks/useSearchFilters';
 
 export interface StructuredSearchResultsProps {
   searchString: string;
@@ -38,6 +40,27 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchModalParams, setSearchModalParams] = useState<{ name?: string; company?: string; location?: string }>({});
   
+  // Filter panel state
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Use search filters hook
+  const {
+    filters,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+    filteredResults,
+    totalFiltered,
+    locationOptions,
+    experienceDistribution
+  } = useSearchFilters(results);
+  
+  // Get paginated filtered results
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * resultsPerPage,
+    currentPage * resultsPerPage
+  );
+  
   // Use the profile enrichment hook
   const { enrichProfile } = useProfileEnrichment();
 
@@ -46,6 +69,13 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
       loadResults(1);
     }
   }, [searchString]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (hasActiveFilters) {
+      setCurrentPage(1);
+    }
+  }, [filters]);
 
   const loadResults = async (page: number) => {
     setIsLoading(true);
@@ -140,8 +170,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   };
 
   const handleFilter = () => {
-    // Mock filter functionality
-    toast.success('Filter functionality will be implemented');
+    setShowFilters(!showFilters);
   };
 
   // Loading state
@@ -188,7 +217,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     <div className="space-y-4">
       {/* Search Summary Header */}
       <SearchSummaryHeader
-        totalResults={totalResults}
+        totalResults={hasActiveFilters ? totalFiltered : totalResults}
         currentPage={currentPage}
         resultsPerPage={resultsPerPage}
         searchQuery={searchString}
@@ -196,9 +225,24 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         onFilter={handleFilter}
       />
 
+      {/* Search Filters Panel */}
+      {showFilters && (
+        <SearchFiltersPanel
+          filters={filters}
+          locationOptions={locationOptions}
+          experienceDistribution={experienceDistribution}
+          onUpdateFilter={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+          totalResults={totalResults}
+          filteredResults={totalFiltered}
+          onClose={() => setShowFilters(false)}
+        />
+      )}
+
       {/* Results Grid */}
       <div className="space-y-3">
-        {results.map((result, index) => (
+        {paginatedResults.map((result, index) => (
           <ProfileCard
             key={`${result.link}-${index}`}
             result={result}
@@ -214,7 +258,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
       </div>
 
       {/* Pagination Controls */}
-      {totalResults > resultsPerPage && (
+      {(hasActiveFilters ? totalFiltered : totalResults) > resultsPerPage && (
         <Card className="p-4 border-2 border-gray-200">
           <div className="flex items-center justify-between">
             <Button
@@ -230,7 +274,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
             
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
-                Page {currentPage} of {Math.ceil(totalResults / resultsPerPage)}
+                Page {currentPage} of {Math.ceil((hasActiveFilters ? totalFiltered : totalResults) / resultsPerPage)}
               </span>
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             </div>
@@ -239,7 +283,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
               variant="outline"
               size="sm"
               onClick={handleNextPage}
-              disabled={currentPage >= Math.ceil(totalResults / resultsPerPage) || isLoading}
+              disabled={currentPage >= Math.ceil((hasActiveFilters ? totalFiltered : totalResults) / resultsPerPage) || isLoading}
               className="border-black hover:bg-gray-100"
             >
               Next
