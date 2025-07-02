@@ -56,7 +56,13 @@ const ContentCreationPage = () => {
 
       if (error) throw error;
       
-      setGeneratedPost(data.post);
+      console.log("Edge function response:", data);
+      
+      if (!data || (!data.post && !data.analysis)) {
+        throw new Error("No content generated from the API");
+      }
+      
+      setGeneratedPost(data.post || "");
       if (data.analysis) {
         setAnalysis(data.analysis);
       }
@@ -155,8 +161,8 @@ const ContentCreationPage = () => {
           {(generatedPost || analysis) && (
             <div className="mt-8">
               <LinkedInPostResults 
-                generatedPost={generatedPost}
-                analysis={analysis}
+                generatedPost={generatedPost || ""}
+                analysis={analysis || ""}
                 activeTab={linkedInActiveTab}
                 onTabChange={setLinkedInActiveTab}
                 isAnalysisOpen={isAnalysisOpen}

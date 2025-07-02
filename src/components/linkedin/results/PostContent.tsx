@@ -8,6 +8,14 @@ interface PostContentProps {
 }
 
 const PostContent = ({ content }: PostContentProps) => {
+  if (!content) {
+    return (
+      <div className="bg-[#F1F0FB] p-4 rounded-lg border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+        <p className="text-gray-500 italic">No content generated yet.</p>
+      </div>
+    );
+  }
+
   const handleDownload = () => {
     try {
       // Create a blob with the content
