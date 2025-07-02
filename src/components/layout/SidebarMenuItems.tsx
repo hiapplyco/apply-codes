@@ -16,28 +16,22 @@ export type MenuItem = {
 // Memoize menu items array to prevent recreation on each render
 export const menuItems: MenuItem[] = [
   { 
-    title: 'Sourcing', 
-    path: '/sourcing', 
-    icon: Search,
-    tooltip: 'Generate powerful boolean searches to find perfect candidates across LinkedIn, Indeed, and other platforms'
-  },
-  { 
-    title: 'Search History', 
-    path: '/search-history', 
-    icon: Clock,
-    tooltip: 'View your search database, saved candidates, and manage recruitment projects'
-  },
-  { 
     title: 'Dashboard', 
     path: '/dashboard', 
     icon: LayoutDashboard,
     tooltip: 'Access all recruitment tools and see your activity overview'
   },
   { 
-    title: 'Screening Room', 
-    path: '/screening-room', 
-    icon: Video,
-    tooltip: 'Conduct AI-assisted video interviews and get instant candidate evaluations'
+    title: 'Chat', 
+    path: '/chat', 
+    icon: MessageSquare,
+    tooltip: 'Your AI recruitment copilot for real-time guidance and task automation'
+  },
+  { 
+    title: 'Sourcing', 
+    path: '/sourcing', 
+    icon: Search,
+    tooltip: 'Generate powerful boolean searches to find perfect candidates across LinkedIn, Indeed, and other platforms'
   },
   { 
     title: 'Meeting', 
@@ -52,16 +46,10 @@ export const menuItems: MenuItem[] = [
     tooltip: 'Generate engaging LinkedIn posts and job postings to attract top talent'
   },
   { 
-    title: 'Chat', 
-    path: '/chat', 
-    icon: MessageSquare,
-    tooltip: 'Your AI recruitment copilot for real-time guidance and task automation'
-  },
-  { 
     title: 'Profile', 
     path: '/profile', 
     icon: User,
-    tooltip: 'Manage your account settings and view usage analytics'
+    tooltip: 'Manage your account settings, view usage analytics, and search history'
   },
 ];
 

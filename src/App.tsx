@@ -19,7 +19,6 @@ import { JobPostingPage } from "@/components/jobs/JobPostingPage";
 import { JobEditorPage } from "@/components/jobs/JobEditorPage";
 import ContentCreationPage from "@/pages/ContentCreationPage";
 import Sourcing from "@/pages/Sourcing";
-import ScreeningRoom from "@/pages/ScreeningRoom";
 import Chat from "@/pages/Chat";
 import Report from "@/pages/Report";
 import Clarvida from "@/pages/Clarvida";
@@ -70,16 +69,16 @@ function App() {
                 <Route path="/job-post" element={<JobPostingPage />} />
                 <Route path="/job-editor/:id" element={<JobEditorPage />} />
                 
-                {/* Redirect old linkedin-post route to content-creation */}
+                {/* Redirect old routes */}
                 <Route path="/linkedin-post" element={<Navigate to="/content-creation" replace />} />
+                <Route path="/screening-room" element={<Navigate to="/meeting" replace />} />
+                <Route path="/search-history" element={<Navigate to="/profile" replace />} />
                 
                 <Route path="/content-creation" element={<ContentCreationPage />} />
                 <Route path="/sourcing" element={<Sourcing />} />
-                <Route path="/screening-room" element={<ScreeningRoom />} />
                 <Route path="/meeting" element={<Meeting />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/report/:jobId" element={<Report />} />
-                <Route path="/search-history" element={<SearchHistory />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/profile" element={<Profile />} />
               </Route>

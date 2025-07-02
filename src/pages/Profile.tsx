@@ -13,7 +13,15 @@ import {
   Settings,
   LogOut,
   Edit3,
-  Camera
+  Camera,
+  Clock,
+  Hash,
+  Briefcase,
+  Trash2,
+  MoreVertical,
+  Plus,
+  Filter,
+  ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,12 +29,20 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format, startOfWeek, startOfMonth, formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
 interface ProfileData {
   email: string;
@@ -49,477 +65,1008 @@ interface UserStats {
   }>;
   searchesThisWeek: number;
   searchesThisMonth: number;
-  topPlatforms: Array<{ platform: string; count: number }>;
 }
 
-const Profile = () => {
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  candidates_count: number;
+  created_at: string;
+  updated_at: string;
+  is_archived: boolean;
+}
+
+interface SearchHistoryItem {
+  id: string;
+  search_query: string;
+  boolean_query: string;
+  platform: string;
+  results_count: number;
+  created_at: string;
+  is_favorite: boolean;
+  tags: string[];
+  project_id: string | null;
+  project?: Project;
+}
+
+export default function Profile() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const [editingProfile, setEditingProfile] = useState({
-    full_name: "",
-    avatar_url: ""
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingName, setEditingName] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  
+  // Search History states
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [newProject, setNewProject] = useState({
+    name: "",
+    description: "",
+    color: "#8B5CF6",
+    icon: "folder"
   });
 
+  const projectIcons = [
+    { name: "folder", icon: Folder },
+    { name: "briefcase", icon: Briefcase },
+    { name: "users", icon: Users },
+  ];
+
+  const projectColors = [
+    "#8B5CF6", // Purple
+    "#D946EF", // Pink
+    "#10B981", // Green
+    "#F59E0B", // Orange
+    "#3B82F6", // Blue
+    "#EF4444", // Red
+  ];
+
   useEffect(() => {
-    if (user) {
-      fetchProfileData();
-      fetchUserStats();
-    }
+    fetchProfileData();
+    fetchUserStats();
+    fetchSearchHistory();
+    fetchProjects();
   }, [user]);
 
   const fetchProfileData = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user?.id)
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
         .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
-        setProfileData(data);
-        setEditingProfile({
-          full_name: data.full_name || "",
-          avatar_url: data.avatar_url || ""
-        });
-      } else {
-        // Create profile if it doesn't exist
-        const newProfile = {
-          id: user?.id,
-          email: user?.email || "",
-          full_name: user?.user_metadata?.full_name || null,
-          avatar_url: user?.user_metadata?.avatar_url || null
-        };
-
-        const { data: createdProfile, error: createError } = await supabase
-          .from("profiles")
-          .insert(newProfile)
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        setProfileData(createdProfile);
-      }
+      
+      if (error) throw error;
+      setProfileData(data);
+      setEditingName(data.full_name || "");
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error('Error fetching profile:', error);
       toast.error("Failed to load profile data");
     }
   };
 
   const fetchUserStats = async () => {
+    if (!user) return;
+    
     try {
-      setLoading(true);
-
-      // Fetch total searches
+      // Fetch search history count
       const { count: searchCount } = await supabase
-        .from("search_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id);
-
-      // Fetch searches this week
+        .from('search_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      // Fetch saved candidates count
+      const { count: candidatesCount } = await supabase
+        .from('saved_candidates')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      // Fetch projects count
+      const { count: projectsCount } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      // Fetch favorite searches count
+      const { count: favoritesCount } = await supabase
+        .from('search_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_favorite', true);
+      
+      // Fetch recent searches (this week and month)
       const weekStart = startOfWeek(new Date());
-      const { count: weekSearchCount } = await supabase
-        .from("search_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id)
-        .gte("created_at", weekStart.toISOString());
-
-      // Fetch searches this month
       const monthStart = startOfMonth(new Date());
-      const { count: monthSearchCount } = await supabase
-        .from("search_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id)
-        .gte("created_at", monthStart.toISOString());
-
-      // Fetch favorite searches
-      const { count: favoriteCount } = await supabase
-        .from("search_history")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id)
-        .eq("is_favorite", true);
-
-      // Fetch total candidates saved
-      const { count: candidateCount } = await supabase
-        .from("saved_candidates")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id);
-
-      // Fetch total projects
-      const { count: projectCount } = await supabase
-        .from("projects")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id)
-        .eq("is_archived", false);
-
-      // Fetch platform distribution
-      const { data: platformData } = await supabase
-        .from("search_history")
-        .select("platform")
-        .eq("user_id", user?.id);
-
-      const platformCounts = platformData?.reduce((acc: Record<string, number>, item) => {
-        const platform = item.platform || "linkedin";
-        acc[platform] = (acc[platform] || 0) + 1;
-        return acc;
-      }, {});
-
-      const topPlatforms = Object.entries(platformCounts || {})
-        .map(([platform, count]) => ({ platform, count: count as number }))
-        .sort((a, b) => b.count - a.count);
-
+      
+      const { count: weekSearches } = await supabase
+        .from('search_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', weekStart.toISOString());
+      
+      const { count: monthSearches } = await supabase
+        .from('search_history')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', monthStart.toISOString());
+      
       // Fetch recent activity
-      const recentActivity: UserStats['recentActivity'] = [];
-
-      // Recent searches
       const { data: recentSearches } = await supabase
-        .from("search_history")
-        .select("id, search_query, created_at")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
+        .from('search_history')
+        .select('id, search_query, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
         .limit(5);
-
-      recentSearches?.forEach(search => {
-        recentActivity.push({
-          id: search.id,
-          type: 'search',
-          description: `Searched for "${search.search_query}"`,
-          timestamp: search.created_at
-        });
-      });
-
-      // Recent saved candidates
-      const { data: recentCandidates } = await supabase
-        .from("saved_candidates")
-        .select("id, name, created_at")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      recentCandidates?.forEach(candidate => {
-        recentActivity.push({
-          id: candidate.id,
-          type: 'save',
-          description: `Saved candidate ${candidate.name}`,
-          timestamp: candidate.created_at
-        });
-      });
-
-      // Sort activity by timestamp
-      recentActivity.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-
+      
+      const recentActivity = recentSearches?.map(search => ({
+        id: search.id,
+        type: 'search' as const,
+        description: `Searched for "${search.search_query}"`,
+        timestamp: search.created_at
+      })) || [];
+      
       setUserStats({
         totalSearches: searchCount || 0,
-        totalCandidatesSaved: candidateCount || 0,
-        totalProjects: projectCount || 0,
-        favoriteSearches: favoriteCount || 0,
-        searchesThisWeek: weekSearchCount || 0,
-        searchesThisMonth: monthSearchCount || 0,
-        topPlatforms,
-        recentActivity: recentActivity.slice(0, 10)
+        totalCandidatesSaved: candidatesCount || 0,
+        totalProjects: projectsCount || 0,
+        favoriteSearches: favoritesCount || 0,
+        searchesThisWeek: weekSearches || 0,
+        searchesThisMonth: monthSearches || 0,
+        recentActivity
       });
     } catch (error) {
-      console.error("Error fetching user stats:", error);
+      console.error('Error fetching user stats:', error);
       toast.error("Failed to load statistics");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateProfile = async () => {
+  const fetchSearchHistory = async () => {
+    if (!user) return;
+
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: editingProfile.full_name,
-          avatar_url: editingProfile.avatar_url,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", user?.id);
+      const { data, error } = await supabase
+        .from('search_history')
+        .select(`
+          *,
+          project:projects(*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      toast.success("Profile updated successfully");
-      setShowEditProfile(false);
-      fetchProfileData();
+      setSearchHistory(data || []);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.error('Error fetching search history:', error);
+      toast.error("Failed to load search history");
+    }
+  };
+
+  const fetchProjects = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast.error("Failed to load projects");
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!user || !profileData) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: editingName })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setProfileData({ ...profileData, full_name: editingName });
+      setEditModalOpen(false);
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      console.error('Error updating profile:', error);
       toast.error("Failed to update profile");
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !user) return;
+    
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+    
+    setUploadingAvatar(true);
+    
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+      
+      if (updateError) throw updateError;
+      
+      if (profileData) {
+        setProfileData({ ...profileData, avatar_url: publicUrl });
+      }
+      
+      toast.success("Avatar updated successfully");
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.error("Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const toggleFavorite = async (searchId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('search_history')
+        .update({ is_favorite: !currentStatus })
+        .eq('id', searchId);
+
+      if (error) throw error;
+      
+      fetchSearchHistory();
+      toast.success(currentStatus ? "Removed from favorites" : "Added to favorites");
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error("Failed to update favorite status");
+    }
+  };
+
+  const deleteSearch = async (searchId: string) => {
+    try {
+      const { error } = await supabase
+        .from('search_history')
+        .delete()
+        .eq('id', searchId);
+
+      if (error) throw error;
+      
+      fetchSearchHistory();
+      toast.success("Search deleted successfully");
+    } catch (error) {
+      console.error('Error deleting search:', error);
+      toast.error("Failed to delete search");
+    }
+  };
+
+  const createProject = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .insert({
+          ...newProject,
+          user_id: user.id
+        });
+
+      if (error) throw error;
+      
+      fetchProjects();
+      setShowCreateProject(false);
+      setNewProject({ name: "", description: "", color: "#8B5CF6", icon: "folder" });
+      toast.success("Project created successfully");
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast.error("Failed to create project");
+    }
+  };
+
+  const updateProject = async () => {
+    if (!editingProject) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          name: editingProject.name,
+          description: editingProject.description,
+          color: editingProject.color,
+          icon: editingProject.icon
+        })
+        .eq('id', editingProject.id);
+
+      if (error) throw error;
+      
+      fetchProjects();
+      setEditingProject(null);
+      toast.success("Project updated successfully");
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error("Failed to update project");
+    }
+  };
+
+  const archiveProject = async (projectId: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_archived: true })
+        .eq('id', projectId);
+
+      if (error) throw error;
+      
+      fetchProjects();
+      toast.success("Project archived successfully");
+    } catch (error) {
+      console.error('Error archiving project:', error);
+      toast.error("Failed to archive project");
     }
   };
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate("/");
+      navigate('/login');
     } catch (error) {
+      console.error('Error signing out:', error);
       toast.error("Failed to sign out");
     }
-  };
-
-  const getInitials = (name: string | null, email: string | null) => {
-    if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    return email?.slice(0, 2).toUpperCase() || 'U';
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     );
   }
 
+  const getInitials = (name: string | null, email: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    return email[0].toUpperCase();
+  };
+
+  const getProjectIcon = (iconName: string) => {
+    const icon = projectIcons.find(i => i.name === iconName);
+    const IconComponent = icon ? icon.icon : Folder;
+    return IconComponent;
+  };
+
+  const favoriteSearches = searchHistory.filter(s => s.is_favorite);
+  const activeProjects = projects.filter(p => !p.is_archived);
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Avatar className="w-24 h-24">
-              <AvatarImage src={profileData?.avatar_url || undefined} />
-              <AvatarFallback className="text-2xl bg-purple-100 text-purple-700">
-                {getInitials(profileData?.full_name, profileData?.email)}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {profileData?.full_name || "Your Profile"}
-              </h1>
-              <p className="text-gray-600">{profileData?.email}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Member since {profileData?.created_at ? format(new Date(profileData.created_at), "MMMM yyyy") : "Unknown"}
-              </p>
+    <div className="container mx-auto py-8 space-y-8">
+      {/* Profile Header */}
+      <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+        <CardContent className="p-8">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <Avatar className="h-24 w-24 border-2 border-black">
+                  <AvatarImage src={profileData?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl font-bold">
+                    {getInitials(profileData?.full_name, user?.email || '')}
+                  </AvatarFallback>
+                </Avatar>
+                <label className="absolute -bottom-2 -right-2 cursor-pointer">
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                  />
+                  <div className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors">
+                    {uploadingAvatar ? (
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                  </div>
+                </label>
+              </div>
+              
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {profileData?.full_name || 'Unnamed User'}
+                </h1>
+                <p className="text-gray-600 flex items-center gap-2 mt-1">
+                  <Mail className="h-4 w-4" />
+                  {user?.email}
+                </p>
+                <p className="text-gray-500 flex items-center gap-2 mt-1">
+                  <Calendar className="h-4 w-4" />
+                  Member since {profileData && format(new Date(profileData.created_at), 'MMMM yyyy')}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditModalOpen(true)}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleSignOut}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowEditProfile(true)}>
-              <Edit3 className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Searches</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Search className="w-5 h-5 text-purple-600" />
-              <span className="text-2xl font-bold">{userStats?.totalSearches || 0}</span>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Searches</p>
+                <p className="text-2xl font-bold text-purple-600">{userStats?.totalSearches || 0}</p>
+              </div>
+              <Search className="h-8 w-8 text-purple-600 opacity-20" />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {userStats?.searchesThisWeek || 0} this week
-            </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Saved Candidates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-green-600" />
-              <span className="text-2xl font-bold">{userStats?.totalCandidatesSaved || 0}</span>
+        
+        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Saved Candidates</p>
+                <p className="text-2xl font-bold text-green-600">{userStats?.totalCandidatesSaved || 0}</p>
+              </div>
+              <Users className="h-8 w-8 text-green-600 opacity-20" />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Across all projects
-            </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Projects</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Folder className="w-5 h-5 text-blue-600" />
-              <span className="text-2xl font-bold">{userStats?.totalProjects || 0}</span>
+        
+        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Active Projects</p>
+                <p className="text-2xl font-bold text-orange-600">{userStats?.totalProjects || 0}</p>
+              </div>
+              <Folder className="h-8 w-8 text-orange-600 opacity-20" />
             </div>
-            <Button
-              variant="link"
-              size="sm"
-              className="text-xs p-0 h-auto mt-1"
-              onClick={() => navigate("/search-history?tab=projects")}
-            >
-              View all
-            </Button>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Favorite Searches</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-500" />
-              <span className="text-2xl font-bold">{userStats?.favoriteSearches || 0}</span>
+        
+        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">This Month</p>
+                <p className="text-2xl font-bold text-blue-600">{userStats?.searchesThisMonth || 0}</p>
+              </div>
+              <Activity className="h-8 w-8 text-blue-600 opacity-20" />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Quick access
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Stats */}
-      <Tabs defaultValue="activity" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="activity" className="space-y-4">
+        <TabsList className="grid grid-cols-4 w-full bg-[#F1F1F1] p-1 rounded-lg border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]">
+          <TabsTrigger value="activity" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            Recent Activity
+          </TabsTrigger>
+          <TabsTrigger value="searches" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            Search History
+          </TabsTrigger>
+          <TabsTrigger value="projects" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            Projects
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+            Settings
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="activity">
-          <Card>
+        
+        <TabsContent value="activity" className="space-y-4">
+          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Your latest searches and saved candidates</CardDescription>
+              <CardDescription>Your latest actions and searches</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {userStats?.recentActivity.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No recent activity</p>
-                ) : (
-                  userStats?.recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center gap-4 pb-4 border-b last:border-0">
-                      <div className={`p-2 rounded-full ${
-                        activity.type === 'search' ? 'bg-purple-100' :
-                        activity.type === 'save' ? 'bg-green-100' :
-                        'bg-blue-100'
-                      }`}>
-                        {activity.type === 'search' && <Search className="w-4 h-4 text-purple-600" />}
-                        {activity.type === 'save' && <Users className="w-4 h-4 text-green-600" />}
-                        {activity.type === 'project' && <Folder className="w-4 h-4 text-blue-600" />}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.description}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                        </p>
+              {userStats?.recentActivity.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No recent activity</p>
+              ) : (
+                <div className="space-y-4">
+                  {userStats?.recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {activity.type === 'search' && <Search className="h-5 w-5 text-purple-600" />}
+                        {activity.type === 'save' && <Star className="h-5 w-5 text-yellow-600" />}
+                        {activity.type === 'project' && <Folder className="h-5 w-5 text-green-600" />}
+                        <div>
+                          <p className="font-medium">{activity.description}</p>
+                          <p className="text-sm text-gray-500">
+                            {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
+        
+        <TabsContent value="searches" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Search History</h2>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]">
+                <Filter className="h-4 w-4 mr-1" />
+                Filter
+              </Button>
+            </div>
+          </div>
 
-        <TabsContent value="analytics">
-          <div className="grid gap-6">
-            <Card>
+          {/* Favorite Searches */}
+          {favoriteSearches.length > 0 && (
+            <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
               <CardHeader>
-                <CardTitle>Search Activity</CardTitle>
-                <CardDescription>Your search patterns over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">This Week</span>
-                      <span className="text-sm text-gray-600">
-                        {userStats?.searchesThisWeek || 0} searches
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(userStats?.searchesThisWeek || 0) / Math.max(userStats?.searchesThisMonth || 1, 1) * 100} 
-                      className="h-2"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">This Month</span>
-                      <span className="text-sm text-gray-600">
-                        {userStats?.searchesThisMonth || 0} searches
-                      </span>
-                    </div>
-                    <Progress 
-                      value={100} 
-                      className="h-2"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Platform Usage</CardTitle>
-                <CardDescription>Where you search for candidates</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  Favorite Searches
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {userStats?.topPlatforms.map((platform) => (
-                    <div key={platform.platform} className="flex items-center justify-between">
-                      <Badge variant="outline" className="capitalize">
-                        {platform.platform}
-                      </Badge>
-                      <span className="text-sm font-medium">{platform.count} searches</span>
+                  {favoriteSearches.map((search) => (
+                    <div key={search.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]">
+                      <div className="flex-1">
+                        <p className="font-medium">{search.search_query}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            {search.platform}
+                          </span>
+                          <span>{search.results_count} results</span>
+                          <span>{format(new Date(search.created_at), 'MMM d, yyyy')}</span>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/sourcing?search=${encodeURIComponent(search.boolean_query)}`)}>
+                            <Search className="h-4 w-4 mr-2" />
+                            Re-run Search
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleFavorite(search.id, true)}>
+                            <Star className="h-4 w-4 mr-2" />
+                            Remove from Favorites
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => deleteSearch(search.id)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* All Searches */}
+          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+            <CardHeader>
+              <CardTitle>All Searches</CardTitle>
+              <CardDescription>Your complete search history</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {searchHistory.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No searches yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {searchHistory.map((search) => (
+                    <div key={search.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex-1">
+                        <p className="font-medium">{search.search_query}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Hash className="h-3 w-3" />
+                            {search.platform}
+                          </span>
+                          <span>{search.results_count} results</span>
+                          <span>{format(new Date(search.created_at), 'MMM d, yyyy')}</span>
+                          {search.project && (
+                            <Badge 
+                              variant="secondary" 
+                              style={{ backgroundColor: search.project.color + '20', color: search.project.color }}
+                            >
+                              {search.project.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/sourcing?search=${encodeURIComponent(search.boolean_query)}`)}>
+                            <Search className="h-4 w-4 mr-2" />
+                            Re-run Search
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleFavorite(search.id, search.is_favorite)}>
+                            <Star className="h-4 w-4 mr-2" />
+                            {search.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => deleteSearch(search.id)} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="projects" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Projects</h2>
+            <Button 
+              onClick={() => setShowCreateProject(true)}
+              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeProjects.map((project) => {
+              const IconComponent = getProjectIcon(project.icon);
+              return (
+                <Card 
+                  key={project.id} 
+                  className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div 
+                        className="p-3 rounded-lg"
+                        style={{ backgroundColor: project.color + '20' }}
+                      >
+                        <IconComponent className="h-6 w-6" style={{ color: project.color }} />
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProject(project);
+                          }}>
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            archiveProject(project.id);
+                          }}>
+                            <Folder className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">{project.name}</h3>
+                    <p className="text-gray-600 text-sm mb-4">{project.description}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>{project.candidates_count} candidates</span>
+                      <span>{format(new Date(project.created_at), 'MMM d')}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="settings" className="space-y-4">
+          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+            <CardHeader>
+              <CardTitle>Account Settings</CardTitle>
+              <CardDescription>Manage your account preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Usage & Limits</h3>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-600">Monthly Searches</span>
+                      <span className="text-sm font-medium">{userStats?.searchesThisMonth || 0} / 500</span>
+                    </div>
+                    <Progress value={(userStats?.searchesThisMonth || 0) / 5} className="h-2" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-gray-600">Saved Candidates</span>
+                      <span className="text-sm font-medium">{userStats?.totalCandidatesSaved || 0} / 1000</span>
+                    </div>
+                    <Progress value={(userStats?.totalCandidatesSaved || 0) / 10} className="h-2" />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Danger Zone</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <Button variant="destructive" className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]">
+                  Delete Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Edit Profile Dialog */}
-      <Dialog open={showEditProfile} onOpenChange={setShowEditProfile}>
-        <DialogContent>
+      {/* Edit Profile Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="full_name">Full Name</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
               <Input
-                id="full_name"
-                value={editingProfile.full_name}
-                onChange={(e) => setEditingProfile({ ...editingProfile, full_name: e.target.value })}
-                placeholder="Enter your full name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="avatar_url">Avatar URL</Label>
-              <Input
-                id="avatar_url"
-                value={editingProfile.avatar_url}
-                onChange={(e) => setEditingProfile({ ...editingProfile, avatar_url: e.target.value })}
-                placeholder="https://example.com/avatar.jpg"
+                id="name"
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditProfile(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditModalOpen(false)}
+              className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpdateProfile}>Save Changes</Button>
+            <Button 
+              onClick={handleUpdateProfile}
+              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+            >
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Create Project Modal */}
+      <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
+        <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+            <DialogDescription>
+              Organize your candidates and searches into projects
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                placeholder="e.g., Q1 Engineering Hiring"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project-description">Description</Label>
+              <Textarea
+                id="project-description"
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                placeholder="Brief description of this project..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <div className="flex gap-2">
+                {projectIcons.map(({ name, icon: Icon }) => (
+                  <button
+                    key={name}
+                    onClick={() => setNewProject({ ...newProject, icon: name })}
+                    className={`p-3 rounded-lg border-2 ${
+                      newProject.icon === name 
+                        ? 'border-purple-600 bg-purple-50' 
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex gap-2">
+                {projectColors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setNewProject({ ...newProject, color })}
+                    className={`w-10 h-10 rounded-lg border-2 ${
+                      newProject.color === color 
+                        ? 'border-gray-900 scale-110' 
+                        : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCreateProject(false)}
+              className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={createProject}
+              disabled={!newProject.name}
+              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+            >
+              Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Modal */}
+      {editingProject && (
+        <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
+          <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+            <DialogHeader>
+              <DialogTitle>Edit Project</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-name">Project Name</Label>
+                <Input
+                  id="edit-project-name"
+                  value={editingProject.name}
+                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                  className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-description">Description</Label>
+                <Textarea
+                  id="edit-project-description"
+                  value={editingProject.description}
+                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                  className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Icon</Label>
+                <div className="flex gap-2">
+                  {projectIcons.map(({ name, icon: Icon }) => (
+                    <button
+                      key={name}
+                      onClick={() => setEditingProject({ ...editingProject, icon: name })}
+                      className={`p-3 rounded-lg border-2 ${
+                        editingProject.icon === name 
+                          ? 'border-purple-600 bg-purple-50' 
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <div className="flex gap-2">
+                  {projectColors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setEditingProject({ ...editingProject, color })}
+                      className={`w-10 h-10 rounded-lg border-2 ${
+                        editingProject.color === color 
+                          ? 'border-gray-900 scale-110' 
+                          : 'border-gray-300'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setEditingProject(null)}
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={updateProject}
+                className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
-};
-
-export default Profile;
+}
