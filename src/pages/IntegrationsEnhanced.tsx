@@ -34,14 +34,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface Integration {
   id: string;
   name: string;
-  category: 'ATS' | 'HRIS' | 'Unified' | 'Free';
+  category: 'ATS' | 'HRIS' | 'Unified' | 'Free' | 'CRM';
   subcategory?: 'Enterprise' | 'Mid-Market' | 'SMB';
   description: string;
   logo: string;
   status: 'connected' | 'available' | 'coming_soon';
   features: string[];
-  aiFeatures: string[];
-  uniqueValue: string[];
+  aiFeatures?: string[];
+  uniqueValue?: string[];
   setupTime: string;
   pricing?: string;
   employeeRange?: string;
@@ -722,6 +722,7 @@ const getCategoryIcon = (category: string) => {
     case 'ATS': return Briefcase;
     case 'Unified': return TrendingUp;
     case 'Free': return Sparkles;
+    case 'CRM': return Users;
     default: return Users;
   }
 };
@@ -732,6 +733,7 @@ const getCategoryColor = (category: string) => {
     case 'ATS': return 'bg-green-100 text-green-700 border-green-200';
     case 'Unified': return 'bg-purple-100 text-purple-700 border-purple-200';
     case 'Free': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    case 'CRM': return 'bg-pink-100 text-pink-700 border-pink-200';
     default: return 'bg-gray-100 text-gray-700 border-gray-200';
   }
 };
@@ -748,7 +750,7 @@ const getStatusColor = (status: string) => {
 export default function IntegrationsEnhanced() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'Unified' | 'Free'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'Unified' | 'Free' | 'CRM'>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'Enterprise' | 'Mid-Market' | 'SMB'>('all');
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -845,7 +847,7 @@ export default function IntegrationsEnhanced() {
             </div>
             
             <div className="flex gap-2">
-              <Select value={selectedCategory} onValueChange={(value: any) => setSelectedCategory(value)}>
+              <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as typeof selectedCategory)}>
                 <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <SelectValue />
                 </SelectTrigger>
@@ -855,10 +857,11 @@ export default function IntegrationsEnhanced() {
                   <SelectItem value="HRIS">HRIS Systems</SelectItem>
                   <SelectItem value="Unified">Unified Platforms</SelectItem>
                   <SelectItem value="Free">Free Options</SelectItem>
+                  <SelectItem value="CRM">CRM Systems</SelectItem>
                 </SelectContent>
               </Select>
 
-              <Select value={selectedSubcategory} onValueChange={(value: any) => setSelectedSubcategory(value)}>
+              <Select value={selectedSubcategory} onValueChange={(value) => setSelectedSubcategory(value as typeof selectedSubcategory)}>
                 <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <SelectValue />
                 </SelectTrigger>
@@ -870,7 +873,7 @@ export default function IntegrationsEnhanced() {
                 </SelectContent>
               </Select>
 
-              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
                 <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                   <SelectValue />
                 </SelectTrigger>
@@ -904,7 +907,7 @@ export default function IntegrationsEnhanced() {
 
           {/* Category Pills */}
           <div className="flex flex-wrap gap-2">
-            {(['all', 'ATS', 'HRIS', 'Unified', 'Free'] as const).map((category) => {
+            {(['all', 'ATS', 'HRIS', 'Unified', 'Free', 'CRM'] as const).map((category) => {
               const Icon = getCategoryIcon(category);
               const count = category === 'all' 
                 ? integrations.length 
