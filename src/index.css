@@ -3,16 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-orbit {
-  animation: orbit calc(var(--duration)*1s) linear infinite;
-}
-
 @layer base {
   :root {
     --background: 252 94% 98%;
