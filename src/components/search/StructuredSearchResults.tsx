@@ -46,6 +46,9 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
   
+  // Omitted profiles state
+  const [omittedProfiles, setOmittedProfiles] = useState<Set<string>>(new Set());
+  
   // Use search filters hook
   const {
     filters,
@@ -58,8 +61,8 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     experienceDistribution
   } = useSearchFilters(results);
   
-  // For infinite scroll, we show all filtered results (no pagination slice)
-  const displayResults = filteredResults;
+  // For infinite scroll, we show all filtered results (no pagination slice), excluding omitted profiles
+  const displayResults = filteredResults.filter(result => !omittedProfiles.has(result.link));
   
   // Use the profile enrichment hook
   const { enrichProfile } = useProfileEnrichment();
@@ -218,6 +221,14 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     setShowFilters(!showFilters);
   };
 
+  const handleOmitProfile = (profileId: string) => {
+    setOmittedProfiles(prev => {
+      const newSet = new Set(prev);
+      newSet.add(profileId);
+      return newSet;
+    });
+  };
+
   // Loading state
   if (isLoading && results.length === 0) {
     return (
@@ -298,6 +309,8 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
             isLoadingContact={loadingProfiles.has(result.link)}
             jobId={jobId}
             searchString={searchString}
+            onOmit={handleOmitProfile}
+            isOmitted={omittedProfiles.has(result.link)}
           />
         ))}
       </div>

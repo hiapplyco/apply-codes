@@ -28,7 +28,9 @@ import {
   CheckCircle,
   Loader2,
   Folder,
-  Plus
+  Plus,
+  X,
+  EyeOff
 } from 'lucide-react';
 import { SearchResult } from '../types';
 import { toast } from 'sonner';
@@ -58,6 +60,8 @@ interface ProfileCardProps {
   jobId?: string | null;
   searchString?: string | null;
   projectId?: string | null;
+  onOmit?: (profileId: string) => void;
+  isOmitted?: boolean;
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({ 
@@ -67,7 +71,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   contactInfo,
   jobId = null,
   searchString = null,
-  projectId = null
+  projectId = null,
+  onOmit,
+  isOmitted = false
 }) => {
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -348,8 +354,20 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     }
   };
 
+  // Handle omit/dismiss functionality
+  const handleOmit = () => {
+    if (onOmit && result.link) {
+      onOmit(result.link);
+      toast.success('Profile hidden from search results');
+    }
+  };
+
   return (
-    <Card className="border-2 border-gray-200 hover:border-purple-300 transition-all duration-200 hover:shadow-lg">
+    <Card className={`border-2 transition-all duration-200 ${
+      isOmitted 
+        ? 'border-gray-300 bg-gray-50 opacity-60' 
+        : 'border-gray-200 hover:border-purple-300 hover:shadow-lg'
+    }`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
           <div className="p-4 cursor-pointer hover:bg-gray-50 transition-colors">
@@ -366,6 +384,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                   {showCompleteness && (
                     <Badge variant="outline" className="text-xs text-gray-500 border-gray-300">
                       {profileCompleteness}% Complete
+                    </Badge>
+                  )}
+                  {isOmitted && (
+                    <Badge variant="outline" className="text-xs text-red-600 border-red-300 bg-red-50">
+                      <EyeOff className="w-3 h-3 mr-1" />
+                      Omitted
                     </Badge>
                   )}
                 </div>
@@ -620,6 +644,18 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
+                {/* Omit/Dismiss Button */}
+                {onOmit && !isOmitted && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOmit}
+                    className="border-red-200 text-red-700 hover:bg-red-50"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Dismiss
+                  </Button>
+                )}
                 {/* Only show LinkedIn button if we have a valid URL */}
                 {result.link && (
                   <Button
