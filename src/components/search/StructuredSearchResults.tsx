@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { fetchSearchResults, processSearchResults } from './hooks/google-search/searchApi';
 import { SearchResult } from './types';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { ProfileCard } from './components/ProfileCard';
 import { SearchSummaryHeader } from './components/SearchSummaryHeader';
 import { SearchFiltersPanel } from './components/SearchFiltersPanel';
 import { useSearchFilters } from './hooks/useSearchFilters';
+import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 
 export interface StructuredSearchResultsProps {
   searchString: string;
@@ -27,9 +28,11 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
 }) => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [hasReachedEnd, setHasReachedEnd] = useState(false);
   const resultsPerPage = 10;
 
   // Store enriched contact data per profile URL
@@ -55,36 +58,34 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     experienceDistribution
   } = useSearchFilters(results);
   
-  // Get paginated filtered results
-  const paginatedResults = filteredResults.slice(
-    (currentPage - 1) * resultsPerPage,
-    currentPage * resultsPerPage
-  );
+  // For infinite scroll, we show all filtered results (no pagination slice)
+  const displayResults = filteredResults;
   
   // Use the profile enrichment hook
   const { enrichProfile } = useProfileEnrichment();
 
   useEffect(() => {
     if (searchString) {
-      loadResults(1);
+      resetAndLoadResults();
     }
   }, [searchString]);
 
-  // Reset to page 1 when filters change
+  // Reset results when filters change (no need to reset page since we removed pagination)
   useEffect(() => {
-    if (hasActiveFilters) {
-      setCurrentPage(1);
-    }
+    // Filters are applied client-side, no need to reload
   }, [filters]);
 
-  const loadResults = async (page: number) => {
+  const resetAndLoadResults = async () => {
     setIsLoading(true);
     setError(null);
+    setResults([]);
+    setCurrentPage(1);
+    setHasReachedEnd(false);
     
     try {
       const { data, error } = await fetchSearchResults(
         searchString,
-        page,
+        1,
         searchType,
         resultsPerPage
       );
@@ -100,7 +101,12 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         const processedResults = processSearchResults(data);
         setResults(processedResults);
         setTotalResults(parseInt(data.searchInformation?.totalResults || '0'));
-        setCurrentPage(page);
+        setCurrentPage(1);
+        
+        // Check if we've reached the end (Google CSE has a limit)
+        if (processedResults.length < resultsPerPage) {
+          setHasReachedEnd(true);
+        }
       }
     } catch (error) {
       console.error('Error loading results:', error);
@@ -111,18 +117,57 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     }
   };
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      loadResults(currentPage - 1);
+  const loadMoreResults = async () => {
+    if (isLoadingMore || hasReachedEnd) return;
+    
+    setIsLoadingMore(true);
+    const nextPage = currentPage + 1;
+    
+    try {
+      const { data, error } = await fetchSearchResults(
+        searchString,
+        nextPage,
+        searchType,
+        resultsPerPage
+      );
+
+      if (error) {
+        console.error('Error fetching more results:', error);
+        toast.error('Failed to load more results');
+        return;
+      }
+
+      if (data) {
+        const processedResults = processSearchResults(data);
+        
+        // Check if we got fewer results than expected (reached end)
+        if (processedResults.length < resultsPerPage) {
+          setHasReachedEnd(true);
+        }
+        
+        // Append new results to existing ones
+        setResults(prev => [...prev, ...processedResults]);
+        setCurrentPage(nextPage);
+      }
+    } catch (error) {
+      console.error('Error loading more results:', error);
+      toast.error('Failed to load more results');
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
-  const handleNextPage = () => {
-    const maxPages = Math.ceil(totalResults / resultsPerPage);
-    if (currentPage < maxPages) {
-      loadResults(currentPage + 1);
-    }
-  };
+  // Calculate if we have more results to load
+  const hasMore = !hasReachedEnd && results.length < totalResults;
+  
+  // Set up infinite scroll
+  const { ref: infiniteScrollRef } = useInfiniteScroll({
+    onLoadMore: loadMoreResults,
+    hasMore,
+    isLoading: isLoadingMore,
+    threshold: 0.1,
+    rootMargin: '200px'
+  });
 
   const handleGetContactInfo = async (profileUrl: string, profileName: string) => {
     try {
@@ -242,7 +287,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
 
       {/* Results Grid */}
       <div className="space-y-3">
-        {paginatedResults.map((result, index) => (
+        {displayResults.map((result, index) => (
           <ProfileCard
             key={`${result.link}-${index}`}
             result={result}
@@ -257,40 +302,26 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         ))}
       </div>
 
-      {/* Pagination Controls */}
-      {(hasActiveFilters ? totalFiltered : totalResults) > resultsPerPage && (
-        <Card className="p-4 border-2 border-gray-200">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1 || isLoading}
-              className="border-black hover:bg-gray-100"
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Previous
-            </Button>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {Math.ceil((hasActiveFilters ? totalFiltered : totalResults) / resultsPerPage)}
-              </span>
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextPage}
-              disabled={currentPage >= Math.ceil((hasActiveFilters ? totalFiltered : totalResults) / resultsPerPage) || isLoading}
-              className="border-black hover:bg-gray-100"
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
+      {/* Infinite Scroll Indicators */}
+      {hasMore && (
+        <div ref={infiniteScrollRef} className="flex justify-center py-4">
+          <div className="flex items-center gap-2 text-gray-600">
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading more results...</span>
+              </>
+            ) : (
+              <span className="text-sm">Scroll down for more results</span>
+            )}
           </div>
-        </Card>
+        </div>
+      )}
+      
+      {hasReachedEnd && displayResults.length > 0 && (
+        <div className="flex justify-center py-4">
+          <span className="text-sm text-gray-500">No more results to load</span>
+        </div>
       )}
 
       {/* Contact Search Modal */}

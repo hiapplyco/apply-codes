@@ -36,7 +36,7 @@ const testimonials = [
     role: "Director of Talent Operations",
     company: "Series B SaaS Startup",
     emoji: "👩🏻‍💼",
-    content: "Apply's AI completely transformed how we scale our hiring. We went from 10 to 50 engineers in 6 months by using their boolean search generator and automated screening. The time savings let me focus on building relationships with top candidates instead of manual sourcing.",
+    content: "Apply's agentic AI orchestration completely transformed our hiring scale. Our autonomous agents coordinate across 5 different HR systems via MCP, managing end-to-end workflows. We scaled from 10 to 50 engineers in 6 months with minimal manual intervention.",
     rating: 5
   },
   {
@@ -45,7 +45,7 @@ const testimonials = [
     role: "VP of People Operations",
     company: "Fortune 500 Tech Company",
     emoji: "👨🏾‍💼",
-    content: "I was skeptical about AI in recruiting until Apply. Their chat assistant helps me analyze candidate data patterns I'd never notice manually. We've improved our diversity hiring by 35% and reduced bias in our screening process. It's like having a data scientist on my team.",
+    content: "I was skeptical about autonomous recruitment until Apply's MCP integration. The agents continuously analyze candidate patterns across our entire tech stack, identifying bias and optimizing for diversity. It's like having a team of data scientists working 24/7.",
     rating: 5
   },
   {
@@ -54,7 +54,7 @@ const testimonials = [
     role: "Head of Talent Strategy",
     company: "High-Growth Fintech",
     emoji: "👩🏽‍💼",
-    content: "Apply solved our biggest challenge: finding niche technical talent. Their AI understands context beyond keywords - it knows that a 'Rust developer who contributed to blockchain projects' is different from generic search results. We filled 3 impossible roles in just 2 weeks.",
+    content: "Apply's contextual AI agents solved our niche talent challenge. The MCP-enabled context injection means agents understand that 'Rust developers with blockchain contributions' require different sourcing strategies than generic searches. Multi-step reasoning filled 3 impossible roles in 2 weeks.",
     rating: 5
   },
   {
@@ -63,7 +63,7 @@ const testimonials = [
     role: "People Operations Manager",
     company: "Healthcare Tech Startup",
     emoji: "👨🏻‍💼",
-    content: "As a lean startup, Apply gave us enterprise-level recruiting capabilities without the cost. The AI helps me write better job descriptions, generate targeted searches, and even suggests interview questions. It's like having a senior recruiter mentor available 24/7.",
+    content: "As a lean startup, Apply's agentic orchestration gave us enterprise-level capabilities. The autonomous agents handle job description optimization, multi-platform sourcing, and interview coordination—all coordinated through secure MCP protocols. It's like having a senior recruiting team available 24/7.",
     rating: 5
   },
   {
@@ -72,7 +72,7 @@ const testimonials = [
     role: "Chief People Officer",
     company: "Global Consulting Firm",
     emoji: "👩🏾‍💼",
-    content: "Apply's AI integration with our ATS was a game-changer. We're now making data-driven hiring decisions at scale. The platform identified that our best performers came from non-traditional backgrounds, completely changing our sourcing strategy.",
+    content: "Apply's MCP protocol integration was a game-changer for our ATS ecosystem. The agents coordinate real-time data across platforms, identifying patterns like 'best performers from non-traditional backgrounds' and autonomously adjusting sourcing strategies. True agentic decision-making at scale.",
     rating: 5
   }
 ];
@@ -105,8 +105,8 @@ const pricingTiers = [
       { text: '5 projects', included: true },
       { text: 'Email support', included: true },
       { text: 'Search history & analytics', included: true },
-      { text: 'AI chat assistant', included: false },
-      { text: 'Advanced platform integrations', included: false },
+      { text: 'Agentic recruitment copilot', included: false },
+      { text: 'MCP protocol integrations', included: false },
       { text: 'Team collaboration', included: false },
       { text: 'Interview tools & transcription', included: false },
     ],
@@ -121,16 +121,16 @@ const pricingTiers = [
     features: [
       { text: 'Unlimited AI searches', included: true },
       { text: 'Advanced boolean optimization', included: true },
-      { text: 'All platform integrations (10+ ATS/HRIS)', included: true },
+      { text: 'MCP-enabled integrations (10+ ATS/HRIS)', included: true },
       { text: 'Unlimited candidate storage', included: true },
       { text: 'Full contact enrichment (500 credits)', included: true },
-      { text: 'AI chat assistant with context', included: true },
+      { text: 'Autonomous agent orchestration', included: true },
       { text: 'Unlimited projects & collaboration', included: true },
       { text: 'Interview tools & transcription', included: true },
       { text: 'Advanced analytics & reporting', included: true },
       { text: 'Priority support', included: true },
       { text: 'Team features (up to 10 users)', included: true },
-      { text: 'Custom AI agent development', included: false },
+      { text: 'Multi-agent workflow coordination', included: false },
     ],
     popular: true,
     cta: 'Start Free Trial',
@@ -142,7 +142,7 @@ const pricingTiers = [
     description: 'For large teams with advanced needs',
     features: [
       { text: 'Everything in Professional', included: true },
-      { text: 'Custom AI agent development', included: true },
+      { text: 'Custom agentic workflow development', included: true },
       { text: 'Unlimited contact enrichment', included: true },
       { text: 'API access with custom rate limits', included: true },
       { text: 'SSO & advanced security', included: true },
@@ -244,13 +244,13 @@ const LandingPageEnhanced = () => {
         <div className="text-center max-w-4xl mx-auto mb-12">
           {/* H1 - Primary SEO target */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
-            AI-Powered Recruitment Platform for Modern Hiring Teams
+            Agentic AI Recruitment Platform with Model Context Protocol
           </h1>
           
           {/* Strong value proposition */}
           <p className="text-gray-600 text-lg sm:text-xl mb-8 max-w-3xl mx-auto">
-            Transform your recruiting with intelligent candidate sourcing, automated screening, and 20+ integrations. 
-            Find better candidates 40% faster with Apply's AI-driven recruitment tools.
+            Autonomous AI agents orchestrate multi-step recruitment workflows through MCP-enabled integrations. 
+            Deploy goal-directed agents that source, screen, and manage hiring end-to-end with human oversight.
           </p>
 
           {/* CTAs */}
@@ -293,10 +293,10 @@ const LandingPageEnhanced = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything You Need for Modern Recruitment
+              Agentic AI Orchestration for Autonomous Hiring
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From AI-powered sourcing to automated workflows, Apply provides all the tools you need to hire smarter and faster.
+              MCP-powered agents coordinate seamlessly across your entire recruitment stack, executing complex workflows with contextual intelligence and real-time adaptability.
             </p>
           </div>
 
@@ -305,32 +305,32 @@ const LandingPageEnhanced = () => {
               <div className="text-[#8B5CF6] mb-4">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg mb-2">AI-Powered Sourcing</h3>
-              <p className="text-gray-600 text-sm">Generate complex boolean searches instantly and find hidden talent across multiple platforms.</p>
+              <h3 className="font-bold text-lg mb-2">Autonomous Agent Sourcing</h3>
+              <p className="text-gray-600 text-sm">Self-directed agents execute multi-step candidate discovery workflows, reasoning through complex requirements to surface hidden talent.</p>
             </div>
             
             <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
               <div className="text-green-600 mb-4">
                 <FileScan className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Smart Screening</h3>
-              <p className="text-gray-600 text-sm">AI analyzes resumes and qualifies candidates based on your specific requirements.</p>
+              <h3 className="font-bold text-lg mb-2">Contextual Candidate Evaluation</h3>
+              <p className="text-gray-600 text-sm">MCP-enabled agents inject dynamic context from ATS/HRIS systems to perform nuanced candidate qualification and ranking.</p>
             </div>
             
             <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
               <div className="text-blue-600 mb-4">
                 <MessageSquare className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg mb-2">AI Chat Assistant</h3>
-              <p className="text-gray-600 text-sm">24/7 AI copilot that helps with candidate evaluation and recruitment strategies.</p>
+              <h3 className="font-bold text-lg mb-2">Agentic Recruitment Copilot</h3>
+              <p className="text-gray-600 text-sm">Goal-directed AI agents provide strategic guidance, adapting recommendations based on real-time hiring data and context.</p>
             </div>
 
             <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
               <div className="text-orange-600 mb-4">
                 <Workflow className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg mb-2">Automated Workflows</h3>
-              <p className="text-gray-600 text-sm">Streamline your process with AI-powered workflows that adapt to your needs.</p>
+              <h3 className="font-bold text-lg mb-2">MCP Orchestration Engine</h3>
+              <p className="text-gray-600 text-sm">Universal connector protocol enables autonomous agents to coordinate across any HR platform with secure, governance-ready integration.</p>
             </div>
           </div>
         </div>
@@ -341,10 +341,10 @@ const LandingPageEnhanced = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              20+ Integrations to Power Your Recruitment Stack
+              MCP Protocol: Universal AI Integration Standard
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Connect Apply with your existing tools for a seamless recruitment experience. From ATS to HRIS, we integrate with the platforms you already use.
+              Model Context Protocol eliminates brittle API bridges, enabling agentic AI to natively coordinate across any ATS, HRIS, or HR platform with real-time context injection and secure tool invocation.
             </p>
           </div>
 
@@ -372,22 +372,22 @@ const LandingPageEnhanced = () => {
               <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Zap className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="font-semibold mb-2">5-Minute Setup</h3>
-              <p className="text-sm text-gray-600">Connect your tools quickly with our guided setup process</p>
+              <h3 className="font-semibold mb-2">MCP Client/Server Model</h3>
+              <p className="text-sm text-gray-600">Agents act as MCP clients, HR systems as servers - standardized protocol enables instant connectivity</p>
             </div>
             <div className="text-center">
               <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Database className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="font-semibold mb-2">Two-Way Sync</h3>
-              <p className="text-sm text-gray-600">Keep data synchronized across all your platforms automatically</p>
+              <h3 className="font-semibold mb-2">Contextual Data Injection</h3>
+              <p className="text-sm text-gray-600">Real-time context window management pulls candidate data, feedback loops, and recruiting intelligence</p>
             </div>
             <div className="text-center">
               <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Globe className="w-6 h-6 text-orange-600" />
               </div>
-              <h3 className="font-semibold mb-2">API Access</h3>
-              <p className="text-sm text-gray-600">Build custom integrations with our comprehensive API</p>
+              <h3 className="font-semibold mb-2">Function Invocation Security</h3>
+              <p className="text-sm text-gray-600">ETDI, OAuth, and audit agents secure tool access while maintaining agentic workflow capabilities</p>
             </div>
           </div>
 
@@ -503,15 +503,89 @@ const LandingPageEnhanced = () => {
         </div>
       </section>
 
+      {/* MCP Technical Advantages Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-white border-y-2 border-black">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-blue-100 border-2 border-blue-300 rounded-full px-4 py-2 mb-6">
+              <Shield className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-semibold text-blue-800">MODEL CONTEXT PROTOCOL</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Enterprise-Grade Agentic AI Infrastructure
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Built on Anthropic's Model Context Protocol standard, Apply delivers secure, governance-ready autonomous recruitment with audit trails and policy-based access control.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-white p-6 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+              <div className="text-blue-600 mb-4">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h3 className="font-bold text-lg mb-3">Security & Governance</h3>
+              <ul className="text-sm text-gray-600 space-y-2">
+                <li>• ETDI and OAuth protocol hardening</li>
+                <li>• MCPSafetyScanner audit agents</li>
+                <li>• Policy-based tool access control</li>
+                <li>• Prompt injection protection</li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+              <div className="text-purple-600 mb-4">
+                <Workflow className="w-8 h-8" />
+              </div>
+              <h3 className="font-bold text-lg mb-3">Multi-Agent Coordination</h3>
+              <ul className="text-sm text-gray-600 space-y-2">
+                <li>• A2A, ACP, ANP ecosystem support</li>
+                <li>• Autonomous workflow orchestration</li>
+                <li>• Goal-directed task delegation</li>
+                <li>• Real-time context synchronization</li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+              <div className="text-green-600 mb-4">
+                <Database className="w-8 h-8" />
+              </div>
+              <h3 className="font-bold text-lg mb-3">Universal Connectivity</h3>
+              <ul className="text-sm text-gray-600 space-y-2">
+                <li>• JSON-RPC based standard protocol</li>
+                <li>• Infrastructure-agnostic integration</li>
+                <li>• Dynamic function invocation</li>
+                <li>• Context window management</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-6 max-w-4xl mx-auto">
+              <h3 className="font-bold text-lg mb-3">Enterprise Deployment Ready</h3>
+              <p className="text-gray-600 mb-4">
+                MCP's open standard ensures Apply integrates seamlessly with existing enterprise infrastructure while maintaining security compliance and audit requirements.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 text-sm font-medium">
+                <span className="bg-white px-3 py-1 rounded border border-gray-300">SOC 2 Type II</span>
+                <span className="bg-white px-3 py-1 rounded border border-gray-300">GDPR Compliant</span>
+                <span className="bg-white px-3 py-1 rounded border border-gray-300">ISO 27001</span>
+                <span className="bg-white px-3 py-1 rounded border border-gray-300">HIPAA Ready</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials Section */}
       <section id="testimonials" className="py-20 bg-white border-y-2 border-black">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              How Talent Operations Leaders Use AI to Scale
+              How Leaders Deploy Agentic AI for Autonomous Hiring
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Discover how Apply helps companies grow faster by solving their toughest hiring challenges
+              See how recruitment teams use MCP-orchestrated agents to scale hiring operations with minimal human intervention
             </p>
           </div>
 
@@ -568,7 +642,7 @@ const LandingPageEnhanced = () => {
             Ready to Transform Your Recruitment?
           </h2>
           <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
-            Join thousands of recruiters who are hiring smarter with Apply. Start your free trial today.
+            Deploy autonomous AI agents that revolutionize hiring through MCP orchestration. Experience the future of recruitment today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -603,7 +677,7 @@ const LandingPageEnhanced = () => {
                 className="h-8 w-auto mb-4 brightness-0 invert"
               />
               <p className="text-sm text-gray-400">
-                AI-powered recruitment platform for modern hiring teams.
+                Agentic AI recruitment platform powered by Model Context Protocol for autonomous hiring workflows.
               </p>
             </div>
             <div>
