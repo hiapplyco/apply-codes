@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSupabase } from '@/context/SupabaseContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
 export interface SubscriptionDetails {
@@ -32,7 +32,6 @@ export interface SubscriptionDetails {
 }
 
 export const useSubscription = () => {
-  const { supabase } = useSupabase();
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +112,7 @@ export const useSubscription = () => {
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Failed to fetch subscription');
     } finally {
       setLoading(false);
     }
