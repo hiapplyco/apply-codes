@@ -19,8 +19,8 @@ interface UploadRequirementsButtonProps {
 // Context-specific tooltip content
 const tooltipContent: Record<string, { title: string; description: string }> = {
   sourcing: {
-    title: "Upload Job Requirements",
-    description: "Import a job description from a URL. We'll extract key skills, experience levels, and requirements to generate an optimized boolean search string for finding qualified candidates."
+    title: "Scrape Website",
+    description: "Import a job description from a URL. We'll extract key skills, experience levels, and requirements to populate the input field so you can review and edit before generating your search string."
   },
   'job-posting': {
     title: "Import Existing Job Post",
@@ -58,7 +58,7 @@ export function UploadRequirementsButton({
     <URLScrapeButton
       onScrapedContent={onScrapedContent}
       className={`${inlineClasses} ${className}`}
-      buttonText="Upload Requirements Here"
+      buttonText="Scrape Website"
       size={size}
       context={context === 'linkedin' ? 'general' : context}
     />

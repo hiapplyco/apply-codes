@@ -217,7 +217,8 @@ export const SearchForm = ({
                 variant="inline"
                 onScrapedContent={(content) => {
                   setSearchText(content.text);
-                  toast.success("Requirements imported successfully");
+                  toast.success("Website content scraped and imported successfully");
+                  console.log("Scraped content imported:", { url: content.url, textLength: content.text.length });
                 }}
               />
             </div>
@@ -258,7 +259,8 @@ export const SearchForm = ({
                     variant="inline"
                     onScrapedContent={(content) => {
                       setSearchText(content.text);
-                      toast.success("Requirements imported successfully");
+                      toast.success("Website content scraped and imported successfully");
+                      console.log("Scraped content imported:", { url: content.url, textLength: content.text.length });
                     }}
                   />
                 </div>
@@ -411,7 +413,7 @@ export const SearchForm = ({
         )}
 
         {/* Submit Button Section */}
-        <div className="flex justify-end">
+        <div className="flex justify-center">
           <SubmitButton
             isProcessing={isProcessing}
             isDisabled={isProcessing || !searchText.trim()}
