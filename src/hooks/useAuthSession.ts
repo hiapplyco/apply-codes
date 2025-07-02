@@ -50,7 +50,7 @@ export const useAuthSession = () => {
           session: null,
           isAuthenticated: false
         }));
-      }, 5000); // 5 second timeout
+      }, 10000); // 10 second timeout for slower connections
 
       try {
         console.log('Initializing auth session...');
