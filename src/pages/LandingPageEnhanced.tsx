@@ -18,7 +18,10 @@ import {
   Database,
   Link,
   ChevronRight,
-  Quote
+  Quote,
+  Check,
+  X,
+  Sparkles
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
@@ -86,6 +89,76 @@ const featuredIntegrations = [
   { name: "Hunter.io", logo: "📧", category: "Email" }
 ];
 
+// Pricing tiers for landing page
+const pricingTiers = [
+  {
+    name: 'Starter',
+    price: '$99',
+    period: 'month',
+    description: 'Perfect for individual recruiters and small teams',
+    features: [
+      { text: '100 AI searches per month', included: true },
+      { text: 'Basic boolean search generation', included: true },
+      { text: 'LinkedIn & Indeed integration', included: true },
+      { text: 'Save up to 500 candidates', included: true },
+      { text: 'Basic contact enrichment (50 credits)', included: true },
+      { text: '5 projects', included: true },
+      { text: 'Email support', included: true },
+      { text: 'Search history & analytics', included: true },
+      { text: 'AI chat assistant', included: false },
+      { text: 'Advanced platform integrations', included: false },
+      { text: 'Team collaboration', included: false },
+      { text: 'Interview tools & transcription', included: false },
+    ],
+    popular: false,
+    cta: 'Start Free Trial',
+  },
+  {
+    name: 'Professional',
+    price: '$299',
+    period: 'month',
+    description: 'Ideal for growing recruiting teams',
+    features: [
+      { text: 'Unlimited AI searches', included: true },
+      { text: 'Advanced boolean optimization', included: true },
+      { text: 'All platform integrations (10+ ATS/HRIS)', included: true },
+      { text: 'Unlimited candidate storage', included: true },
+      { text: 'Full contact enrichment (500 credits)', included: true },
+      { text: 'AI chat assistant with context', included: true },
+      { text: 'Unlimited projects & collaboration', included: true },
+      { text: 'Interview tools & transcription', included: true },
+      { text: 'Advanced analytics & reporting', included: true },
+      { text: 'Priority support', included: true },
+      { text: 'Team features (up to 10 users)', included: true },
+      { text: 'Custom AI agent development', included: false },
+    ],
+    popular: true,
+    cta: 'Start Free Trial',
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    period: '',
+    description: 'For large teams with advanced needs',
+    features: [
+      { text: 'Everything in Professional', included: true },
+      { text: 'Custom AI agent development', included: true },
+      { text: 'Unlimited contact enrichment', included: true },
+      { text: 'API access with custom rate limits', included: true },
+      { text: 'SSO & advanced security', included: true },
+      { text: 'Custom integrations & development', included: true },
+      { text: 'Dedicated success manager', included: true },
+      { text: 'SLA guarantees & uptime', included: true },
+      { text: 'Training & onboarding', included: true },
+      { text: 'White-label options', included: true },
+      { text: 'Unlimited team members', included: true },
+      { text: 'On-premise deployment options', included: true },
+    ],
+    popular: false,
+    cta: 'Contact Sales',
+  },
+];
+
 // Removed fake stats - will show trust differently
 
 const LandingPageEnhanced = () => {
@@ -145,12 +218,16 @@ const LandingPageEnhanced = () => {
               <a href="#testimonials" className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors">
                 Testimonials
               </a>
-              <button
-                onClick={() => navigate('/pricing')}
+              <a 
+                href="#pricing"
                 className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+                }}
               >
                 Pricing
-              </button>
+              </a>
               <Button
                 onClick={handleGetStarted}
                 className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
@@ -325,6 +402,103 @@ const LandingPageEnhanced = () => {
               View All Integrations
               <ChevronRight className="ml-2 w-4 h-4" />
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-gradient-to-b from-purple-50 to-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-purple-100 border-2 border-purple-300 rounded-full px-4 py-2 mb-6">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-semibold text-purple-800">AI-POWERED RECRUITING</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Pricing that scales with your
+              <span className="block text-purple-600">recruiting success</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Start with a 14-day free trial. No credit card required. 
+              Upgrade, downgrade, or cancel anytime.
+            </p>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {pricingTiers.map((tier) => (
+              <div
+                key={tier.name}
+                className={`relative bg-white rounded-2xl border-4 border-black p-8 ${
+                  tier.popular
+                    ? 'shadow-[8px_8px_0px_0px_rgba(147,51,234,1)] scale-105'
+                    : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                } hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-bold border-2 border-black">
+                      MOST POPULAR
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-black mb-2">{tier.name}</h3>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-4xl font-black">{tier.price}</span>
+                    {tier.period && (
+                      <span className="text-gray-600 font-medium">/{tier.period}</span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 mt-2">{tier.description}</p>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {tier.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-start gap-3">
+                      {feature.included ? (
+                        <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <X className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      )}
+                      <span className={`${feature.included ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                        {feature.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  onClick={() => navigate(tier.name === 'Enterprise' ? '/contact' : '/login')}
+                  className={`w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${
+                    tier.popular
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-white hover:bg-gray-50 text-black'
+                  }`}
+                >
+                  {tier.cta}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust indicators */}
+          <div className="text-center mt-12">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-green-600" />
+                <span>14-day free trial</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-green-600" />
+                <span>Cancel anytime</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
