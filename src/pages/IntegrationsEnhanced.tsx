@@ -20,7 +20,6 @@ import {
   Grid3x3,
   List
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -748,7 +747,6 @@ const getStatusColor = (status: string) => {
 };
 
 export default function IntegrationsEnhanced() {
-  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'Unified' | 'Free' | 'CRM'>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'Enterprise' | 'Mid-Market' | 'SMB'>('all');

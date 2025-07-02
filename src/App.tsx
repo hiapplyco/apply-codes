@@ -50,6 +50,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/integrations" element={<Integrations />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
             <Route path="/reset-password" element={<PasswordReset />} />
@@ -80,7 +81,6 @@ function App() {
                 <Route path="/report/:jobId" element={<Report />} />
                 <Route path="/search-history" element={<SearchHistory />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
-                <Route path="/integrations" element={<Integrations />} />
                 <Route path="/profile" element={<Profile />} />
               </Route>
             </Route>

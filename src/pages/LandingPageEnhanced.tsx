@@ -21,7 +21,6 @@ import {
   Quote
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
 import { MetaTags } from "@/components/landing/MetaTags";
 import { StructuredData } from "@/components/landing/StructuredData";
@@ -91,17 +90,7 @@ const featuredIntegrations = [
 
 const LandingPageEnhanced = () => {
   const navigate = useNavigate();
-  const { session, isLoading } = useAuth();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  // Debug logging
-  console.log('LandingPage render - isLoading:', isLoading, 'session:', !!session);
-
-  useEffect(() => {
-    if (session) {
-      navigate('/dashboard');
-    }
-  }, [session, navigate]);
 
   // Rotate testimonials
   useEffect(() => {
@@ -111,17 +100,18 @@ const LandingPageEnhanced = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Show loading state if auth is still initializing
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FFFBF4]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading Apply...</p>
-        </div>
-      </div>
-    );
-  }
+  // Handle Get Started click with fast auth check
+  const handleGetStarted = async () => {
+    // Quick check if user has an existing session
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <>
@@ -162,7 +152,7 @@ const LandingPageEnhanced = () => {
                 Pricing
               </button>
               <Button
-                onClick={() => navigate('/login')}
+                onClick={handleGetStarted}
                 className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
               >
                 Get Started
@@ -189,7 +179,7 @@ const LandingPageEnhanced = () => {
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button
-              onClick={() => navigate('/login')}
+              onClick={handleGetStarted}
               className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all transform hover:-translate-y-0.5"
             >
               Start Free Trial
@@ -326,7 +316,10 @@ const LandingPageEnhanced = () => {
 
           <div className="text-center">
             <Button
-              onClick={() => navigate('/integrations')}
+              onClick={() => {
+                console.log('Navigating to /integrations');
+                navigate('/integrations');
+              }}
               className="bg-white hover:bg-gray-50 text-[#8B5CF6] px-6 py-3 font-semibold rounded-lg shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all"
             >
               View All Integrations
@@ -405,7 +398,7 @@ const LandingPageEnhanced = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              onClick={() => navigate('/login')}
+              onClick={handleGetStarted}
               className="bg-white hover:bg-gray-100 text-purple-600 px-8 py-4 text-lg font-semibold rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
             >
               Start Free Trial

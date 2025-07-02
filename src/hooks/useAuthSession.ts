@@ -16,19 +16,19 @@ export const useAuthSession = () => {
     isLoading: true,
   });
   
-  // Emergency timeout - ensure loading never stays true forever
+  // Fast timeout - ensure loading is quick for better UX
   useEffect(() => {
-    const emergencyTimeout = setTimeout(() => {
+    const fastTimeout = setTimeout(() => {
       setState(prev => {
         if (prev.isLoading) {
-          console.error('Emergency timeout triggered - forcing loading to false');
+          console.log('Fast timeout - proceeding without session');
           return { ...prev, isLoading: false };
         }
         return prev;
       });
-    }, 15000); // 15 seconds max
+    }, 1000); // 1 second max for immediate UX
     
-    return () => clearTimeout(emergencyTimeout);
+    return () => clearTimeout(fastTimeout);
   }, []);
   
   const prevSession = useRef<Session | null>(null);
@@ -57,16 +57,16 @@ export const useAuthSession = () => {
     if (initialized.current) return;
     
     const initializeAuth = async () => {
-      // Set a timeout to prevent infinite loading
+      // Set a fast timeout for immediate UX
       const timeoutId = setTimeout(() => {
-        console.warn('Auth initialization timeout - proceeding without session');
+        console.log('Auth check timeout - proceeding');
         setState(prev => ({ 
           ...prev, 
           isLoading: false,
           session: null,
           isAuthenticated: false
         }));
-      }, 10000); // 10 second timeout for slower connections
+      }, 800); // 800ms timeout for fast UX
 
       try {
         console.log('Initializing auth session...');
