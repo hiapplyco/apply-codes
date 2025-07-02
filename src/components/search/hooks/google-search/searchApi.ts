@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SearchResult } from "../../types";
-import { extractLocationFromSnippet, prepareSearchString } from "./utils";
+import { extractLocationFromSnippet, prepareSearchString, validateLinkedInUrl } from "./utils";
 import { GoogleSearchResult } from "./types";
 
 /**
@@ -124,12 +124,15 @@ export const fetchSearchResults = async (
             jobTitle = cleanSnippet.split(/[·\-]/)[0].trim();
           }
           
+          // Validate LinkedIn URL before using
+          const validatedUrl = validateLinkedInUrl(item.link);
+          
           return {
             ...item,
             name,
             location: extractLocationFromSnippet(item.snippet),
             jobTitle,
-            profileUrl: item.link
+            profileUrl: validatedUrl
           };
         });
         

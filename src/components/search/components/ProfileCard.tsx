@@ -606,22 +606,25 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-100">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                  className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                >
-                  <a
-                    href={result.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2"
+                {/* Only show LinkedIn button if we have a valid URL */}
+                {result.link && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="border-purple-200 text-purple-700 hover:bg-purple-50"
                   >
-                    <ExternalLink className="w-4 h-4" />
-                    View LinkedIn
-                  </a>
-                </Button>
+                    <a
+                      href={result.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View LinkedIn
+                    </a>
+                  </Button>
+                )}
 
 
                 {result.link?.includes('linkedin.com/in/') && !localContactInfo && (
@@ -646,12 +649,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                   </Button>
                 )}
 
-                {/* Email Outreach Form - Only show if candidate has contact info and we have a project context */}
-                {localContactInfo && (localContactInfo.work_email || localContactInfo.personal_emails?.length) && selectedProjectId && (
+                {/* Email Outreach Form - Show when candidate has contact info */}
+                {localContactInfo && (localContactInfo.work_email || localContactInfo.personal_emails?.length) && (
                   <EmailOutreachForm
                     candidateProfileUrl={result.link}
                     candidateName={result.name}
-                    projectId={selectedProjectId}
+                    projectId={selectedProjectId || undefined}
                     onEmailSent={() => {
                       toast.success('Outreach email sent successfully!');
                     }}

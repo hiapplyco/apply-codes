@@ -70,30 +70,61 @@ const ProjectDetail = () => {
   useEffect(() => {
     if (user && projectId) {
       fetchProjectData();
+    } else if (!user) {
+      // If no user, don't try to fetch - wait for auth
+      setLoading(false);
     }
   }, [user, projectId]);
+
+  // Show loading state while waiting for auth
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Authenticating...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchProjectData = async () => {
     try {
       setLoading(true);
+
+      // Wait for user to be available
+      if (!user?.id) {
+        console.warn('User not authenticated, skipping data fetch');
+        return;
+      }
 
       // Fetch project details
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("*")
         .eq("id", projectId)
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Project fetch error:', projectError);
+        throw new Error(`Failed to fetch project: ${projectError.message}`);
+      }
+      
+      if (!projectData) {
+        throw new Error('Project not found or access denied');
+      }
+      
       setProject(projectData);
 
-      // Fetch candidates in the project
+      // Fetch candidates in the project (using LEFT JOIN to handle empty projects)
       const { data: candidatesData, error: candidatesError } = await supabase
         .from("saved_candidates")
         .select(`
           *,
-          project_candidates!inner(
+          project_candidates(
             added_at,
             notes,
             tags
@@ -102,12 +133,20 @@ const ProjectDetail = () => {
         .eq("project_candidates.project_id", projectId)
         .order("project_candidates.added_at", { ascending: false });
 
-      if (candidatesError) throw candidatesError;
-      setCandidates(candidatesData || []);
+      if (candidatesError) {
+        console.error('Candidates fetch error:', candidatesError);
+        // Don't fail the whole page if candidates can't load
+        toast.error('Failed to load candidates, but project loaded successfully');
+        setCandidates([]);
+      } else {
+        setCandidates(candidatesData || []);
+      }
     } catch (error) {
       console.error("Error fetching project data:", error);
-      toast.error("Failed to load project data");
-      navigate("/search-history");
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to load project data: ${errorMessage}`);
+      // Update navigation to reflect new route structure
+      navigate("/profile");
     } finally {
       setLoading(false);
     }
