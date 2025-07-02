@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 import { Agent, ToolRegistry, promptManager } from "./Agent.ts";
 import { LinkedInSearchTool } from "../tools/LinkedInSearchTool.ts";
 import { SkillsExtractionTool } from "../tools/SkillsExtractionTool.ts";

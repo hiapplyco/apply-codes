@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { JobPostingForm } from "@/components/jobs/JobPostingForm";
+import { JobCreatedModal } from "@/components/jobs/JobCreatedModal";
 import LinkedInPostForm from "@/components/linkedin/LinkedInPostForm";
 import LinkedInPostResults from "@/components/linkedin/LinkedInPostResults";
 import { toast } from "sonner";
@@ -23,6 +24,12 @@ const ContentCreationPage = () => {
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [linkedInActiveTab, setLinkedInActiveTab] = useState("post");
   const [isScrapingUrl, setIsScrapingUrl] = useState(false);
+  const [jobModalData, setJobModalData] = useState<{
+    isOpen: boolean;
+    jobId?: number;
+    jobTitle?: string;
+    booleanSearch?: string;
+  }>({ isOpen: false });
 
   // If user was redirected from linkedin-post, set tab to linkedin
   useEffect(() => {
@@ -63,9 +70,31 @@ const ContentCreationPage = () => {
     }
   };
 
-  const handleJobPostSuccess = () => {
-    toast.success("Job posting created successfully!");
+  const handleJobPostSuccess = (jobData?: { id: number; booleanSearch?: string; title?: string }) => {
+    if (jobData && jobData.booleanSearch) {
+      // Show the modal with the job data
+      setJobModalData({
+        isOpen: true,
+        jobId: jobData.id,
+        jobTitle: jobData.title,
+        booleanSearch: jobData.booleanSearch,
+      });
+    } else {
+      // Fallback to the old behavior if no boolean search was generated
+      toast.success("Job posting created successfully!");
+      setActiveTab("linkedin");
+    }
+  };
+
+  const handleCloseJobModal = () => {
+    setJobModalData({ isOpen: false });
+  };
+
+  const handleCreateAnother = () => {
+    setJobModalData({ isOpen: false });
+    // Reset form by switching tabs and back
     setActiveTab("linkedin");
+    setTimeout(() => setActiveTab("job"), 10);
   };
 
   return (
@@ -137,6 +166,16 @@ const ContentCreationPage = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Job Created Modal */}
+      <JobCreatedModal
+        isOpen={jobModalData.isOpen}
+        onClose={handleCloseJobModal}
+        jobId={jobModalData.jobId || 0}
+        jobTitle={jobModalData.jobTitle}
+        booleanSearch={jobModalData.booleanSearch}
+        onCreateAnother={handleCreateAnother}
+      />
     </div>
   );
 };

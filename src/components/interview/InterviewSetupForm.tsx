@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { UploadRequirementsButton } from "@/components/url-scraper";
 
 interface InterviewSetupFormProps {
   onSubmit: (data: InterviewSetupData) => void;
@@ -99,14 +100,26 @@ export const InterviewSetupForm = ({ onSubmit, isLoading = false }: InterviewSet
 
           <div className="space-y-2">
             <Label htmlFor="roleDescription">Role Description *</Label>
-            <Textarea
-              id="roleDescription"
-              value={formData.roleDescription}
-              onChange={(e) => setFormData(prev => ({ ...prev, roleDescription: e.target.value }))}
-              placeholder="Describe the role, key responsibilities, and requirements..."
-              rows={4}
-              required
-            />
+            <div className="space-y-3">
+              <Textarea
+                id="roleDescription"
+                value={formData.roleDescription}
+                onChange={(e) => setFormData(prev => ({ ...prev, roleDescription: e.target.value }))}
+                placeholder="Describe the role, key responsibilities, and requirements..."
+                rows={4}
+                required
+              />
+              <div className="flex justify-center">
+                <UploadRequirementsButton
+                  context="interview"
+                  size="md"
+                  variant="inline"
+                  onScrapedContent={(data) => {
+                    setFormData(prev => ({ ...prev, roleDescription: data.text }));
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 import { Agent, ToolRegistry, promptManager } from "./Agent.ts";
 import { NymeriaEnrichmentTool } from "../tools/NymeriaEnrichmentTool.ts";
 import { SearchTool } from "./Agent.ts"; // Reuse the base search tool

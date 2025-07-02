@@ -8,7 +8,7 @@ import { useProjectContext } from "@/context/ProjectContext";
 
 interface UseJobPostingFormProps {
   jobId?: string;
-  onSuccess?: () => void;
+  onSuccess?: (jobData?: { id: number; booleanSearch?: string; title?: string }) => void;
   onError?: (errorMessage: string) => void;
 }
 
@@ -137,6 +137,54 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     return true;
   };
 
+  const generateBooleanSearch = async (newJobId: number, jobTitle?: string) => {
+    console.log("Generating boolean search...");
+    try {
+      const { data: booleanData, error: booleanError } = await supabase.functions
+        .invoke('generate-boolean-search', {
+          body: { 
+            description: formState.content,
+            jobTitle: jobTitle,
+            userId: session?.user?.id
+          }
+        });
+
+      if (booleanError) {
+        console.error("Boolean generation error:", booleanError);
+        throw booleanError;
+      }
+
+      console.log("Boolean search generated:", booleanData);
+      
+      if (booleanData?.searchString) {
+        // Update the job record with the boolean search
+        const updateData: any = { 
+          search_string: booleanData.searchString,
+          metadata: {
+            boolean_generated: true,
+            boolean_generated_at: new Date().toISOString()
+          }
+        };
+        
+        const { error: updateError } = await supabase
+          .from("jobs")
+          .update(updateData)
+          .eq("id", newJobId);
+
+        if (updateError) {
+          console.error("Error updating search string:", updateError);
+          // Don't throw - we still have the boolean search to return
+        }
+      }
+
+      return booleanData?.searchString || null;
+    } catch (error) {
+      console.error("Error generating boolean search:", error);
+      // Return null instead of throwing to prevent job save failure
+      return null;
+    }
+  };
+
   const analyzeJobPosting = async (newJobId: number) => {
     console.log("Analyzing job posting...");
     try {
@@ -213,29 +261,71 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
       const newJobId = jobResult.id;
       console.log("Job created/updated with ID:", newJobId);
 
-      // Analyze the job posting (but don't block on completion)
+      // Generate boolean search and analyze in parallel
+      let booleanSearch = null;
       let analysisResult = null;
+      let jobTitle = null;
+
+      // First, generate boolean search (fast operation)
+      console.log("Attempting to generate boolean search for job:", newJobId);
       try {
-        analysisResult = await analyzeJobPosting(newJobId);
-      } catch (analysisError) {
-        console.warn("Analysis failed, but job was saved:", analysisError);
+        booleanSearch = await generateBooleanSearch(newJobId);
+        console.log("Boolean search generated successfully:", booleanSearch);
+      } catch (booleanError) {
+        console.error("Boolean search generation failed, but job was saved:", booleanError);
       }
 
-      // Show a success message
-      toast({
-        title: "Success",
-        description: jobId ? "Job updated successfully" : "Job created successfully" + 
-                   (!analysisResult ? " (Analysis will be available soon)" : ""),
+      // Then analyze the job posting (slower operation, don't block on it)
+      const analysisPromise = analyzeJobPosting(newJobId).then(result => {
+        analysisResult = result;
+        // Extract job title from analysis if available
+        if (result && typeof result === 'object' && 'title' in result) {
+          jobTitle = result.title;
+        }
+        return result;
+      }).catch(analysisError => {
+        console.warn("Analysis failed, but job was saved:", analysisError);
       });
-      
-      // Call the onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
+
+      // If we're creating a new job and have a success callback
+      if (!jobId && onSuccess) {
+        // Always call the onSuccess callback with available data
+        onSuccess({
+          id: newJobId,
+          booleanSearch: booleanSearch || undefined,
+          title: jobTitle || undefined
+        });
+        
+        // Only navigate if no boolean search was generated (fallback behavior)
+        if (!booleanSearch) {
+          toast({
+            title: "Success",
+            description: "Job created successfully! Boolean search generation is pending.",
+          });
+          
+          // Navigate to the editor page as fallback
+          console.log("Navigating to editor page (fallback):", `/job-editor/${newJobId}`);
+          navigate(`/job-editor/${newJobId}`, { replace: true });
+        }
+      } else {
+        // Show a success message for updates or when no modal is needed
+        toast({
+          title: "Success",
+          description: jobId ? "Job updated successfully" : "Job created successfully",
+        });
+        
+        // Call the onSuccess callback if provided (for backward compatibility)
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // Navigate to the editor page
+        console.log("Navigating to editor page:", `/job-editor/${newJobId}`);
+        navigate(`/job-editor/${newJobId}`, { replace: true });
       }
-      
-      // Navigate to the editor page
-      console.log("Navigating to editor page:", `/job-editor/${newJobId}`);
-      navigate(`/job-editor/${newJobId}`, { replace: true });
+
+      // Wait for analysis to complete in the background
+      await analysisPromise;
 
     } catch (error) {
       console.error("Error saving job:", error);

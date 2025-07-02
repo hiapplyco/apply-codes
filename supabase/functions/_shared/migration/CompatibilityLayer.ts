@@ -2,7 +2,7 @@
 import { Agent as LegacyAgent } from "../agents/Agent.ts";
 import { Tool as LegacyTool } from "../tools/Tool.ts";
 import { Agent as EnhancedAgent, Tool as EnhancedTool, BaseTool, ToolDefinition } from "../agents/Agent.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 import { PromptParams } from "../prompts/types.ts";
 
 // Feature flags for gradual migration

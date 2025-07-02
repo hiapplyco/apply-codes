@@ -393,7 +393,7 @@ export class FileSystemTool extends BaseTool {
 }
 
 // Agent.ts - Updated and improved Agent class
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 
 export abstract class Agent<T extends PromptParams> {
   protected readonly model: GoogleGenerativeAI;

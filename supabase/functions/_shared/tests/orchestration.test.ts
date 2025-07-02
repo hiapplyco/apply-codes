@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.177.0/testing/asserts.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 import {
   createRecruitmentOrchestrator,
   WorkflowTemplates,

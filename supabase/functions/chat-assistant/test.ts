@@ -6,7 +6,7 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import { IntentAnalyzer } from "./intent-analyzer.ts";
 import { ToolRegistry } from "./tools.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai";
 
 // Mock Gemini for testing
 class MockGemini {

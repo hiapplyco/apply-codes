@@ -15,14 +15,25 @@ import { useSearchForm } from "./search/hooks/useSearchForm";
 interface NewSearchFormProps {
   userId: string | null;
   autoRun?: boolean;
+  initialRequirements?: string;
+  initialJobId?: number | null;
+  initialSearchString?: string;
+  jobTitle?: string;
 }
 
-const NewSearchForm = ({ userId, autoRun = false }: NewSearchFormProps) => {
+const NewSearchForm = ({ 
+  userId, 
+  autoRun = false,
+  initialRequirements,
+  initialJobId,
+  initialSearchString,
+  jobTitle
+}: NewSearchFormProps) => {
   const location = useLocation();
-  const [currentJobId, setCurrentJobId] = useState<number | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<number | null>(initialJobId || null);
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
-  const [showGoogleSearch, setShowGoogleSearch] = useState(false);
+  const [showGoogleSearch, setShowGoogleSearch] = useState(!!initialSearchString);
 
   const handleJobCreatedOrSubmitted = (jobId: number, submittedText: string) => {
     console.log("Job created/submitted:", { jobId, submittedText });
@@ -57,17 +68,26 @@ const NewSearchForm = ({ userId, autoRun = false }: NewSearchFormProps) => {
 
   useEffect(() => {
     const state = location.state as { content?: string; autoRun?: boolean; searchString?: string } | null;
-    if (state?.content) {
+    
+    // Use props first, then location state
+    if (initialRequirements) {
+      setSearchText(initialRequirements);
+    } else if (state?.content) {
       setSearchText(state.content);
     }
-    if (state?.searchString) {
+    
+    if (initialSearchString) {
+      setSearchString(initialSearchString);
+      setShowGoogleSearch(true);
+    } else if (state?.searchString) {
       setSearchString(state.searchString);
       setShowGoogleSearch(true);
     }
-     if (state) {
-        window.history.replaceState({}, document.title);
-     }
-  }, [location.state, setSearchText, setSearchString]);
+    
+    if (state) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, setSearchText, setSearchString, initialRequirements, initialSearchString]);
 
   useEffect(() => {
     if ((autoRun || (location.state as any)?.autoRun) && searchText && currentJobId && !isProcessing && !isGeneratingAnalysis) {
@@ -78,6 +98,15 @@ const NewSearchForm = ({ userId, autoRun = false }: NewSearchFormProps) => {
        }
     }
   }, [autoRun, searchText, location.state, isProcessing, isGeneratingAnalysis, currentJobId]);
+  
+  // Auto-show Google search if we have initialSearchString and autoRun
+  useEffect(() => {
+    if (autoRun && initialSearchString && !showGoogleSearch) {
+      console.log("Auto-showing Google search with initial search string");
+      setShowGoogleSearch(true);
+      setIsProcessingComplete(true);
+    }
+  }, [autoRun, initialSearchString]);
 
   useEffect(() => {
     if (agentOutput && !isLoadingAgentOutput) {

@@ -1,0 +1,9 @@
+### Test generate-boolean-search function
+POST https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/generate-boolean-search
+Content-Type: application/json
+Authorization: Bearer YOUR_ANON_KEY
+
+{
+  "description": "We are looking for a Senior React Developer with 5+ years of experience. Must have strong TypeScript skills and experience with modern React patterns including hooks, context API, and state management libraries like Redux or MobX. Experience with Next.js is a plus.",
+  "jobTitle": "Senior React Developer"
+}

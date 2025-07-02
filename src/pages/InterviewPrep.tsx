@@ -10,7 +10,6 @@ import { InterviewPlanDisplay } from "@/components/interview/InterviewPlanDispla
 import { useInterviewSetup } from "@/hooks/useInterviewSetup";
 import { useAuth } from "@/context/AuthContext";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
-import { URLScrapeButton } from "@/components/url-scraper";
 
 import { InterviewPrep as InterviewPrepComponent } from '@/components/interview/InterviewPrep';
 
@@ -138,17 +137,11 @@ export default function InterviewPrep() {
       <div className="flex-1 p-6 overflow-auto">
         {/* Project selector at the top of all steps */}
         <div className="max-w-4xl mx-auto mb-6">
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between">
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <ProjectSelector 
               label="Select project for interview preparation"
               placeholder="Choose a project (optional)"
               className="max-w-md"
-            />
-            <URLScrapeButton
-              context="interview"
-              buttonText="Import Job Description"
-              size="sm"
-              className="ml-4"
             />
           </div>
         </div>

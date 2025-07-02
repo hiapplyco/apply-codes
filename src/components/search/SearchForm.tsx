@@ -14,6 +14,7 @@ import { Copy, Search, Loader2, Edit3, ChevronDown, ChevronUp } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { UploadRequirementsButton } from "@/components/url-scraper";
 
 export const SearchForm = ({
   userId,
@@ -191,22 +192,35 @@ export const SearchForm = ({
 
         {/* Requirements Input Section */}
         {!hasSearched ? (
-          <div className="px-3 py-4 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.25)]">
-            <ChatStyleInput
-              value={searchText}
-              onChange={setSearchText}
-              onFileSelect={(file) => {
-                // Create a synthetic event to pass to the existing handler
-                const syntheticEvent = {
-                  target: { files: [file] },
-                  preventDefault: () => {},
-                } as unknown as React.ChangeEvent<HTMLInputElement>;
-                fileUploadHandler(syntheticEvent);
-              }}
-              placeholder="Describe the ideal candidate, paste a job description, or use boolean search..."
-              disabled={isProcessing}
-              maxHeight={200}
-            />
+          <div className="space-y-3">
+            <div className="px-3 py-4 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.25)]">
+              <ChatStyleInput
+                value={searchText}
+                onChange={setSearchText}
+                onFileSelect={(file) => {
+                  // Create a synthetic event to pass to the existing handler
+                  const syntheticEvent = {
+                    target: { files: [file] },
+                    preventDefault: () => {},
+                  } as unknown as React.ChangeEvent<HTMLInputElement>;
+                  fileUploadHandler(syntheticEvent);
+                }}
+                placeholder="Describe the ideal candidate, paste a job description, or use boolean search..."
+                disabled={isProcessing}
+                maxHeight={200}
+              />
+            </div>
+            <div className="flex justify-center">
+              <UploadRequirementsButton
+                context="sourcing"
+                size="md"
+                variant="inline"
+                onScrapedContent={(content) => {
+                  setSearchText(content.text);
+                  toast.success("Requirements imported successfully");
+                }}
+              />
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -220,21 +234,34 @@ export const SearchForm = ({
               {collapsedSections.requirements ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
             </Button>
             {!collapsedSections.requirements && (
-              <div className="px-3 py-4 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.25)] animate-in slide-in-from-top duration-200">
-                <ChatStyleInput
-                  value={searchText}
-                  onChange={setSearchText}
-                  onFileSelect={(file) => {
-                    const syntheticEvent = {
-                      target: { files: [file] },
-                      preventDefault: () => {},
-                    } as unknown as React.ChangeEvent<HTMLInputElement>;
-                    fileUploadHandler(syntheticEvent);
-                  }}
-                  placeholder="Describe the ideal candidate, paste a job description, or use boolean search..."
-                  disabled={isProcessing}
-                  maxHeight={200}
-                />
+              <div className="space-y-3 animate-in slide-in-from-top duration-200">
+                <div className="px-3 py-4 bg-white rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.25)]">
+                  <ChatStyleInput
+                    value={searchText}
+                    onChange={setSearchText}
+                    onFileSelect={(file) => {
+                      const syntheticEvent = {
+                        target: { files: [file] },
+                        preventDefault: () => {},
+                      } as unknown as React.ChangeEvent<HTMLInputElement>;
+                      fileUploadHandler(syntheticEvent);
+                    }}
+                    placeholder="Describe the ideal candidate, paste a job description, or use boolean search..."
+                    disabled={isProcessing}
+                    maxHeight={200}
+                  />
+                </div>
+                <div className="flex justify-center">
+                  <UploadRequirementsButton
+                    context="sourcing"
+                    size="md"
+                    variant="inline"
+                    onScrapedContent={(content) => {
+                      setSearchText(content.text);
+                      toast.success("Requirements imported successfully");
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>

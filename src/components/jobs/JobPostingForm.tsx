@@ -5,7 +5,7 @@ import { useJobPostingForm } from "./hooks/useJobPostingForm";
 import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { URLScrapeButton } from "@/components/url-scraper";
+import { UploadRequirementsButton } from "@/components/url-scraper";
 
 interface JobPostingFormProps {
   jobId?: string;
@@ -56,30 +56,32 @@ export function JobPostingForm({ jobId, onSuccess, onCancel, onError }: JobPosti
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label 
-            htmlFor="content" 
-            className="text-base font-bold text-gray-600"
-          >
-            Job Details
-          </Label>
-          <URLScrapeButton
-            context="job-posting"
-            buttonText="Import from URL"
-            size="sm"
-            onScrapedContent={(data) => {
-              // Append scraped content to existing content
-              setContent(content ? `${content}\n\n--- Imported Content ---\n${data.text}` : data.text);
-            }}
+        <Label 
+          htmlFor="content" 
+          className="text-base font-bold text-gray-600"
+        >
+          Job Details
+        </Label>
+        <div className="space-y-3">
+          <Textarea
+            id="content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={placeholder}
+            className="min-h-[400px] font-mono text-base border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
           />
+          <div className="flex justify-center">
+            <UploadRequirementsButton
+              context="job-posting"
+              size="md"
+              variant="inline"
+              onScrapedContent={(data) => {
+                // Replace content with scraped content
+                setContent(data.text);
+              }}
+            />
+          </div>
         </div>
-        <Textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={placeholder}
-          className="min-h-[400px] font-mono text-base border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
-        />
         <p className="text-xs text-gray-500">
           Include all relevant details about the job position
         </p>
