@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { AuthForm } from "@/components/auth/AuthForm";
+import { UnifiedAuthForm } from "@/components/auth/UnifiedAuthForm";
 import { ArrowLeft } from "lucide-react";
 
 const Login = () => {
@@ -34,13 +34,13 @@ const Login = () => {
           <div className="w-16 h-16 mx-auto mb-4 bg-[#8B5CF6] rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black flex items-center justify-center">
             <span className="text-2xl font-bold text-white">A</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Welcome back to Apply</h1>
-          <p className="text-gray-600">Sign in to continue to your dashboard</p>
+          <h1 className="text-3xl font-bold mb-2">Welcome to Apply</h1>
+          <p className="text-gray-600">Find qualified candidates with AI-powered search</p>
         </div>
 
         {/* Auth Form */}
         <div className="bg-white p-8 rounded-lg border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <AuthForm redirectTo="/dashboard" />
+          <UnifiedAuthForm redirectTo="/dashboard" />
         </div>
       </div>
     </div>
