@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
@@ -755,6 +755,11 @@ export default function IntegrationsEnhanced() {
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'popularity' | 'setupTime'>('popularity');
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Filter and sort integrations
   const filteredIntegrations = useMemo(() => {
