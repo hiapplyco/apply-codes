@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { NoContactInfoDialog } from './NoContactInfoDialog';
+import { EmailOutreachForm } from '@/components/email/EmailOutreachForm';
 
 interface ContactInfo {
   work_email?: string;
@@ -643,6 +644,18 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                       </>
                     )}
                   </Button>
+                )}
+
+                {/* Email Outreach Form - Only show if candidate has contact info and we have a project context */}
+                {localContactInfo && (localContactInfo.work_email || localContactInfo.personal_emails?.length) && selectedProjectId && (
+                  <EmailOutreachForm
+                    candidateProfileUrl={result.link}
+                    candidateName={result.name}
+                    projectId={selectedProjectId}
+                    onEmailSent={() => {
+                      toast.success('Outreach email sent successfully!');
+                    }}
+                  />
                 )}
 
                 <Button

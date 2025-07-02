@@ -1,0 +1,21 @@
+### Test send-outreach-email function
+POST http://127.0.0.1:54321/functions/v1/send-outreach-email
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+
+{
+  "projectId": "test-project-id",
+  "candidateProfileUrl": "https://linkedin.com/in/test-profile",
+  "userCustomText": "I noticed your experience with React and TypeScript aligns perfectly with what we're looking for. Would you be interested in learning more?"
+}
+
+### Test with invalid data
+POST http://127.0.0.1:54321/functions/v1/send-outreach-email
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+
+{
+  "projectId": "",
+  "candidateProfileUrl": "",
+  "userCustomText": ""
+}
