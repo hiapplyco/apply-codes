@@ -158,8 +158,8 @@ export default function MeetingSimplified() {
 
   if (meetingStep === 'welcome') {
     return (
-      <div className="flex-1 bg-gradient-to-br from-purple-50 to-white">
-        <div className="max-w-4xl mx-auto p-8">
+      <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
+        <div className="max-w-4xl mx-auto p-8 w-full">
           <div className="text-center mb-12">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
               <Video className="w-8 h-8 text-purple-600" />
@@ -258,8 +258,8 @@ export default function MeetingSimplified() {
 
   if (meetingStep === 'setup') {
     return (
-      <div className="flex-1 bg-gradient-to-br from-purple-50 to-white">
-        <div className="max-w-3xl mx-auto p-8">
+      <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
+        <div className="max-w-3xl mx-auto p-8 w-full">
           <div className="mb-8">
             <Button
               onClick={() => setMeetingStep('welcome')}
@@ -417,7 +417,7 @@ export default function MeetingSimplified() {
 
   // Meeting View
   return (
-    <div className="flex-1 bg-gray-900 relative">
+    <div className="flex-1 flex flex-col bg-gray-900 rounded-lg overflow-hidden">
       {/* Video Area */}
       <VideoCallFrame
         onJoinMeeting={() => {
