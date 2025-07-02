@@ -30,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  console.log('AuthProvider initializing...');
   const auth = useAuthSession();
 
   // Auth methods

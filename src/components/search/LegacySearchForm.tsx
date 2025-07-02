@@ -12,7 +12,7 @@ import { SubmitButton } from "@/components/search/SubmitButton";
 import { GoogleSearchWindow } from "@/components/search/GoogleSearchWindow";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { SearchType } from "../search/types";
+import { SearchType } from "./types";
 import { useFormState } from "./hooks/useFormState";
 import { useFormSubmit } from "./hooks/useFormSubmit";
 import { processFileUpload } from "./hooks/utils/processFileUpload";

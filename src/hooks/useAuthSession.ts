@@ -16,6 +16,21 @@ export const useAuthSession = () => {
     isLoading: true,
   });
   
+  // Emergency timeout - ensure loading never stays true forever
+  useEffect(() => {
+    const emergencyTimeout = setTimeout(() => {
+      setState(prev => {
+        if (prev.isLoading) {
+          console.error('Emergency timeout triggered - forcing loading to false');
+          return { ...prev, isLoading: false };
+        }
+        return prev;
+      });
+    }, 15000); // 15 seconds max
+    
+    return () => clearTimeout(emergencyTimeout);
+  }, []);
+  
   const prevSession = useRef<Session | null>(null);
   const initialized = useRef(false);
 
@@ -38,6 +53,7 @@ export const useAuthSession = () => {
   }, []);
 
   useEffect(() => {
+    console.log('useAuthSession effect running, initialized:', initialized.current);
     if (initialized.current) return;
     
     const initializeAuth = async () => {
@@ -54,6 +70,7 @@ export const useAuthSession = () => {
 
       try {
         console.log('Initializing auth session...');
+        console.log('Supabase client ready:', !!supabase);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         clearTimeout(timeoutId);

@@ -36,6 +36,7 @@ import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
 
 function App() {
+  console.log('App component rendering...');
   // Remove the basename configuration to let React Router handle paths naturally
   return (
     <HelmetProvider>
