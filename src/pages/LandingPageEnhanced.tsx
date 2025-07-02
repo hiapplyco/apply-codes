@@ -18,13 +18,18 @@ import {
   Database,
   Link,
   ChevronRight,
-  Quote
+  Quote,
+  BrainCircuit,
+  Bot,
+  Sparkles,
+  Target
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
 import { MetaTags } from "@/components/landing/MetaTags";
 import { StructuredData } from "@/components/landing/StructuredData";
+import { OrbitingCircles } from "@/components/landing/OrbitingCircles";
 
 // SEO-friendly testimonials data
 const testimonials = [
@@ -133,6 +138,9 @@ const LandingPageEnhanced = () => {
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors">
                 Features
+              </a>
+              <a href="#tools" className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors">
+                Tools
               </a>
               <a href="#integrations" className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors">
                 Integrations
@@ -254,8 +262,192 @@ const LandingPageEnhanced = () => {
         </div>
       </section>
 
+      {/* Tools Section with Orbiting System */}
+      <section id="tools" className="py-20 bg-gradient-to-br from-purple-50 to-white border-y-2 border-black">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Our AI-Powered Recruitment Tools
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              A comprehensive suite of tools working together to revolutionize your hiring process
+            </p>
+          </div>
+
+          {/* Orbiting Tools System */}
+          <div className="relative mx-auto flex h-[500px] w-full max-w-[600px] items-center justify-center overflow-hidden rounded-lg">
+            {/* Center - Main Platform */}
+            <div className="z-10 flex flex-col items-center justify-center space-y-4">
+              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center shadow-2xl border-2 border-black">
+                <BrainCircuit className="h-12 w-12 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-center">Apply AI Platform</h3>
+              <p className="text-sm text-gray-600 text-center max-w-[200px]">
+                Intelligent recruitment powered by advanced AI
+              </p>
+            </div>
+
+            {/* Inner Orbit - Core Tools */}
+            <OrbitingCircles
+              className="h-[80px] w-[80px] border-none bg-transparent"
+              duration={30}
+              delay={0}
+              radius={180}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg border-2 border-black">
+                  <Search className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[80px] w-[80px] border-none bg-transparent"
+              duration={30}
+              delay={7.5}
+              radius={180}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg border-2 border-black">
+                  <FileScan className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[80px] w-[80px] border-none bg-transparent"
+              duration={30}
+              delay={15}
+              radius={180}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg border-2 border-black">
+                  <Bot className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[80px] w-[80px] border-none bg-transparent"
+              duration={30}
+              delay={22.5}
+              radius={180}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg border-2 border-black">
+                  <Workflow className="h-8 w-8 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            {/* Outer Orbit - Supporting Features */}
+            <OrbitingCircles
+              className="h-[60px] w-[60px] border-none bg-transparent"
+              reverse
+              duration={40}
+              delay={0}
+              radius={280}
+              path={false}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 flex items-center justify-center shadow-md border border-black">
+                  <Video className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[60px] w-[60px] border-none bg-transparent"
+              reverse
+              duration={40}
+              delay={10}
+              radius={280}
+              path={false}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-500 flex items-center justify-center shadow-md border border-black">
+                  <Target className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[60px] w-[60px] border-none bg-transparent"
+              reverse
+              duration={40}
+              delay={20}
+              radius={280}
+              path={false}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center shadow-md border border-black">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+
+            <OrbitingCircles
+              className="h-[60px] w-[60px] border-none bg-transparent"
+              reverse
+              duration={40}
+              delay={30}
+              radius={280}
+              path={false}
+            >
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-md border border-black">
+                  <MessageSquare className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </OrbitingCircles>
+          </div>
+
+          {/* Tool Descriptions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 max-w-5xl mx-auto">
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <Search className="h-6 w-6 text-white" />
+              </div>
+              <h4 className="font-semibold mb-2">AI Sourcing</h4>
+              <p className="text-sm text-gray-600">Generate complex boolean searches instantly</p>
+            </div>
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <FileScan className="h-6 w-6 text-white" />
+              </div>
+              <h4 className="font-semibold mb-2">Smart Screening</h4>
+              <p className="text-sm text-gray-600">AI-powered candidate evaluation and ranking</p>
+            </div>
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <Bot className="h-6 w-6 text-white" />
+              </div>
+              <h4 className="font-semibold mb-2">AI Assistant</h4>
+              <p className="text-sm text-gray-600">Your intelligent recruitment copilot</p>
+            </div>
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <Workflow className="h-6 w-6 text-white" />
+              </div>
+              <h4 className="font-semibold mb-2">Workflows</h4>
+              <p className="text-sm text-gray-600">Automated recruitment pipelines</p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <Button
+              onClick={() => navigate('/login')}
+              size="lg"
+              className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-8 py-6 text-lg rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+            >
+              Explore All Tools <ArrowRight className="ml-2" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Integrations Showcase Section */}
-      <section id="integrations" className="py-20 bg-gradient-to-br from-purple-50 to-white">
+      <section id="integrations" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
