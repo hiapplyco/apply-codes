@@ -128,11 +128,11 @@ export const useInterviewBot = () => {
       const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
       processorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
-      processorRef.current.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
+      processorRef.current.onaudioprocess = (audioEvent) => {
+        const inputData = audioEvent.inputBuffer.getChannelData(0);
         const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          pcm16[i] = inputData[i] * 0x7fff;
+        for (let sampleIndex = 0; sampleIndex < inputData.length; sampleIndex++) {
+          pcm16[sampleIndex] = inputData[sampleIndex] * 0x7fff;
         }
         pcmData.current.push(...pcm16);
       };

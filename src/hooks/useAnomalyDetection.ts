@@ -180,17 +180,17 @@ export const useAnomalyDetection = (jobId: string) => {
     // Check pipeline conversion rates
     const pipelineStages = metrics.pipeline.stages;
     if (pipelineStages.length >= 2) {
-      for (let i = 1; i < pipelineStages.length; i++) {
-        const current = pipelineStages[i];
-        const previous = pipelineStages[i - 1];
+      for (let stageIndex = 1; stageIndex < pipelineStages.length; stageIndex++) {
+        const current = pipelineStages[stageIndex];
+        const previous = pipelineStages[stageIndex - 1];
         
         if (previous.value > 0) {
           const conversionRate = current.value / previous.value;
           
           // Flag unusually low conversion rates
-          if (conversionRate < 0.1 && i < pipelineStages.length - 1) {
+          if (conversionRate < 0.1 && stageIndex < pipelineStages.length - 1) {
             anomalies.push({
-              id: `pattern_conversion_${i}_${Date.now()}`,
+              id: `pattern_conversion_${stageIndex}_${Date.now()}`,
               type: 'pattern',
               severity: conversionRate < 0.05 ? 'high' : 'medium',
               title: `Low Conversion Rate Detected`,
@@ -198,7 +198,7 @@ export const useAnomalyDetection = (jobId: string) => {
               value: conversionRate,
               expectedValue: 0.3, // Expected 30% conversion
               deviation: ((0.3 - conversionRate) / 0.3) * 100,
-              metric: `conversion_${i}`,
+              metric: `conversion_${stageIndex}`,
               category: 'pipeline',
               detectedAt: new Date(),
               impact: 'negative',
