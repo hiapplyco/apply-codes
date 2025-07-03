@@ -128,11 +128,18 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
 
     setIsSearchingPerplexity(true);
     try {
+      console.log('Sending Perplexity query:', perplexityQuery);
+      
       const { data, error } = await supabase.functions.invoke('perplexity-search', {
         body: { query: perplexityQuery },
       });
 
-      if (error) throw error;
+      console.log('Perplexity response:', { data, error });
+      
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
       if (data?.choices?.[0]?.message?.content) {
         appendToJobDescription(`[Perplexity search: "${perplexityQuery}"]\n${data.choices[0].message.content}`);
@@ -144,7 +151,18 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
       }
     } catch (error) {
       console.error('Perplexity search failed:', error);
-      toast.error('Failed to search');
+      
+      // Try to get the actual error message from the response
+      let errorMessage = 'Failed to search';
+      if (error && typeof error === 'object') {
+        if ('message' in error && error.message) {
+          errorMessage = error.message;
+        }
+        // Log the full error for debugging
+        console.log('Full error object:', JSON.stringify(error, null, 2));
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsSearchingPerplexity(false);
     }

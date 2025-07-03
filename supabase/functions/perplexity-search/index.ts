@@ -36,9 +36,28 @@ serve(async (req) => {
       })
     }
 
-    const { query, projectId } = await req.json()
-    if (!query) {
-      return new Response(JSON.stringify({ error: 'Query is required' }), {
+    let requestBody
+    try {
+      requestBody = await req.json()
+      console.log('Request body received:', requestBody)
+    } catch (error) {
+      console.error('Failed to parse JSON:', error)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body',
+        details: error.message
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    
+    const { query, projectId } = requestBody
+    if (!query || typeof query !== 'string' || query.trim() === '') {
+      console.log('Invalid query:', { query, type: typeof query, requestBody })
+      return new Response(JSON.stringify({ 
+        error: 'Query is required and must be a non-empty string',
+        received: { query, type: typeof query, fullBody: requestBody }
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -46,33 +65,43 @@ serve(async (req) => {
 
     // TODO: Add Redis caching here
 
-    const requestBody = {
-      model: 'sonar-medium-online',
+    const perplexityRequestBody = {
+      model: 'sonar',
       messages: [
-        { role: 'system', content: 'You are an AI assistant that provides concise and accurate answers.' },
+        { role: 'system', content: 'Be precise and concise.' },
         { role: 'user', content: query },
       ],
     }
 
+    console.log('Sending request to Perplexity:', perplexityRequestBody)
+
     const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${perplexityApiKey}`,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(perplexityRequestBody),
     })
 
+    console.log('Perplexity response status:', perplexityResponse.status)
+    
     if (!perplexityResponse.ok) {
       const errorBody = await perplexityResponse.text()
-      console.error(`Perplexity API error: ${errorBody}`)
-      return new Response(JSON.stringify({ error: `Perplexity API request failed with status ${perplexityResponse.status}` }), {
-        status: perplexityResponse.status,
+      console.error(`Perplexity API error (${perplexityResponse.status}):`, errorBody)
+      return new Response(JSON.stringify({ 
+        error: `Perplexity API request failed with status ${perplexityResponse.status}`,
+        details: errorBody,
+        perplexityStatus: perplexityResponse.status
+      }), {
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const responseData = await perplexityResponse.json()
+    console.log('Perplexity response data:', JSON.stringify(responseData, null, 2))
 
     // Store search result in database
     try {
