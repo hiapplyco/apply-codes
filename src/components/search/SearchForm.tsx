@@ -74,13 +74,13 @@ export const SearchForm = ({
     }
   }, [searchString, isProcessing, booleanExplanation, explainBoolean, isExplaining]);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFormSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setShowAnimation(true);
     setAnimationStage('generating');
     setBooleanExplanation(null); // Clear previous explanation
     
-    await handleSubmit(e);
+    await handleSubmit(event);
     
     // Wait a bit for the animation
     setTimeout(() => {
@@ -344,7 +344,7 @@ export const SearchForm = ({
                 </div>
                 <Textarea
                   value={searchString}
-                  onChange={(e) => setSearchString(e.target.value)}
+                  onChange={(event) => setSearchString(event.target.value)}
                   className="mt-2 font-mono text-sm resize-none focus:ring-2 focus:ring-black"
                   rows={4}
                   readOnly={false}
@@ -391,7 +391,7 @@ export const SearchForm = ({
                       </div>
                       <Textarea
                         value={searchString}
-                        onChange={(e) => setSearchString(e.target.value)}
+                        onChange={(event) => setSearchString(event.target.value)}
                         className="mt-2 font-mono text-sm resize-none focus:ring-2 focus:ring-black"
                         rows={4}
                         readOnly={false}

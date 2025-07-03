@@ -266,8 +266,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="firstName"
                 placeholder="John"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setFirstName(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
             <div>
@@ -276,8 +276,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="lastName"
                 placeholder="Doe"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setLastName(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
             <div>
@@ -286,8 +286,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="company"
                 placeholder="Apple"
                 value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setCompany(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
             <div>
@@ -296,8 +296,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="title"
                 placeholder="Software Engineer"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setTitle(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
             <div>
@@ -306,8 +306,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="location"
                 placeholder="San Francisco"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setLocation(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
             <div>
@@ -316,8 +316,8 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
                 id="industry"
                 placeholder="Technology"
                 value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onChange={(event) => setIndustry(event.target.value)}
+                onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
               />
             </div>
           </div>

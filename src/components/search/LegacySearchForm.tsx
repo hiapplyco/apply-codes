@@ -66,7 +66,7 @@ export const LegacySearchForm = ({
 
   return (
     <Card className="p-6 border-4 border-black bg-[#FFFBF4] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-      <form onSubmit={(e) => submitForm(e, searchText, searchType as SearchType, companyName)} className="space-y-6">
+      <form onSubmit={(event) => submitForm(event, searchText, searchType as SearchType, companyName)} className="space-y-6">
         {!hideSearchTypeToggle && (
           <SearchTypeToggle 
             value={searchType as SearchType} 

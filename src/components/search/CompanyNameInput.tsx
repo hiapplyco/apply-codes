@@ -21,7 +21,7 @@ export const CompanyNameInput = ({ companyName, isProcessing, onChange }: Compan
         id="companyName"
         placeholder="Enter company name"
         value={companyName}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
         className="border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.8)] focus:ring-0 focus:border-black"
       />
     </div>

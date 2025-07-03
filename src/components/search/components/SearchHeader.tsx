@@ -59,7 +59,7 @@ export const SearchHeader = ({
         </div>
         <Textarea
           value={searchString}
-          onChange={(e) => setSearchString?.(e.target.value)}
+          onChange={(event) => setSearchString?.(event.target.value)}
           className="mt-2 font-mono text-sm resize-none focus:ring-2 focus:ring-black"
           rows={4}
         />

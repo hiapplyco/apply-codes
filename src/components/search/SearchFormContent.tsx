@@ -139,9 +139,9 @@ export const SearchFormContent = ({
              id="mainSearchInput"
              placeholder="Who or what are you sourcing for?"
              value={searchText}
-             onChange={(e) => {
-               console.log("Input onChange fired. Value:", e.target.value); // Log the event
-               onSearchTextChange(e.target.value);
+             onChange={(event) => {
+               console.log("Input onChange fired. Value:", event.target.value); // Log the event
+               onSearchTextChange(event.target.value);
              }}
              className={cn(
                "w-full p-4 border-4 border-black rounded bg-white resize-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-medium focus:ring-0 focus:border-black transition-all duration-300",
@@ -209,7 +209,7 @@ export const SearchFormContent = ({
            <div className="grid gap-4 py-4">
              <div className="space-y-2">
                <Label htmlFor="url">Website URL</Label>
-               <Input id="url" type="url" placeholder="https://example.com" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} className="w-full" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUrlSubmit(); }}} />
+               <Input id="url" type="url" placeholder="https://example.com" value={urlInput} onChange={(event) => setUrlInput(event.target.value)} className="w-full" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handleUrlSubmit(); }}} />
              </div>
              <div className="flex justify-end space-x-2">
                <Button variant="outline" onClick={() => setShowUrlDialog(false)}>Cancel</Button>

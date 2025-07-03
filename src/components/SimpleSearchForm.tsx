@@ -169,7 +169,7 @@ const SimpleSearchForm = ({
   const handleEnhancedMode = () => {
     setIsEnhancedMode(true);
     toast.success('🚀 Enhanced mode activated! Full AI-powered functionality restored.');
-    console.log('Enhanced mode: All single-letter variable conflicts resolved');
+    console.log('Enhanced mode: All single-letter variable conflicts resolved - v2');
   };
 
   if (isEnhancedMode) {

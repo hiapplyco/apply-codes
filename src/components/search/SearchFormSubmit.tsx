@@ -24,8 +24,8 @@ export const useSearchFormSubmit = ({
 }: SearchFormSubmitProps) => {
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     onProcessingChange(true);
 
     try {

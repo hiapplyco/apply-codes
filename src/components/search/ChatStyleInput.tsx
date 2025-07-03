@@ -60,10 +60,10 @@ export const ChatStyleInput = forwardRef<HTMLTextAreaElement, ChatStyleInputProp
       }
     }, [value, maxHeight, ref]);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Submit on Enter (without Shift)
-      if (e.key === 'Enter' && !e.shiftKey && onSubmit) {
-        e.preventDefault();
+      if (event.key === 'Enter' && !event.shiftKey && onSubmit) {
+        event.preventDefault();
         onSubmit();
       }
     };
@@ -72,8 +72,8 @@ export const ChatStyleInput = forwardRef<HTMLTextAreaElement, ChatStyleInputProp
       fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
       if (file && onFileSelect) {
         onFileSelect(file);
       }
@@ -122,7 +122,7 @@ export const ChatStyleInput = forwardRef<HTMLTextAreaElement, ChatStyleInputProp
               else if (ref) ref.current = node;
             }}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(event) => onChange(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled || isLoading}

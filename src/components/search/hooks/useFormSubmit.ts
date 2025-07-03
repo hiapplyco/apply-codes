@@ -16,12 +16,12 @@ export const useFormSubmit = (
   const [isScrapingProfiles, setIsScrapingProfiles] = useState(false);
 
   const handleSubmit = async (
-    e: React.FormEvent,
+    event: React.FormEvent,
     searchText: string,
     searchType: SearchType,
     companyName: string
   ) => {
-    e.preventDefault();
+    event.preventDefault();
     setIsProcessing(true);
 
     try {

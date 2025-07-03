@@ -36,9 +36,9 @@ export const CaptureWindow = ({ onTextUpdate }: CaptureWindowProps = {}) => {
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
+      mediaRecorder.ondataavailable = (dataEvent) => {
+        if (dataEvent.data.size > 0) {
+          chunksRef.current.push(dataEvent.data);
         }
       };
 

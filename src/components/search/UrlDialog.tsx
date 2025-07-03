@@ -38,11 +38,11 @@ export const UrlDialog = ({
               type="url"
               placeholder="https://example.com"
               value={urlInput}
-              onChange={(e) => onUrlChange(e.target.value)}
+              onChange={(event) => onUrlChange(event.target.value)}
               className="w-full"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
                   onSubmit();
                 }
               }}

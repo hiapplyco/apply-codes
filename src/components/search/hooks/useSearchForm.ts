@@ -38,9 +38,9 @@ export const useSearchForm = (
   const handleFileUpload = useFileUploadHandler(userId, setSearchText, setIsProcessing);
 
   // Create a wrapper for the submit form function to pass current state
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback((event: React.FormEvent) => {
     // Pass the necessary state values from useSearchFormState to the submitter logic
-    return submitForm(e, searchText, searchType, companyName);
+    return submitForm(event, searchText, searchType, companyName);
   }, [submitForm, searchText, searchType, companyName]);
 
   // Return all the state and handlers needed by the component
