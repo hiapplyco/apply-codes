@@ -41,7 +41,6 @@ export const useFormSubmit = (
       
       if (source === 'clarvida') {
         // For Clarvida, pass the data directly to the callback
-        console.log('Processing Clarvida result, data:', result?.data);
         if (!result || !result.data) {
           throw new Error('Failed to generate Clarvida report: No data returned');
         }

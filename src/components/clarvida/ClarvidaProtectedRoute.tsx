@@ -9,12 +9,7 @@ export const ClarvidaProtectedRoute = ({ children }: { children: React.ReactNode
   const location = useLocation();
 
   useEffect(() => {
-    console.log("ClarvidaProtectedRoute:", { 
-      isAuthenticated, 
-      isLoading, 
-      path: location.pathname,
-      fullUrl: window.location.href
-    });
+    // Track auth state changes for debugging if needed
   }, [isAuthenticated, isLoading, location]);
 
   if (isLoading) {
@@ -26,12 +21,10 @@ export const ClarvidaProtectedRoute = ({ children }: { children: React.ReactNode
   }
 
   if (!isAuthenticated) {
-    console.log("Not authenticated, redirecting to /clarvida/login from", location.pathname);
     // Use absolute path to ensure proper redirection
     return <Navigate to="/clarvida/login" state={{ from: location }} replace />;
   }
 
   // User is authenticated, render the children
-  console.log("Authenticated, rendering Clarvida protected content");
   return <>{children}</>;
 };

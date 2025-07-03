@@ -612,7 +612,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         .insert([{
           ...item,
           user_id: userId,
-          project_id: selectedProjectId
+          project_id: selectedProjectId || null
         }])
         .select()
         .single();
@@ -663,12 +663,19 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     
     setLoadingContext(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('context_items')
         .select('*')
         .eq('user_id', userId)
-        .eq('project_id', selectedProjectId || null)
         .order('created_at', { ascending: false });
+
+      if (selectedProjectId) {
+        query = query.eq('project_id', selectedProjectId);
+      } else {
+        query = query.is('project_id', null);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

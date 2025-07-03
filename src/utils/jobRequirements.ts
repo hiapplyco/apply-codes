@@ -86,7 +86,6 @@ export const processJobRequirements = async (
     
     // Provide a fallback response for development/testing when the API fails
     if (source === 'clarvida') {
-      console.log('Returning fallback data for Clarvida');
       return {
         success: true,
         data: {

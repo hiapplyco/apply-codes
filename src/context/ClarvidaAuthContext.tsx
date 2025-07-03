@@ -35,7 +35,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
           console.error("Clarvida Auth Error:", error);
           setSession(null);
         } else {
-          console.log("Clarvida Session Data:", !!data.session);
           setSession(data.session);
         }
         setIsLoading(false);
@@ -49,7 +48,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("Clarvida Auth State Change:", _event, !!session);
       setSession(session);
       setIsLoading(false);
     });
@@ -61,7 +59,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log("Clarvida signIn attempt:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email, 
         password
@@ -72,7 +69,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
         return { error };
       }
       
-      console.log("Clarvida signIn success:", !!data.session);
       return { error: null };
     } catch (err) {
       console.error("Unexpected error during Clarvida signIn:", err);
@@ -82,12 +78,9 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
 
   const signUp = async (email: string, password: string) => {
     try {
-      console.log("Clarvida signUp attempt:", email);
       // Get the full origin including protocol for redirects
       const origin = window.location.origin;
       const redirectTo = `${origin}/clarvida`;
-      
-      console.log("Using redirect URL:", redirectTo);
       
       const { data, error } = await supabase.auth.signUp({
         email, 
@@ -102,7 +95,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
         return { error };
       }
       
-      console.log("Clarvida signUp success:", !!data.session);
       return { error: null };
     } catch (err) {
       console.error("Unexpected error during Clarvida signUp:", err);

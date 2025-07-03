@@ -39,14 +39,12 @@ const ClarvidaLogin = () => {
 
   // Check if user is already authenticated
   useEffect(() => {
-    console.log("ClarvidaLogin - Auth state:", { isAuthenticated, redirectTo: from });
     if (isAuthenticated) {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, from]);
 
   const onSubmit = async (values: AuthFormValues) => {
-    console.log("Clarvida form submission:", { isSignUp, email: values.email });
     setIsLoading(true);
 
     try {
@@ -77,10 +75,6 @@ const ClarvidaLogin = () => {
     }
   };
 
-  // Added for debugging
-  useEffect(() => {
-    console.log("ClarvidaLogin component mounted at path:", location.pathname);
-  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-[#F1F0FB] py-12 px-4 sm:px-6 lg:px-8">
