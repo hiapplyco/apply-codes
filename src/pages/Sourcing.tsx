@@ -9,8 +9,8 @@ import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { UploadRequirementsButton } from "@/components/url-scraper";
 import { supabase } from "@/integrations/supabase/client";
 
-// Lazy load components to improve initial page load
-const NewSearchForm = lazy(() => import("@/components/NewSearchForm"));
+// Temporary simple search form to avoid minification issues
+const SimpleSearchForm = lazy(() => import("@/components/SimpleSearchForm"));
 
 const LoadingState = () => (
   <div className="h-96 flex items-center justify-center">
@@ -110,7 +110,7 @@ const SourcingComponent = () => {
           {isLoadingJob ? (
             <LoadingState />
           ) : (
-            <NewSearchForm 
+            <SimpleSearchForm 
               userId={session?.user?.id ?? null}
               initialRequirements={processedRequirements || jobData?.content}
               initialJobId={jobId}
