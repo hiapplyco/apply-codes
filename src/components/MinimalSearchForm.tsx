@@ -237,7 +237,7 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
     setIsSearching(true);
     try {
       // Get the API key from Supabase edge function (same as original implementation)
-      const { data: keyData, error: keyError } = await supabase.functions.invoke('get-google-api-key');
+      const { data: keyData, error: keyError } = await supabase.functions.invoke('get-google-cse-key');
       
       if (keyError || !keyData?.key) {
         throw new Error('Failed to get API key');

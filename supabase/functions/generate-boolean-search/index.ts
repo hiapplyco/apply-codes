@@ -62,21 +62,49 @@ Deno.serve(async (req: Request) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    const prompt = `Generate a LinkedIn boolean search string for this job posting. Focus on speed and relevance.
+    const prompt = `You are an expert LinkedIn recruiter with 10+ years of experience creating sophisticated boolean search strings. Generate a comprehensive, precise LinkedIn boolean search string for this job posting.
 
 Job Title: ${jobTitle || 'Not specified'}
-Description: ${description}
+Job Description: ${description}
 
-Requirements:
-1. Include 3-5 job title variations (use OR)
-2. Include key skills and technologies mentioned
-3. Add seniority indicators if applicable
-4. Use proper Boolean operators (AND, OR, NOT)
-5. Enclose phrases in quotes
-6. Keep it concise but comprehensive
-7. Optimize for LinkedIn search
+Create a multi-layered boolean search strategy:
 
-Return ONLY the boolean search string, no explanation or markdown.`
+1. **Core Job Titles** (3-5 variations with OR):
+   - Include exact matches, abbreviated forms, and industry variations
+   - Consider both current and previous titles
+   - Example: ("Software Engineer" OR "Software Developer" OR "SWE" OR "Application Developer")
+
+2. **Required Skills & Technologies**:
+   - Extract primary technical skills (programming languages, frameworks, tools)
+   - Include both full names and common abbreviations
+   - Group related technologies with OR, separate groups with AND
+   - Example: (JavaScript OR JS OR Node.js) AND (React OR ReactJS)
+
+3. **Experience Level Indicators**:
+   - Add seniority keywords if mentioned: Senior, Lead, Principal, Staff, Junior, Entry
+   - Include years of experience if specified
+   - Example: ("Senior" OR "Lead" OR "Principal")
+
+4. **Industry Context**:
+   - Include relevant industry terms, company types, or domains
+   - Add certifications or education requirements if mentioned
+
+5. **Advanced Optimization**:
+   - Use NOT operators to exclude irrelevant results
+   - Add location-specific terms if mentioned
+   - Include variations in spelling and terminology
+
+6. **LinkedIn-Specific Optimization**:
+   - Structure for LinkedIn's search algorithm
+   - Use proper parentheses for operator precedence
+   - Optimize for profile headline and summary matching
+
+Output a single, production-ready boolean search string that balances:
+- Precision (finds qualified candidates)
+- Recall (doesn't miss good candidates)
+- LinkedIn platform optimization
+
+Return ONLY the boolean search string with no explanation, markdown, or formatting.`
 
     console.log('Generating content with Gemini...')
     const result = await model.generateContent(prompt)
