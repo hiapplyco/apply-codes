@@ -25,13 +25,6 @@ const SourcingComponent = () => {
   const [jobData, setJobData] = useState<{ content?: string; search_string?: string; title?: string } | null>(null);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
   
-  // Debug logging
-  console.log('Sourcing Component - Auth State:', {
-    session: !!session,
-    isAuthenticated,
-    isLoading,
-    userId: session?.user?.id
-  });
   
   // Check both location state and URL params for jobId
   const jobIdFromState = location.state?.jobId;
@@ -45,7 +38,7 @@ const SourcingComponent = () => {
   const processedRequirements = location.state?.processedRequirements;
   
   // Pre-fetch agent outputs if we have a jobId
-  const { data: agentOutput } = useAgentOutputs(jobId || 0);
+  const { data: agentOutput } = useAgentOutputs(jobId);
   
   // Fetch job data if we have a jobId from URL params
   useEffect(() => {

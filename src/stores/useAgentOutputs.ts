@@ -22,18 +22,15 @@ export const useAgentOutputs = (jobId: number | null) => {
 
   return useQuery({
     queryKey: ["agent-outputs", jobId],
+    enabled: !!jobId,
     queryFn: async () => {
       if (clientOutput) {
-        console.log("Using client-side agent output for job:", jobId);
         return clientOutput;
       }
 
       if (!jobId) {
-        console.log("No jobId provided to useAgentOutputs");
         return null;
       }
-
-      console.log("Fetching agent outputs from database for job:", jobId);
       
       try {
         // First verify the job exists
@@ -44,12 +41,10 @@ export const useAgentOutputs = (jobId: number | null) => {
           .maybeSingle();
 
         if (jobError) {
-          console.error("Error fetching job:", jobError);
           throw jobError;
         }
 
         if (!jobData) {
-          console.log("No job found with id:", jobId);
           return null;
         }
 
@@ -62,16 +57,12 @@ export const useAgentOutputs = (jobId: number | null) => {
           .maybeSingle();
 
         if (error) {
-          console.error("Error fetching agent outputs:", error);
           throw error;
         }
 
         if (!data) {
-          console.log("No agent outputs found for job:", jobId);
           return null;
         }
-
-        console.log("Successfully fetched agent output:", data);
 
         return {
           id: data.id,
@@ -83,11 +74,9 @@ export const useAgentOutputs = (jobId: number | null) => {
           job_summary: data.job_summary
         };
       } catch (error) {
-        console.error("Unexpected error in useAgentOutputs:", error);
         throw error;
       }
     },
-    enabled: !!jobId,
     refetchInterval: (data) => (!data && !clientOutput ? 1000 : false),
     retry: !clientOutput,
     retryDelay: 1000,
