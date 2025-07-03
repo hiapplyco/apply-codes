@@ -106,6 +106,25 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       return;
     }
 
+    // Check if URL is a LinkedIn URL
+    const isLinkedInUrl = urlInput.toLowerCase().includes('linkedin.com');
+    
+    if (isLinkedInUrl) {
+      // Show sad emoji first
+      toast.error('😢 LinkedIn URLs are tricky to scrape...', {
+        description: 'LinkedIn has strong anti-scraping measures'
+      });
+      
+      // Wait a moment, then show happy emoji with clever message
+      setTimeout(() => {
+        toast.success('😊 But that\'s exactly why we built this tool!', {
+          description: 'Use the search below to find and analyze LinkedIn profiles instead 👇'
+        });
+      }, 2000);
+      
+      return;
+    }
+
     setIsScrapingUrl(true);
     try {
       const result = await FirecrawlService.crawlWebsite(urlInput, {
@@ -548,24 +567,30 @@ Please create personalized outreach messages for each candidate.`;
             <h2 className="text-xl font-semibold">1. Enter Job Description</h2>
             <div className="flex gap-2">
               {/* URL Scraper Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+              <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                         <Link className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Scrape any website URL with Firecrawl AI</p>
+                    <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
+                  </TooltipContent>
+                </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Scrape Website Content</DialogTitle>
                         <DialogDescription>
-                          Enter a URL to scrape its content and add it to your job description.
+                          Enter a URL to scrape its content and add it to your job description. Note: LinkedIn URLs cannot be scraped due to their anti-bot protection.
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <Input
-                          placeholder="Enter website URL..."
+                          placeholder="Enter website URL (LinkedIn URLs won't work)..."
                           value={urlInput}
                           onChange={(event) => setUrlInput(event.target.value)}
                           onKeyDown={(event) => {
@@ -589,13 +614,7 @@ Please create personalized outreach messages for each candidate.`;
                         </div>
                       </div>
                     </DialogContent>
-                  </Dialog>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Scrape any website URL with Firecrawl AI</p>
-                  <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
-                </TooltipContent>
-              </Tooltip>
+              </Dialog>
 
               {/* File Upload Button */}
               <Tooltip>
@@ -624,9 +643,9 @@ Please create personalized outreach messages for each candidate.`;
               />
 
               {/* Perplexity Search Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
+              <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                         <img 
@@ -636,6 +655,12 @@ Please create personalized outreach messages for each candidate.`;
                         />
                       </Button>
                     </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Search the web with Perplexity AI</p>
+                    <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
+                  </TooltipContent>
+                </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Perplexity Web Search</DialogTitle>
@@ -669,13 +694,7 @@ Please create personalized outreach messages for each candidate.`;
                         </div>
                       </div>
                     </DialogContent>
-                  </Dialog>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Search the web with Perplexity AI</p>
-                  <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
-                </TooltipContent>
-              </Tooltip>
+              </Dialog>
             </div>
           </div>
           
