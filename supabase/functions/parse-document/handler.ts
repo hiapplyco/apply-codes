@@ -28,7 +28,27 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       throw new Error('No file uploaded or missing user ID')
     }
 
-    console.log('Processing file:', (file as File).name, 'of type:', (file as File).type)
+    console.log('Processing file:', (file as File).name, 'of type:', (file as File).type, 'size:', (file as File).size)
+    
+    // Validate file size (20MB limit)
+    if ((file as File).size > 20 * 1024 * 1024) {
+      throw new Error('File size exceeds 20MB limit. Please use a smaller file.');
+    }
+    
+    // Validate file type
+    const supportedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/jpg'
+    ];
+    
+    if (!supportedTypes.includes((file as File).type)) {
+      throw new Error(`Unsupported file type: ${(file as File).type}. Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG`);
+    }
 
     // Create Supabase client
     const supabase = deps.supabaseClient || createClient(
@@ -80,9 +100,15 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
 
     console.log('File uploaded, starting Gemini processing...')
 
+    // Check for Gemini API key
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('Gemini API key not configured. Please contact support.');
+    }
+
     // Initialize Gemini
-    const genAI = deps.googleAI || new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-    const fileManager = deps.fileManager || new GoogleAIFileManager(Deno.env.get('GEMINI_API_KEY') || '');
+    const genAI = deps.googleAI || new GoogleGenerativeAI(geminiApiKey);
+    const fileManager = deps.fileManager || new GoogleAIFileManager(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     let uploadedFile = null;
@@ -90,11 +116,23 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
     try {
       // Upload file to Gemini
       console.log('Uploading file to Gemini...');
-      uploadedFile = await fileManager.uploadFile(arrayBuffer, {
+      console.log('File details - name:', (file as File).name, 'type:', (file as File).type, 'size:', (file as File).size);
+      
+      // Create a File object for Gemini API
+      const fileForGemini = new File([arrayBuffer], (file as File).name, {
+        type: (file as File).type
+      });
+      
+      console.log('Created File object for Gemini, attempting upload...');
+      
+      uploadedFile = await fileManager.uploadFile(fileForGemini, {
         mimeType: (file as File).type,
         displayName: (file as File).name,
       });
-      console.log('Uploaded file:', uploadedFile.file.name);
+      
+      console.log('Successfully uploaded file to Gemini:', uploadedFile.file.name);
+      console.log('File URI:', uploadedFile.file.uri);
+      console.log('Initial file state:', uploadedFile.file.state);
 
       // Poll for file to become active
       let fileState = uploadedFile.file.state;
@@ -156,7 +194,24 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       )
     } catch (processingError) {
       console.error('Gemini processing error:', processingError)
-      const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown error'
+      console.error('Error stack:', processingError instanceof Error ? processingError.stack : 'No stack trace')
+      
+      let errorMessage = 'Unknown processing error'
+      if (processingError instanceof Error) {
+        errorMessage = processingError.message
+        
+        // Provide more specific error messages based on the error content
+        if (errorMessage.includes('uploadFile')) {
+          errorMessage = 'Failed to upload file to Gemini AI. Please try again or contact support.'
+        } else if (errorMessage.includes('FAILED')) {
+          errorMessage = 'Google AI could not process this file. Please try a different file format.'
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+          errorMessage = 'File processing timed out. Please try a smaller file.'
+        } else if (errorMessage.includes('mimeType') || errorMessage.includes('mime')) {
+          errorMessage = 'File format not supported by AI processor. Please use PDF, DOC, DOCX, or image files.'
+        }
+      }
+      
       throw new Error(`Document processing failed: ${errorMessage}`)
     } finally {
       // Clean up uploaded file
