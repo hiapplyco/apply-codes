@@ -1,10 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { GoogleGenerativeAI } from 'npm:@google/generative-ai'
 
+interface ContextItem {
+  type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input';
+  title: string;
+  content: string;
+  summary?: string;
+  source_url?: string;
+  file_name?: string;
+}
+
 interface RequestPayload {
   description: string
   jobTitle?: string
   userId?: string
+  contextItems?: ContextItem[]
 }
 
 interface BooleanSearchResponse {
@@ -38,7 +48,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const { description, jobTitle, userId } = requestBody
+    const { description, jobTitle, userId, contextItems } = requestBody
 
     if (!description || typeof description !== 'string' || description.trim() === '') {
       console.error('Description is missing or invalid:', { description, type: typeof description })
@@ -66,6 +76,18 @@ Deno.serve(async (req: Request) => {
 
 Job Title: ${jobTitle || 'Not specified'}
 Job Description: ${description}
+
+${contextItems && contextItems.length > 0 ? `
+Additional Context (${contextItems.length} items):
+${contextItems.map((item, index) => `
+${index + 1}. ${item.type.replace('_', ' ').toUpperCase()} - ${item.title}
+   ${item.summary || item.content.substring(0, 200) + (item.content.length > 200 ? '...' : '')}
+   ${item.source_url ? `Source: ${item.source_url}` : ''}
+   ${item.file_name ? `File: ${item.file_name}` : ''}
+`).join('')}
+
+Use this additional context to enhance the boolean search string with more specific terms, requirements, and qualifications mentioned in the context items.
+` : ''}
 
 Create a multi-layered boolean search strategy:
 

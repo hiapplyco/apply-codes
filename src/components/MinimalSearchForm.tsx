@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -28,6 +28,20 @@ interface ContactInfo {
   email: string;
   phone?: string;
   linkedin?: string;
+}
+
+interface ContextItem {
+  id: string;
+  type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input';
+  title: string;
+  content: string;
+  summary?: string;
+  source_url?: string;
+  file_name?: string;
+  file_type?: string;
+  created_at: string;
+  metadata?: Record<string, any>;
+  isExpanded?: boolean;
 }
 
 // Helper function to extract location from LinkedIn snippet
@@ -83,6 +97,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [savedCandidates, setSavedCandidates] = useState<Set<number>>(new Set());
   const [savingCandidates, setSavingCandidates] = useState<Set<number>>(new Set());
   
+  // Context management states
+  const [contextItems, setContextItems] = useState<ContextItem[]>([]);
+  const [loadingContext, setLoadingContext] = useState(false);
+  
   // Input method states
   const [urlInput, setUrlInput] = useState('');
   const [isScrapingUrl, setIsScrapingUrl] = useState(false);
@@ -134,6 +152,21 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (result.success && result.data?.text) {
         appendToJobDescription(`[Scraped from ${urlInput}]\n${result.data.text}`);
+        
+        // Save to database
+        await saveContextItem({
+          type: 'url_scrape',
+          title: result.data.title || `Scraped from ${urlInput}`,
+          content: result.data.text,
+          source_url: urlInput,
+          summary: result.data.summary,
+          metadata: {
+            url: urlInput,
+            success: true,
+            timestamp: new Date().toISOString()
+          }
+        });
+        
         setUrlInput('');
         setShowUrlDialog(false);
         toast.success('Website content added successfully!');
@@ -187,6 +220,24 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (data?.success && data?.text) {
         appendToJobDescription(`[Extracted from ${file.name}]\n${data.text}`);
+        
+        // Save to database
+        await saveContextItem({
+          type: 'file_upload',
+          title: `Extracted from ${file.name}`,
+          content: data.text,
+          file_name: file.name,
+          file_type: file.type,
+          summary: data.summary,
+          metadata: {
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            success: true,
+            timestamp: new Date().toISOString()
+          }
+        });
+        
         toast.success('File content extracted and added!');
       } else {
         throw new Error(data?.message || 'Failed to extract file content');
@@ -240,7 +291,24 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
 
       if (data?.choices?.[0]?.message?.content) {
-        appendToJobDescription(`[Perplexity search: "${perplexityQuery}"]\n${data.choices[0].message.content}`);
+        const searchContent = data.choices[0].message.content;
+        appendToJobDescription(`[Perplexity search: "${perplexityQuery}"]\n${searchContent}`);
+        
+        // Save to database
+        await saveContextItem({
+          type: 'perplexity_search',
+          title: `Perplexity search: "${perplexityQuery}"`,
+          content: searchContent,
+          source_url: perplexityQuery, // Store query as source
+          summary: searchContent.length > 500 ? searchContent.substring(0, 500) + '...' : searchContent,
+          metadata: {
+            query: perplexityQuery,
+            success: true,
+            timestamp: new Date().toISOString(),
+            response_data: data
+          }
+        });
+        
         setPerplexityQuery('');
         setShowPerplexityDialog(false);
         toast.success('Search results added successfully!');
@@ -274,8 +342,21 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     setIsGenerating(true);
     try {
+      // Prepare context items for the edge function
+      const contextData = contextItems.map(item => ({
+        type: item.type,
+        title: item.title,
+        content: item.content,
+        summary: item.summary,
+        source_url: item.source_url,
+        file_name: item.file_name
+      }));
+
       const { data, error } = await supabase.functions.invoke('generate-boolean-search', {
-        body: { description: jobDescription }
+        body: { 
+          description: jobDescription,
+          contextItems: contextData
+        }
       });
 
       if (error) throw error;
@@ -523,6 +604,87 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
+  // Context management functions
+  const saveContextItem = async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('context_items')
+        .insert([{
+          ...item,
+          user_id: userId,
+          project_id: selectedProjectId
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newContextItem: ContextItem = {
+        ...data,
+        isExpanded: false
+      };
+
+      setContextItems(prev => [newContextItem, ...prev]);
+      return newContextItem;
+    } catch (error) {
+      console.error('Error saving context item:', error);
+      toast.error('Failed to save context item');
+      return null;
+    }
+  };
+
+  const toggleContextExpansion = (id: string) => {
+    setContextItems(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, isExpanded: !item.isExpanded } : item
+      )
+    );
+  };
+
+  const removeContextItem = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('context_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setContextItems(prev => prev.filter(item => item.id !== id));
+      toast.success('Context item removed');
+    } catch (error) {
+      console.error('Error removing context item:', error);
+      toast.error('Failed to remove context item');
+    }
+  };
+
+  const loadContextItems = async () => {
+    if (!userId) return;
+    
+    setLoadingContext(true);
+    try {
+      const { data, error } = await supabase
+        .from('context_items')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('project_id', selectedProjectId || null)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setContextItems(data.map(item => ({ ...item, isExpanded: false })));
+    } catch (error) {
+      console.error('Error loading context items:', error);
+    } finally {
+      setLoadingContext(false);
+    }
+  };
+
+  // Load context items when component mounts or project changes
+  useEffect(() => {
+    loadContextItems();
+  }, [userId, selectedProjectId]);
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
@@ -704,6 +866,88 @@ Please create personalized outreach messages for each candidate.`;
             placeholder="Paste your job description here..."
             className="min-h-[120px] mb-4"
           />
+
+          {/* Context Items Thumbnails */}
+          {contextItems.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Added Context ({contextItems.length} item{contextItems.length !== 1 ? 's' : ''})
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {contextItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {item.type === 'url_scrape' && <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                        {item.type === 'file_upload' && <FileText className="w-4 h-4 text-green-500 flex-shrink-0" />}
+                        {item.type === 'perplexity_search' && <img src="/assets/perplexity.svg" alt="Perplexity" className="w-4 h-4 flex-shrink-0" />}
+                        <span className="text-xs font-medium text-gray-800 truncate">
+                          {item.title}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          onClick={() => toggleContextExpansion(item.id)}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          {item.isExpanded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                        <button
+                          onClick={() => removeContextItem(item.id)}
+                          className="text-gray-400 hover:text-red-500 p-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Preview text */}
+                    <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                      {item.summary || item.content.substring(0, 100) + (item.content.length > 100 ? '...' : '')}
+                    </p>
+                    
+                    {/* Source info */}
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>
+                        {item.type === 'url_scrape' && item.source_url && (
+                          <span title={item.source_url}>{new URL(item.source_url).hostname}</span>
+                        )}
+                        {item.type === 'file_upload' && item.file_name && (
+                          <span>{item.file_name}</span>
+                        )}
+                        {item.type === 'perplexity_search' && (
+                          <span>Web search</span>
+                        )}
+                      </span>
+                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+                    
+                    {/* Expanded content */}
+                    {item.isExpanded && (
+                      <div className="mt-3 pt-2 border-t border-gray-200">
+                        <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-2 rounded border">
+                          {item.content}
+                        </div>
+                        {item.source_url && (
+                          <a
+                            href={item.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-500 hover:underline mt-1 inline-block"
+                          >
+                            View original source ↗
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <Button
             onClick={generateBooleanSearch}
