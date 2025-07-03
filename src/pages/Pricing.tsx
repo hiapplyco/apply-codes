@@ -7,26 +7,50 @@ const Pricing = () => {
 
   const tiers = [
     {
-      name: 'Starter',
-      price: '$99',
-      period: 'month',
-      description: 'Perfect for individual recruiters and small teams',
+      name: 'Free Trial',
+      price: 'Free',
+      period: '7 days',
+      description: 'Try all features with no commitment',
       features: [
-        { text: '100 AI searches per month', included: true },
-        { text: 'Basic boolean search generation', included: true },
-        { text: 'LinkedIn & Indeed integration', included: true },
-        { text: 'Save up to 500 candidates', included: true },
-        { text: 'Basic contact enrichment (50 credits)', included: true },
-        { text: '5 projects', included: true },
+        { text: '10 AI searches', included: true },
+        { text: 'Boolean search generation', included: true },
+        { text: 'LinkedIn & platform integrations', included: true },
+        { text: '50 contact enrichments', included: true },
+        { text: '100 AI chat interactions', included: true },
+        { text: '5 video interviews', included: true },
+        { text: '3 projects', included: true },
+        { text: '1 team member (you)', included: true },
         { text: 'Email support', included: true },
-        { text: 'Search history & analytics', included: true },
-        { text: 'AI chat assistant', included: false },
-        { text: 'Advanced platform integrations', included: false },
-        { text: 'Team collaboration', included: false },
-        { text: 'Interview tools & transcription', included: false },
+        { text: 'Full feature access', included: true },
+        { text: 'No credit card required', included: true },
+        { text: 'Upgrade anytime', included: true },
       ],
       popular: false,
       cta: 'Start Free Trial',
+      tier: 'free_trial',
+    },
+    {
+      name: 'Starter',
+      price: '$99',
+      period: 'month',
+      description: 'Perfect for individual recruiters',
+      features: [
+        { text: '100 AI searches per month', included: true },
+        { text: 'Boolean search generation', included: true },
+        { text: 'LinkedIn & platform integrations', included: true },
+        { text: '200 contact enrichments', included: true },
+        { text: '500 AI chat interactions', included: true },
+        { text: '10 video interviews', included: true },
+        { text: '10 projects', included: true },
+        { text: '3 team members', included: true },
+        { text: 'Email support', included: true },
+        { text: 'Search history & analytics', included: true },
+        { text: 'Bulk operations', included: false },
+        { text: 'API access', included: false },
+      ],
+      popular: false,
+      cta: 'Choose Starter',
+      tier: 'starter',
     },
     {
       name: 'Professional',
@@ -36,19 +60,20 @@ const Pricing = () => {
       features: [
         { text: 'Unlimited AI searches', included: true },
         { text: 'Advanced boolean optimization', included: true },
-        { text: 'All platform integrations (10+ ATS/HRIS)', included: true },
-        { text: 'Unlimited candidate storage', included: true },
-        { text: 'Full contact enrichment (500 credits)', included: true },
-        { text: 'AI chat assistant with context', included: true },
-        { text: 'Unlimited projects & collaboration', included: true },
-        { text: 'Interview tools & transcription', included: true },
-        { text: 'Advanced analytics & reporting', included: true },
+        { text: 'All platform integrations', included: true },
+        { text: 'Unlimited contact enrichments', included: true },
+        { text: 'Unlimited AI chat interactions', included: true },
+        { text: 'Unlimited video interviews', included: true },
+        { text: 'Unlimited projects', included: true },
+        { text: '10 team members', included: true },
         { text: 'Priority support', included: true },
-        { text: 'Team features (up to 10 users)', included: true },
-        { text: 'Custom AI agent development', included: false },
+        { text: 'Advanced analytics & reporting', included: true },
+        { text: 'Bulk operations', included: true },
+        { text: 'API access', included: true },
       ],
       popular: true,
-      cta: 'Start Free Trial',
+      cta: 'Choose Professional',
+      tier: 'professional',
     },
     {
       name: 'Enterprise',
@@ -57,20 +82,21 @@ const Pricing = () => {
       description: 'For large teams with advanced needs',
       features: [
         { text: 'Everything in Professional', included: true },
-        { text: 'Custom AI agent development', included: true },
-        { text: 'Unlimited contact enrichment', included: true },
-        { text: 'API access with custom rate limits', included: true },
+        { text: 'Custom usage limits', included: true },
+        { text: 'Unlimited team members', included: true },
         { text: 'SSO & advanced security', included: true },
-        { text: 'Custom integrations & development', included: true },
+        { text: 'Custom integrations', included: true },
         { text: 'Dedicated success manager', included: true },
-        { text: 'SLA guarantees & uptime', included: true },
+        { text: 'SLA guarantees', included: true },
         { text: 'Training & onboarding', included: true },
         { text: 'White-label options', included: true },
-        { text: 'Unlimited team members', included: true },
-        { text: 'On-premise deployment options', included: true },
+        { text: 'On-premise deployment', included: true },
+        { text: 'Custom AI development', included: true },
+        { text: '24/7 phone support', included: true },
       ],
       popular: false,
       cta: 'Contact Sales',
+      tier: 'enterprise',
     },
   ];
 
@@ -108,13 +134,13 @@ const Pricing = () => {
             <span className="block text-purple-600">recruiting success</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Start with a 14-day free trial. No credit card required. 
+            Start with a 7-day free trial. No credit card required. 
             Upgrade, downgrade, or cancel anytime.
           </p>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {tiers.map((tier, index) => (
             <div
               key={tier.name}
@@ -159,7 +185,16 @@ const Pricing = () => {
               </ul>
 
               <Button
-                onClick={() => navigate(tier.name === 'Enterprise' ? '/contact' : '/login')}
+                onClick={() => {
+                  if (tier.name === 'Enterprise') {
+                    navigate('/contact');
+                  } else if (tier.name === 'Free Trial') {
+                    navigate('/login');
+                  } else {
+                    // For paid plans, redirect to login with plan parameter
+                    navigate(`/login?plan=${tier.tier}`);
+                  }
+                }}
                 className={`w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${
                   tier.popular
                     ? 'bg-purple-600 hover:bg-purple-700 text-white'
@@ -179,7 +214,7 @@ const Pricing = () => {
             <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h3 className="font-bold text-lg mb-2">What's included in the free trial?</h3>
               <p className="text-gray-600">
-                You get full access to all Professional features for 14 days. No credit card required.
+                You get 7 days to try all features: 10 searches, 50 contact enrichments, 100 AI interactions, 5 video interviews, and 3 projects. No credit card required.
               </p>
             </div>
             <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">

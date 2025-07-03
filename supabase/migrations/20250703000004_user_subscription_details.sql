@@ -38,7 +38,7 @@ CREATE INDEX idx_user_subscription_details_user_id ON user_subscription_details(
 CREATE INDEX idx_user_subscription_details_subscription_id ON user_subscription_details(subscription_id);
 CREATE INDEX idx_user_subscription_details_customer_id ON user_subscription_details(customer_id);
 CREATE INDEX idx_user_subscription_details_status ON user_subscription_details(status);
-CREATE INDEX idx_user_subscription_details_plan_type ON user_subscription_details(plan_type);
+CREATE INDEX idx_user_subscription_details_tier ON user_subscription_details(tier);
 
 -- Enable Row Level Security
 ALTER TABLE user_subscription_details ENABLE ROW LEVEL SECURITY;
