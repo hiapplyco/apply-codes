@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -109,6 +109,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [isSearchingPerplexity, setIsSearchingPerplexity] = useState(false);
   const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [showPerplexityDialog, setShowPerplexityDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [emailContext, setEmailContext] = useState('');
+  const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
+  const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to append content to job description
@@ -658,7 +662,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
-  const loadContextItems = async () => {
+  const loadContextItems = useCallback(async () => {
     if (!userId) return;
     
     setLoadingContext(true);
@@ -685,39 +689,72 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     } finally {
       setLoadingContext(false);
     }
-  };
+  }, [userId, selectedProjectId]);
 
   // Load context items when component mounts or project changes
   useEffect(() => {
     loadContextItems();
-  }, [userId, selectedProjectId]);
+  }, [userId, selectedProjectId, loadContextItems]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
   };
 
-  const generateEmailPrompt = () => {
+  const generateEmailTemplates = async () => {
     const selectedResults = searchResults.filter((_, index) => selectedProfiles.has(index));
+    
     if (selectedResults.length === 0) {
       toast.error('Please select some profiles first');
       return;
     }
 
-    const emailPrompt = `Draft a professional recruiting email for the following candidates:
+    if (!jobDescription.trim()) {
+      toast.error('Please enter a job description first');
+      return;
+    }
 
-${selectedResults.map((result, index) => `
-${index + 1}. ${result.title}
-   LinkedIn: ${result.link}
-   Background: ${result.snippet}
-`).join('')}
+    setIsGeneratingEmails(true);
+    try {
+      // Prepare candidates data for the edge function
+      const candidates = selectedResults.map(result => ({
+        name: result.title.split(' - ')[0] || result.title,
+        profileUrl: result.link,
+        snippet: result.snippet,
+        location: result.location
+      }));
 
-Job Description: ${jobDescription}
+      const { data, error } = await supabase.functions.invoke('generate-email-templates', {
+        body: {
+          candidates,
+          jobDescription,
+          context: emailContext.trim() || undefined
+        }
+      });
 
-Please create personalized outreach messages for each candidate.`;
+      if (error) throw error;
 
-    copyToClipboard(emailPrompt);
-    toast.success('Email prompt copied to clipboard!');
+      if (data?.success && data?.emailTemplates) {
+        setGeneratedEmails(data.emailTemplates);
+        toast.success(`Generated ${data.emailTemplates.length} email template(s)!`);
+      } else {
+        throw new Error('No email templates generated');
+      }
+    } catch (error) {
+      console.error('Error generating email templates:', error);
+      toast.error('Failed to generate email templates');
+    } finally {
+      setIsGeneratingEmails(false);
+    }
+  };
+
+  const openEmailDialog = () => {
+    const selectedResults = searchResults.filter((_, index) => selectedProfiles.has(index));
+    if (selectedResults.length === 0) {
+      toast.error('Please select some profiles first');
+      return;
+    }
+    setShowEmailDialog(true);
   };
 
   return (
@@ -791,11 +828,19 @@ Please create personalized outreach messages for each candidate.`;
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0"
+                    className="h-8 w-8 p-0 relative overflow-hidden"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingFile}
                   >
-                    <Upload className="w-4 h-4" />
+                    {isUploadingFile ? (
+                      <>
+                        <div className="absolute inset-0 bg-purple-100 animate-pulse" />
+                        <div className="absolute bottom-0 left-0 h-1 bg-purple-600 animate-loading-bar" />
+                        <Upload className="w-4 h-4 relative z-10 animate-bounce" />
+                      </>
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -1007,12 +1052,12 @@ Please create personalized outreach messages for each candidate.`;
             <div className="space-x-2">
               <Badge variant="outline">{selectedProfiles.size} selected</Badge>
               <Button
-                onClick={generateEmailPrompt}
+                onClick={openEmailDialog}
                 disabled={selectedProfiles.size === 0}
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
               >
-                Generate Email Prompt
+                Generate Email Templates
               </Button>
             </div>
           </div>
@@ -1167,28 +1212,28 @@ Please create personalized outreach messages for each candidate.`;
                       {/* Contact Information */}
                       {contact && (
                         <div className="bg-white p-3 rounded border">
-                          <h4 className="font-semibold text-sm mb-2">📞 Contact Information</h4>
-                          <div className="space-y-1 text-sm">
+                          <h4 className="font-semibold text-sm mb-1.5">📞 Contact Information</h4>
+                          <div className="space-y-0.5 text-sm">
                             {contact.email && (
-                              <div className="flex justify-between">
-                                <span className="font-medium">Email:</span>
-                                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-xs">Email:</span>
+                                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline text-xs">
                                   {contact.email}
                                 </a>
                               </div>
                             )}
                             {contact.phone && (
-                              <div className="flex justify-between">
-                                <span className="font-medium">Phone:</span>
-                                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-xs">Phone:</span>
+                                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline text-xs">
                                   {contact.phone}
                                 </a>
                               </div>
                             )}
                             {contact.linkedin && (
-                              <div className="flex justify-between">
-                                <span className="font-medium">LinkedIn:</span>
-                                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-xs">LinkedIn:</span>
+                                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
                                   View Profile
                                 </a>
                               </div>
@@ -1210,6 +1255,128 @@ Please create personalized outreach messages for each candidate.`;
           <p className="text-center text-gray-500">
             Click "Search LinkedIn Profiles" to find candidates
           </p>
+        </Card>
+      )}
+
+      {/* Email Generation Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Generate Email Templates</DialogTitle>
+            <DialogDescription>
+              Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Additional Context (Optional)
+              </label>
+              <Textarea
+                placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
+                value={emailContext}
+                onChange={(e) => setEmailContext(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={generateEmailTemplates}
+                disabled={isGeneratingEmails}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
+              </Button>
+              <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generated Email Templates */}
+      {generatedEmails.length > 0 && (
+        <Card className="p-6 border-2 border-blue-400">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
+            <Button
+              onClick={() => setGeneratedEmails([])}
+              variant="outline"
+              size="sm"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {generatedEmails.map((email, index) => (
+              <div key={index} className="border rounded-lg bg-white">
+                <div className="p-4 border-b bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => copyToClipboard(email.subject)}
+                      >
+                        Copy Subject
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => copyToClipboard(email.body)}
+                      >
+                        Copy Email
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
+                    <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
+                      {email.subject}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
+                    <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                      {email.body}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <a 
+                      href={email.profileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline flex items-center"
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View LinkedIn Profile
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy Complete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
       </div>

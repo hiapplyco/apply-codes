@@ -90,7 +90,7 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
     try {
       // Upload file to Gemini
       console.log('Uploading file to Gemini...');
-      uploadedFile = await fileManager.uploadFile(new Blob([arrayBuffer]), {
+      uploadedFile = await fileManager.uploadFile(arrayBuffer, {
         mimeType: (file as File).type,
         displayName: (file as File).name,
       });
