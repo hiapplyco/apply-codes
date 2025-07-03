@@ -32,7 +32,7 @@ const menuItems: MenuItem[] = [
   { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Sourcing', path: '/sourcing', icon: Search },
   { title: 'Meeting', path: '/meeting', icon: Users },
-  { title: 'Integrations', path: '/integrations', icon: Plug },
+  { title: 'Integrations', path: '/platform/integrations', icon: Plug },
   { title: 'Profile', path: '/profile', icon: User },
   { title: 'Chat', path: '/chat', icon: MessageSquare },
 ];

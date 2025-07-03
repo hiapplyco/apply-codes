@@ -28,7 +28,8 @@ import ResetPasswordRequest from "@/pages/ResetPasswordRequest";
 import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
-import Integrations from "@/pages/IntegrationsEnhanced";
+import MarketingIntegrations from "@/pages/MarketingIntegrations";
+import PlatformIntegrations from "@/pages/PlatformIntegrations";
 import Meeting from "@/pages/MeetingSimplified";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
@@ -49,7 +50,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/integrations" element={<Integrations />} />
+            <Route path="/integrations" element={<MarketingIntegrations />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
             <Route path="/reset-password" element={<PasswordReset />} />
@@ -81,6 +82,7 @@ function App() {
                 <Route path="/report/:jobId" element={<Report />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/platform/integrations" element={<PlatformIntegrations />} />
               </Route>
             </Route>
 
