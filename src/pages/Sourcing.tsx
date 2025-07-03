@@ -1,16 +1,11 @@
 
-import { lazy, Suspense, memo, useEffect, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { lazy, Suspense, memo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useAgentOutputs } from "@/stores/useAgentOutputs";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { ProjectSelector } from "@/components/project/ProjectSelector";
-import { UploadRequirementsButton } from "@/components/url-scraper";
-import { supabase } from "@/integrations/supabase/client";
 
-// Temporary simple search form to avoid minification issues
-const SimpleSearchForm = lazy(() => import("@/components/SimpleSearchForm"));
+// Minimal stable search form 
+const MinimalSearchForm = lazy(() => import("@/components/MinimalSearchForm"));
 
 const LoadingState = () => (
   <div className="h-96 flex items-center justify-center">
@@ -20,53 +15,6 @@ const LoadingState = () => (
 
 const SourcingComponent = () => {
   const { session, isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const [jobData, setJobData] = useState<{ content?: string; search_string?: string; title?: string } | null>(null);
-  const [isLoadingJob, setIsLoadingJob] = useState(false);
-  
-  
-  // Check both location state and URL params for jobId
-  const jobIdFromState = location.state?.jobId;
-  const jobIdFromParams = searchParams.get('jobId');
-  const jobId = jobIdFromState || (jobIdFromParams ? parseInt(jobIdFromParams) : null);
-  
-  // Check for autoSearch parameter
-  const autoSearchFromParams = searchParams.get('autoSearch') === 'true';
-  const autoRun = location.state?.autoRun || autoSearchFromParams;
-  
-  const processedRequirements = location.state?.processedRequirements;
-  
-  // Pre-fetch agent outputs if we have a jobId
-  const { data: agentOutput } = useAgentOutputs(jobId);
-  
-  // Fetch job data if we have a jobId from URL params
-  useEffect(() => {
-    const fetchJobData = async () => {
-      if (jobIdFromParams && !jobIdFromState) {
-        setIsLoadingJob(true);
-        try {
-          const { data, error } = await supabase
-            .from('jobs')
-            .select('content, search_string, title')
-            .eq('id', parseInt(jobIdFromParams))
-            .single();
-          
-          if (error) {
-            console.error('Error fetching job:', error);
-          } else if (data) {
-            setJobData(data);
-          }
-        } catch (error) {
-          console.error('Error fetching job data:', error);
-        } finally {
-          setIsLoadingJob(false);
-        }
-      }
-    };
-    
-    fetchJobData();
-  }, [jobIdFromParams, jobIdFromState]);
 
   // Show loading while auth is being checked
   if (isLoading) {
@@ -95,32 +43,12 @@ const SourcingComponent = () => {
         </p>
       </div>
 
-      {/* Project selector */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <ProjectSelector 
-          label="Select project for this search"
-          placeholder="Choose a project (optional)"
-          className="max-w-md"
+      {/* Main content */}
+      <Suspense fallback={<LoadingState />}>
+        <MinimalSearchForm 
+          userId={session?.user?.id ?? null}
         />
-      </div>
-      
-      {/* Main content card */}
-      <Card className="border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] bg-white p-6">
-        <Suspense fallback={<LoadingState />}>
-          {isLoadingJob ? (
-            <LoadingState />
-          ) : (
-            <SimpleSearchForm 
-              userId={session?.user?.id ?? null}
-              initialRequirements={processedRequirements || jobData?.content}
-              initialJobId={jobId}
-              autoRun={autoRun}
-              initialSearchString={jobData?.search_string}
-              jobTitle={jobData?.title}
-            />
-          )}
-        </Suspense>
-      </Card>
+      </Suspense>
     </div>
   );
 };
