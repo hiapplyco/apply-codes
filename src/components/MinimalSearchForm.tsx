@@ -220,7 +220,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         body: formData,
       });
 
-      if (error) throw error;
+      console.log('Parse document response:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (data?.success === false) {
+        console.error('Function returned error:', data.error || data.details);
+        throw new Error(data.error || data.details || 'Unknown error from function');
+      }
 
       if (data?.success && data?.text) {
         appendToJobDescription(`[Extracted from ${file.name}]\n${data.text}`);
@@ -252,12 +262,22 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       // Provide more specific error messages for file uploads
       let errorMessage = 'Failed to process file';
       if (error instanceof Error) {
-        if (error.message.includes('size') || error.message.includes('large')) {
-          errorMessage = 'File is too large. Please try a smaller file (under 10MB).';
-        } else if (error.message.includes('format') || error.message.includes('type')) {
-          errorMessage = 'Unsupported file format. Try PDF, Word, or image files.';
+        // Check for specific error messages from the function
+        if (error.message.includes('20MB') || error.message.includes('size')) {
+          errorMessage = 'File is too large. Please try a smaller file (under 20MB).';
+        } else if (error.message.includes('Unsupported file type') || error.message.includes('format')) {
+          errorMessage = 'Unsupported file format. Try PDF, DOC, DOCX, TXT, JPG, or PNG files.';
+        } else if (error.message.includes('API key') || error.message.includes('configured')) {
+          errorMessage = 'AI processing service unavailable. Please try again later.';
+        } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
+          errorMessage = 'File processing timed out. Please try a smaller file.';
+        } else if (error.message.includes('Gemini') || error.message.includes('Google AI')) {
+          errorMessage = 'AI processing failed. Please try again or use a different file.';
         } else if (error.message.includes('corrupt') || error.message.includes('invalid')) {
           errorMessage = 'File appears corrupted or invalid. Try a different file.';
+        } else if (error.message !== 'Failed to process file') {
+          // Use the specific error message from the function if it's informative
+          errorMessage = error.message;
         }
       }
       
