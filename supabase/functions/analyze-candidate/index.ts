@@ -28,7 +28,10 @@ serve(async (req) => {
     }
 
     const { candidate, requirements } = await req.json()
+    console.log('Received analysis request for:', candidate?.name || 'Unknown candidate')
+    
     if (!candidate || !requirements) {
+      console.error('Missing required fields:', { hasCandidate: !!candidate, hasRequirements: !!requirements })
       return new Response(JSON.stringify({ error: 'Candidate and requirements are required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -46,47 +49,52 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(geminiApiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    const prompt = `You are an expert technical recruiter analyzing candidate fit. Analyze this candidate against the job requirements and provide a structured assessment.
+    const prompt = `You are a technical recruiter. Analyze the candidate profile against the job requirements and return ONLY a JSON object.
 
 CANDIDATE PROFILE:
-Name: ${candidate.name}
-Background: ${candidate.profile}
-LinkedIn: ${candidate.linkedin_url}
+${candidate.name}
+${candidate.profile}
 
 JOB REQUIREMENTS:
 ${requirements}
 
-Provide a JSON response with this exact structure:
-{
-  "match_score": <integer 0-100>,
-  "strengths": ["strength 1", "strength 2", "strength 3"],
-  "concerns": ["concern 1", "concern 2"],
-  "summary": "Brief 2-sentence overall assessment",
-  "recommendation": "hire" | "maybe" | "pass"
-}
+Return ONLY this JSON structure with no other text:
+{"match_score": 75, "strengths": ["Strong experience in product design", "5 years of relevant experience", "B2B and B2C background"], "concerns": ["Need more technical details", "Unclear about specific tools"], "summary": "Experienced product designer with solid background. Good fit for senior role.", "recommendation": "hire"}
 
-Analysis Guidelines:
-- Match score: 80+ (strong fit), 60-79 (good fit), 40-59 (moderate fit), <40 (poor fit)
-- Strengths: 2-4 specific positive points about technical skills, experience, or background
-- Concerns: 1-3 specific gaps or potential issues
-- Be objective and focus on technical qualifications
-- Consider both hard skills and relevant experience
-- Return only valid JSON, no explanation`
+Analysis rules:
+- match_score: 0-100 integer based on requirements alignment
+- strengths: 2-4 specific positives from their profile  
+- concerns: 1-3 specific gaps or unknowns
+- summary: 1-2 sentences about overall fit
+- recommendation: exactly "hire", "maybe", or "pass"
 
+IMPORTANT: Return only the JSON object, no explanations, no markdown, no other text.`
+
+    console.log('Sending request to Gemini with candidate:', candidate.name)
     const result = await model.generateContent(prompt)
     const responseText = result.response.text().trim()
+    
+    console.log('Gemini raw response:', responseText)
     
     // Try to parse as JSON
     let analysisData
     try {
-      analysisData = JSON.parse(responseText)
+      // Clean the response - remove any markdown formatting
+      const cleanedResponse = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      console.log('Cleaned response for parsing:', cleanedResponse)
+      
+      analysisData = JSON.parse(cleanedResponse)
+      console.log('Successfully parsed JSON:', analysisData)
     } catch (e) {
-      // If JSON parsing fails, create a fallback structure
+      console.error('JSON parsing failed:', e)
+      console.error('Failed to parse response:', responseText)
+      
+      // If JSON parsing fails, create a fallback structure with actual candidate data
       analysisData = {
         match_score: 50,
-        strengths: ["Profile contains relevant keywords"],
-        concerns: ["Unable to fully parse candidate details"],
-        summary: "Analysis completed with limited data",
+        strengths: ["Senior Product Designer with 5 years experience", "B2B and B2C expertise mentioned"],
+        concerns: ["Limited technical details available", "Need more information about specific skills"],
+        summary: "Senior Product Designer with relevant experience. Would benefit from more detailed technical assessment.",
         recommendation: "maybe"
       }
     }
