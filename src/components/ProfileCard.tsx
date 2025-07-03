@@ -58,7 +58,7 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) 
       setError(null);
       
       try {
-        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/enrich-profile', {
+        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/get-contact-info', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

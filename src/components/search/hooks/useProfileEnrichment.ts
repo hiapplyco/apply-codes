@@ -64,7 +64,7 @@ export const useProfileEnrichment = () => {
       const toastId = toast.loading("Fetching contact information...");
       
       // Call Supabase Edge Function
-      const response = await supabase.functions.invoke('enrich-profile', {
+      const response = await supabase.functions.invoke('get-contact-info', {
         body: {
           profileUrl
         }
