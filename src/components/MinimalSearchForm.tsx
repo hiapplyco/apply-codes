@@ -83,6 +83,8 @@ const extractLocationFromSnippet = (snippet: string): string | undefined => {
 };
 
 export default function MinimalSearchForm({ userId, selectedProjectId }: MinimalSearchFormProps) {
+  // Debug version to help with cache issues
+  console.log('MinimalSearchForm v3.1 loaded', { userId, selectedProjectId });
   const [jobDescription, setJobDescription] = useState('');
   const [booleanString, setBooleanString] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -205,16 +207,31 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   // File upload with Gemini extraction
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    console.log('File upload triggered:', { file: file?.name, userId });
+    
     if (!file || !userId) {
+      console.error('Missing file or userId:', { hasFile: !!file, userId });
       toast.error('Please select a file');
       return;
     }
 
     setIsUploadingFile(true);
     try {
+      console.log('Preparing file upload:', { 
+        fileName: file.name, 
+        fileType: file.type, 
+        fileSize: file.size,
+        userId: userId
+      });
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', userId);
+
+      console.log('FormData entries:');
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value instanceof File ? `File: ${value.name}` : value);
+      }
 
       const { data, error } = await supabase.functions.invoke('parse-document', {
         body: formData,
@@ -541,7 +558,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   };
 
   const saveCandidate = async (candidate: SearchResult, index: number) => {
+    console.log('Saving candidate:', { candidate, selectedProjectId, index });
+    
     if (!selectedProjectId) {
+      console.error('No project selected for saving candidate');
       toast.error('Please select a project first');
       return;
     }
@@ -550,6 +570,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     try {
       // Extract candidate details from search result
       const candidateData = {
+        user_id: userId, // Add the user_id field that might be missing
         name: candidate.title.split(' - ')[0] || candidate.title, // Extract name from title
         job_title: candidate.title.includes(' - ') ? candidate.title.split(' - ')[1] : '',
         company: candidate.displayLink.includes('linkedin.com') ? '' : candidate.displayLink,
@@ -561,6 +582,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         enrichment_status: 'pending' as const
       };
 
+      console.log('Candidate data to save:', candidateData);
+
       // Save candidate to database
       const { data: savedCandidate, error: candidateError } = await supabase
         .from('saved_candidates')
@@ -568,10 +591,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         .select()
         .single();
 
-      if (candidateError) throw candidateError;
+      console.log('Candidate save result:', { savedCandidate, candidateError });
+
+      if (candidateError) {
+        console.error('Error saving candidate:', candidateError);
+        throw candidateError;
+      }
 
       // Add candidate to project if project is selected
       if (savedCandidate && selectedProjectId) {
+        console.log('Adding candidate to project:', { 
+          candidateId: savedCandidate.id, 
+          projectId: selectedProjectId 
+        });
+        
         const { error: projectError } = await supabase
           .from('project_candidates')
           .insert([{
@@ -579,7 +612,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             candidate_id: savedCandidate.id
           }]);
 
-        if (projectError) throw projectError;
+        console.log('Project association result:', { projectError });
+
+        if (projectError) {
+          console.error('Error adding candidate to project:', projectError);
+          throw projectError;
+        }
       }
 
       // If we have contact info for this candidate, merge it
