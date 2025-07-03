@@ -1,9 +1,26 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { GoogleGenerativeAI } from 'npm:@google/generative-ai';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const systemPrompt = `You are a professional content analyzer. Given webpage content, create a clear summary focusing on:
+
+1. Key Information:
+   - Main points and takeaways
+   - Important dates or deadlines
+   - Requirements or qualifications
+   - Responsibilities or expectations
+   
+2. Content Organization:
+   - Break down into clear sections
+   - Highlight important details
+   - Remove any irrelevant content
+   
+Format the response as a clear, professional summary that would be appropriate for business use.`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,26 +29,32 @@ serve(async (req) => {
 
   try {
     console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     const requestBody = await req.text();
     console.log('Raw request body:', requestBody);
     
-    const { url } = JSON.parse(requestBody);
-    console.log('Starting scrape for URL:', url);
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(requestBody);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      throw new Error('Invalid JSON in request body');
+    }
+    
+    const { url } = parsedBody;
+    console.log('Starting crawl for URL:', url);
     
     if (!url) {
       throw new Error('URL is required');
     }
-    
+
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
-    console.log('API key present:', !!apiKey);
-    
     if (!apiKey) {
       throw new Error('Firecrawl API key not configured');
     }
 
-    // Use the direct Firecrawl API v1 endpoint (this is working)
-    console.log('Making request to Firecrawl API...');
+    // Use the direct Firecrawl API v1 endpoint
     const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -59,7 +82,7 @@ serve(async (req) => {
     }
 
     const crawlResponse = await firecrawlResponse.json();
-    console.log('Crawl response received successfully');
+    console.log('Crawl response received:', crawlResponse);
 
     if (!crawlResponse.success || !crawlResponse.data) {
       throw new Error('Failed to scrape URL - no data returned');
@@ -71,14 +94,31 @@ serve(async (req) => {
       throw new Error('No content found on webpage');
     }
 
-    console.log('Content successfully scraped, length:', scrapedContent.length);
+    // Use Gemini to analyze and summarize the content
+    const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY')!);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Return the markdown content directly (no Gemini processing for now)
-    // The markdown from Firecrawl is already well-formatted for job descriptions
+    console.log('Processing content with Gemini...');
+    const result = await model.generateContent({
+      contents: [{ 
+        role: 'user',
+        parts: [{ text: `${systemPrompt}\n\nWebpage content:\n${scrapedContent}` }]
+      }],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 40,
+        topP: 0.8,
+        maxOutputTokens: 1000,
+      }
+    });
+
+    const summarizedText = result.response.text();
+    console.log('Content successfully summarized');
+
     return new Response(
       JSON.stringify({
         success: true,
-        text: scrapedContent,
+        text: summarizedText,
         rawContent: scrapedContent
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
