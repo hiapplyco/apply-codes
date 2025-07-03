@@ -20,12 +20,31 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
   }
 
   try {
+    console.log('Starting document parse request...')
+    console.log('Request method:', req.method)
+    console.log('Content-Type:', req.headers.get('content-type'))
+    
     const formData = await req.formData()
+    console.log('FormData parsed successfully')
+    
     const file = formData.get('file')
     const userId = formData.get('userId')
+    
+    console.log('Form fields:', {
+      hasFile: !!file,
+      fileType: file ? (file as File).type : 'none',
+      fileName: file ? (file as File).name : 'none',
+      userId: userId
+    })
 
     if (!file || !userId) {
+      console.error('Missing required fields:', { file: !!file, userId: !!userId })
       throw new Error('No file uploaded or missing user ID')
+    }
+
+    if (!(file instanceof File)) {
+      console.error('File is not a File instance:', typeof file)
+      throw new Error('Invalid file format received')
     }
 
     console.log('Processing file:', (file as File).name, 'of type:', (file as File).type, 'size:', (file as File).size)
@@ -56,8 +75,9 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Generate unique file path
-    const filePath = `${crypto.randomUUID()}-${(file as File).name}`
+    // Generate unique file path with sanitized filename
+    const sanitizedFileName = (file as File).name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `${crypto.randomUUID()}-${sanitizedFileName}`
 
     // Get file data as ArrayBuffer
     const arrayBuffer = await (file as File).arrayBuffer()
