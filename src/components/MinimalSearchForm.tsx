@@ -35,6 +35,11 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
+  const [expandedProfiles, setExpandedProfiles] = useState<Set<number>>(new Set());
+  const [analysisResults, setAnalysisResults] = useState<{[key: number]: any}>({});
+  const [loadingAnalysis, setLoadingAnalysis] = useState<Set<number>>(new Set());
+  const [contactInfo, setContactInfo] = useState<{[key: number]: ContactInfo}>({});
+  const [loadingContact, setLoadingContact] = useState<Set<number>>(new Set());
   
   // Input method states
   const [urlInput, setUrlInput] = useState('');
@@ -293,6 +298,73 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
     setSelectedProfiles(newSelected);
   };
 
+  const toggleProfileExpansion = (index: number) => {
+    const newExpanded = new Set(expandedProfiles);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedProfiles(newExpanded);
+  };
+
+  const analyzeCandidate = async (candidate: SearchResult, index: number) => {
+    if (!jobDescription.trim()) {
+      toast.error('Please enter a job description first');
+      return;
+    }
+
+    setLoadingAnalysis(prev => new Set([...prev, index]));
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-candidate', {
+        body: {
+          candidate: {
+            name: candidate.title,
+            profile: candidate.snippet,
+            linkedin_url: candidate.link
+          },
+          requirements: jobDescription
+        }
+      });
+
+      if (error) throw error;
+
+      setAnalysisResults(prev => ({ ...prev, [index]: data }));
+      toast.success('Candidate analyzed successfully!');
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      toast.error('Failed to analyze candidate');
+    } finally {
+      setLoadingAnalysis(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(index);
+        return newSet;
+      });
+    }
+  };
+
+  const getContactInfo = async (candidate: SearchResult, index: number) => {
+    setLoadingContact(prev => new Set([...prev, index]));
+    try {
+      const contactData = await enrichProfile(candidate.link);
+      if (contactData) {
+        setContactInfo(prev => ({ ...prev, [index]: contactData }));
+        toast.success('Contact information retrieved!');
+      } else {
+        toast.error('No contact information found');
+      }
+    } catch (error) {
+      console.error('Contact enrichment failed:', error);
+      toast.error('Failed to get contact information');
+    } finally {
+      setLoadingContact(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(index);
+        return newSet;
+      });
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
@@ -490,10 +562,11 @@ Please create personalized outreach messages for each candidate.`;
         <Card className="p-6 border-2 border-purple-400 bg-purple-50">
           <h2 className="text-xl font-semibold mb-4">2. Boolean Search String</h2>
           <div className="space-y-4">
-            <Input
+            <Textarea
               value={booleanString}
               onChange={(event) => setBooleanString(event.target.value)}
-              className="font-mono"
+              className="font-mono min-h-[120px] resize-y"
+              placeholder="Generated Boolean search string will appear here..."
             />
             <div className="flex gap-2">
               <Button
@@ -536,38 +609,170 @@ Please create personalized outreach messages for each candidate.`;
           </div>
           
           <div className="space-y-4">
-            {searchResults.map((result, index) => (
-              <div
-                key={index}
-                className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                  selectedProfiles.has(index)
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-                onClick={() => toggleProfileSelection(index)}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-600 hover:underline">
-                      {result.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">{result.snippet}</p>
-                    <p className="text-xs text-gray-500 mt-2">{result.displayLink}</p>
+            {searchResults.map((result, index) => {
+              const isExpanded = expandedProfiles.has(index);
+              const analysis = analysisResults[index];
+              const contact = contactInfo[index];
+              
+              return (
+                <div key={index} className="border rounded-lg overflow-hidden">
+                  {/* Main Card */}
+                  <div
+                    className={`p-4 cursor-pointer transition-colors ${
+                      selectedProfiles.has(index)
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                    onClick={() => toggleProfileExpansion(index)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedProfiles.has(index)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleProfileSelection(index);
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <h3 className="font-semibold text-blue-600 hover:underline">
+                            {result.title}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{result.snippet}</p>
+                        <p className="text-xs text-gray-500 mt-2">{result.displayLink}</p>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <a
+                          href={result.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleProfileExpansion(index);
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+                          {isExpanded ? '-' : '+'}
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <a
-                      href={result.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t bg-gray-50 p-4 space-y-4">
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          onClick={() => analyzeCandidate(result, index)}
+                          disabled={loadingAnalysis.has(index)}
+                          className="bg-purple-600 hover:bg-purple-700"
+                        >
+                          <Sparkles className="w-4 h-4 mr-1" />
+                          {loadingAnalysis.has(index) ? 'Analyzing...' : 'Analyze vs Requirements'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => getContactInfo(result, index)}
+                          disabled={loadingContact.has(index)}
+                        >
+                          <Search className="w-4 h-4 mr-1" />
+                          {loadingContact.has(index) ? 'Getting...' : 'Get Contact Info'}
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Plus className="w-4 h-4 mr-1" />
+                          Save to Project
+                        </Button>
+                      </div>
+
+                      {/* Analysis Results */}
+                      {analysis && (
+                        <div className="bg-white p-3 rounded border">
+                          <h4 className="font-semibold text-sm mb-2">🎯 Analysis Results</h4>
+                          <div className="space-y-2">
+                            {analysis.match_score && (
+                              <div className="flex justify-between">
+                                <span className="text-sm font-medium">Match Score:</span>
+                                <span className={`text-sm font-bold ${
+                                  analysis.match_score >= 80 ? 'text-green-600' :
+                                  analysis.match_score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>{analysis.match_score}%</span>
+                              </div>
+                            )}
+                            {analysis.strengths && (
+                              <div>
+                                <span className="text-sm font-medium text-green-600">Strengths:</span>
+                                <ul className="text-xs text-gray-600 list-disc list-inside ml-2">
+                                  {analysis.strengths.map((strength: string, i: number) => (
+                                    <li key={i}>{strength}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {analysis.concerns && (
+                              <div>
+                                <span className="text-sm font-medium text-red-600">Concerns:</span>
+                                <ul className="text-xs text-gray-600 list-disc list-inside ml-2">
+                                  {analysis.concerns.map((concern: string, i: number) => (
+                                    <li key={i}>{concern}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Contact Information */}
+                      {contact && (
+                        <div className="bg-white p-3 rounded border">
+                          <h4 className="font-semibold text-sm mb-2">📞 Contact Information</h4>
+                          <div className="space-y-1 text-sm">
+                            {contact.email && (
+                              <div className="flex justify-between">
+                                <span className="font-medium">Email:</span>
+                                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
+                                  {contact.email}
+                                </a>
+                              </div>
+                            )}
+                            {contact.phone && (
+                              <div className="flex justify-between">
+                                <span className="font-medium">Phone:</span>
+                                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                                  {contact.phone}
+                                </a>
+                              </div>
+                            )}
+                            {contact.linkedin && (
+                              <div className="flex justify-between">
+                                <span className="font-medium">LinkedIn:</span>
+                                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  View Profile
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
