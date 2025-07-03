@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -296,6 +296,9 @@ Please create personalized outreach messages for each candidate.`;
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Scrape Website Content</DialogTitle>
+                        <DialogDescription>
+                          Enter a URL to scrape its content and add it to your job description.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <Input
@@ -367,6 +370,9 @@ Please create personalized outreach messages for each candidate.`;
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Perplexity Web Search</DialogTitle>
+                        <DialogDescription>
+                          Search the web with Perplexity AI and add results to your job description.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <Input
