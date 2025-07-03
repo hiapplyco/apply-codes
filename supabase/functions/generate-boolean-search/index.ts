@@ -26,13 +26,28 @@ Deno.serve(async (req: Request) => {
   try {
     console.log('Generate boolean search function called')
     
-    const { description, jobTitle, userId } = await req.json() as RequestPayload
-    console.log('Request payload:', { hasDescription: !!description, hasJobTitle: !!jobTitle, hasUserId: !!userId })
-
-    if (!description) {
-      console.error('Description is missing from request')
+    let requestBody
+    try {
+      requestBody = await req.json() as RequestPayload
+      console.log('Request payload received:', { hasDescription: !!requestBody?.description, hasJobTitle: !!requestBody?.jobTitle, hasUserId: !!requestBody?.userId })
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError)
       return new Response(
-        JSON.stringify({ success: false, error: 'Description is required' }),
+        JSON.stringify({ success: false, error: 'Invalid JSON in request body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    const { description, jobTitle, userId } = requestBody
+
+    if (!description || typeof description !== 'string' || description.trim() === '') {
+      console.error('Description is missing or invalid:', { description, type: typeof description })
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Description is required and must be a non-empty string',
+          received: { description, type: typeof description }
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }

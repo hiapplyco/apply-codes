@@ -209,14 +209,16 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-boolean-search', {
-        body: { content: jobDescription }
+        body: { description: jobDescription }
       });
 
       if (error) throw error;
 
-      if (data?.boolean_search) {
-        setBooleanString(data.boolean_search);
+      if (data?.searchString) {
+        setBooleanString(data.searchString);
         toast.success('Boolean search generated successfully!');
+      } else {
+        throw new Error('No search string generated');
       }
     } catch (error) {
       console.error('Error generating boolean search:', error);
