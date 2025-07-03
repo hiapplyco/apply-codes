@@ -159,8 +159,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           jobTitle = parts[0];
           
           // Look for location patterns
-          for (let i = 1; i < parts.length; i++) {
-            const part = parts[i];
+          for (let index = 1; index < parts.length; index++) {
+            const part = parts[index];
             // Check if this part looks like a location (contains city/state/country patterns)
             if (part.match(/\b(City|State|USA|US|United States|Canada|UK|United Kingdom|[A-Z][a-z]+,\s*[A-Z]{2})/i) ||
                 part.match(/^[A-Z][a-z]+(?:,\s*[A-Z][a-z]+)*$/)) {

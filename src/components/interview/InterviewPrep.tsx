@@ -332,10 +332,10 @@ export function InterviewPrep({ onInterviewStart }: InterviewPrepProps = {}) {
           <h3 className="text-xl font-bold mb-2">{response.interviewType} Interview Questions</h3>
           <p className="text-sm text-gray-500 mb-4">{response.tooltip}</p>
           <ul className="space-y-4">
-            {response.questions.map((q, index) => (
+            {response.questions.map((question, index) => (
               <li key={index}>
-                <p className="font-semibold">{q.question}</p>
-                <p className="text-sm text-gray-600">Assesses: {q.assesses}</p>
+                <p className="font-semibold">{question.question}</p>
+                <p className="text-sm text-gray-600">Assesses: {question.assesses}</p>
               </li>
             ))}
           </ul>

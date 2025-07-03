@@ -305,7 +305,7 @@ export class MigrationValidator {
         .select('canonical_name')
         .order('canonical_name');
 
-      const companyNames = duplicateCompanies?.map(c => c.canonical_name) || [];
+      const companyNames = duplicateCompanies?.map(company => company.canonical_name) || [];
       const uniqueCompanyNames = new Set(companyNames);
       if (companyNames.length !== uniqueCompanyNames.size) {
         issues.push('Duplicate company names detected');
@@ -317,7 +317,7 @@ export class MigrationValidator {
         .select('canonical_name')
         .order('canonical_name');
 
-      const locationNames = duplicateLocations?.map(l => l.canonical_name) || [];
+      const locationNames = duplicateLocations?.map(location => location.canonical_name) || [];
       const uniqueLocationNames = new Set(locationNames);
       if (locationNames.length !== uniqueLocationNames.size) {
         issues.push('Duplicate location names detected');

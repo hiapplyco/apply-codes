@@ -552,8 +552,8 @@ export class TiptapGoogleDocsIntegration {
     // This is a simplified conversion - in practice, you'd need to
     // reconstruct HTML from the Google Docs requests
     return requests
-      .filter(req => req.insertText)
-      .map(req => req.insertText.text)
+      .filter(request => request.insertText)
+      .map(request => request.insertText.text)
       .join('');
   }
 }

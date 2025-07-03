@@ -106,7 +106,7 @@ export const useProjects = () => {
       if (error) throw error;
 
       setProjects(prev => 
-        prev.map(p => p.id === projectId ? { ...p, ...updates } : p)
+        prev.map(project => project.id === projectId ? { ...project, ...updates } : project)
       );
       toast.success('Project updated successfully');
       return true;
@@ -123,7 +123,7 @@ export const useProjects = () => {
   };
 
   // Get selected project
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = projects.find(project => project.id === selectedProjectId);
 
   // Load projects when user is authenticated
   useEffect(() => {
@@ -140,7 +140,7 @@ export const useProjects = () => {
   // Persist selected project in localStorage
   useEffect(() => {
     const savedProjectId = localStorage.getItem('selectedProjectId');
-    if (savedProjectId && projects.some(p => p.id === savedProjectId)) {
+    if (savedProjectId && projects.some(project => project.id === savedProjectId)) {
       setSelectedProjectId(savedProjectId);
     }
   }, [projects]);

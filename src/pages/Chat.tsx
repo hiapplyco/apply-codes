@@ -144,10 +144,10 @@ User Statistics:
 - Total Saved Candidates: ${userContext.totalCandidates}
 
 Recent Searches:
-${userContext.recentSearches.map(s => `- "${s.search_query}" (${s.results_count} results)`).join('\n')}
+${userContext.recentSearches.map(search => `- "${search.search_query}" (${search.results_count} results)`).join('\n')}
 
 Active Projects:
-${userContext.projects.map(p => `- ${p.name}: ${p.candidates_count} candidates`).join('\n')}
+${userContext.projects.map(project => `- ${project.name}: ${project.candidates_count} candidates`).join('\n')}
 
 Provide helpful, specific advice based on their data. Be conversational but professional. When suggesting searches, provide actual boolean strings they can use.`;
   };
@@ -173,9 +173,9 @@ Provide helpful, specific advice based on their data. Be conversational but prof
         body: {
           message: input.trim(),
           systemPrompt: generateSystemPrompt(),
-          history: messages.slice(-10).map(m => ({
-            role: m.role,
-            content: m.content
+          history: messages.slice(-10).map(message => ({
+            role: message.role,
+            content: message.content
           })),
           projectId: selectedProjectId,
           userId: user?.id
