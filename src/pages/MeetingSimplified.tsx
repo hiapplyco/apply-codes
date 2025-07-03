@@ -32,8 +32,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { InterviewPrepEnhanced } from '@/components/interview/InterviewPrepEnhanced';
-import { InterviewContext } from '@/types/interview';
 
 interface Participant {
   id: string;

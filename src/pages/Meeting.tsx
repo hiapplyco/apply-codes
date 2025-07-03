@@ -38,8 +38,6 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FirecrawlService } from '@/utils/FirecrawlService';
-import { InterviewPrep } from '@/components/interview/InterviewPrep';
-import { InterviewChat } from '@/components/interview/InterviewChat';
 
 type MeetingType = 'kickoff' | 'interview' | 'screening';
 
@@ -496,13 +494,6 @@ export default function Meeting() {
                   </div>
                 )}
 
-                {/* Interview Prep Section */}
-                {currentConfig.features.interviewPrep && (
-                  <div className="border-t pt-6">
-                    <h3 className="font-bold text-lg mb-4">Interview Preparation</h3>
-                    <InterviewPrep />
-                  </div>
-                )}
 
                 {/* Start Meeting Button */}
                 <Button

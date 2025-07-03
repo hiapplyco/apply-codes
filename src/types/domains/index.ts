@@ -4,7 +4,6 @@
  */
 
 export * from './recruitment';
-export * from './interview';
 export * from './meeting';
 export * from './chat';
 export * from './user';
