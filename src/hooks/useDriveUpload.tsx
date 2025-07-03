@@ -247,7 +247,7 @@ export function useDriveUpload(options: UseDriveUploadOptions = {}): UseDriveUpl
             });
 
             // Remove from queue on success
-            setUploadQueue(prev => prev.filter(q => q.id !== item.id));
+            setUploadQueue(prev => prev.filter(queueItem => queueItem.id !== item.id));
           } catch (error) {
             console.error(`Failed to upload ${item.name}:`, error);
           } finally {
