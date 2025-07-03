@@ -132,7 +132,7 @@ export interface GoogleDriveFileList {
 }
 
 export interface GoogleDriveSearchParams {
-  q?: string;
+  query?: string;
   pageSize?: number;
   pageToken?: string;
   orderBy?: string;

@@ -81,7 +81,7 @@ export function useDriveFiles(options: UseDriveFilesOptions = {}): UseDriveFiles
     }
 
     if (conditions.length > 0) {
-      params.q = conditions.join(' and ');
+      params.query = conditions.join(' and ');
     }
 
     return params;

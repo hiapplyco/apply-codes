@@ -142,13 +142,13 @@ export class GoogleDriveService {
         pageSize: 100,
         fields: 'nextPageToken, files(id, name, mimeType, parents, size, createdTime, modifiedTime, trashed, starred, shared, ownedByMe, capabilities, owners, lastModifyingUser, thumbnailLink, webViewLink, webContentLink, iconLink, fileExtension, fullFileExtension)',
         orderBy: 'modifiedTime desc' as GoogleDriveOrderBy,
-        q: 'trashed = false',
+        query: 'trashed = false',
         ...params
       };
 
       // Build query string
-      if (params.q) {
-        defaultParams.q = `(${params.q}) and trashed = false`;
+      if (params.query) {
+        defaultParams.query = `(${params.query}) and trashed = false`;
       }
 
       const response = await this.driveClient.files.list(defaultParams);
@@ -177,7 +177,7 @@ export class GoogleDriveService {
     const searchQuery = this.buildSearchQuery(query, options);
     
     return this.getFiles({
-      q: searchQuery,
+      query: searchQuery,
       pageSize: options.pageSize || 50,
       orderBy: 'relevance desc'
     });
@@ -193,7 +193,7 @@ export class GoogleDriveService {
     const query = `modifiedTime >= '${thirtyDaysAgo.toISOString()}'`;
     
     const result = await this.getFiles({
-      q: query,
+      query: query,
       pageSize: limit,
       orderBy: 'modifiedTime desc'
     });
@@ -206,7 +206,7 @@ export class GoogleDriveService {
    */
   async getStarredFiles(): Promise<GoogleDriveFile[]> {
     const result = await this.getFiles({
-      q: 'starred = true',
+      query: 'starred = true',
       orderBy: 'modifiedTime desc'
     });
     
@@ -218,7 +218,7 @@ export class GoogleDriveService {
    */
   async getSharedFiles(): Promise<GoogleDriveFile[]> {
     const result = await this.getFiles({
-      q: 'sharedWithMe = true',
+      query: 'sharedWithMe = true',
       orderBy: 'sharedWithMeTime desc'
     });
     
@@ -262,7 +262,7 @@ export class GoogleDriveService {
    */
   async getFolderContents(folderId: string): Promise<GoogleDriveFile[]> {
     const result = await this.getFiles({
-      q: `'${folderId}' in parents`,
+      query: `'${folderId}' in parents`,
       orderBy: 'folder,name'
     });
     
