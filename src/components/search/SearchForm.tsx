@@ -27,6 +27,14 @@ export const SearchForm = ({
   onSubmitStart,
   onShowGoogleSearch // Prop to trigger showing Google Search results
 }: SearchFormProps) => {
+  // Debug logging
+  console.log('SearchForm - Props received:', {
+    userId,
+    currentJobId,
+    isProcessingComplete,
+    source,
+    hideSearchTypeToggle
+  });
   const {
     searchText,
     setSearchText,

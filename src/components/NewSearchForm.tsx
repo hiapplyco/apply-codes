@@ -29,6 +29,15 @@ const NewSearchForm = ({
   initialSearchString,
   jobTitle
 }: NewSearchFormProps) => {
+  // Debug logging
+  console.log('NewSearchForm - Props received:', {
+    userId,
+    autoRun,
+    initialRequirements: !!initialRequirements,
+    initialJobId,
+    initialSearchString: !!initialSearchString,
+    jobTitle
+  });
   const location = useLocation();
   const [currentJobId, setCurrentJobId] = useState<number | null>(initialJobId || null);
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);

@@ -19,11 +19,19 @@ const LoadingState = () => (
 );
 
 const SourcingComponent = () => {
-  const { session } = useAuth();
+  const { session, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [jobData, setJobData] = useState<{ content?: string; search_string?: string; title?: string } | null>(null);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
+  
+  // Debug logging
+  console.log('Sourcing Component - Auth State:', {
+    session: !!session,
+    isAuthenticated,
+    isLoading,
+    userId: session?.user?.id
+  });
   
   // Check both location state and URL params for jobId
   const jobIdFromState = location.state?.jobId;
@@ -66,6 +74,23 @@ const SourcingComponent = () => {
     
     fetchJobData();
   }, [jobIdFromParams, jobIdFromState]);
+
+  // Show loading while auth is being checked
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  // Show debug info if not authenticated (this should not happen due to ProtectedRoute)
+  if (!isAuthenticated) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>Authentication issue detected. Session: {session ? 'exists' : 'missing'}</p>
+          <p>Please try refreshing the page or logging in again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-4xl py-8 space-y-8">
