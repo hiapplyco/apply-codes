@@ -42,17 +42,17 @@ CREATE TABLE IF NOT EXISTS public.project_candidates (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_projects_user_id ON public.projects(user_id);
-CREATE INDEX idx_projects_created_at ON public.projects(created_at DESC);
-CREATE INDEX idx_projects_is_archived ON public.projects(is_archived);
+CREATE INDEX IF NOT EXISTS idx_projects_user_id ON public.projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON public.projects(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_is_archived ON public.projects(is_archived);
 
-CREATE INDEX idx_search_history_user_id ON public.search_history(user_id);
-CREATE INDEX idx_search_history_created_at ON public.search_history(created_at DESC);
-CREATE INDEX idx_search_history_project_id ON public.search_history(project_id);
-CREATE INDEX idx_search_history_is_favorite ON public.search_history(is_favorite);
+CREATE INDEX IF NOT EXISTS idx_search_history_user_id ON public.search_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_search_history_created_at ON public.search_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_search_history_project_id ON public.search_history(project_id);
+CREATE INDEX IF NOT EXISTS idx_search_history_is_favorite ON public.search_history(is_favorite);
 
-CREATE INDEX idx_project_candidates_project_id ON public.project_candidates(project_id);
-CREATE INDEX idx_project_candidates_candidate_id ON public.project_candidates(candidate_id);
+CREATE INDEX IF NOT EXISTS idx_project_candidates_project_id ON public.project_candidates(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_candidates_candidate_id ON public.project_candidates(candidate_id);
 
 -- Enable Row Level Security
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
