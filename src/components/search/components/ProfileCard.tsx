@@ -153,7 +153,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       }
       // Pattern 2: "Job Title | Skills | Location · Experience"
       else {
-        const parts = snippet.split(/[·|]/).map(s => s.trim());
+        const parts = snippet.split(/[·|]/).map(segment => segment.trim());
         if (parts.length > 0) {
           // First part is usually job title
           jobTitle = parts[0];

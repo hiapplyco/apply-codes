@@ -30,8 +30,8 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
 
   const updateStepStatus = (index: number, status: ProcessingStep['status'], progress: number) => {
     setSteps(currentSteps => 
-      currentSteps.map((step, i) => 
-        i === index ? { ...step, status, progress } : step
+      currentSteps.map((step, stepIndex) => 
+        stepIndex === index ? { ...step, status, progress } : step
       )
     );
   };

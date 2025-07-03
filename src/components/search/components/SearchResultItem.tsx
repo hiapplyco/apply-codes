@@ -28,7 +28,7 @@ export const SearchResultItem = ({
     // Remove HTML tags
     const withoutTags = title.replace(/<\/?[^>]+(>|$)/g, "");
     // Try to get just the name before any symbols like |, -, at, etc.
-    const namePart = withoutTags.split(/[|\-–—@]/).map(s => s.trim())[0];
+    const namePart = withoutTags.split(/[|\-–—@]/).map(segment => segment.trim())[0];
     return namePart || withoutTags;
   };
 

@@ -59,7 +59,7 @@ export const useSearchFilters = (results: SearchResult[]) => {
     const locationOptions = Array.from(
       new Set(
         results
-          .map(r => r.location)
+          .map(result => result.location)
           .filter(loc => loc && loc.trim() && !loc.toLowerCase().includes('unknown'))
           .map(loc => loc.trim())
       )

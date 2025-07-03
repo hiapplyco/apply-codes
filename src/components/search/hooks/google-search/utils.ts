@@ -164,8 +164,8 @@ export const extractLocationFromSnippet = (snippet: string): string => {
   const parts = cleanSnippet.split('·').map(part => part.trim());
   if (parts.length > 1) {
     // Look for the best location candidate, preferring later parts (more likely to be personal)
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const part = parts[i];
+    for (let partIndex = parts.length - 1; partIndex >= 0; partIndex--) {
+      const part = parts[partIndex];
       const cleaned = cleanLocation(part);
       
       if (isValidLocation(cleaned) && !isJobTitle(cleaned) && !isTechSkill(cleaned)) {
