@@ -54,7 +54,7 @@ export const useSubscription = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'subscriptions',
+          table: 'user_subscription_details',
           filter: `user_id=eq.${user.id}`,
         },
         () => {
