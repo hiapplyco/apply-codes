@@ -76,7 +76,7 @@ export const useSubscription = () => {
         .from('user_subscription_details')
         .select('*')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -109,12 +109,46 @@ export const useSubscription = () => {
             videoInterviews: data.video_interviews_count || 0,
           },
         });
+      } else {
+        // No subscription record found, create default trial subscription
+        await createDefaultSubscription();
       }
     } catch (err) {
       console.error('Error fetching subscription:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch subscription');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createDefaultSubscription = async () => {
+    try {
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 days from now
+
+      const { error } = await supabase
+        .from('user_subscription_details')
+        .insert({
+          user_id: user!.id,
+          status: 'trialing',
+          tier: 'free_trial',
+          trial_start_date: new Date().toISOString(),
+          trial_end_date: trialEndDate.toISOString(),
+          searches_limit: 10,
+          candidates_enriched_limit: 50,
+          ai_calls_limit: 100,
+          video_interviews_limit: 5,
+          projects_limit: 3,
+          team_members_limit: 1,
+        });
+
+      if (error) throw error;
+
+      // Fetch the newly created subscription
+      await fetchSubscription();
+    } catch (err) {
+      console.error('Error creating default subscription:', err);
+      throw err;
     }
   };
 
