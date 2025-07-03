@@ -34,6 +34,7 @@ import Meeting from "@/pages/MeetingSimplified";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
+import { DashboardAnalytics } from "@/pages/DashboardAnalytics";
 
 function App() {
   console.log('App component rendering...');
@@ -80,6 +81,7 @@ function App() {
                 <Route path="/meeting" element={<Meeting />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/report/:jobId" element={<Report />} />
+                <Route path="/analytics/:jobId" element={<DashboardAnalytics />} />
                 <Route path="/projects/:projectId" element={<ProjectDetail />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/platform/integrations" element={<PlatformIntegrations />} />

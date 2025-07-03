@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { SearchFormHeader } from "./SearchFormHeader";
 import { useSearchForm } from "./hooks/useSearchForm";
@@ -64,7 +64,7 @@ export const SearchForm = ({
         explainBoolean(searchString);
       }
     }
-  }, [searchString, isProcessing]);
+  }, [searchString, isProcessing, booleanExplanation, explainBoolean, isExplaining]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +80,7 @@ export const SearchForm = ({
     }, 500);
   };
   
-  const explainBoolean = async (booleanStr: string) => {
+  const explainBoolean = useCallback(async (booleanStr: string) => {
     setIsExplaining(true);
     try {
       const { data, error } = await supabase.functions.invoke('explain-boolean', {
@@ -96,7 +96,7 @@ export const SearchForm = ({
     } finally {
       setIsExplaining(false);
     }
-  };
+  }, [searchText]);
   
   const handleComplexityChange = async (complexity: 'simpler' | 'complex') => {
     if (!searchText || !searchString) return;
@@ -220,6 +220,11 @@ export const SearchForm = ({
                   toast.success("Website content scraped and imported successfully");
                   console.log("Scraped content imported:", { url: content.url, textLength: content.text.length });
                 }}
+                onSearchResult={(result) => {
+                  setSearchText(prev => `${prev}\n\n--- Search Result for "${result.query}" ---\n${result.text}`);
+                  toast.success('Search result imported successfully');
+                }}
+                projectId={currentJobId}
               />
             </div>
           </div>
@@ -262,6 +267,11 @@ export const SearchForm = ({
                       toast.success("Website content scraped and imported successfully");
                       console.log("Scraped content imported:", { url: content.url, textLength: content.text.length });
                     }}
+                    onSearchResult={(result) => {
+                      setSearchText(prev => `${prev}\n\n--- Search Result for "${result.query}" ---\n${result.text}`);
+                      toast.success('Search result imported successfully');
+                    }}
+                    projectId={currentJobId}
                   />
                 </div>
               </div>

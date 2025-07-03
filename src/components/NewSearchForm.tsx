@@ -90,14 +90,14 @@ const NewSearchForm = ({
   }, [location.state, setSearchText, setSearchString, initialRequirements, initialSearchString]);
 
   useEffect(() => {
-    if ((autoRun || (location.state as any)?.autoRun) && searchText && currentJobId && !isProcessing && !isGeneratingAnalysis) {
+    if ((autoRun || (location.state as { autoRun?: boolean })?.autoRun) && searchText && currentJobId && !isProcessing && !isGeneratingAnalysis) {
        console.log("Auto-running analysis generation...");
        handleGenerateAnalysis();
        if (location.state) {
          window.history.replaceState({}, document.title);
        }
     }
-  }, [autoRun, searchText, location.state, isProcessing, isGeneratingAnalysis, currentJobId]);
+  }, [autoRun, searchText, location.state, isProcessing, isGeneratingAnalysis, currentJobId, handleGenerateAnalysis]);
   
   // Auto-show Google search if we have initialSearchString and autoRun
   useEffect(() => {
@@ -106,7 +106,7 @@ const NewSearchForm = ({
       setShowGoogleSearch(true);
       setIsProcessingComplete(true);
     }
-  }, [autoRun, initialSearchString]);
+  }, [autoRun, initialSearchString, showGoogleSearch]);
 
   useEffect(() => {
     if (agentOutput && !isLoadingAgentOutput) {
@@ -180,6 +180,7 @@ const NewSearchForm = ({
           agentOutput={agentOutput}
           isGeneratingAnalysis={isGeneratingAnalysis}
           isProcessingComplete={isProcessingComplete}
+          jobId={currentJobId}
         >
           {isGeneratingAnalysis && !isProcessingComplete && (
             <AgentProcessor

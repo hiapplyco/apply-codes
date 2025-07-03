@@ -2,12 +2,15 @@
 import { AgentOutput } from "@/types/agent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Briefcase, DollarSign, Star, Users, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Briefcase, DollarSign, Star, Users, Target, BarChart3, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AnalysisReportProps {
   agentOutput?: AgentOutput | null;
   isGeneratingAnalysis: boolean;
   isProcessingComplete: boolean;
+  jobId?: number | null;
   children?: React.ReactNode;
 }
 
@@ -15,8 +18,10 @@ export const AnalysisReport = ({
   agentOutput, 
   isGeneratingAnalysis, 
   isProcessingComplete, 
+  jobId,
   children 
 }: AnalysisReportProps) => {
+  const navigate = useNavigate();
   if (isGeneratingAnalysis && !isProcessingComplete) {
     return (
       <div className="space-y-6">
@@ -174,6 +179,41 @@ export const AnalysisReport = ({
           </Card>
         )}
       </div>
+
+      {/* Dashboard Analytics Link */}
+      {agentOutput && jobId && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <BarChart3 className="h-5 w-5" />
+              Advanced Analytics Dashboard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-700 mb-2">
+                  View comprehensive recruitment intelligence with interactive charts and AI-powered insights.
+                </p>
+                <ul className="text-sm text-purple-600 space-y-1">
+                  <li>• Talent pipeline visualizations</li>
+                  <li>• Skills distribution analysis</li>
+                  <li>• Compensation market insights</li>
+                  <li>• Predictive hiring metrics</li>
+                </ul>
+              </div>
+              <Button
+                onClick={() => navigate(`/analytics/${jobId}`)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                View Dashboard
+                <ExternalLink className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {children}
     </div>

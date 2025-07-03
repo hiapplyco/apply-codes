@@ -7,32 +7,144 @@ import Underline from '@tiptap/extension-underline';
 import Heading from '@tiptap/extension-heading';
 import BulletList from '@tiptap/extension-bullet-list';
 import OrderedList from '@tiptap/extension-ordered-list';
-import { EditorToolbar } from './EditorToolbar';
-import { useEffect } from 'react';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableHeader from '@tiptap/extension-table-header';
+import TableCell from '@tiptap/extension-table-cell';
+import Image from '@tiptap/extension-image';
+import TextAlign from '@tiptap/extension-text-align';
+import TextStyle from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import Highlight from '@tiptap/extension-highlight';
+import FontFamily from '@tiptap/extension-font-family';
+import Dropcursor from '@tiptap/extension-dropcursor';
+import Gapcursor from '@tiptap/extension-gapcursor';
+import { GoogleDocsToolbar } from './GoogleDocsToolbar';
+import { DocumentStats } from './DocumentStats';
+import { useEffect, useState, useCallback } from 'react';
 import { formatAnalysisContent } from '../utils/formatAnalysis';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useDebounce } from 'use-debounce';
+import { useCollaboration } from '@/hooks/useCollaboration';
+import { UserPresence } from './UserPresence';
+import './GoogleDocsEditor.css';
 
 interface JobEditorContentProps {
   initialContent?: any;
+  onUpdate?: (content: string) => void;
+  isAnalysisComplete?: boolean;
+  isError?: boolean;
+  autoSave?: boolean;
+  onAutoSave?: (content: string) => void;
+  collaborationEnabled?: boolean;
+  showStats?: boolean;
+  documentId?: string;
 }
 
-export function JobEditorContent({ initialContent }: JobEditorContentProps) {
+export function JobEditorContent({ 
+  initialContent, 
+  onUpdate, 
+  isAnalysisComplete, 
+  isError, 
+  autoSave = true,
+  onAutoSave,
+  collaborationEnabled = false,
+  showStats = true,
+  documentId
+}: JobEditorContentProps) {
+  const [content, setContent] = useState('');
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Debounced content for auto-save
+  const [debouncedContent] = useDebounce(content, 2000);
+  
+  // Collaboration features
+  const collaboration = useCollaboration({
+    documentId: documentId || 'default-doc',
+    enabled: collaborationEnabled
+  });
+  
+  // Auto-save functionality
+  const handleAutoSave = useCallback(async (content: string) => {
+    if (!autoSave || !onAutoSave || !content.trim()) return;
+    
+    setIsSaving(true);
+    try {
+      await onAutoSave(content);
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [autoSave, onAutoSave]);
+  
+  // Trigger auto-save when content changes
+  useEffect(() => {
+    if (debouncedContent && debouncedContent !== content) {
+      handleAutoSave(debouncedContent);
+    }
+  }, [debouncedContent, handleAutoSave]);
   const editor = useEditor({
     extensions: [
       StarterKit,
       Bold,
       Italic,
       Underline,
-      Heading,
+      Heading.configure({
+        levels: [1, 2, 3, 4, 5, 6],
+      }),
       BulletList,
       OrderedList,
+      Table.configure({
+        resizable: true,
+        handleWidth: 5,
+        cellMinWidth: 50,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
+      TextStyle,
+      Color.configure({
+        types: ['textStyle'],
+      }),
+      Highlight.configure({
+        multicolor: true,
+      }),
+      FontFamily.configure({
+        types: ['textStyle'],
+      }),
+      Dropcursor,
+      Gapcursor,
     ],
     content: '',
     editable: true,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[500px] p-4',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[500px] p-4 google-docs-editor',
       },
+    },
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      const text = editor.getText();
+      
+      setContent(html);
+      setWordCount(text.trim().split(/\s+/).length);
+      setCharCount(text.length);
+      
+      if (onUpdate) {
+        onUpdate(html);
+      }
     },
   });
 
@@ -40,7 +152,10 @@ export function JobEditorContent({ initialContent }: JobEditorContentProps) {
     if (editor) {
       let content = '';
       
-      if (initialContent?.enhanced_content) {
+      if (typeof initialContent === 'string') {
+        // Content is a string (from UnifiedContentCreator)
+        content = initialContent;
+      } else if (initialContent?.enhanced_content) {
         // We have enhanced content from AI, use it directly
         content = initialContent.enhanced_content;
       } else if (initialContent?.analysis) {
@@ -49,14 +164,17 @@ export function JobEditorContent({ initialContent }: JobEditorContentProps) {
       } else if (initialContent?.content) {
         // Fallback to using the raw content if no analysis is available
         content = `<h2>Job Description</h2><p>${initialContent.content.replace(/\n/g, '</p><p>')}</p>`;
-      } else {
-        // No content at all
+      } else if (isError) {
+        // Show error message
         content = '<h2>No job content available</h2><p>There was a problem processing the job description. You can manually edit this content or try creating a new job.</p>';
+      } else {
+        // No content yet
+        content = '<p>Click "Generate Content" to create your content...</p>';
       }
       
       editor.commands.setContent(content);
     }
-  }, [editor, initialContent]);
+  }, [editor, initialContent, isError]);
 
   if (!editor) {
     return (
@@ -81,15 +199,44 @@ export function JobEditorContent({ initialContent }: JobEditorContentProps) {
 
   return (
     <div className="prose max-w-none">
-      {!initialContent?.analysis && initialContent?.id && (
+      {isError && (
+        <Alert className="mb-4 bg-red-50 border-red-200">
+          <AlertDescription>
+            There was an error generating content. You can still edit the content manually.
+          </AlertDescription>
+        </Alert>
+      )}
+      {!isAnalysisComplete && !isError && typeof initialContent !== 'string' && !initialContent?.analysis && initialContent?.id && (
         <Alert className="mb-4 bg-yellow-50 border-yellow-200">
           <AlertDescription>
-            The job analysis couldn't be generated. You can still edit the content manually.
+            The content analysis couldn't be generated. You can still edit the content manually.
           </AlertDescription>
         </Alert>
       )}
       <div className="border rounded-lg bg-white shadow-sm">
-        <EditorToolbar editor={editor} />
+        <div className="flex items-center justify-between p-2 border-b">
+          <h3 className="font-medium text-sm text-gray-700">Job Description Editor</h3>
+          {collaborationEnabled && (
+            <UserPresence 
+              users={collaboration.users}
+              isConnected={collaboration.isConnected}
+            />
+          )}
+        </div>
+        <GoogleDocsToolbar 
+          editor={editor} 
+          isSaving={isSaving}
+          lastSaved={lastSaved}
+          onAutoSave={handleAutoSave}
+        />
+        {showStats && (
+          <DocumentStats 
+            wordCount={wordCount}
+            charCount={charCount}
+            readingTime={Math.ceil(wordCount / 200)}
+            collaborators={collaboration.userCount}
+          />
+        )}
         <div className="p-4">
           <EditorContent editor={editor} />
         </div>

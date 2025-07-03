@@ -205,6 +205,41 @@ npm run typecheck    # Check types
 npm test             # Run tests
 ```
 
+### Reference Repository (blind-nut-70)
+
+**Setup Reference Access:**
+```bash
+# Add reference repository for visualization features
+git remote add reference https://github.com/hiapplyco/blind-nut-70.git
+git fetch reference
+
+# View reference branches
+git branch -r | grep reference
+```
+
+**When referencing blind-nut-70:**
+Use these commands to access the reference codebase without affecting current work:
+
+```bash
+# View files from reference repo
+git show reference/main:path/to/file.js
+
+# Create exploration branch (safe)
+git checkout -b reference-exploration reference/main
+
+# Compare implementations
+git diff HEAD reference/main -- path/to/file.js
+
+# Cherry-pick specific commits if needed
+git cherry-pick <commit-hash-from-reference>
+```
+
+**Key Reference Features:**
+- **Recruitment Intelligence Dashboard** - AI-powered candidate sourcing analytics
+- **Gemini-based Visualizations** - Interactive charts and metrics
+- **Post Creation Analytics** - Job posting optimization insights
+- **Candidate Scoring Visualizations** - Advanced recruiting metrics
+
 ## Architecture Overview
 
 ```

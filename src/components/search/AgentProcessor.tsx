@@ -5,11 +5,18 @@ import { useClientAgentOutputs } from "@/stores/useClientAgentOutputs";
 import { useMutation } from "@tanstack/react-query";
 import { ProcessingProgress } from "./ProcessingProgress";
 import { PROCESSING_STEPS, ERROR_MESSAGES } from "./constants/processingSteps";
+import { AgentOutput } from "@/types/agent";
 
 interface AgentProcessorProps {
   content: string;
   jobId: number;
   onComplete: () => void;
+}
+
+interface ProcessStepResponse {
+  success: boolean;
+  data?: unknown;
+  error?: string;
 }
 
 export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorProps) => {
@@ -21,7 +28,7 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
   const processStep = async (
     functionName: string, 
     responseKey: string,
-  ): Promise<any> => {
+  ): Promise<unknown> => {
     try {
       console.log(`Starting ${functionName} processing...`);
       
@@ -50,7 +57,7 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
   };
 
   const persistToDatabase = useMutation({
-    mutationFn: async (agentOutput: any) => {
+    mutationFn: async (agentOutput: Partial<AgentOutput>) => {
       console.log('Persisting agent output to database:', agentOutput);
       
       const { error } = await supabase
@@ -123,12 +130,34 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
         setOutput(jobId, agentOutput);
         console.log('Set client-side agent output:', agentOutput);
         
+        // Persist to database first
         await persistToDatabase.mutateAsync({
           terms,
           compensationData,
           enhancerData,
           summaryData
         });
+
+        // Generate dashboard metrics as 5th step
+        try {
+          console.log('Starting dashboard metrics generation...');
+          const metricsResponse = await supabase.functions.invoke('generate-dashboard-metrics', {
+            body: { 
+              jobId: jobId.toString(),
+              forceRefresh: true 
+            }
+          });
+
+          if (metricsResponse.error) {
+            console.error('Dashboard metrics generation failed:', metricsResponse.error);
+            // Don't fail the entire process if dashboard metrics fail
+          } else {
+            console.log('Dashboard metrics generated successfully:', metricsResponse.data);
+          }
+        } catch (error) {
+          console.error('Error generating dashboard metrics:', error);
+          // Continue without failing - dashboard metrics are supplementary
+        }
 
       } catch (error) {
         console.error('Error in agent processing:', error);

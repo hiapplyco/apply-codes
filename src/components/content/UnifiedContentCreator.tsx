@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
 import contentTypes from "../../../contentcreationbots.json";
 
 interface GeneratedContent {
@@ -40,6 +41,12 @@ export const UnifiedContentCreator = () => {
 
     setIsGenerating(true);
     try {
+      console.log('Sending request to generate-content with:', {
+        contentType: selectedContentType,
+        userInput: userInput.substring(0, 100) + '...', // Log first 100 chars
+        systemPrompt: selectedOption.system_prompt.substring(0, 100) + '...' // Log first 100 chars
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-content', {
         body: {
           contentType: selectedContentType,
@@ -48,21 +55,38 @@ export const UnifiedContentCreator = () => {
         },
       });
 
-      if (error) throw error;
+      console.log('Response from generate-content:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
       if (data && data.content) {
+        console.log('Content received, length:', data.content.length);
+        const htmlContent = advancedMarkdownToHtml(data.content);
+        console.log('HTML content generated, length:', htmlContent.length);
+        
         setGeneratedContent({
-          content: data.content,
+          content: htmlContent,
           markdown: data.markdown || data.content,
         });
-        setRawContent(data.markdown || data.content);
+        setRawContent(htmlContent);
         toast.success("Content generated successfully!");
       } else {
-        throw new Error("No content generated");
+        console.error('No content in response:', data);
+        throw new Error(`No content generated. Response: ${JSON.stringify(data)}`);
       }
     } catch (error) {
       console.error("Error generating content:", error);
       toast.error(error instanceof Error ? error.message : "Failed to generate content");
+      
+      // Set error state for the editor
+      setGeneratedContent({
+        content: '<p>Error generating content. Please try again.</p>',
+        markdown: 'Error generating content. Please try again.'
+      });
+      setRawContent('<p>Error generating content. Please try again.</p>');
     } finally {
       setIsGenerating(false);
     }

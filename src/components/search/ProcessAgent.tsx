@@ -142,7 +142,7 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
     return () => {
       isMounted = false;
     };
-  }, [content, jobId, toast, setOutput]);
+  }, [content, jobId, toast, setOutput, persistToDatabase, processStep]);
 
   return (
     <Card className="p-6 border-4 border-black bg-[#FFFBF4] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">

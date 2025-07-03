@@ -3,10 +3,37 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+interface GoogleCredentialResponse {
+  credential: string;
+  select_by: string;
+}
+
+interface GoogleAccounts {
+  id: {
+    initialize: (config: {
+      client_id: string;
+      callback: (response: GoogleCredentialResponse) => void;
+      nonce?: string;
+      use_fedcm_for_prompt?: boolean;
+    }) => void;
+    renderButton: (element: HTMLElement, options: {
+      theme: string;
+      size: string;
+      type: string;
+      shape: string;
+      width: string;
+    }) => void;
+  };
+}
+
+interface GoogleAPI {
+  accounts: GoogleAccounts;
+}
+
 declare global {
   interface Window {
-    google: any;
-    handleSignInWithGoogle: (response: any) => void;
+    google: GoogleAPI;
+    handleSignInWithGoogle: (response: GoogleCredentialResponse) => void;
   }
 }
 
@@ -43,7 +70,7 @@ export function GoogleSignIn({ onSuccess, redirectTo = '/dashboard' }: GoogleSig
       const { nonce: generatedNonce, hashedNonce: generatedHashedNonce } = await generateNonce();
       
       // Create global callback function
-      window.handleSignInWithGoogle = async (response: any) => {
+      window.handleSignInWithGoogle = async (response: GoogleCredentialResponse) => {
         setIsLoading(true);
         
         try {

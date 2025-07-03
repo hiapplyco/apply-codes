@@ -12,10 +12,24 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 
+interface DailyCallFrame {
+  leave: () => Promise<void>;
+  destroy: () => void;
+  participants: () => Record<string, unknown>;
+  localAudio: () => boolean;
+  localVideo: () => boolean;
+  setLocalAudio: (enabled: boolean) => Promise<void>;
+  setLocalVideo: (enabled: boolean) => Promise<void>;
+  startScreenShare: () => Promise<void>;
+  stopScreenShare: () => Promise<void>;
+  on: (event: string, callback: (...args: unknown[]) => void) => void;
+  off: (event: string, callback?: (...args: unknown[]) => void) => void;
+}
+
 interface ScreeningControlsProps {
   onToggleChat: () => void;
   onScreenShare: () => void;
-  callFrame: any;
+  callFrame: DailyCallFrame | null;
 }
 
 export const ScreeningControls = ({ 

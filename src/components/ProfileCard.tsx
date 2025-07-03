@@ -20,11 +20,18 @@ interface Profile {
 interface EnrichedProfileData {
   name: string;
   profile: Profile;
-  [key: string]: any;
+  email?: string;
+  phone?: string;
+  company?: string;
+  industry?: string;
+  experience?: string;
+  skills?: string[];
+  social_links?: Record<string, string>;
+  additional_info?: Record<string, string | number | boolean>;
 }
 
 // Profile Card Component
-export const ProfileCard = ({ profile: originalProfile }: { profile: any }) => {
+export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) => {
   const [showModal, setShowModal] = useState(false);
   const [enrichedData, setEnrichedData] = useState<EnrichedProfileData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -187,10 +194,10 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: any }) => {
 };
 
 // Profiles List Component
-export const ProfilesList = ({ profiles }: { profiles: any[] }) => {
+export const ProfilesList = ({ profiles }: { profiles: Profile[] }) => {
   return (
     <div className="space-y-4">
-      {profiles.map((profile: any, index: number) => (
+      {profiles.map((profile: Profile, index: number) => (
         <ProfileCard key={index} profile={profile} />
       ))}
     </div>

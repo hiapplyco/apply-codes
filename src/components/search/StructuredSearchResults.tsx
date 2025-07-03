@@ -71,7 +71,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     if (searchString) {
       resetAndLoadResults();
     }
-  }, [searchString]);
+  }, [searchString, resetAndLoadResults]);
 
   // Reset results when filters change (no need to reset page since we removed pagination)
   useEffect(() => {

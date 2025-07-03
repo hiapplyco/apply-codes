@@ -69,11 +69,11 @@ export function UnifiedAuthForm({ redirectTo, onSuccess }: UnifiedAuthFormProps)
         });
         if (onSuccess) onSuccess();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth error:', error);
       toast({
         title: "Authentication error",
-        description: error.message || "An error occurred during authentication.",
+        description: error instanceof Error ? error.message : "An error occurred during authentication.",
         variant: "destructive",
       });
     } finally {

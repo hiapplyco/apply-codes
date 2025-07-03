@@ -40,9 +40,9 @@ export function CustomPasswordReset({ onBack }: CustomPasswordResetProps) {
       // 3. Send the custom email with the actual reset token link
       // See: https://supabase.com/docs/guides/auth/auth-hooks
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password reset error:', error);
-      toast.error(error.message || 'Failed to send password reset email');
+      toast.error(error instanceof Error ? error.message : 'Failed to send password reset email');
     } finally {
       setLoading(false);
     }
