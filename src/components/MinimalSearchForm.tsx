@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Sparkles, Copy, ExternalLink } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FirecrawlService } from '@/utils/FirecrawlService';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -32,6 +35,120 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
+  
+  // Input method states
+  const [urlInput, setUrlInput] = useState('');
+  const [isScrapingUrl, setIsScrapingUrl] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [perplexityQuery, setPerplexityQuery] = useState('');
+  const [isSearchingPerplexity, setIsSearchingPerplexity] = useState(false);
+  const [showUrlDialog, setShowUrlDialog] = useState(false);
+  const [showPerplexityDialog, setShowPerplexityDialog] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper function to append content to job description
+  const appendToJobDescription = (newContent: string) => {
+    const separator = jobDescription.trim() ? '\n\n---\n\n' : '';
+    setJobDescription(prev => prev + separator + newContent);
+  };
+
+  // Firecrawl URL scraping
+  const handleUrlScrape = async () => {
+    if (!urlInput.trim()) {
+      toast.error('Please enter a URL');
+      return;
+    }
+
+    setIsScrapingUrl(true);
+    try {
+      const result = await FirecrawlService.crawlWebsite(urlInput, {
+        context: 'sourcing',
+        saveToProject: false
+      });
+
+      if (result.success && result.data?.text) {
+        appendToJobDescription(`[Scraped from ${urlInput}]\n${result.data.text}`);
+        setUrlInput('');
+        setShowUrlDialog(false);
+        toast.success('Website content added successfully!');
+      } else {
+        throw new Error(result.error || 'Failed to scrape website');
+      }
+    } catch (error) {
+      console.error('URL scraping failed:', error);
+      toast.error('Failed to scrape website');
+    } finally {
+      setIsScrapingUrl(false);
+    }
+  };
+
+  // File upload with Gemini extraction
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    setIsUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', userId);
+
+      const { data, error } = await supabase.functions.invoke('parse-document', {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.text) {
+        appendToJobDescription(`[Extracted from ${file.name}]\n${data.text}`);
+        toast.success('File content extracted and added!');
+      } else {
+        throw new Error(data?.message || 'Failed to extract file content');
+      }
+    } catch (error) {
+      console.error('File upload failed:', error);
+      toast.error('Failed to process file');
+    } finally {
+      setIsUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Perplexity web search
+  const handlePerplexitySearch = async () => {
+    if (!perplexityQuery.trim()) {
+      toast.error('Please enter a search query');
+      return;
+    }
+
+    setIsSearchingPerplexity(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('perplexity-search', {
+        body: { query: perplexityQuery },
+      });
+
+      if (error) throw error;
+
+      if (data?.choices?.[0]?.message?.content) {
+        appendToJobDescription(`[Perplexity search: "${perplexityQuery}"]\n${data.choices[0].message.content}`);
+        setPerplexityQuery('');
+        setShowPerplexityDialog(false);
+        toast.success('Search results added successfully!');
+      } else {
+        throw new Error('No search results found');
+      }
+    } catch (error) {
+      console.error('Perplexity search failed:', error);
+      toast.error('Failed to search');
+    } finally {
+      setIsSearchingPerplexity(false);
+    }
+  };
 
   const generateBooleanSearch = async () => {
     if (!jobDescription.trim()) {
@@ -153,32 +270,155 @@ Please create personalized outreach messages for each candidate.`;
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-purple-600 mb-2">Boolean Search Generator</h1>
-        <p className="text-gray-600">
-          Generate boolean search strings and find candidates with Google Search + Nymeria enrichment
-        </p>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6 max-w-4xl mx-auto p-6">
+        <div>
+          <h1 className="text-3xl font-bold text-purple-600 mb-2">Boolean Search Generator</h1>
+          <p className="text-gray-600">
+            Generate boolean search strings and find candidates with Google Search + Nymeria enrichment
+          </p>
+        </div>
 
-      {/* Job Description Input */}
-      <Card className="p-6 border-2 border-gray-300">
-        <h2 className="text-xl font-semibold mb-4">1. Enter Job Description</h2>
-        <Textarea
-          value={jobDescription}
-          onChange={(event) => setJobDescription(event.target.value)}
-          placeholder="Paste your job description here..."
-          className="min-h-[120px] mb-4"
-        />
-        <Button
-          onClick={generateBooleanSearch}
-          disabled={!jobDescription.trim() || isGenerating}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          {isGenerating ? 'Generating...' : 'Generate Boolean Search'}
-        </Button>
-      </Card>
+        {/* Job Description Input with Input Methods */}
+        <Card className="p-6 border-2 border-gray-300">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">1. Enter Job Description</h2>
+            <div className="flex gap-2">
+              {/* URL Scraper Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                        <Globe className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Scrape Website Content</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Input
+                          placeholder="Enter website URL..."
+                          value={urlInput}
+                          onChange={(event) => setUrlInput(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              handleUrlScrape();
+                            }
+                          }}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleUrlScrape}
+                            disabled={!urlInput.trim() || isScrapingUrl}
+                            className="flex-1"
+                          >
+                            <Globe className="w-4 h-4 mr-2" />
+                            {isScrapingUrl ? 'Scraping...' : 'Scrape & Add'}
+                          </Button>
+                          <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Scrape website content with Firecrawl</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* File Upload Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingFile}
+                  >
+                    <Upload className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Upload file and extract content with Gemini AI</p>
+                </TooltipContent>
+              </Tooltip>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                onChange={handleFileUpload}
+              />
+
+              {/* Perplexity Search Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                        <Zap className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Perplexity Web Search</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <Input
+                          placeholder="Enter search query..."
+                          value={perplexityQuery}
+                          onChange={(event) => setPerplexityQuery(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              handlePerplexitySearch();
+                            }
+                          }}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handlePerplexitySearch}
+                            disabled={!perplexityQuery.trim() || isSearchingPerplexity}
+                            className="flex-1"
+                          >
+                            <Zap className="w-4 h-4 mr-2" />
+                            {isSearchingPerplexity ? 'Searching...' : 'Search & Add'}
+                          </Button>
+                          <Button variant="outline" onClick={() => setShowPerplexityDialog(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Search the web with Perplexity Sonar</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+          
+          <Textarea
+            value={jobDescription}
+            onChange={(event) => setJobDescription(event.target.value)}
+            placeholder="Paste your job description here..."
+            className="min-h-[120px] mb-4"
+          />
+          
+          <Button
+            onClick={generateBooleanSearch}
+            disabled={!jobDescription.trim() || isGenerating}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            {isGenerating ? 'Generating...' : 'Generate Boolean Search'}
+          </Button>
+        </Card>
 
       {/* Boolean Search String */}
       {booleanString && (
@@ -274,6 +514,7 @@ Please create personalized outreach messages for each candidate.`;
           </p>
         </Card>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
