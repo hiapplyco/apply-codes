@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Terms } from "@/types/agent";
+import { ExtractedTerms } from "@/types/agent";
 import { useClientAgentOutputs } from "./useClientAgentOutputs";
 
-function isTerms(value: unknown): value is Terms {
+function isTerms(value: unknown): value is ExtractedTerms {
   if (typeof value !== 'object' || value === null) return false;
   const terms = value as Record<string, unknown>;
   return (
