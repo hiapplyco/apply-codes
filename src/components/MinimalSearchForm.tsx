@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
@@ -76,7 +76,24 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
       }
     } catch (error) {
       console.error('URL scraping failed:', error);
-      toast.error('Failed to scrape website');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to scrape website';
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Website took too long to load. Try a different URL or try again later.';
+        } else if (error.message.includes('403') || error.message.includes('blocked')) {
+          errorMessage = 'Website blocked our scraper. Some sites prevent automated access.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Page not found. Please check the URL and try again.';
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          errorMessage = 'Network error. Check your connection and try again.';
+        }
+      }
+      
+      toast.error(errorMessage, {
+        description: 'Try copying and pasting the content manually if scraping fails.'
+      });
     } finally {
       setIsScrapingUrl(false);
     }
@@ -110,7 +127,22 @@ export default function MinimalSearchForm({ userId }: MinimalSearchFormProps) {
       }
     } catch (error) {
       console.error('File upload failed:', error);
-      toast.error('Failed to process file');
+      
+      // Provide more specific error messages for file uploads
+      let errorMessage = 'Failed to process file';
+      if (error instanceof Error) {
+        if (error.message.includes('size') || error.message.includes('large')) {
+          errorMessage = 'File is too large. Please try a smaller file (under 10MB).';
+        } else if (error.message.includes('format') || error.message.includes('type')) {
+          errorMessage = 'Unsupported file format. Try PDF, Word, or image files.';
+        } else if (error.message.includes('corrupt') || error.message.includes('invalid')) {
+          errorMessage = 'File appears corrupted or invalid. Try a different file.';
+        }
+      }
+      
+      toast.error(errorMessage, {
+        description: 'Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG'
+      });
     } finally {
       setIsUploadingFile(false);
       if (fileInputRef.current) {
@@ -308,7 +340,7 @@ Please create personalized outreach messages for each candidate.`;
                   <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                        <Globe className="w-4 h-4" />
+                        <Link className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -347,7 +379,8 @@ Please create personalized outreach messages for each candidate.`;
                   </Dialog>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Scrape website content with Firecrawl</p>
+                  <p>Scrape any website URL with Firecrawl AI</p>
+                  <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -365,7 +398,8 @@ Please create personalized outreach messages for each candidate.`;
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload file and extract content with Gemini AI</p>
+                  <p>Upload and extract content with Gemini AI</p>
+                  <p className="text-xs text-gray-500 mt-1">Supports PDFs, Word docs, images, and text files</p>
                 </TooltipContent>
               </Tooltip>
               <input
@@ -382,7 +416,11 @@ Please create personalized outreach messages for each candidate.`;
                   <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
                     <DialogTrigger asChild>
                       <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                        <Zap className="w-4 h-4" />
+                        <img 
+                          src="/assets/perplexity.svg" 
+                          alt="Perplexity" 
+                          className="w-4 h-4" 
+                        />
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -421,7 +459,8 @@ Please create personalized outreach messages for each candidate.`;
                   </Dialog>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Search the web with Perplexity Sonar</p>
+                  <p>Search the web with Perplexity AI</p>
+                  <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
                 </TooltipContent>
               </Tooltip>
             </div>
