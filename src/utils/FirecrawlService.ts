@@ -30,13 +30,18 @@ export class FirecrawlService {
       }
 
       console.log('Making request to firecrawl-url function with URL:', url);
+      console.log('Using session token:', session.access_token ? 'Token present' : 'No token');
+      
       const { data: response, error: functionError } = await supabase.functions.invoke<CrawlResponse>('firecrawl-url', {
         body: { url }
       });
 
+      console.log('Function response:', response);
+      console.log('Function error:', functionError);
+
       if (functionError) {
         console.error('Error calling Firecrawl:', functionError);
-        return { success: false, error: functionError.message };
+        return { success: false, error: `Function error: ${functionError.message}` };
       }
 
       console.log('Received response from firecrawl-url function:', response);

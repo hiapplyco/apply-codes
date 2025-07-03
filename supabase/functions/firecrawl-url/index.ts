@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import FirecrawlApp from 'npm:@mendable/firecrawl-js';
 import { GoogleGenerativeAI } from 'npm:@google/generative-ai';
 
 const corsHeaders = {
@@ -37,27 +36,41 @@ serve(async (req) => {
       throw new Error('Firecrawl API key not configured');
     }
 
-    const firecrawl = new FirecrawlApp({ apiKey });
-    const crawlResponse = await firecrawl.crawlUrl(url, {
-      limit: 1,
-      scrapeOptions: {
-        formats: ['json', 'markdown'],
-        selectors: ['main', 'article', '.content', '#content', '.job-description'],
-        removeSelectors: ['nav', 'header', 'footer', '.advertisement'],
+    // Use the direct Firecrawl API v1 endpoint
+    const firecrawlResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        url: url,
+        formats: ['markdown'],
+        onlyMainContent: true,
         blockAds: true,
         removeBase64Images: true,
-        timeout: 60000,
-        waitUntil: 'networkidle0'
-      }
+        timeout: 30000,
+        excludeTags: ['nav', 'header', 'footer', '.advertisement', '.ads'],
+        includeTags: ['main', 'article', '.content', '#content', '.job-description', '.job-details']
+      })
     });
 
-    console.log('Crawl response received:', crawlResponse);
+    console.log('Firecrawl response status:', firecrawlResponse.status);
 
-    if (!crawlResponse.success || !crawlResponse.data?.[0]) {
-      throw new Error('Failed to crawl URL');
+    if (!firecrawlResponse.ok) {
+      const errorText = await firecrawlResponse.text();
+      console.error('Firecrawl API error:', errorText);
+      throw new Error(`Firecrawl API error: ${firecrawlResponse.status} - ${errorText}`);
     }
 
-    const scrapedContent = crawlResponse.data[0].content;
+    const crawlResponse = await firecrawlResponse.json();
+    console.log('Crawl response received:', crawlResponse);
+
+    if (!crawlResponse.success || !crawlResponse.data) {
+      throw new Error('Failed to scrape URL - no data returned');
+    }
+
+    const scrapedContent = crawlResponse.data.markdown;
     
     if (!scrapedContent) {
       throw new Error('No content found on webpage');

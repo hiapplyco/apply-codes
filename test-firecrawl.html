@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firecrawl Test</title>
+</head>
+<body>
+    <h1>Firecrawl Function Test</h1>
+    <button onclick="testFirecrawl()">Test Firecrawl</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testFirecrawl() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/firecrawl-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Z2hhYWpvam50a3FybXZzbmduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ2MTU4NDIsImV4cCI6MjA0MDE5MTg0Mn0.vgSm_lAuVo8j3OD-f_jPfJp2Nv1kfV8nAQMLT1nHf3c'
+                    },
+                    body: JSON.stringify({
+                        url: 'https://example.com'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                console.log('Response:', data);
+            } catch (error) {
+                resultDiv.innerHTML = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
