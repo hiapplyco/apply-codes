@@ -6,11 +6,15 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb } from 'lucide-react';
+import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { DocumentProcessor } from '@/lib/documentProcessing';
+import BooleanExplainer from '@/components/BooleanExplainer';
+import { BooleanExplanation } from '@/types/boolean-explanation';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -117,6 +121,15 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
   const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Collapse states for progressive focus
+  const [requirementsCollapsed, setRequirementsCollapsed] = useState(false);
+  const [booleanCollapsed, setBooleanCollapsed] = useState(false);
+  
+  // Boolean explanation states
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [booleanExplanation, setBooleanExplanation] = useState<BooleanExplanation | null>(null);
+  const [isExplaining, setIsExplaining] = useState(false);
 
   // Helper function to append content to job description
   const appendToJobDescription = (newContent: string) => {
@@ -158,9 +171,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       });
 
       if (result.success && result.data?.text) {
-        appendToJobDescription(`[Scraped from ${urlInput}]\n${result.data.text}`);
-        
-        // Save to database
+        // Save to database (don't add to job description - keep visual only)
         await saveContextItem({
           type: 'url_scrape',
           title: result.data.title || `Scraped from ${urlInput}`,
@@ -261,9 +272,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           }
         },
         onComplete: async (content) => {
-          appendToJobDescription(`[Extracted from ${file.name}]\n${content}`);
-          
-          // Save to database
+          // Save to database (don't add to job description - keep visual only)
           await saveContextItem({
             type: 'file_upload',
             title: `Extracted from ${file.name}`,
@@ -361,9 +370,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (data?.choices?.[0]?.message?.content) {
         const searchContent = data.choices[0].message.content;
-        appendToJobDescription(`[Perplexity search: "${perplexityQuery}"]\n${searchContent}`);
         
-        // Save to database
+        // Save to database (don't add to job description - keep visual only)
         await saveContextItem({
           type: 'perplexity_search',
           title: `Perplexity search: "${perplexityQuery}"`,
@@ -404,8 +412,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   };
 
   const generateBooleanSearch = async () => {
+    // Require custom instructions (context items alone are not enough)
     if (!jobDescription.trim()) {
-      toast.error('Please enter a job description');
+      toast.error('Please enter custom instructions or job requirements in the text area above');
       return;
     }
 
@@ -421,9 +430,15 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         file_name: item.file_name
       }));
 
+      console.log('Generating boolean search with:', {
+        hasCustomInstructions: !!jobDescription.trim(),
+        contextItemsCount: contextItems.length,
+        customInstructionsLength: jobDescription.length
+      });
+
       const { data, error } = await supabase.functions.invoke('generate-boolean-search', {
         body: { 
-          description: jobDescription,
+          description: jobDescription.trim() || '', // Send empty string if no custom instructions
           contextItems: contextData
         }
       });
@@ -432,7 +447,18 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (data?.searchString) {
         setBooleanString(data.searchString);
-        toast.success('Boolean search generated successfully!');
+        
+        // Collapse Requirements container to focus on Boolean section
+        setRequirementsCollapsed(true);
+        
+        // Enhanced success message based on what was used
+        if (jobDescription.trim() && contextItems.length > 0) {
+          toast.success(`Boolean search generated from custom instructions + ${contextItems.length} context item(s)!`);
+        } else if (contextItems.length > 0) {
+          toast.success(`Boolean search generated from ${contextItems.length} context item(s)!`);
+        } else {
+          toast.success('Boolean search generated from custom instructions!');
+        }
       } else {
         throw new Error('No search string generated');
       }
@@ -441,6 +467,40 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.error('Failed to generate boolean search');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleExplainBoolean = async () => {
+    if (!booleanString.trim()) {
+      toast.error('Please generate a boolean search string first');
+      return;
+    }
+
+    setIsExplaining(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('explain-boolean', {
+        body: {
+          booleanString: booleanString,
+          requirements: jobDescription.trim() || 'Boolean search explanation'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        // Parse the response if it's a string
+        const explanation = typeof data === 'string' ? JSON.parse(data) : data;
+        setBooleanExplanation(explanation);
+        setShowExplanation(true);
+        toast.success('Boolean search explained!');
+      } else {
+        throw new Error('No explanation generated');
+      }
+    } catch (error) {
+      console.error('Error explaining boolean search:', error);
+      toast.error('Failed to explain boolean search');
+    } finally {
+      setIsExplaining(false);
     }
   };
 
@@ -481,6 +541,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         }));
         
         setSearchResults(mappedResults);
+        
+        // Collapse Boolean container to focus on Search Results
+        setBooleanCollapsed(true);
+        
         toast.success(`Found ${data.items.length} results`);
       } else {
         setSearchResults([]);
@@ -854,10 +918,22 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         </div>
 
         {/* Job Description Input with Input Methods */}
-        <Card className="p-6 border-2 border-gray-300">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">1. Enter Job Description</h2>
-            <div className="flex gap-2">
+        <Collapsible open={!requirementsCollapsed} onOpenChange={setRequirementsCollapsed}>
+          <Card className="p-6 border-2 border-gray-300">
+            <CollapsibleTrigger asChild>
+              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded">
+                <h2 className="text-xl font-semibold">1. Custom Instructions & Context</h2>
+                <div className="flex items-center gap-2">
+                  {requirementsCollapsed ? (
+                    <EyeOff className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="flex gap-2 mb-4">
               {/* URL Scraper Button */}
               <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
                 <Tooltip>
@@ -897,8 +973,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                             disabled={!urlInput.trim() || isScrapingUrl}
                             className="flex-1"
                           >
-                            <Globe className="w-4 h-4 mr-2" />
-                            {isScrapingUrl ? 'Scraping...' : 'Scrape & Add'}
+                            <ButtonLoading 
+                              isLoading={isScrapingUrl}
+                              loadingText="Scraping..."
+                            >
+                              <Globe className="w-4 h-4 mr-2" />
+                              Scrape & Add
+                            </ButtonLoading>
                           </Button>
                           <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
                             Cancel
@@ -914,19 +995,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0 relative overflow-hidden"
+                    className="h-8 w-8 p-0"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingFile}
                   >
-                    {isUploadingFile ? (
-                      <>
-                        <div className="absolute inset-0 bg-purple-100 animate-pulse" />
-                        <div className="absolute bottom-0 left-0 h-1 bg-purple-600 animate-loading-bar" />
-                        <Upload className="w-4 h-4 relative z-10 animate-bounce" />
-                      </>
-                    ) : (
+                    <ButtonLoading isLoading={isUploadingFile}>
                       <Upload className="w-4 h-4" />
-                    )}
+                    </ButtonLoading>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -985,8 +1060,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                             disabled={!perplexityQuery.trim() || isSearchingPerplexity}
                             className="flex-1"
                           >
-                            <Zap className="w-4 h-4 mr-2" />
-                            {isSearchingPerplexity ? 'Searching...' : 'Search & Add'}
+                            <ButtonLoading 
+                              isLoading={isSearchingPerplexity}
+                              loadingText="Searching..."
+                            >
+                              <Zap className="w-4 h-4 mr-2" />
+                              Search & Add
+                            </ButtonLoading>
                           </Button>
                           <Button variant="outline" onClick={() => setShowPerplexityDialog(false)}>
                             Cancel
@@ -996,12 +1076,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                     </DialogContent>
               </Dialog>
             </div>
-          </div>
           
           <Textarea
             value={jobDescription}
             onChange={(event) => setJobDescription(event.target.value)}
-            placeholder="Paste your job description here..."
+            placeholder="Enter custom instructions or requirements (optional)...\n\nThis area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
             className="min-h-[120px] mb-4"
           />
 
@@ -1090,17 +1169,37 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           <Button
             onClick={generateBooleanSearch}
             disabled={!jobDescription.trim() || isGenerating}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Generate Boolean Search'}
+            <ButtonLoading 
+              isLoading={isGenerating}
+              loadingText="Generating..."
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Boolean Search
+            </ButtonLoading>
           </Button>
-        </Card>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
       {/* Boolean Search String */}
       {booleanString && (
-        <Card className="p-6 border-2 border-purple-400 bg-purple-50">
-          <h2 className="text-xl font-semibold mb-4">2. Boolean Search String</h2>
+        <Collapsible open={!booleanCollapsed} onOpenChange={setBooleanCollapsed}>
+          <Card className="p-6 border-2 border-purple-400 bg-purple-50">
+            <CollapsibleTrigger asChild>
+              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-purple-100 -m-2 p-2 rounded">
+                <h2 className="text-xl font-semibold">2. Boolean Search String</h2>
+                <div className="flex items-center gap-2">
+                  {booleanCollapsed ? (
+                    <EyeOff className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
           <div className="space-y-4">
             <Textarea
               value={booleanString}
@@ -1118,23 +1217,49 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                 Copy
               </Button>
               <Button
+                onClick={handleExplainBoolean}
+                variant="outline"
+                size="sm"
+                disabled={isExplaining || !booleanString.trim()}
+              >
+                <ButtonLoading 
+                  isLoading={isExplaining}
+                  loadingText="Analyzing..."
+                >
+                  <Lightbulb className="w-4 h-4 mr-2" />
+                  Explain This Search
+                </ButtonLoading>
+              </Button>
+              <Button
                 onClick={searchGoogle}
                 disabled={isSearching}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                <Search className="w-4 h-4 mr-2" />
-                {isSearching ? 'Searching...' : 'Search LinkedIn Profiles'}
+                <ButtonLoading 
+                  isLoading={isSearching}
+                  loadingText="Searching..."
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Search LinkedIn Profiles
+                </ButtonLoading>
               </Button>
             </div>
           </div>
-        </Card>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Search Results */}
-      {searchResults.length > 0 && (
-        <Card className="p-6 border-2 border-green-400">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">3. Search Results ({searchResults.length})</h2>
+      {(searchResults.length > 0 || isSearching) && (
+        <ContainedLoading
+          isLoading={isSearching}
+          loadingText="Searching LinkedIn profiles..."
+          className="mb-6"
+        >
+          <Card className="p-6 border-2 border-green-400">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">3. Search Results ({searchResults.length})</h2>
             <div className="space-x-2">
               <Badge variant="outline">{selectedProfiles.size} selected</Badge>
               <Button
@@ -1217,6 +1342,53 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div className="border-t bg-gray-50 p-4 space-y-4">
+                      {/* Detailed Profile Information */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4 text-blue-600" />
+                          Profile Details
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="font-medium text-gray-700">Full Name:</span>
+                            <p className="text-gray-900 mt-1">{result.title.split(' - ')[0] || result.title}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Current Role:</span>
+                            <p className="text-gray-900 mt-1">{result.title.includes(' - ') ? result.title.split(' - ').slice(1).join(' - ') : 'Not specified'}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">Profile Summary:</span>
+                            <p className="text-gray-600 mt-1 leading-relaxed">{result.snippet}</p>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-700">LinkedIn URL:</span>
+                            <a 
+                              href={result.link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline mt-1 block break-all"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {result.link}
+                            </a>
+                          </div>
+                          {result.location && (
+                            <div>
+                              <span className="font-medium text-gray-700">Location:</span>
+                              <p className="text-gray-900 mt-1 flex items-center gap-1">
+                                <span>📍</span>
+                                {result.location}
+                              </p>
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium text-gray-700">Source:</span>
+                            <p className="text-gray-600 mt-1">{result.displayLink}</p>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap">
                         <Button
@@ -1225,8 +1397,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                           disabled={loadingAnalysis.has(index)}
                           className="bg-purple-600 hover:bg-purple-700"
                         >
-                          <Sparkles className="w-4 h-4 mr-1" />
-                          {loadingAnalysis.has(index) ? 'Analyzing...' : 'Analyze vs Requirements'}
+                          <ButtonLoading 
+                            isLoading={loadingAnalysis.has(index)}
+                            loadingText="Analyzing..."
+                          >
+                            <Sparkles className="w-4 h-4 mr-1" />
+                            Analyze vs Requirements
+                          </ButtonLoading>
                         </Button>
                         <Button
                           size="sm"
@@ -1234,8 +1411,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                           onClick={() => getContactInfo(result, index)}
                           disabled={loadingContact.has(index)}
                         >
-                          <Search className="w-4 h-4 mr-1" />
-                          {loadingContact.has(index) ? 'Getting...' : 'Get Contact Info'}
+                          <ButtonLoading 
+                            isLoading={loadingContact.has(index)}
+                            loadingText="Getting..."
+                          >
+                            <Search className="w-4 h-4 mr-1" />
+                            Get Contact Info
+                          </ButtonLoading>
                         </Button>
                         <Button 
                           size="sm" 
@@ -1249,10 +1431,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                               Saved
                             </>
                           ) : (
-                            <>
+                            <ButtonLoading 
+                              isLoading={savingCandidates.has(index)}
+                              loadingText="Saving..."
+                            >
                               <Save className="w-4 h-4 mr-1" />
-                              {savingCandidates.has(index) ? 'Saving...' : 'Save to Project'}
-                            </>
+                              Save to Project
+                            </ButtonLoading>
                           )}
                         </Button>
                       </div>
@@ -1334,6 +1519,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             })}
           </div>
         </Card>
+        </ContainedLoading>
       )}
 
       {searchResults.length === 0 && booleanString && (
@@ -1465,6 +1651,24 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           </div>
         </Card>
       )}
+
+      {/* Boolean Explanation Dialog */}
+      <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Boolean Search Explanation</DialogTitle>
+            <DialogDescription>
+              Understanding what your search will find and why
+            </DialogDescription>
+          </DialogHeader>
+          {booleanExplanation && (
+            <BooleanExplainer 
+              explanation={booleanExplanation} 
+              onClose={() => setShowExplanation(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     </TooltipProvider>
   );

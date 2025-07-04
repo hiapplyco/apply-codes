@@ -21,34 +21,58 @@ serve(async (req) => {
     const genAI = new GoogleGenerativeAI(Deno.env.get('GOOGLE_AI_API_KEY') || '');
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `
-You are an expert recruiter explaining a boolean search string to a user. Analyze this boolean search string and provide a structured explanation.
+    const prompt = `You are a Boolean search expert who explains complex search strings in simple, visual terms. Your goal is to help users understand EXACTLY what their search will find.
 
-Boolean String: "${booleanString}"
-${requirements ? `Original Requirements: "${requirements}"` : ''}
+INPUTS PROVIDED:
+- User's original request: ${requirements || 'Not specified'}
+- Context source: search
+- Generated Boolean string: ${booleanString}
 
-Provide a response in the following JSON format:
+TASK: Create a structured explanation of the Boolean search string that can be rendered with visual hierarchy.
+
+OUTPUT FORMAT (JSON):
 {
-  "overview": "Brief 1-2 sentence overview of what this search will find",
-  "components": [
-    {
-      "part": "The specific part of the boolean string",
-      "purpose": "What this part searches for",
-      "example": "Example of what this would match"
-    }
-  ],
-  "inclusions": [
-    "What types of candidates WILL be found"
-  ],
-  "exclusions": [
-    "What types of candidates will be EXCLUDED"
-  ],
+  "summary": "One-sentence plain English explanation of what this search finds",
+  "structure": {
+    "primaryTarget": "The main thing we're searching for",
+    "breakdown": [
+      {
+        "component": "Boolean segment",
+        "operator": "AND|OR|NOT",
+        "meaning": "What this part does",
+        "examples": ["Example matches"],
+        "visual": "primary|secondary|exclude"
+      }
+    ]
+  },
+  "locationLogic": {
+    "areas": ["List of locations"],
+    "explanation": "Why these locations"
+  },
+  "exclusions": {
+    "terms": ["What we're filtering out"],
+    "reason": "Why we exclude these"
+  },
   "tips": [
-    "Helpful tips for using or modifying this search"
+    "Practical tip about the results"
   ]
 }
 
-Focus on clarity and helping the user understand exactly what their search will return.`;
+VISUAL HIERARCHY RULES:
+- AND components = "primary" (these narrow the search)
+- OR components = "secondary" (these expand options)
+- NOT components = "exclude" (these filter out)
+- Quoted phrases = exact matches (highlight differently)
+- Parentheses = grouped concepts (show as containers)
+
+EXPLANATION STYLE:
+- Use plain English, no jargon
+- Focus on WHAT the search finds, not HOW Boolean works
+- Give concrete examples when possible
+- Keep each explanation under 15 words
+- Make it actionable and practical
+
+Output ONLY the JSON structure. No markdown, no code blocks.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
