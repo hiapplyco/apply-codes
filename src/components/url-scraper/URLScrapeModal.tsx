@@ -113,18 +113,18 @@ export function URLScrapeModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
+        <div className="flex items-center justify-between p-6 border-b-2 border-black">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#39FF14] to-[#00D4FF] rounded-lg flex items-center justify-center">
-              <Link2 className="w-6 h-6 text-black" />
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <Link2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Import from URL</h2>
+              <h2 className="text-xl font-bold text-black">Import from URL</h2>
               {activeProjectId && selectedProject && (
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-600">
                   Saving to project: {selectedProject.name}
                 </p>
               )}
@@ -132,7 +132,8 @@ export function URLScrapeModal({
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-600 hover:text-black transition-colors p-1 hover:bg-gray-100 rounded"
+            type="button"
           >
             <X className="w-6 h-6" />
           </button>
@@ -144,7 +145,7 @@ export function URLScrapeModal({
             <>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     Website URL
                   </label>
                   <div className="relative">
@@ -153,13 +154,13 @@ export function URLScrapeModal({
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://example.com/job-posting"
-                      className="w-full bg-gray-800 text-white rounded-lg px-4 py-3 pr-12 
-                               focus:outline-none focus:ring-2 focus:ring-[#39FF14]/50"
+                      className="w-full bg-white text-black border-2 border-black rounded-lg px-4 py-3 pr-12 
+                               focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]"
                       onKeyDown={(e) => e.key === 'Enter' && handleScrape()}
                     />
                     <Link2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                   </div>
-                  <p className="text-sm text-gray-400 mt-2">
+                  <p className="text-sm text-gray-600 mt-2">
                     Enter a URL to import content from any website
                   </p>
                 </div>
@@ -167,12 +168,12 @@ export function URLScrapeModal({
                 <button
                   onClick={handleScrape}
                   disabled={isLoading || !url}
-                  className="w-full bg-gradient-to-r from-[#39FF14] to-[#00D4FF] 
-                           text-black font-semibold py-3 rounded-lg
-                           hover:shadow-lg hover:shadow-[#39FF14]/20 
-                           transition-all duration-200 
-                           disabled:opacity-50 disabled:cursor-not-allowed
+                  className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg
+                           border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+                           hover:scale-105 transition-transform duration-200 
+                           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
                            flex items-center justify-center gap-2"
+                  type="button"
                 >
                   {isLoading ? (
                     <>
@@ -190,22 +191,22 @@ export function URLScrapeModal({
             </>
           ) : (
             <div className="space-y-4">
-              <div className="bg-gray-800 rounded-lg p-4 border border-[#39FF14]/20">
+              <div className="bg-white rounded-lg p-4 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]">
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#39FF14]" />
-                  <h3 className="text-lg font-semibold text-white">Content Scraped Successfully</h3>
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <h3 className="text-lg font-bold text-black">Content Scraped Successfully</h3>
                 </div>
                 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">URL:</p>
-                    <p className="text-sm text-white truncate">{url}</p>
+                    <p className="text-sm font-medium text-black mb-1">URL:</p>
+                    <p className="text-sm text-gray-600 truncate">{url}</p>
                   </div>
                   
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">Summary:</p>
-                    <div className="bg-gray-900 rounded p-3 max-h-60 overflow-y-auto">
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                    <p className="text-sm font-medium text-black mb-1">Summary:</p>
+                    <div className="bg-gray-50 border-2 border-gray-200 rounded p-3 max-h-60 overflow-y-auto">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">
                         {scrapedData.text}
                       </p>
                     </div>
@@ -216,17 +217,19 @@ export function URLScrapeModal({
               <div className="flex gap-3">
                 <button
                   onClick={handleUseContent}
-                  className="flex-1 bg-gradient-to-r from-[#39FF14] to-[#00D4FF] 
-                           text-black font-semibold py-3 rounded-lg
-                           hover:shadow-lg hover:shadow-[#39FF14]/20 
-                           transition-all duration-200"
+                  className="flex-1 bg-purple-600 text-white font-bold py-3 rounded-lg
+                           border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+                           hover:scale-105 transition-transform duration-200"
+                  type="button"
                 >
                   Use This Content
                 </button>
                 <button
                   onClick={() => setScrapedData(null)}
-                  className="flex-1 bg-gray-800 text-white font-semibold py-3 rounded-lg
-                           hover:bg-gray-700 transition-colors"
+                  className="flex-1 bg-gray-200 text-black font-bold py-3 rounded-lg
+                           border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+                           hover:scale-105 transition-transform duration-200"
+                  type="button"
                 >
                   Scrape Another URL
                 </button>

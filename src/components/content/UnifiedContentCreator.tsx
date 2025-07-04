@@ -10,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ContextBar } from "@/components/context/ContextBar";
+import { ContentGenerationDialog } from "@/components/content/ContentGenerationDialog";
+import { useProjectContext } from "@/context/ProjectContext";
 import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
 import contentTypes from "../../../contentcreationbots.json";
 
@@ -24,8 +27,22 @@ export const UnifiedContentCreator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [rawContent, setRawContent] = useState("");
+  const [contextContent, setContextContent] = useState<string>("");
+  const [projectContext, setProjectContext] = useState<string>("");
+  const [showGenerationDialog, setShowGenerationDialog] = useState(false);
 
+  const { selectedProject } = useProjectContext();
   const contentOptions = contentTypes.recruiter_hr_content;
+
+  const handleContextContent = async (content: any) => {
+    try {
+      setContextContent(content.text);
+      toast.success(`${content.type} context added to content creation`);
+    } catch (error) {
+      console.error('Context processing error:', error);
+      toast.error('Failed to process context content');
+    }
+  };
 
   const handleGenerate = async () => {
     if (!selectedContentType || !userInput.trim()) {
@@ -40,6 +57,7 @@ export const UnifiedContentCreator = () => {
     }
 
     setIsGenerating(true);
+    setShowGenerationDialog(true);
     try {
       console.log('Sending request to generate-content with:', {
         contentType: selectedContentType,
@@ -52,6 +70,9 @@ export const UnifiedContentCreator = () => {
           contentType: selectedContentType,
           userInput: userInput,
           systemPrompt: selectedOption.system_prompt,
+          contextContent: contextContent,
+          projectContext: selectedProject ? `Project: ${selectedProject.name}\nDescription: ${selectedProject.description || 'No description'}` : '',
+          projectId: selectedProject?.id,
         },
       });
 
@@ -89,6 +110,7 @@ export const UnifiedContentCreator = () => {
       setRawContent('<p>Error generating content. Please try again.</p>');
     } finally {
       setIsGenerating(false);
+      // Dialog will auto-close after showing completion state
     }
   };
 
@@ -99,18 +121,30 @@ export const UnifiedContentCreator = () => {
   const selectedOption = contentOptions.find(opt => opt.content_type === selectedContentType);
 
   return (
-    <div className="space-y-8">
-      {/* Project Selector */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <ProjectSelector 
-          label="Select project for content creation"
-          placeholder="Choose a project (optional)"
-          className="max-w-md"
-        />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Context Bar with Project Selector */}
+      <div className="animate-in slide-in-from-top duration-700 delay-100">
+        <ContextBar
+        context="general"
+        title="Add Context for Content Creation"
+        description="Upload documents, scrape websites, or search for additional context to enhance your content"
+        onContentProcessed={handleContextContent}
+        showProjectSelector={true}
+        projectSelectorProps={{
+          label: "Select project for content creation",
+          placeholder: "Choose a project (optional)",
+          className: "w-full"
+        }}
+        showLabels={true}
+        layout="vertical"
+        compact={false}
+        className="mb-6"
+      />
       </div>
 
       {/* Content Creation Form */}
-      <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+      <div className="animate-in slide-in-from-bottom duration-700 delay-200">
+        <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-[#8B5CF6]">Create Content</CardTitle>
           <CardDescription className="text-gray-600">
@@ -163,6 +197,24 @@ export const UnifiedContentCreator = () => {
             </div>
           </div>
 
+          {/* Context Status Indicator */}
+          {(contextContent || selectedProject) && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg animate-in slide-in-from-left duration-500 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 text-sm text-green-700">
+                <Info className="w-4 h-4 animate-pulse" />
+                <span className="font-medium">Context Active:</span>
+              </div>
+              <div className="mt-1 text-xs text-green-600 space-y-1">
+                {selectedProject && (
+                  <div className="animate-in fade-in duration-300 delay-100">• Project: {selectedProject.name}</div>
+                )}
+                {contextContent && (
+                  <div className="animate-in fade-in duration-300 delay-200">• Additional context from uploaded/scraped content</div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* User Input */}
           <div className="space-y-2">
             <Label htmlFor="user-input" className="text-sm font-medium">
@@ -185,7 +237,8 @@ export const UnifiedContentCreator = () => {
           <Button
             onClick={handleGenerate}
             disabled={!selectedContentType || !userInput.trim() || isGenerating}
-            className="w-full bg-[#8B5CF6] text-white hover:bg-[#7C3AED] border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)] disabled:opacity-50"
+            className="w-full bg-[#8B5CF6] text-white hover:bg-[#7C3AED] border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)] disabled:opacity-50 transition-all duration-200 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,0.7)] hover:scale-[1.02] active:scale-[0.98]"
+            type="button"
           >
             {isGenerating ? (
               <>
@@ -200,11 +253,13 @@ export const UnifiedContentCreator = () => {
             )}
           </Button>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {/* Generated Content Editor */}
       {generatedContent && (
-        <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+        <div className="animate-in slide-in-from-bottom duration-700 delay-300">
+          <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-[#8B5CF6]">
               Generated {selectedContentType}
@@ -223,8 +278,19 @@ export const UnifiedContentCreator = () => {
               />
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
+
+      {/* Content Generation Dialog */}
+      <ContentGenerationDialog
+        isOpen={showGenerationDialog}
+        onClose={() => setShowGenerationDialog(false)}
+        contentType={selectedContentType}
+        isGenerating={isGenerating}
+        hasContext={!!(contextContent || selectedProject)}
+        projectName={selectedProject?.name}
+      />
     </div>
   );
 };

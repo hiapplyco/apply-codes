@@ -23,7 +23,14 @@ serve(async (req) => {
       systemPromptLength: requestBody?.systemPrompt?.length
     });
     
-    const { contentType, userInput, systemPrompt } = requestBody;
+    const { 
+      contentType, 
+      userInput, 
+      systemPrompt, 
+      contextContent = '',
+      projectContext = '',
+      projectId = null 
+    } = requestBody;
     
     if (!contentType || !userInput?.trim() || !systemPrompt) {
       const missingFields = [];
@@ -55,10 +62,30 @@ serve(async (req) => {
     
     console.log(`Starting content generation for: ${contentType}`);
     
-    // Combine system prompt with user input
-    const fullPrompt = `${systemPrompt}\n\nUser Input:\n${userInput}\n\nIMPORTANT: Format your response in Markdown with proper headings, lists, and formatting. Make it visually appealing and well-structured.`;
+    // Build comprehensive prompt with all context sources
+    let fullPrompt = systemPrompt;
     
-    console.log(`Prompt prepared, length: ${fullPrompt.length}`);
+    // Add project context if available
+    if (projectContext.trim()) {
+      fullPrompt += `\n\n**PROJECT CONTEXT:**\n${projectContext}`;
+    }
+    
+    // Add additional context content if available (from uploads, scraping, etc.)
+    if (contextContent.trim()) {
+      fullPrompt += `\n\n**ADDITIONAL CONTEXT:**\n${contextContent}`;
+    }
+    
+    // Add user input
+    fullPrompt += `\n\n**USER INPUT:**\n${userInput}`;
+    
+    // Add formatting instructions
+    fullPrompt += `\n\n**FORMATTING INSTRUCTIONS:**\nFormat your response in Markdown with proper headings, lists, and formatting. Make it visually appealing and well-structured. Use the project context and additional context to make the content more relevant and personalized.`;
+    
+    console.log(`Prompt prepared, total length: ${fullPrompt.length}`, {
+      hasProjectContext: !!projectContext.trim(),
+      hasContextContent: !!contextContent.trim(),
+      projectId: projectId
+    });
     
     const result = await model.generateContent([
       {
@@ -83,6 +110,9 @@ serve(async (req) => {
       content: cleanedContent,
       markdown: cleanedContent,
       contentType: contentType,
+      projectId: projectId,
+      hasProjectContext: !!projectContext.trim(),
+      hasContextContent: !!contextContent.trim(),
       success: true
     };
     

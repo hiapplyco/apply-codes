@@ -275,12 +275,14 @@ export function ProjectSelector({
               variant="outline" 
               onClick={() => setShowCreateDialog(false)}
               disabled={creating}
+              type="button"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleCreateProject}
               disabled={!newProject.name.trim() || creating}
+              type="button"
             >
               {creating ? 'Creating...' : 'Create Project'}
             </Button>

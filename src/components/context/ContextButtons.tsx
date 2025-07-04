@@ -7,6 +7,7 @@ import { DocumentProcessor } from '@/lib/documentProcessing';
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchModal';
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface ContextButtonsProps {
@@ -62,6 +63,38 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   // File input ref for upload functionality
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Universal context item storage function
+  const saveContextItem = useCallback(async (item: {
+    type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input';
+    title: string;
+    content: string;
+    summary?: string;
+    source_url?: string;
+    file_name?: string;
+    file_type?: string;
+    metadata?: Record<string, any>;
+  }) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('save-context-item', {
+        body: {
+          ...item,
+          project_id: selectedProject?.id || null, // Always store, project optional
+          tags: [context] // Add context as a tag
+        }
+      });
+
+      if (error) {
+        console.error('Failed to save context item:', error);
+        // Don't throw - we want the main functionality to still work
+      } else {
+        console.log('Context item saved successfully:', data);
+      }
+    } catch (error) {
+      console.error('Error saving context item:', error);
+      // Don't throw - graceful degradation
+    }
+  }, [selectedProject, context]);
+
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -86,6 +119,21 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
           context
         });
       }
+
+      // Always save to context_items table
+      await saveContextItem({
+        type: 'file_upload',
+        title: `Uploaded: ${file.name}`,
+        content: content,
+        summary: content.length > 500 ? content.substring(0, 500) + '...' : content,
+        file_name: file.name,
+        file_type: file.type,
+        metadata: {
+          fileSize: file.size,
+          processingMethod: 'client-side',
+          uploadedAt: new Date().toISOString()
+        }
+      });
 
       onContentProcessed?.({
         type: 'upload',
@@ -116,12 +164,31 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     setIsProcessing('firecrawl');
 
     try {
+      const textContent = content.text || content.summary;
+      const url = content.url;
+      const title = content.title || `Scraped from ${url}`;
+
+      // Always save to context_items table
+      await saveContextItem({
+        type: 'url_scrape',
+        title: title,
+        content: textContent,
+        summary: textContent.length > 500 ? textContent.substring(0, 500) + '...' : textContent,
+        source_url: url,
+        metadata: {
+          title: content.title,
+          scrapedAt: new Date().toISOString(),
+          source: 'firecrawl',
+          rawContent: content.rawContent
+        }
+      });
+
       onContentProcessed?.({
         type: 'firecrawl',
-        text: content.text || content.summary,
+        text: textContent,
         metadata: {
-          url: content.url,
-          title: content.title,
+          url: url,
+          title: title,
           timestamp: new Date().toISOString(),
           context
         },
@@ -135,17 +202,36 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     } finally {
       setIsProcessing(null);
     }
-  }, [selectedProject, context, onContentProcessed]);
+  }, [selectedProject, context, onContentProcessed, saveContextItem]);
 
   const handlePerplexityResult = useCallback(async (result: any) => {
     setIsProcessing('perplexity');
 
     try {
+      const textContent = result.text || result.content;
+      const query = result.query;
+      const title = `Search: ${query}`;
+
+      // Always save to context_items table
+      await saveContextItem({
+        type: 'perplexity_search',
+        title: title,
+        content: textContent,
+        summary: textContent.length > 500 ? textContent.substring(0, 500) + '...' : textContent,
+        metadata: {
+          query: query,
+          sources: result.sources,
+          searchId: result.searchId,
+          searchedAt: new Date().toISOString(),
+          source: 'perplexity'
+        }
+      });
+
       onContentProcessed?.({
         type: 'perplexity',
-        text: result.text || result.content,
+        text: textContent,
         metadata: {
-          query: result.query,
+          query: query,
           sources: result.sources,
           timestamp: new Date().toISOString(),
           context
@@ -160,7 +246,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     } finally {
       setIsProcessing(null);
     }
-  }, [selectedProject, context, onContentProcessed]);
+  }, [selectedProject, context, onContentProcessed, saveContextItem]);
 
   // Dynamic button sizing
   const buttonSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'default';
@@ -203,6 +289,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing === 'upload'}
             className={buttonStyles}
+            type="button"
           >
             {isProcessing === 'upload' ? (
               <div className="animate-spin">
@@ -228,6 +315,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
           onClick={() => setIsFirecrawlModalOpen(true)}
           disabled={isProcessing === 'firecrawl'}
           className={buttonStyles}
+          type="button"
         >
           {isProcessing === 'firecrawl' ? (
             <div className="animate-spin">
@@ -252,6 +340,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
           onClick={() => setIsPerplexityModalOpen(true)}
           disabled={isProcessing === 'perplexity'}
           className={buttonStyles}
+          type="button"
         >
           {isProcessing === 'perplexity' ? (
             <div className="animate-spin">
@@ -270,19 +359,16 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
 
       {/* Modals */}
       <URLScrapeModal
-        open={isFirecrawlModalOpen}
+        isOpen={isFirecrawlModalOpen}
         onClose={() => setIsFirecrawlModalOpen(false)}
         onScrapedContent={handleFirecrawlContent}
         projectId={selectedProject?.id}
-        context={context}
       />
 
       <PerplexitySearchModal
-        open={isPerplexityModalOpen}
+        isOpen={isPerplexityModalOpen}
         onClose={() => setIsPerplexityModalOpen(false)}
         onSearchResult={handlePerplexityResult}
-        projectId={selectedProject?.id}
-        context={context}
       />
     </div>
   );

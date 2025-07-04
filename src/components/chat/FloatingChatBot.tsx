@@ -181,6 +181,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
           positionClasses[position],
           className
         )}
+        type="button"
       >
         <MessageCircle className="w-6 h-6" />
       </Button>
@@ -207,6 +208,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
             size="sm"
             onClick={() => setIsMinimized(!isMinimized)}
             className="w-8 h-8 p-0 hover:bg-purple-100"
+            type="button"
           >
             {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
           </Button>
@@ -215,6 +217,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
             size="sm"
             onClick={() => setIsOpen(false)}
             className="w-8 h-8 p-0 hover:bg-red-100"
+            type="button"
           >
             <X className="w-4 h-4" />
           </Button>
