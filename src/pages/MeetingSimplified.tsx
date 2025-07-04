@@ -5,6 +5,8 @@ import { useProjectContext } from '@/context/ProjectContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DocumentProcessor } from '@/lib/documentProcessing';
+import { ContextBar } from '@/components/context/ContextBar';
+import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { useNavigate } from 'react-router-dom';
 import { 
   Video, 
@@ -50,6 +52,7 @@ export default function MeetingSimplified() {
   const [jobDescription, setJobDescription] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   
   // Interview context
   const [interviewContext, setInterviewContext] = useState<InterviewContext | null>(null);
@@ -60,6 +63,17 @@ export default function MeetingSimplified() {
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+
+  // Context integration for file uploads, web scraping, and AI search
+  const {
+    processContent,
+    sendToWebSocket,
+    isProcessing: isContextProcessing,
+    isWebSocketConnected
+  } = useContextIntegration({
+    context: 'meeting',
+    enableRealTime: true
+  });
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -287,21 +301,50 @@ export default function MeetingSimplified() {
             </p>
           </div>
 
+          {/* Context Bar for uploads, scraping, and AI search */}
+          <div className="mb-8">
+            <ContextBar
+              context="meeting"
+              title="Meeting Context & Project"
+              description="Select a project and add context for your meeting through uploads, web scraping, or AI search"
+              onContentProcessed={async (content) => {
+                try {
+                  // Process with orchestration
+                  await processContent(content);
+                  
+                  // Add to uploaded files for display
+                  setUploadedFiles(prev => [...prev, {
+                    name: content.metadata?.filename || `${content.type} content`,
+                    content: content.text,
+                    type: content.type,
+                    size: content.text.length,
+                  }]);
+                  
+                  toast.success(`${content.type} content processed and ready for meeting`);
+                } catch (error) {
+                  console.error('Meeting context processing error:', error);
+                }
+              }}
+              projectSelectorProps={{
+                placeholder: "Select project for this meeting...",
+                className: "w-full max-w-md"
+              }}
+              showLabels={true}
+              size="default"
+              layout="stacked"
+            />
+            
+            {/* Real-time status indicator */}
+            {isWebSocketConnected && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Real-time AI processing enabled</span>
+              </div>
+            )}
+          </div>
+
           <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <CardContent className="p-6 space-y-6">
-              {/* Project Selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Project <span className="text-red-500">*</span>
-                </label>
-                <ProjectSelector />
-                {!selectedProjectId && (
-                  <p className="text-sm text-orange-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Please select a project to continue
-                  </p>
-                )}
-              </div>
 
               {/* Job Title (for interviews) */}
               {meetingPurpose === 'interview' && (
@@ -331,32 +374,25 @@ export default function MeetingSimplified() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Candidate Resume (Optional)
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-500 transition-colors">
-                      <input
-                        type="file"
-                        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                        className="hidden"
-                        id="resume-upload"
-                        accept=".pdf,.doc,.docx,.txt"
-                        disabled={isLoading}
-                      />
-                      <label htmlFor="resume-upload" className="cursor-pointer">
-                        <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-purple-600 font-medium">
-                          {isLoading ? 'Processing...' : 'Click to upload resume'}
-                        </p>
-                        {resumeFile && (
-                          <Badge variant="secondary" className="mt-2">
-                            {resumeFile.name}
-                          </Badge>
-                        )}
+                  {/* Show uploaded files from context */}
+                  {uploadedFiles.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Uploaded Content
                       </label>
+                      <div className="space-y-2">
+                        {uploadedFiles.map((file, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium">{file.name}</span>
+                            <Badge variant="secondary" className="text-xs">
+                              {file.type}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
 
@@ -398,7 +434,7 @@ export default function MeetingSimplified() {
 
               <Button
                 onClick={startMeeting}
-                disabled={!selectedProjectId || (meetingPurpose === 'interview' && !jobTitle) || isLoading}
+                disabled={!selectedProjectId || (meetingPurpose === 'interview' && !jobTitle) || isLoading || isContextProcessing}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 text-lg font-semibold 
                          border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
                          hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] 

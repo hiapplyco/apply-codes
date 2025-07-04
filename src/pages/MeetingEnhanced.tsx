@@ -40,6 +40,8 @@ import { InterviewPrepEnhanced } from '@/components/interview/InterviewPrepEnhan
 import { InterviewDashboard } from '@/components/interview/InterviewDashboard';
 import { QuestionSuggestions } from '@/components/interview/QuestionSuggestions';
 import { InterviewChat } from '@/components/interview/InterviewChat';
+import { ContextBar } from '@/components/context/ContextBar';
+import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { InterviewContext, TranscriptEntry } from '@/types/interview';
 import { Resizable } from 're-resizable';
 
@@ -142,11 +144,24 @@ export default function MeetingEnhanced() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDashboardMinimized, setIsDashboardMinimized] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   
   // WebSocket for real-time features
   useWebSocket(sessionId);
   
   const currentConfig = meetingConfigs[meetingType];
+
+  // Context integration for file uploads, web scraping, and AI search
+  const {
+    processContent,
+    sendToWebSocket,
+    isProcessing: isContextProcessing,
+    isWebSocketConnected
+  } = useContextIntegration({
+    context: 'meeting',
+    sessionId: sessionId || undefined,
+    enableRealTime: true
+  });
 
   // Interview Co-Pilot hook
   const {
@@ -357,6 +372,53 @@ export default function MeetingEnhanced() {
                     </div>
                   </Card>
                 ))}
+              </div>
+
+              {/* Context Bar for uploads, scraping, and AI search */}
+              <div className="mb-8">
+                <ContextBar
+                  context="meeting"
+                  title="Meeting Context & Project"
+                  description="Select a project and add context for your meeting through uploads, web scraping, or AI search"
+                  onContentProcessed={async (content) => {
+                    try {
+                      // Process with orchestration
+                      await processContent(content);
+                      
+                      // Send to WebSocket for real-time processing if connected
+                      if (isWebSocketConnected && sessionId) {
+                        await sendToWebSocket(content);
+                      }
+                      
+                      // Add to uploaded files for display
+                      setUploadedFiles(prev => [...prev, {
+                        name: content.metadata?.filename || `${content.type} content`,
+                        content: content.text,
+                        type: content.type,
+                        size: content.text.length,
+                      }]);
+                      
+                      toast.success(`${content.type} content processed and ready for meeting`);
+                    } catch (error) {
+                      console.error('Meeting context processing error:', error);
+                    }
+                  }}
+                  projectSelectorProps={{
+                    placeholder: "Select project for this meeting...",
+                    className: "w-full max-w-md"
+                  }}
+                  showLabels={true}
+                  size="default"
+                  layout="stacked"
+                />
+                
+                {/* Real-time status indicator */}
+                {isWebSocketConnected && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Real-time AI processing enabled</span>
+                  </div>
+                )}
               </div>
 
               {/* Setup Content */}

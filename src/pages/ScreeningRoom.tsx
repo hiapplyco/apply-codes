@@ -14,6 +14,8 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { useScreeningSession } from "@/hooks/useScreeningSession";
 import { Loader2 } from "lucide-react";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
+import { ContextBar } from "@/components/context/ContextBar";
+import { useContextIntegration } from "@/hooks/useContextIntegration";
 import { useProjectContext } from "@/context/ProjectContext";
 
 interface Participant {
@@ -36,9 +38,22 @@ const ScreeningRoom = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [hasJoinedMeeting, setHasJoinedMeeting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   
   const { sessionId } = useScreeningSession();
   useWebSocket(sessionId);
+
+  // Context integration for file uploads, web scraping, and AI search
+  const {
+    processContent,
+    sendToWebSocket,
+    isProcessing: isContextProcessing,
+    isWebSocketConnected
+  } = useContextIntegration({
+    context: 'screening',
+    sessionId: sessionId || undefined,
+    enableRealTime: true
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -159,13 +174,68 @@ const ScreeningRoom = () => {
     <div className="flex flex-col h-screen relative">
       <ScreeningHeader />
       
-      {/* Project selector */}
+      {/* Context Bar with Project Selector and Context Buttons */}
       <div className="px-6 py-4 bg-gray-50 border-b">
-        <ProjectSelector 
-          label="Select project for this screening session"
-          placeholder="Choose a project (optional)"
-          className="max-w-md"
+        <ContextBar
+          context="screening"
+          title="Screening Context & Project"
+          description="Select a project and add context for your screening session through uploads, web scraping, or AI search"
+          onContentProcessed={async (content) => {
+            try {
+              // Process with orchestration
+              await processContent(content);
+              
+              // Send to WebSocket for real-time processing if connected
+              if (isWebSocketConnected && sessionId) {
+                await sendToWebSocket(content);
+              }
+              
+              // Add to uploaded files for display
+              setUploadedFiles(prev => [...prev, {
+                name: content.metadata?.filename || `${content.type} content`,
+                content: content.text,
+                type: content.type,
+                size: content.text.length,
+              }]);
+              
+              toast.success(`${content.type} content processed and ready for screening`);
+            } catch (error) {
+              console.error('Screening context processing error:', error);
+            }
+          }}
+          projectSelectorProps={{
+            label: "Select project for this screening session",
+            placeholder: "Choose a project (optional)",
+            className: "max-w-md"
+          }}
+          showLabels={true}
+          size="default"
+          layout="stacked"
+          className="max-w-4xl"
         />
+        
+        {/* Real-time status indicator */}
+        {isWebSocketConnected && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Real-time AI processing enabled</span>
+          </div>
+        )}
+        
+        {/* Show uploaded files */}
+        {uploadedFiles.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-medium mb-2">Context Files Ready:</h4>
+            <div className="flex flex-wrap gap-2">
+              {uploadedFiles.map((file, index) => (
+                <div key={index} className="flex items-center gap-2 px-3 py-1 bg-green-50 border border-green-200 rounded-full text-sm">
+                  <span>{file.name}</span>
+                  <span className="px-2 py-0.5 bg-green-100 rounded text-xs">{file.type}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       {hasJoinedMeeting && (
