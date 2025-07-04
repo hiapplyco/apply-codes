@@ -139,7 +139,64 @@ export class DocumentProcessor {
 
     if (uploadError) {
       console.error('Storage upload error:', uploadError);
-      throw new Error(`Failed to upload file: ${uploadError.message}`);
+      
+      // Provide more specific error messages
+      let errorMessage = uploadError.message || 'Unknown upload error';
+      if (errorMessage.includes('not-null constraint') || errorMessage.includes('processed_documents')) {
+        errorMessage = 'Database setup incomplete. Please run the document processing setup SQL.';
+      } else if (errorMessage.includes('mime type') && errorMessage.includes('not supported')) {
+        errorMessage = 'File type not allowed by storage bucket. Please run the bucket MIME type fix.';
+      } else if (errorMessage.includes('size') || errorMessage.includes('limit')) {
+        errorMessage = 'File exceeds storage bucket size limit.';
+      }
+      
+      throw new Error(`Upload failed: ${errorMessage}`);
+    }
+
+    // Manually create database record (since trigger isn't working)
+    try {
+      const { error: dbError } = await supabase
+        .from('processed_documents')
+        .insert({
+          user_id: userId,
+          storage_path: storagePath,
+          original_filename: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          processing_status: 'pending'
+        });
+        
+      if (dbError) {
+        console.warn('Database record creation failed:', dbError);
+        // Don't throw - file upload succeeded, we can still process it
+      } else {
+        console.log('Database record created successfully');
+      }
+    } catch (dbError) {
+      console.warn('Database record creation error:', dbError);
+      // Don't throw - file upload succeeded
+    }
+
+    // Manually trigger processing (since storage trigger isn't working)
+    try {
+      console.log('Manually triggering document processing...');
+      const { error: functionError } = await supabase.functions.invoke('process-document-async', {
+        body: {
+          storage_path: storagePath,
+          user_id: userId,
+          bucket_id: 'docs'
+        }
+      });
+      
+      if (functionError) {
+        console.warn('Manual processing trigger failed:', functionError);
+        // Don't throw - we can still poll for results
+      } else {
+        console.log('Processing triggered successfully');
+      }
+    } catch (functionError) {
+      console.warn('Manual processing trigger error:', functionError);
+      // Don't throw - we can still poll for results
     }
 
     return { storagePath, uploadSuccess: true };
