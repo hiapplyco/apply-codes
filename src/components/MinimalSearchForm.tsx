@@ -1207,40 +1207,47 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
               className="font-mono min-h-[120px] resize-y"
               placeholder="Generated Boolean search string will appear here..."
             />
-            <div className="flex gap-2">
-              <Button
-                onClick={() => copyToClipboard(booleanString)}
-                variant="outline"
-                size="sm"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copy
-              </Button>
-              <Button
-                onClick={handleExplainBoolean}
-                variant="outline"
-                size="sm"
-                disabled={isExplaining || !booleanString.trim()}
-              >
-                <ButtonLoading 
-                  isLoading={isExplaining}
-                  loadingText="Analyzing..."
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => copyToClipboard(booleanString)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
                 >
-                  <Lightbulb className="w-4 h-4 mr-2" />
-                  Explain This Search
-                </ButtonLoading>
-              </Button>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  onClick={handleExplainBoolean}
+                  variant="outline"
+                  size="sm"
+                  disabled={isExplaining || !booleanString.trim()}
+                  className="flex-1 sm:flex-none"
+                >
+                  <ButtonLoading 
+                    isLoading={isExplaining}
+                    loadingText="Analyzing..."
+                  >
+                    <Lightbulb className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Explain This Search</span>
+                    <span className="sm:hidden">Explain</span>
+                  </ButtonLoading>
+                </Button>
+              </div>
               <Button
                 onClick={searchGoogle}
                 disabled={isSearching}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                size="sm"
               >
                 <ButtonLoading 
                   isLoading={isSearching}
                   loadingText="Searching..."
                 >
                   <Search className="w-4 h-4 mr-2" />
-                  Search LinkedIn Profiles
+                  <span className="hidden sm:inline">Search LinkedIn Profiles</span>
+                  <span className="sm:hidden">Search LinkedIn</span>
                 </ButtonLoading>
               </Button>
             </div>
