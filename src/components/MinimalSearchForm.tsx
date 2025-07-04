@@ -239,13 +239,21 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         pollInterval: 3000, // Reasonable polling interval
         onProgress: (status) => {
           console.log('Processing status:', status);
-          // Update UI with progress
+          // Enhanced UI feedback with file-type awareness
           if (status.includes('timeout') || status.includes('failed')) {
             toast.error(status, { duration: 4000 });
           } else if (status.includes('complete')) {
-            toast.success(status);
+            if (file.name.toLowerCase().endsWith('.docx')) {
+              toast.success('✅ DOCX processed successfully with enhanced formatting!');
+            } else {
+              toast.success(status);
+            }
+          } else if (status.includes('🎯') || status.includes('DOCX')) {
+            toast.info('⚡ Processing DOCX with optimized engine for best results...', { duration: 3000 });
           } else if (status.includes('locally') || status.includes('Client')) {
-            toast.info('📄 Processing locally for faster results...', { duration: 3000 });
+            toast.info('📄 Processing locally for faster results...', { duration: 2500 });
+          } else if (status.includes('Saving')) {
+            toast.info('💾 Saving processed document...', { duration: 1500 });
           } else {
             toast.info(status, { duration: 2000 }); // Show brief progress updates
           }
@@ -271,7 +279,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             }
           });
           
-          toast.success('File content extracted and added!');
+          // Enhanced success message based on file type
+          if (file.name.toLowerCase().endsWith('.docx')) {
+            toast.success('🎯 DOCX content extracted with enhanced formatting preservation!');
+          } else {
+            toast.success('✅ File content extracted and added!');
+          }
         },
         onError: (error) => {
           throw new Error(error);

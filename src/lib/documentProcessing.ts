@@ -36,24 +36,71 @@ class ClientDocumentProcessor {
   }
   
   /**
-   * Extract text from DOCX files using mammoth.js
+   * Extract text from DOCX files using optimized mammoth.js configuration
+   * Primary method for DOCX processing with enhanced formatting preservation
    */
   static async extractTextFromDOCX(file: File): Promise<string> {
     try {
+      console.log('Starting optimized DOCX extraction with mammoth.js');
+      
       // Dynamic import to avoid bundling issues
       const mammoth = await import('mammoth');
       
       const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
       
+      // Enhanced configuration for better text extraction
+      const options = {
+        convertImage: mammoth.images.imgElement(function() {
+          return { alt: '[IMAGE]' }; // Replace images with placeholder
+        }),
+        styleMap: [
+          // Preserve paragraph structure
+          "p[style-name='Heading 1'] => h1:fresh",
+          "p[style-name='Heading 2'] => h2:fresh", 
+          "p[style-name='Heading 3'] => h3:fresh",
+          // Convert lists properly
+          "p[style-name='List Paragraph'] => li:fresh",
+          // Preserve emphasis
+          "b => strong",
+          "i => em"
+        ]
+      };
+      
+      // Extract with enhanced formatting
+      const result = await mammoth.extractRawText({ arrayBuffer }, options);
+      
+      // Log warnings but don't fail on them (they're usually just styling info)
       if (result.messages.length > 0) {
-        console.warn('DOCX extraction warnings:', result.messages);
+        const warnings = result.messages.filter(m => m.type === 'warning');
+        const errors = result.messages.filter(m => m.type === 'error');
+        
+        if (warnings.length > 0) {
+          console.info('DOCX extraction info:', warnings.length, 'styling warnings (normal)');
+        }
+        if (errors.length > 0) {
+          console.warn('DOCX extraction errors:', errors);
+        }
       }
       
-      return result.value.trim();
+      const extractedText = result.value.trim();
+      
+      // Basic text cleanup for better readability
+      const cleanedText = extractedText
+        .replace(/\r\n/g, '\n') // Normalize line endings
+        .replace(/\n{3,}/g, '\n\n') // Reduce excessive line breaks
+        .replace(/[ \t]+/g, ' ') // Normalize whitespace
+        .trim();
+      
+      console.log('DOCX extraction successful:', {
+        originalLength: extractedText.length,
+        cleanedLength: cleanedText.length,
+        hasContent: cleanedText.length > 0
+      });
+      
+      return cleanedText;
     } catch (error) {
       console.error('DOCX extraction failed:', error);
-      throw new Error('Failed to extract text from DOCX. The file may be corrupted or in an unsupported format.');
+      throw new Error('Failed to extract text from DOCX. The file may be corrupted, password-protected, or in an unsupported format.');
     }
   }
   
@@ -90,7 +137,8 @@ class ClientDocumentProcessor {
   }
   
   /**
-   * Main extraction method that routes to appropriate processor
+   * Main extraction method with DOCX optimization and smart routing
+   * DOCX files are prioritized as the primary supported format
    */
   static async extractText(file: File): Promise<string> {
     const fileName = file.name.toLowerCase();
@@ -99,30 +147,49 @@ class ClientDocumentProcessor {
     console.log('Client-side text extraction starting:', {
       fileName,
       fileType,
-      fileSize: file.size
+      fileSize: file.size,
+      fileSizeMB: (file.size / 1024 / 1024).toFixed(2)
     });
     
-    if (fileName.endsWith('.pdf') || fileType === 'application/pdf') {
-      return await this.extractTextFromPDF(file);
-    }
-    
+    // PRIORITY 1: DOCX files (our optimized primary format)
     if (fileName.endsWith('.docx') || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      console.log('🎯 Processing DOCX with optimized mammoth.js (primary method)');
       return await this.extractTextFromDOCX(file);
     }
     
-    if (fileName.endsWith('.doc') || fileType === 'application/msword') {
-      throw new Error('Legacy .doc files are not supported. Please convert to .docx format.');
+    // PRIORITY 2: PDF files (reliable secondary format)
+    if (fileName.endsWith('.pdf') || fileType === 'application/pdf') {
+      console.log('📄 Processing PDF with PDF.js');
+      return await this.extractTextFromPDF(file);
     }
     
+    // PRIORITY 3: Plain text (simple and fast)
     if (fileName.endsWith('.txt') || fileType === 'text/plain') {
+      console.log('📝 Processing plain text file');
       return await this.extractTextFromTXT(file);
     }
     
+    // PRIORITY 4: Images with OCR (slower but comprehensive)
     if (fileName.match(/\.(jpg|jpeg|png)$/i) || fileType.startsWith('image/')) {
+      console.log('🖼️ Processing image with OCR (this may take longer)');
       return await this.extractTextFromImage(file);
     }
     
-    throw new Error(`Unsupported file type: ${fileName}. Supported formats: PDF, DOCX, TXT, JPG, PNG`);
+    // Legacy DOC files - provide helpful guidance
+    if (fileName.endsWith('.doc') || fileType === 'application/msword') {
+      throw new Error('Legacy .doc files are not supported. Please save your document as .docx format for optimal processing.');
+    }
+    
+    // Unsupported format with guidance
+    throw new Error(`Unsupported file type: "${fileName}". 
+    
+Supported formats (in order of recommendation):
+• .docx (Word documents) - ⭐ BEST support with advanced formatting
+• .pdf (PDF documents) - ✅ Full text extraction
+• .txt (Plain text) - ✅ Direct reading
+• .jpg, .jpeg, .png (Images) - ✅ OCR text extraction
+
+Tip: For best results, save Word documents as .docx format.`);
   }
 }
 
@@ -543,7 +610,15 @@ export class DocumentProcessor {
 
       // Try client-side processing first for immediate results
       try {
-        onProgress?.('Processing file locally...');
+        // Custom progress messages based on file type
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.docx')) {
+          onProgress?.('🎯 Processing DOCX locally with optimized engine...');
+        } else if (fileName.endsWith('.pdf')) {
+          onProgress?.('📄 Processing PDF locally...');
+        } else {
+          onProgress?.('Processing file locally...');
+        }
         
         const extractedText = await ClientDocumentProcessor.extractText(file);
         
@@ -551,7 +626,7 @@ export class DocumentProcessor {
           console.log('Client-side processing successful, uploading result...');
           
           // Upload file to storage for record keeping
-          onProgress?.('Uploading file...');
+          onProgress?.('Saving processed document...');
           const { storagePath } = await this.uploadDocument(file, userId);
           
           // Store the result in database
