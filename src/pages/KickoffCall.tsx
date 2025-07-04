@@ -7,7 +7,8 @@ import { FileList } from "@/components/kickoff-call/FileList";
 import { SummaryCard } from "@/components/kickoff-call/SummaryCard";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ProjectSelector } from "@/components/project/ProjectSelector";
+import { ContextBar } from "@/components/context/ContextBar";
+import { useContextIntegration } from "@/hooks/useContextIntegration";
 
 interface Summary {
   id: string;
@@ -22,6 +23,11 @@ const KickOffCall = () => {
   const [uploadedFiles, setUploadedFiles] = useState<{ name: string; path: string }[]>([]);
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [title, setTitle] = useState("");
+  
+  // Context integration for kickoff meetings
+  const { processContent } = useContextIntegration({
+    context: 'meeting'
+  });
 
   const handleFileUpload = (filePath: string, fileName: string, text: string) => {
     setUploadedFiles(prev => [...prev, { name: fileName, path: filePath }]);
@@ -60,16 +66,61 @@ const KickOffCall = () => {
     }
   };
 
+  const handleContextContent = async (content: any) => {
+    try {
+      await processContent(content);
+      
+      // Add to uploaded files for display
+      setUploadedFiles(prev => [...prev, { 
+        name: content.metadata?.filename || `${content.type} content`, 
+        path: `context-${Date.now()}` 
+      }]);
+      
+      // Add summary card
+      setSummaries(prev => [...prev, {
+        id: `context-${Date.now()}`,
+        title: content.metadata?.filename || `${content.type} Content`,
+        content: content.text.length > 200 ? content.text.substring(0, 200) + "..." : content.text,
+        source: `${content.type}: ${content.metadata?.url || content.metadata?.filename || 'Direct input'}`
+      }]);
+      
+      // Suggest title if none is set
+      if (!title.trim() && content.metadata?.filename) {
+        const suggestedTitle = `Kickoff Call - ${content.metadata.filename.split('.')[0]}`;
+        setTitle(suggestedTitle);
+        toast.info(`Title set to "${suggestedTitle}"`);
+      }
+      
+      toast.success(`${content.type} content added to kickoff call`);
+    } catch (error) {
+      console.error('Context processing error:', error);
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-8 space-y-8">
-      {/* Project selector */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <ProjectSelector 
-          label="Select project for this kickoff call"
-          placeholder="Choose a project (optional)"
-          className="max-w-md"
-        />
+      {/* Page header */}
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold text-[#8B5CF6]">Kickoff Call Setup</h1>
+        <p className="text-gray-600 text-lg">
+          Let's gather some information to make your meeting more productive
+        </p>
       </div>
+
+      {/* Context Bar with Project Selector and Context Buttons */}
+      <ContextBar
+        context="meeting"
+        title="Project & Meeting Context"
+        description="Select a project and add context through uploads, web scraping, or AI search"
+        onContentProcessed={handleContextContent}
+        projectSelectorProps={{
+          placeholder: "Choose a project for this kickoff call (optional)",
+          className: "w-full max-w-md"
+        }}
+        showLabels={true}
+        size="default"
+        layout="stacked"
+      />
 
       <Card className="p-6 border-4 border-black bg-[#FFFBF4] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-[#8B5CF6] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">

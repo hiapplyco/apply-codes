@@ -1,0 +1,330 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  MessageCircle, 
+  X, 
+  Send, 
+  Bot, 
+  User, 
+  Loader2,
+  Minimize2,
+  Maximize2
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ContextBar } from '@/components/context/ContextBar';
+import { useContextIntegration } from '@/hooks/useContextIntegration';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  metadata?: {
+    searchCount?: number;
+    projectCount?: number;
+    candidateCount?: number;
+  };
+}
+
+interface FloatingChatBotProps {
+  /** Page context for targeted responses */
+  context?: 'sourcing' | 'meeting' | 'chat' | 'job-posting' | 'screening' | 'general';
+  
+  /** Custom position */
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  
+  /** Custom styling */
+  className?: string;
+}
+
+export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
+  context = 'general',
+  position = 'bottom-right',
+  className
+}) => {
+  const { user } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [contextContent, setContextContent] = useState<string>('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Context integration for chat
+  const { processContent } = useContextIntegration({
+    context: 'chat'
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+      // Focus input when chat opens
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen, messages]);
+
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      // Initialize chat with welcome message
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        role: 'assistant',
+        content: `👋 Hi! I'm your AI recruitment assistant. I can help you with candidate sourcing, job analysis, market insights, and more. \n\nFeel free to upload documents, scrape websites, or ask me questions about your recruitment needs!`,
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
+    }
+  }, [isOpen]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: input,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-assistant', {
+        body: {
+          message: input,
+          context: contextContent,
+          pageContext: context,
+          userId: user?.id
+        }
+      });
+
+      if (error) throw error;
+
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: data.response || 'Sorry, I encountered an issue. Please try again.',
+        timestamp: new Date(),
+        metadata: data.metadata
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast.error('Failed to send message. Please try again.');
+      
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleContextContent = async (content: any) => {
+    try {
+      await processContent(content);
+      setContextContent(content.text);
+      
+      // Add context message to chat
+      const contextMessage: Message = {
+        id: `context-${Date.now()}`,
+        role: 'assistant',
+        content: `📎 Perfect! I've received and processed your ${content.type} content. This context will help me provide more relevant and specific responses to your questions.`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, contextMessage]);
+      
+      toast.success(`${content.type} context added to chat`);
+    } catch (error) {
+      console.error('Chat context processing error:', error);
+    }
+  };
+
+  // Position classes
+  const positionClasses = {
+    'bottom-right': 'bottom-6 right-6',
+    'bottom-left': 'bottom-6 left-6',
+    'top-right': 'top-6 right-6',
+    'top-left': 'top-6 left-6'
+  };
+
+  // Chat trigger button
+  if (!isOpen) {
+    return (
+      <Button
+        onClick={() => setIsOpen(true)}
+        className={cn(
+          "fixed z-50 w-14 h-14 rounded-full bg-purple-600 hover:bg-purple-700 text-white",
+          "border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+          "hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-200",
+          positionClasses[position],
+          className
+        )}
+      >
+        <MessageCircle className="w-6 h-6" />
+      </Button>
+    );
+  }
+
+  return (
+    <div className={cn(
+      "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
+      "flex flex-col transition-all duration-300",
+      positionClasses[position],
+      isMinimized ? "w-80 h-16" : "w-96 h-[600px]",
+      className
+    )}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b-2 border-black bg-purple-50 rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-purple-600" />
+          <span className="font-semibold text-purple-900">AI Assistant</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="w-8 h-8 p-0 hover:bg-purple-100"
+          >
+            {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsOpen(false)}
+            className="w-8 h-8 p-0 hover:bg-red-100"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {!isMinimized && (
+        <>
+          {/* Context Bar */}
+          <div className="p-3 border-b border-gray-200 bg-gray-50">
+            <ContextBar
+              context={context}
+              title="Add Context"
+              description="Upload, scrape, or search to enhance responses"
+              onContentProcessed={handleContextContent}
+              showProjectSelector={true}
+              projectSelectorProps={{
+                placeholder: "Select project (optional)",
+                className: "w-full"
+              }}
+              showLabels={false}
+              size="sm"
+              layout="vertical"
+              compact={true}
+              className="border-none shadow-none bg-transparent p-2"
+            />
+          </div>
+
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex gap-2",
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Bot className="w-3 h-3 text-purple-600" />
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[75%] rounded-lg px-3 py-2 text-sm",
+                      message.role === 'user'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-900'
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className={cn(
+                      "text-xs mt-1",
+                      message.role === 'user' ? 'text-purple-200' : 'text-gray-500'
+                    )}>
+                      {format(message.timestamp, 'h:mm a')}
+                    </p>
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0 mt-1">
+                      <User className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex gap-2 justify-start">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Bot className="w-3 h-3 text-purple-600" />
+                  </div>
+                  <div className="bg-gray-100 rounded-lg px-3 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="p-3 border-t-2 border-black">
+            <div className="flex gap-2">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask me anything about recruitment..."
+                className="flex-1 text-sm"
+                disabled={isLoading}
+              />
+              <Button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </form>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default FloatingChatBot;

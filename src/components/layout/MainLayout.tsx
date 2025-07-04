@@ -1,20 +1,33 @@
 import { Outlet } from "react-router-dom";
 import { useEffect, memo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { NavigationProgress } from "./NavigationProgress";
 import { useNavigation } from "@/hooks/useNavigation";
 import { Menu, X } from "lucide-react";
 import { SidebarNew } from "./SidebarNew";
 import { cn } from "@/lib/utils";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
+import { FloatingChatBot } from "@/components/chat/FloatingChatBot";
 
 const MainLayoutComponent = () => {
   const { isNavigating, progress, handleNavigation, currentPath } = useNavigation();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  
+  // Determine page context for chat bot
+  const getPageContext = () => {
+    const path = location.pathname;
+    if (path.includes('/sourcing')) return 'sourcing';
+    if (path.includes('/meeting') || path.includes('/kickoff')) return 'meeting';
+    if (path.includes('/chat')) return 'chat';
+    if (path.includes('/job') || path.includes('/posting')) return 'job-posting';
+    if (path.includes('/screening')) return 'screening';
+    return 'general';
+  };
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -96,6 +109,12 @@ const MainLayoutComponent = () => {
           </div>
         </div>
       </div>
+      
+      {/* Floating Chat Bot - Available on all pages */}
+      <FloatingChatBot 
+        context={getPageContext()}
+        position="bottom-right"
+      />
     </div>
   );
 };
