@@ -62,12 +62,36 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       'text/plain',
       'image/jpeg',
       'image/png',
-      'image/jpg'
+      'image/jpg',
+      // Common variations for .docx files
+      'application/octet-stream',
+      'application/zip',
+      // Additional Word document types
+      'application/vnd.ms-word',
+      'application/vnd.ms-word.document.macroEnabled.12'
     ];
     
-    if (!supportedTypes.includes((file as File).type)) {
+    // Check both MIME type and file extension for better compatibility
+    const fileName = (file as File).name.toLowerCase();
+    const supportedExtensions = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'];
+    const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!supportedTypes.includes((file as File).type) && !hasValidExtension) {
+      console.error(`File validation failed:`, {
+        fileName: (file as File).name,
+        fileType: (file as File).type,
+        hasValidExtension,
+        supportedTypes,
+        supportedExtensions
+      });
       throw new Error(`Unsupported file type: ${(file as File).type}. Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG`);
     }
+    
+    console.log('File validation passed:', {
+      fileType: (file as File).type,
+      fileName: (file as File).name,
+      hasValidExtension
+    });
 
     // Create Supabase client
     const supabase = deps.supabaseClient || createClient(
