@@ -118,10 +118,22 @@ export class DocumentProcessor {
     console.log('Uploading to storage path:', storagePath);
 
     // Upload directly to Supabase Storage
+    // Use a generic MIME type for better compatibility with bucket restrictions
+    let uploadMimeType = file.type;
+    
+    // If the exact MIME type might not be allowed, use a generic one
+    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.type === 'application/msword' ||
+        file.type === 'application/zip') {
+      uploadMimeType = 'application/octet-stream'; // Generic binary type
+    }
+    
+    console.log('Upload MIME type mapping:', { original: file.type, upload: uploadMimeType });
+    
     const { error: uploadError } = await supabase.storage
       .from('docs')
       .upload(storagePath, file, {
-        contentType: file.type,
+        contentType: uploadMimeType,
         upsert: false
       });
 
