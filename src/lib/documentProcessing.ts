@@ -190,7 +190,34 @@ export class DocumentProcessor {
       
       if (functionError) {
         console.warn('Manual processing trigger failed:', functionError);
-        // Don't throw - we can still poll for results
+        
+        // Try the old parse-document function as fallback
+        console.log('Trying fallback to old parse-document function...');
+        try {
+          // Download the file and process with old function
+          const { data: fileData } = await supabase.storage.from('docs').download(storagePath);
+          if (fileData) {
+            const formData = new FormData();
+            formData.append('file', fileData, file.name);
+            formData.append('userId', userId);
+            
+            const { data: parseResult, error: parseError } = await supabase.functions.invoke('parse-document', {
+              body: formData
+            });
+            
+            if (!parseError && parseResult?.text) {
+              // Update the database record with the result
+              await supabase.rpc('update_document_status', {
+                p_storage_path: storagePath,
+                p_status: 'completed',
+                p_content: parseResult.text
+              });
+              console.log('Fallback processing successful');
+            }
+          }
+        } catch (fallbackError) {
+          console.warn('Fallback processing also failed:', fallbackError);
+        }
       } else {
         console.log('Processing triggered successfully');
       }
@@ -213,11 +240,17 @@ export class DocumentProcessor {
       onProgress?: (status: DocumentProcessingStatus) => void;
     } = {}
   ): Promise<DocumentProcessingStatus> {
-    const { maxRetries = 30, pollInterval = 2000, onProgress } = options;
+    const { maxRetries = 15, pollInterval = 3000, onProgress } = options; // Reduced retries and increased interval
     let retries = 0;
+    let noDataRetries = 0;
+    const maxNoDataRetries = 5; // Give up if no data found after 5 attempts
+
+    console.log(`Starting to poll for status: ${storagePath}, maxRetries: ${maxRetries}`);
 
     while (retries < maxRetries) {
       try {
+        console.log(`Polling attempt ${retries + 1}/${maxRetries}`);
+        
         const { data, error } = await supabase.rpc('get_document_status', {
           p_storage_path: storagePath
         });
@@ -229,6 +262,7 @@ export class DocumentProcessor {
 
         if (data && data.length > 0) {
           const status = data[0] as DocumentProcessingStatus;
+          console.log('Got status:', status.status);
           
           if (onProgress) {
             onProgress(status);
@@ -236,15 +270,29 @@ export class DocumentProcessor {
 
           // Check if processing is complete
           if (status.status === 'completed') {
+            console.log('Processing completed successfully');
             return status;
           }
 
           if (status.status === 'failed') {
+            console.log('Processing failed:', status.error_message);
             throw new Error(status.error_message || 'Document processing failed');
+          }
+          
+          // Reset no-data counter since we got data
+          noDataRetries = 0;
+        } else {
+          console.log('No status data found');
+          noDataRetries++;
+          
+          // If we keep getting no data, the processing might have failed
+          if (noDataRetries >= maxNoDataRetries) {
+            throw new Error('Processing failed: No status updates received. The Edge Function may have failed.');
           }
         }
 
         // Wait before next poll
+        console.log(`Waiting ${pollInterval}ms before next poll...`);
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         retries++;
       } catch (error) {
@@ -252,6 +300,7 @@ export class DocumentProcessor {
         retries++;
         
         if (retries >= maxRetries) {
+          console.error('Max retries reached, giving up');
           throw error;
         }
         
@@ -260,7 +309,7 @@ export class DocumentProcessor {
       }
     }
 
-    throw new Error('Processing timeout: Document took too long to process');
+    throw new Error(`Processing timeout: Document took too long to process (${maxRetries} attempts over ${Math.round(maxRetries * pollInterval / 1000)} seconds)`);
   }
 
   /**
