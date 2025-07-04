@@ -918,7 +918,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         </div>
 
         {/* Job Description Input with Input Methods */}
-        <Collapsible open={!requirementsCollapsed} onOpenChange={setRequirementsCollapsed}>
+        <Collapsible open={!requirementsCollapsed} onOpenChange={(open) => setRequirementsCollapsed(!open)}>
           <Card className="p-6 border-2 border-gray-300">
             <CollapsibleTrigger asChild>
               <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded">
@@ -1185,7 +1185,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       {/* Boolean Search String */}
       {booleanString && (
-        <Collapsible open={!booleanCollapsed} onOpenChange={setBooleanCollapsed}>
+        <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
           <Card className="p-6 border-2 border-purple-400 bg-purple-50">
             <CollapsibleTrigger asChild>
               <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-purple-100 -m-2 p-2 rounded">
