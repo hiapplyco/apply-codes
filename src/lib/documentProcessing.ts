@@ -31,7 +31,15 @@ export class DocumentProcessor {
     'text/plain',
     'image/jpeg',
     'image/png',
-    'image/jpg'
+    'image/jpg',
+    // Common variations browsers might report
+    'application/octet-stream', // Generic binary - often reported for .docx
+    'application/zip', // Some browsers report .docx as zip
+    'application/vnd.ms-word', // Alternative Word format
+    'application/vnd.ms-word.document.macroEnabled.12', // .docm files
+    '', // Empty MIME type - some browsers don't set it
+    'application/x-pdf', // Alternative PDF MIME type
+    'text/pdf' // Some systems report PDF as text
   ];
 
   private static readonly SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.txt', '.jpg', '.jpeg', '.png'];
@@ -41,24 +49,56 @@ export class DocumentProcessor {
    * Validates if a file is supported for processing
    */
   static validateFile(file: File): { valid: boolean; error?: string } {
-    // Check file size
+    console.log('DocumentProcessor.validateFile:', {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      fileSizeMB: (file.size / 1024 / 1024).toFixed(2)
+    });
+
+    // Check file size (convert to MB for debugging)
+    const fileSizeMB = file.size / 1024 / 1024;
+    const maxSizeMB = this.MAX_FILE_SIZE / 1024 / 1024;
+    
     if (file.size > this.MAX_FILE_SIZE) {
-      return { valid: false, error: `File size exceeds 20MB limit. Please use a smaller file.` };
+      console.error('File too large:', { fileSizeMB, maxSizeMB });
+      return { valid: false, error: `File size (${fileSizeMB.toFixed(1)}MB) exceeds ${maxSizeMB}MB limit. Please use a smaller file.` };
     }
 
-    // Check MIME type and extension
+    // Check file extension first (more reliable than MIME type)
     const fileName = file.name.toLowerCase();
     const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+    
+    // If extension is valid, accept the file regardless of MIME type
+    if (hasValidExtension) {
+      console.log('File validation passed (valid extension):', { fileName, extension: fileName.split('.').pop() });
+      return { valid: true };
+    }
+    
+    // If extension check fails, check MIME type as fallback
     const hasValidMimeType = this.SUPPORTED_TYPES.includes(file.type);
 
-    if (!hasValidMimeType && !hasValidExtension) {
-      return { 
-        valid: false, 
-        error: `Unsupported file type: ${file.type}. Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG` 
-      };
+    console.log('File validation (checking MIME type):', {
+      fileName,
+      fileType: file.type,
+      hasValidExtension,
+      hasValidMimeType,
+      supportedTypes: this.SUPPORTED_TYPES,
+      supportedExtensions: this.SUPPORTED_EXTENSIONS
+    });
+
+    // Accept file if MIME type is valid
+    if (hasValidMimeType) {
+      console.log('File validation passed (valid MIME type)');
+      return { valid: true };
     }
 
-    return { valid: true };
+    // Neither extension nor MIME type is valid
+    console.error('Invalid file type:', { fileType: file.type, fileName });
+    return { 
+      valid: false, 
+      error: `Unsupported file: "${file.name}". Please use: PDF, DOC, DOCX, TXT, JPG, or PNG files` 
+    };
   }
 
   /**
