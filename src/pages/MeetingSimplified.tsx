@@ -4,6 +4,7 @@ import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DocumentProcessor } from '@/lib/documentProcessing';
 import { useNavigate } from 'react-router-dom';
 import { 
   Video, 
@@ -70,9 +71,6 @@ export default function MeetingSimplified() {
         return;
       }
 
-      // Import DocumentProcessor
-      const { DocumentProcessor } = await import('@/lib/documentProcessing');
-      
       // Validate file
       const validation = DocumentProcessor.validateFile(file);
       if (!validation.valid) {

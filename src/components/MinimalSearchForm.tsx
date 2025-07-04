@@ -10,6 +10,7 @@ import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, S
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
+import { DocumentProcessor } from '@/lib/documentProcessing';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -215,9 +216,6 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       return;
     }
 
-    // Import DocumentProcessor
-    const { DocumentProcessor } = await import('@/lib/documentProcessing');
-    
     // Validate file
     const validation = DocumentProcessor.validateFile(file);
     if (!validation.valid) {
