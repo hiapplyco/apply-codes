@@ -235,9 +235,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       const extractedText = await DocumentProcessor.processDocument({
         file,
         userId,
+        maxRetries: 4, // Much faster failure for better UX
+        pollInterval: 3000, // Reasonable polling interval
         onProgress: (status) => {
           console.log('Processing status:', status);
-          // Could update UI with progress if needed
+          // Update UI with progress
+          if (status.includes('timeout') || status.includes('failed')) {
+            toast.error(status, { duration: 4000 });
+          } else if (status.includes('complete')) {
+            toast.success(status);
+          } else if (status.includes('locally') || status.includes('Client')) {
+            toast.info('📄 Processing locally for faster results...', { duration: 3000 });
+          } else {
+            toast.info(status, { duration: 2000 }); // Show brief progress updates
+          }
         },
         onComplete: async (content) => {
           appendToJobDescription(`[Extracted from ${file.name}]\n${content}`);
@@ -256,7 +267,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
               file_size: file.size,
               success: true,
               timestamp: new Date().toISOString(),
-              processing_method: 'async_storage'
+              processing_method: 'client_side_with_server_fallback'
             }
           });
           
