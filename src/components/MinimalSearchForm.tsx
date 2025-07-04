@@ -288,8 +288,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           errorMessage = 'AI processing service unavailable. Please try again later.';
         } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
           errorMessage = 'File processing timed out. Please try a smaller file.';
-        } else if (error.message.includes('Gemini') || error.message.includes('Google AI')) {
-          errorMessage = 'AI processing failed. Please try again or use a different file.';
+        } else if (error.message.includes('Gemini') || error.message.includes('Google AI') || error.message.includes('400')) {
+          // Special handling for DOCX files that fail due to Gemini API limitations
+          if (file && file.name.toLowerCase().endsWith('.docx')) {
+            errorMessage = 'DOCX processing temporarily unavailable. Please convert to PDF or try a different format.';
+          } else {
+            errorMessage = 'AI processing failed. Please try again or use a different file.';
+          }
         } else if (error.message.includes('corrupt') || error.message.includes('invalid')) {
           errorMessage = 'File appears corrupted or invalid. Try a different file.';
         } else if (error.message !== 'Failed to process file') {
@@ -299,7 +304,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
       
       toast.error(errorMessage, {
-        description: 'Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG'
+        description: file && file.name.toLowerCase().endsWith('.docx') 
+          ? 'Try converting to PDF or use a different format for best results'
+          : 'Supported formats: PDF, TXT, JPG, PNG work best'
       });
     } finally {
       setIsUploadingFile(false);
@@ -903,7 +910,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Upload and extract content with Gemini AI</p>
-                  <p className="text-xs text-gray-500 mt-1">Supports PDFs, Word docs, images, and text files</p>
+                  <p className="text-xs text-gray-500 mt-1">Best with PDFs and text files. DOCX processing temporarily limited.</p>
                 </TooltipContent>
               </Tooltip>
               <input
