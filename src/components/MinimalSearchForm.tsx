@@ -204,7 +204,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
-  // File upload with Gemini extraction
+  // File upload with enhanced async processing
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     console.log('File upload triggered:', { file: file?.name, userId });
@@ -215,64 +215,59 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       return;
     }
 
+    // Import DocumentProcessor
+    const { DocumentProcessor } = await import('@/lib/documentProcessing');
+    
+    // Validate file
+    const validation = DocumentProcessor.validateFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error || 'Invalid file type');
+      return;
+    }
+
     setIsUploadingFile(true);
     try {
-      console.log('Preparing file upload:', { 
+      console.log('Processing file with DocumentProcessor:', { 
         fileName: file.name, 
         fileType: file.type, 
         fileSize: file.size,
         userId: userId
       });
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', userId);
-
-      console.log('FormData entries:');
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value instanceof File ? `File: ${value.name}` : value);
-      }
-
-      const { data, error } = await supabase.functions.invoke('parse-document', {
-        body: formData,
-      });
-
-      console.log('Parse document response:', { data, error });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-
-      if (data?.success === false) {
-        console.error('Function returned error:', data.error || data.details);
-        throw new Error(data.error || data.details || 'Unknown error from function');
-      }
-
-      if (data?.success && data?.text) {
-        appendToJobDescription(`[Extracted from ${file.name}]\n${data.text}`);
-        
-        // Save to database
-        await saveContextItem({
-          type: 'file_upload',
-          title: `Extracted from ${file.name}`,
-          content: data.text,
-          file_name: file.name,
-          file_type: file.type,
-          summary: data.summary,
-          metadata: {
+      const extractedText = await DocumentProcessor.processDocument({
+        file,
+        userId,
+        onProgress: (status) => {
+          console.log('Processing status:', status);
+          // Could update UI with progress if needed
+        },
+        onComplete: async (content) => {
+          appendToJobDescription(`[Extracted from ${file.name}]\n${content}`);
+          
+          // Save to database
+          await saveContextItem({
+            type: 'file_upload',
+            title: `Extracted from ${file.name}`,
+            content: content,
             file_name: file.name,
             file_type: file.type,
-            file_size: file.size,
-            success: true,
-            timestamp: new Date().toISOString()
-          }
-        });
-        
-        toast.success('File content extracted and added!');
-      } else {
-        throw new Error(data?.message || 'Failed to extract file content');
-      }
+            summary: content.substring(0, 200) + '...',
+            metadata: {
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              success: true,
+              timestamp: new Date().toISOString(),
+              processing_method: 'async_storage'
+            }
+          });
+          
+          toast.success('File content extracted and added!');
+        },
+        onError: (error) => {
+          throw new Error(error);
+        }
+      });
     } catch (error) {
       console.error('File upload failed:', error);
       

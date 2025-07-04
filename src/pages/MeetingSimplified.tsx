@@ -70,28 +70,40 @@ export default function MeetingSimplified() {
         return;
       }
 
-      setIsLoading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', user.id);
-
-      const { data, error } = await supabase.functions.invoke('parse-document', {
-        body: formData,
-      });
-
-      if (error) {
-        console.error('Error from parse-document:', error);
-        throw error;
+      // Import DocumentProcessor
+      const { DocumentProcessor } = await import('@/lib/documentProcessing');
+      
+      // Validate file
+      const validation = DocumentProcessor.validateFile(file);
+      if (!validation.valid) {
+        toast.error(validation.error || 'Invalid file type');
+        return;
       }
 
-      setResumeFile(file);
-      toast.success('Resume uploaded successfully!');
+      setIsLoading(true);
+
+      await DocumentProcessor.processDocument({
+        file,
+        userId: user.id,
+        onProgress: (status) => {
+          console.log('Processing status:', status);
+        },
+        onComplete: (content) => {
+          setResumeFile(file);
+          toast.success('Resume uploaded and processed successfully!');
+        },
+        onError: (error) => {
+          throw new Error(error);
+        }
+      });
+
     } catch (error) {
       console.error('Error processing file:', error);
-      if (error?.message?.includes('size')) {
-        toast.error('File too large. Please use a file smaller than 2MB.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process file. Please try again.';
+      if (errorMessage.includes('size') || errorMessage.includes('20MB')) {
+        toast.error('File too large. Please use a file smaller than 20MB.');
       } else {
-        toast.error('Failed to process file. Please try again.');
+        toast.error(errorMessage);
       }
     } finally {
       setIsLoading(false);

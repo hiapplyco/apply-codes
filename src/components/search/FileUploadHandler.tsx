@@ -1,6 +1,6 @@
 
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { DocumentProcessor } from "@/lib/documentProcessing";
 
 export interface FileUploadHandlerProps {
   userId: string | null;
@@ -13,41 +13,60 @@ export const FileUploadHandler = ({ userId, onTextUpdate, onProcessingChange }: 
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !userId) {
+      if (!userId) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to upload files",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
 
-    if (!file.type.includes('pdf') && !file.type.includes('image')) {
+    // Validate file using DocumentProcessor
+    const validation = DocumentProcessor.validateFile(file);
+    if (!validation.valid) {
       toast({
-        title: "Invalid file type",
-        description: "Please upload a PDF file or an image",
+        title: "Invalid file",
+        description: validation.error || "Unsupported file type",
         variant: "destructive",
       });
       return;
     }
 
     onProcessingChange(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('userId', userId || '');
 
     try {
-      const { data, error } = await supabase.functions.invoke('parse-document', {
-        body: formData,
+      const extractedText = await DocumentProcessor.processDocument({
+        file,
+        userId,
+        onProgress: (status) => {
+          // Could show progress in toast if needed
+          console.log('Processing status:', status);
+        },
+        onComplete: (content) => {
+          onTextUpdate(content);
+          toast({
+            title: "File processed",
+            description: "The content has been extracted and added to the input field.",
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Processing failed",
+            description: error,
+            variant: "destructive",
+          });
+        }
       });
 
-      if (error) throw error;
-
-      if (data?.text) {
-        onTextUpdate(data.text);
-        toast({
-          title: "File processed",
-          description: "The content has been extracted and added to the input field.",
-        });
-      }
     } catch (error) {
       console.error('Error processing file:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to process the file. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to process the file. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
