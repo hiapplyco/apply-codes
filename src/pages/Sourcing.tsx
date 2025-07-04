@@ -4,6 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
+import { ContextBar } from "@/components/context/ContextBar";
+import { useContextIntegration } from "@/hooks/useContextIntegration";
+import { toast } from "sonner";
 
 // Minimal stable search form 
 const MinimalSearchForm = lazy(() => import("@/components/MinimalSearchForm"));
@@ -17,6 +20,11 @@ const LoadingState = () => (
 const SourcingComponent = () => {
   const { session, isAuthenticated, isLoading } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [contextContent, setContextContent] = useState<string>('');
+  
+  const { processContent, isProcessing } = useContextIntegration({
+    context: 'sourcing'
+  });
 
   // Show loading while auth is being checked
   if (isLoading) {
@@ -35,42 +43,46 @@ const SourcingComponent = () => {
     );
   }
 
+  const handleContextContent = async (content: any) => {
+    try {
+      await processContent(content);
+      setContextContent(content.text);
+      toast.success('Context content processed and ready for sourcing');
+    } catch (error) {
+      console.error('Context processing error:', error);
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-8 space-y-8">
-      {/* Page header with project selector */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-[#8B5CF6]">Candidate Sourcing</h1>
-          <p className="text-gray-600 text-lg">
-            Find qualified candidates, research companies, or discover talent at specific organizations
-          </p>
-        </div>
-        
-        {/* Global Project Selector */}
-        <div className="bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-4 rounded-lg">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Select Project (Optional)
-            </label>
-            <ProjectSelector 
-              onProjectChange={setSelectedProjectId}
-              className="w-full max-w-md"
-              placeholder="Choose a project to save candidates to..."
-            />
-            {selectedProjectId && (
-              <p className="text-sm text-gray-500">
-                All saved candidates will be added to the selected project
-              </p>
-            )}
-          </div>
-        </div>
+      {/* Page header */}
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold text-[#8B5CF6]">Candidate Sourcing</h1>
+        <p className="text-gray-600 text-lg">
+          Find qualified candidates, research companies, or discover talent at specific organizations
+        </p>
       </div>
+      
+      {/* Context Bar with Project Selector and Context Buttons */}
+      <ContextBar
+        context="sourcing"
+        title="Project & Context"
+        description="Select a project and add context through uploads, web scraping, or AI search"
+        onContentProcessed={handleContextContent}
+        projectSelectorProps={{
+          placeholder: "Choose a project to save candidates to...",
+          className: "w-full max-w-md"
+        }}
+        showLabels={true}
+        size="default"
+      />
 
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>
         <MinimalSearchForm 
           userId={session?.user?.id ?? null}
           selectedProjectId={selectedProjectId}
+          contextContent={contextContent}
         />
       </Suspense>
     </div>

@@ -6,6 +6,8 @@ import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useScreeningSession } from '@/hooks/useScreeningSession';
+import { ContextBar } from '@/components/context/ContextBar';
+import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -114,6 +116,23 @@ export default function Meeting() {
   const { selectedProjectId } = useProjectContext();
   const { sessionId } = useScreeningSession();
   const firecrawlService = new FirecrawlService();
+  
+  // Context integration with pipecat orchestration
+  const { 
+    processContent, 
+    sendToWebSocket, 
+    isProcessing, 
+    isWebSocketConnected 
+  } = useContextIntegration({
+    context: 'meeting',
+    sessionId: sessionId?.toString(),
+    enableRealTime: true,
+    agentConfig: {
+      agentTypes: ['RecruitmentAgent', 'ProfileEnrichmentAgent', 'CompensationAgent'],
+      maxConcurrency: 3,
+      contextPropagation: true
+    }
+  });
   
   // Meeting state
   const [meetingType, setMeetingType] = useState<MeetingType>('kickoff');
@@ -322,10 +341,50 @@ export default function Meeting() {
           </p>
         </div>
 
-        {/* Project Selector */}
-        <div className="mb-6">
-          <ProjectSelector />
-        </div>
+        {/* Context Bar with Project Selector and Context Buttons */}
+        <ContextBar
+          context="meeting"
+          title="Meeting Context & Project"
+          description="Select a project and add context for your meeting through uploads, web scraping, or AI search"
+          onContentProcessed={async (content) => {
+            try {
+              // Process with orchestration
+              await processContent(content);
+              
+              // Send to WebSocket for real-time processing if connected
+              if (isWebSocketConnected && sessionId) {
+                await sendToWebSocket(content);
+              }
+              
+              // Add to uploaded files for display
+              setUploadedFiles(prev => [...prev, {
+                name: content.metadata?.filename || `${content.type} content`,
+                content: content.text,
+                type: content.type,
+                size: content.text.length,
+              }]);
+              
+              toast.success(`${content.type} content processed and ready for meeting`);
+            } catch (error) {
+              console.error('Meeting context processing error:', error);
+            }
+          }}
+          projectSelectorProps={{
+            placeholder: "Select project for this meeting...",
+            className: "w-full max-w-md"
+          }}
+          showLabels={true}
+          size="default"
+          layout="stacked"
+        />
+        
+        {/* Real-time status indicator */}
+        {isWebSocketConnected && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Real-time AI processing enabled</span>
+          </div>
+        )}
 
         {/* Meeting Type Selector */}
         {!isInMeeting && (

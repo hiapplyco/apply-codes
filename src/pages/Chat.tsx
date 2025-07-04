@@ -21,6 +21,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
+import { ContextBar } from "@/components/context/ContextBar";
+import { useContextIntegration } from "@/hooks/useContextIntegration";
 
 interface Message {
   id: string;
@@ -61,8 +63,14 @@ const Chat = () => {
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [showContext, setShowContext] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [contextContent, setContextContent] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Context integration for chat
+  const { processContent, isProcessing } = useContextIntegration({
+    context: 'chat'
+  });
 
   useEffect(() => {
     if (user) {
@@ -210,22 +218,18 @@ Provide helpful, specific advice based on their data. Be conversational but prof
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-start mb-6 flex-shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            <Bot className="w-8 h-8 text-purple-600" />
-            AI Recruitment Assistant
-          </h1>
-          <p className="text-gray-600">
-            Your intelligent copilot for recruitment insights and automation
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <ProjectSelector 
-            onProjectChange={setSelectedProjectId}
-            className="w-64"
-            placeholder="Select a project (optional)"
-          />
+      <div className="mb-6 flex-shrink-0">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <Bot className="w-8 h-8 text-purple-600" />
+              AI Recruitment Assistant
+            </h1>
+            <p className="text-gray-600">
+              Your intelligent copilot for recruitment insights and automation
+            </p>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -235,6 +239,39 @@ Provide helpful, specific advice based on their data. Be conversational but prof
             {showContext ? 'Hide' : 'Show'} Context
           </Button>
         </div>
+
+        {/* Context Bar */}
+        <ContextBar
+          context="chat"
+          title="Chat Context & Project"
+          description="Select a project and add context to enhance your AI conversations"
+          onContentProcessed={async (content) => {
+            try {
+              await processContent(content);
+              setContextContent(content.text);
+              
+              // Add context message to chat
+              const contextMessage: Message = {
+                id: `context-${Date.now()}`,
+                role: 'assistant',
+                content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses to your questions.`,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, contextMessage]);
+              
+              toast.success(`${content.type} context added to chat`);
+            } catch (error) {
+              console.error('Chat context processing error:', error);
+            }
+          }}
+          projectSelectorProps={{
+            placeholder: "Select a project (optional)",
+            className: "w-64"
+          }}
+          showLabels={true}
+          size="default"
+          layout="horizontal"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
