@@ -18,7 +18,12 @@ serve(async (req) => {
       throw new Error('Boolean string is required');
     }
 
-    const genAI = new GoogleGenerativeAI(Deno.env.get('GOOGLE_AI_API_KEY') || '');
+    const apiKey = Deno.env.get('GOOGLE_AI_API_KEY') || Deno.env.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('Google AI API key not configured');
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a Boolean search expert who explains complex search strings in simple, visual terms. Your goal is to help users understand EXACTLY what their search will find.
@@ -74,9 +79,14 @@ EXPLANATION STYLE:
 
 Output ONLY the JSON structure. No markdown, no code blocks.`;
 
+    console.log('Generating explanation for:', booleanString.substring(0, 100));
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    
+    console.log('Gemini response length:', text.length);
+    console.log('Response preview:', text.substring(0, 200));
     
     // Extract JSON from the response
     let explanation;
@@ -88,17 +98,32 @@ Output ONLY the JSON structure. No markdown, no code blocks.`;
         throw new Error('No JSON found in response');
       }
     } catch (e) {
-      // Fallback to a basic structure
+      // Fallback to a basic structure matching our interface
       explanation = {
-        overview: text.substring(0, 200),
-        components: [],
-        inclusions: ["Candidates matching the search criteria"],
-        exclusions: ["Candidates not matching the criteria"],
-        tips: ["Review and adjust the search as needed"]
+        summary: text.substring(0, 200) || "This search finds candidates based on your criteria",
+        structure: {
+          primaryTarget: "Candidates matching your requirements",
+          breakdown: [{
+            component: booleanString.substring(0, 100),
+            operator: "AND",
+            meaning: "Complete search criteria",
+            examples: ["Matching candidates"],
+            visual: "primary"
+          }]
+        },
+        locationLogic: {
+          areas: [],
+          explanation: "No specific location targeting"
+        },
+        exclusions: {
+          terms: [],
+          reason: "No specific exclusions applied"
+        },
+        tips: ["Review and adjust the search as needed", "Try the explanation again for more details"]
       };
     }
 
-    return new Response(JSON.stringify({ explanation }), {
+    return new Response(JSON.stringify(explanation), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
