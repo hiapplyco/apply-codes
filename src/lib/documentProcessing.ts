@@ -4,34 +4,132 @@ import { toast } from "sonner";
 // Client-side document processing utilities
 class ClientDocumentProcessor {
   /**
-   * Extract text from PDF files using PDF.js
+   * Extract text from PDF files using optimized PDF.js with reliable worker setup
    */
   static async extractTextFromPDF(file: File): Promise<string> {
     try {
+      console.log('Starting optimized PDF extraction with PDF.js');
+      
       // Dynamic import to avoid bundling issues
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Set worker source
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      // Multiple fallback options for worker source to avoid CORS issues
+      const workerSources = [
+        // Option 1: jsdelivr (more reliable than cdnjs)
+        `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`,
+        // Option 2: unpkg (alternative CDN)
+        `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`,
+        // Option 3: Use PDF.js without worker (slower but works)
+        undefined
+      ];
       
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let pdf;
+      let workerSetupSuccessful = false;
       
-      let fullText = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + '\n';
+      // Try each worker source until one works
+      for (const workerSrc of workerSources) {
+        try {
+          if (workerSrc) {
+            console.log('Trying PDF worker source:', workerSrc);
+            pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+          } else {
+            console.log('Using PDF.js in main thread (no worker)');
+            // Disable worker to run in main thread
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+          }
+          
+          const arrayBuffer = await file.arrayBuffer();
+          
+          // Test worker by trying to load the document
+          pdf = await pdfjsLib.getDocument({ 
+            data: arrayBuffer,
+            useWorkerFetch: !!workerSrc,
+            isEvalSupported: false,
+            useSystemFonts: true
+          }).promise;
+          
+          workerSetupSuccessful = true;
+          console.log('PDF worker setup successful:', workerSrc || 'main-thread');
+          break;
+        } catch (workerError) {
+          console.warn('PDF worker source failed:', workerSrc, workerError.message);
+          continue;
+        }
       }
       
-      return fullText.trim();
+      if (!pdf) {
+        throw new Error('All PDF worker configurations failed');
+      }
+      
+      let fullText = '';
+      const totalPages = pdf.numPages;
+      
+      console.log(`Processing ${totalPages} pages from PDF`);
+      
+      // Extract text from all pages
+      for (let i = 1; i <= totalPages; i++) {
+        try {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          
+          // Enhanced text extraction with better formatting
+          const pageText = textContent.items
+            .map((item: any) => {
+              // Preserve some spacing and structure
+              const text = item.str || '';
+              const hasEOL = item.hasEOL;
+              return text + (hasEOL ? '\n' : ' ');
+            })
+            .join('');
+          
+          fullText += pageText;
+          
+          if (i % 5 === 0) {
+            console.log(`Processed ${i}/${totalPages} pages`);
+          }
+        } catch (pageError) {
+          console.warn(`Failed to extract text from page ${i}:`, pageError);
+          fullText += `[Page ${i} - text extraction failed]\n`;
+        }
+      }
+      
+      // Clean up the extracted text
+      const cleanedText = fullText
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/\n{3,}/g, '\n\n') // Reduce excessive line breaks
+        .trim();
+      
+      console.log('PDF extraction successful:', {
+        totalPages,
+        originalLength: fullText.length,
+        cleanedLength: cleanedText.length,
+        workerUsed: workerSetupSuccessful,
+        hasContent: cleanedText.length > 0
+      });
+      
+      if (cleanedText.length === 0) {
+        throw new Error('PDF contains no extractable text. It may be an image-based PDF or encrypted.');
+      }
+      
+      return cleanedText;
     } catch (error) {
       console.error('PDF extraction failed:', error);
-      throw new Error('Failed to extract text from PDF. The file may be corrupted or password-protected.');
+      
+      // Provide specific error messages
+      let errorMessage = 'Failed to extract text from PDF.';
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid PDF') || error.message.includes('corrupted')) {
+          errorMessage = 'PDF file appears to be corrupted or invalid.';
+        } else if (error.message.includes('password') || error.message.includes('encrypted')) {
+          errorMessage = 'PDF is password-protected or encrypted. Please provide an unprotected version.';
+        } else if (error.message.includes('no extractable text')) {
+          errorMessage = 'PDF contains no text (may be image-based). Try using OCR or convert to text-based PDF.';
+        } else if (error.message.includes('worker')) {
+          errorMessage = 'PDF processing failed due to worker configuration. Falling back to server processing.';
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
   }
   
@@ -615,7 +713,7 @@ export class DocumentProcessor {
         if (fileName.endsWith('.docx')) {
           onProgress?.('🎯 Processing DOCX locally with optimized engine...');
         } else if (fileName.endsWith('.pdf')) {
-          onProgress?.('📄 Processing PDF locally...');
+          onProgress?.('📄 Processing PDF locally with enhanced extraction...');
         } else {
           onProgress?.('Processing file locally...');
         }

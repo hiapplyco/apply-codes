@@ -250,6 +250,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             }
           } else if (status.includes('🎯') || status.includes('DOCX')) {
             toast.info('⚡ Processing DOCX with optimized engine for best results...', { duration: 3000 });
+          } else if (status.includes('📄') || status.includes('PDF')) {
+            toast.info('📄 Processing PDF with multi-worker fallback system...', { duration: 3000 });
           } else if (status.includes('locally') || status.includes('Client')) {
             toast.info('📄 Processing locally for faster results...', { duration: 2500 });
           } else if (status.includes('Saving')) {
@@ -282,6 +284,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           // Enhanced success message based on file type
           if (file.name.toLowerCase().endsWith('.docx')) {
             toast.success('🎯 DOCX content extracted with enhanced formatting preservation!');
+          } else if (file.name.toLowerCase().endsWith('.pdf')) {
+            toast.success('📄 PDF content extracted with optimized text recognition!');
           } else {
             toast.success('✅ File content extracted and added!');
           }
