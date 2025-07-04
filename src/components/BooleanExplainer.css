@@ -1,9 +1,18 @@
 .boolean-explainer {
-  max-width: 600px;
+  max-width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: relative;
-  background: white;
+  background: transparent;
   border-radius: 12px;
+  padding: 0;
+  max-height: none;
+  overflow-y: visible;
+}
+
+/* Modal version styling */
+.boolean-explainer.modal-version {
+  max-width: 600px;
+  background: white;
   padding: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   max-height: 80vh;
@@ -35,11 +44,18 @@
 }
 
 .summary-box {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-box:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.2);
 }
 
 .summary-box h3 {
@@ -239,9 +255,50 @@
   margin-bottom: 0;
 }
 
+/* Entrance animation for new explanations */
+.boolean-explainer {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth hover effects */
+.component-box {
+  transition: all 0.3s ease;
+}
+
+.component-box:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.location-chip,
+.excluded-chip {
+  transition: all 0.2s ease;
+}
+
+.location-chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.3);
+}
+
+.excluded-chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(153, 27, 27, 0.3);
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .boolean-explainer {
+  .boolean-explainer.modal-version {
     max-width: 100%;
     margin: 0;
     border-radius: 0;

@@ -130,6 +130,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [showExplanation, setShowExplanation] = useState(false);
   const [booleanExplanation, setBooleanExplanation] = useState<BooleanExplanation | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
+  const [explanationCollapsed, setExplanationCollapsed] = useState(false);
 
   // Helper function to append content to job description
   const appendToJobDescription = (newContent: string) => {
@@ -491,7 +492,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         // Parse the response if it's a string
         const explanation = typeof data === 'string' ? JSON.parse(data) : data;
         setBooleanExplanation(explanation);
-        setShowExplanation(true);
+        setExplanationCollapsed(false); // Expand the explanation section
         toast.success('Boolean search explained!');
       } else {
         throw new Error('No explanation generated');
@@ -1257,6 +1258,65 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         </Collapsible>
       )}
 
+      {/* Boolean Explanation */}
+      {booleanExplanation && (
+        <Collapsible open={!explanationCollapsed} onOpenChange={(open) => setExplanationCollapsed(!open)}>
+          <Card className="p-6 border-2 border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50">
+            <CollapsibleTrigger asChild>
+              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-indigo-100 -m-2 p-2 rounded transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-indigo-900">Boolean Search Explanation</h2>
+                    <p className="text-sm text-indigo-600">Understanding your search strategy</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowExplanation(true);
+                    }}
+                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
+                    title="View in full screen"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBooleanExplanation(null);
+                    }}
+                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
+                    title="Remove explanation"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <div className="transition-transform duration-200">
+                    {explanationCollapsed ? (
+                      <Eye className="w-4 h-4 text-indigo-500" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-indigo-500" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="transition-all duration-500 ease-in-out">
+              <div className="mt-2">
+                <BooleanExplainer explanation={booleanExplanation} />
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
       {/* Search Results */}
       {(searchResults.length > 0 || isSearching) && (
         <ContainedLoading
@@ -1672,6 +1732,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             <BooleanExplainer 
               explanation={booleanExplanation} 
               onClose={() => setShowExplanation(false)}
+              variant="modal"
             />
           )}
         </DialogContent>

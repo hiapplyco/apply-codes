@@ -5,11 +5,14 @@ import './BooleanExplainer.css';
 interface BooleanExplainerProps {
   explanation: BooleanExplanation;
   onClose?: () => void;
+  variant?: 'modal' | 'persistent';
 }
 
-const BooleanExplainer: React.FC<BooleanExplainerProps> = ({ explanation, onClose }) => {
+const BooleanExplainer: React.FC<BooleanExplainerProps> = ({ explanation, onClose, variant = 'persistent' }) => {
+  const containerClass = variant === 'modal' ? 'boolean-explainer modal-version' : 'boolean-explainer';
+  
   return (
-    <div className="boolean-explainer">
+    <div className={containerClass}>
       {onClose && (
         <button onClick={onClose} className="close-button">
           ×
