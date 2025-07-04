@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { DocumentProcessor } from "@/lib/documentProcessing";
 
 interface FileUploadSectionProps {
   onFileUpload: (filePath: string, fileName: string, text: string) => void;
@@ -20,13 +21,6 @@ export const FileUploadSection = ({ onFileUpload, isProcessing }: FileUploadSect
 
     setIsUploading(true);
 
-    const acceptedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain'
-    ];
-
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
@@ -39,74 +33,66 @@ export const FileUploadSection = ({ onFileUpload, isProcessing }: FileUploadSect
       }
 
       for (const file of Array.from(files)) {
-        if (!acceptedTypes.includes(file.type)) {
-          toast.error(`Invalid file type: ${file.name}. Only PDF, DOC, DOCX, and TXT files are accepted.`);
-          continue;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`File too large: ${file.name}. Maximum size is 10MB.`);
+        // Validate file using DocumentProcessor
+        const validation = DocumentProcessor.validateFile(file);
+        if (!validation.valid) {
+          toast.error(`${file.name}: ${validation.error}`);
           continue;
         }
 
         // Create a unique ID for this upload in the toast system
         const toastId = `upload-${Date.now()}-${file.name}`;
         
-        // Show initial toast for file upload
-        toast.loading(`Uploading ${file.name}...`, { id: toastId });
-        
         setUploadProgress({
           fileName: file.name,
-          status: "Uploading file..."
+          status: "Starting upload..."
         });
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', session.user.id);
+        try {
+          const extractedText = await DocumentProcessor.processDocument({
+            file,
+            userId: session.user.id,
+            onProgress: (status) => {
+              setUploadProgress({
+                fileName: file.name,
+                status
+              });
+              toast.loading(`${file.name}: ${status}`, { id: toastId });
+            },
+            onComplete: async (content) => {
+              // Store the file summary
+              const { error: summaryError } = await supabase
+                .from('kickoff_summaries')
+                .insert({
+                  content,
+                  source: `file:${file.name}`,
+                  user_id: session.user.id
+                });
 
-        // Update progress status
-        setUploadProgress({
-          fileName: file.name,
-          status: "Processing with Gemini..."
-        });
-        
-        // Update toast to show processing status
-        toast.loading(`Processing ${file.name} with Gemini...`, { id: toastId });
-        
-        const { data, error } = await supabase.functions.invoke('parse-document', {
-          body: formData,
-        });
+              if (summaryError) {
+                console.error('Error storing summary:', summaryError);
+                toast.error(`Failed to store summary for ${file.name}`, { id: toastId });
+                return;
+              }
 
-        if (error) {
-          toast.error(`Failed to process ${file.name}: ${error.message}`, { id: toastId });
-          continue;
-        }
-
-        if (data?.text) {
-          // Store the file summary
-          const { error: summaryError } = await supabase
-            .from('kickoff_summaries')
-            .insert({
-              content: data.text,
-              source: `file:${file.name}`,
-              user_id: session.user.id
-            });
-
-          if (summaryError) {
-            console.error('Error storing summary:', summaryError);
-            toast.error(`Failed to store summary for ${file.name}`, { id: toastId });
-            continue;
-          }
-
-          onFileUpload(data.filePath, file.name, data.text);
-          
-          // Update toast to show success
-          toast.success(`Successfully processed ${file.name}`, { 
-            id: toastId,
-            className: "animate-fade-in",
+              // Generate a storage path for compatibility
+              const storagePath = `processed/${session.user.id}/${Date.now()}-${file.name}`;
+              onFileUpload(storagePath, file.name, content);
+              
+              toast.success(`Successfully processed ${file.name}`, { 
+                id: toastId,
+                className: "animate-fade-in",
+              });
+            },
+            onError: (error) => {
+              toast.error(`Failed to process ${file.name}: ${error}`, { id: toastId });
+            }
           });
-        } else {
-          toast.error(`No text content extracted from ${file.name}`, { id: toastId });
+
+        } catch (error) {
+          console.error(`Error processing ${file.name}:`, error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          toast.error(`Failed to process ${file.name}: ${errorMessage}`, { id: toastId });
         }
       }
     } catch (error) {
@@ -130,7 +116,7 @@ export const FileUploadSection = ({ onFileUpload, isProcessing }: FileUploadSect
           className="hidden"
           id="file-upload"
           multiple
-          accept=".pdf,.doc,.docx,.txt"
+          accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
           disabled={showProcessing}
         />
         <label
@@ -161,7 +147,7 @@ export const FileUploadSection = ({ onFileUpload, isProcessing }: FileUploadSect
               </div>
             </div>
           ) : (
-            'Accepts PDF, DOC, DOCX, TXT (max 10MB each)'
+            'Accepts PDF, DOC, DOCX, TXT, JPG, PNG (max 20MB each)'
           )}
         </span>
       </div>

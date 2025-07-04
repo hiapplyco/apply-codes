@@ -139,11 +139,11 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       return await processPDFWithGemini(arrayBuffer, (file as File).name, geminiApiKey)
     }
 
-    // For DOCX files, convert to PDF first then process
+    // For DOCX files, try direct base64 approach first
     if ((file as File).type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
         fileName.endsWith('.docx')) {
-      console.log('Converting DOCX to PDF for Gemini processing...')
-      return await processDOCXWithGemini(arrayBuffer, (file as File).name, geminiApiKey)
+      console.log('Processing DOCX with direct base64 approach...')
+      return await processDOCXWithDirectAPI(arrayBuffer, (file as File).name, geminiApiKey)
     }
 
     // Upload file to Supabase Storage
@@ -387,15 +387,107 @@ async function processPDFWithGemini(arrayBuffer: ArrayBuffer, fileName: string, 
   }
 }
 
-// Helper function to process DOCX files by converting to PDF first
+// Helper function to process DOCX files using direct API approach
+async function processDOCXWithDirectAPI(arrayBuffer: ArrayBuffer, fileName: string, apiKey: string) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  }
+  
+  try {
+    console.log('Starting direct API DOCX processing...')
+    console.log('DOCX file details:', { fileName, arrayBufferSize: arrayBuffer?.byteLength })
+    
+    // Validate inputs
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('Invalid or empty DOCX file data')
+    }
+    
+    // Convert ArrayBuffer to base64
+    const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            { text: 'System: You are an expert in parsing Word documents. Your task is to accurately extract all text content, including tables, lists, and formatting. Preserve the original structure and formatting as closely as possible. Pay special attention to details like contact information, skills, experience, and job requirements.' },
+            {
+              inline_data: {
+                mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                data: base64Data
+              }
+            }
+          ]
+        }
+      ]
+    }
+    
+    console.log('Making direct API call to Gemini...')
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Gemini API error:', response.status, errorText)
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`)
+    }
+
+    const result = await response.json()
+    const extractedText = result.candidates?.[0]?.content?.parts?.[0]?.text
+
+    if (!extractedText) {
+      throw new Error('No text extracted from DOCX file')
+    }
+
+    console.log('Direct API DOCX processing completed successfully')
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        text: extractedText,
+        message: 'DOCX processed successfully with direct API approach'
+      }),
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    )
+  } catch (error) {
+    console.error('Direct API DOCX processing error:', error)
+    throw new Error(`DOCX processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+// Helper function to process DOCX files by converting to PDF first (LEGACY)
 async function processDOCXWithGemini(arrayBuffer: ArrayBuffer, fileName: string, apiKey: string) {
   try {
-    console.log('Starting DOCX to PDF conversion...')
+    console.log('Starting DOCX processing...')
+    console.log('DOCX file details:', { fileName, arrayBufferSize: arrayBuffer?.byteLength })
+    
+    // Validate inputs immediately
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('Invalid or empty DOCX file data')
+    }
+    
+    if (!fileName) {
+      throw new Error('Missing fileName for DOCX processing')
+    }
+    
+    if (!apiKey) {
+      throw new Error('Missing Gemini API key for DOCX processing')
+    }
     
     // Check for ConvertAPI key
     const convertApiKey = Deno.env.get('CONVERTAPI_KEY')
     if (!convertApiKey) {
-      console.log('ConvertAPI key not found, falling back to file manager approach')
+      console.log('ConvertAPI key not found, falling back to direct Gemini file manager approach')
       // Fall back to the original file manager approach
       return await processWithFileManager(arrayBuffer, fileName, apiKey, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     }
@@ -452,22 +544,42 @@ async function processWithFileManager(arrayBuffer: ArrayBuffer, fileName: string
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   }
-  // This is the original implementation that was in the try block
-  const { GoogleGenerativeAI } = await import("npm:@google/generative-ai")
-  const { GoogleAIFileManager } = await import("npm:@google/generative-ai/server")
   
+  // Use the already imported classes from the top of the file
   const genAI = new GoogleGenerativeAI(apiKey)
   const fileManager = new GoogleAIFileManager(apiKey)
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
   let uploadedFile = null
-
+  
   try {
     console.log('Using file manager approach as fallback...')
+    console.log('File details:', { fileName, mimeType, arrayBufferSize: arrayBuffer.byteLength })
     
-    // Create a File object for Gemini API
-    const fileForGemini = new File([arrayBuffer], fileName, { type: mimeType })
+    // Validate inputs before proceeding
+    if (!fileName || !apiKey || !mimeType) {
+      throw new Error(`Missing required parameters: fileName=${!!fileName}, apiKey=${!!apiKey}, mimeType=${!!mimeType}`)
+    }
     
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('Invalid or empty file data')
+    }
+    
+    // Create a File object for Gemini API with proper error handling
+    let fileForGemini;
+    try {
+      fileForGemini = new File([arrayBuffer], fileName, { type: mimeType })
+      console.log('Created File object successfully:', {
+        name: fileForGemini.name,
+        type: fileForGemini.type,
+        size: fileForGemini.size
+      })
+    } catch (fileError) {
+      console.error('Error creating File object:', fileError)
+      throw new Error(`Failed to create File object: ${fileError.message}`)
+    }
+    
+    console.log('Attempting to upload file to Gemini...')
     uploadedFile = await fileManager.uploadFile(fileForGemini, {
       mimeType: mimeType,
       displayName: fileName,
@@ -530,6 +642,9 @@ async function processWithFileManager(arrayBuffer: ArrayBuffer, fileName: string
         }
       }
     )
+  } catch (fallbackError) {
+    console.error('Error in file manager fallback:', fallbackError)
+    throw new Error(`File manager processing failed: ${fallbackError.message}`)
   } finally {
     // Clean up uploaded file
     if (uploadedFile) {

@@ -6,6 +6,254 @@
 
 **Primary Directive**: Provide concise development assistance for AI-powered recruitment features, focusing on code quality, security, and user experience.
 
+## 🔗 Claude Code Hooks & Automation
+
+**Claude Code Hooks** provide deterministic automation by executing shell commands at specific workflow points, moving repetitive tasks from prompts to app-level enforcement.
+
+### Hook Configuration (`.claude/settings.json`)
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run lint:fix",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "echo 'Running: $CLAUDE_TOOL_ARGS' >> .claude/execution.log"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Essential Hooks for Apply
+
+#### Auto-Format & Quality
+```json
+"PostToolUse": [
+  {
+    "matcher": "Write|Edit|MultiEdit",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "npm run lint:fix && npm run typecheck"
+      }
+    ]
+  }
+]
+```
+
+#### Security Validation
+```json
+"PreToolUse": [
+  {
+    "matcher": "Write.*\\.env|Edit.*\\.env",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "echo 'WARNING: Editing environment file' && read -p 'Continue? (y/N): ' confirm && [[ $confirm == [yY] ]]"
+      }
+    ]
+  }
+]
+```
+
+#### Build Validation
+```json
+"PostToolUse": [
+  {
+    "matcher": ".*",
+    "hooks": [
+      {
+        "type": "command",
+        "command": "if [[ -f package.json ]]; then npm run build --if-present; fi"
+      }
+    ]
+  }
+]
+```
+
+### Hook Events Reference
+
+| Event | Trigger | Use Case |
+|-------|---------|----------|
+| `PreToolUse` | Before tool execution | Validation, logging, permissions |
+| `PostToolUse` | After tool completion | Formatting, testing, notifications |
+| `Notification` | Claude sends notification | Custom alerts, external integrations |
+| `Stop` | Main agent finishes | Cleanup, reporting, deployment |
+| `SubagentStop` | Task tool completes | Subtask tracking, progress updates |
+
+### Hook Security & Best Practices
+
+- **Exit Code 0**: Success (output shown to user)
+- **Exit Code 2**: Blocking error (stderr fed back to Claude)
+- **Other codes**: Non-blocking error (execution continues)
+- **Always validate**: Hooks run with full user permissions
+- **Test thoroughly**: No confirmation prompts for hook execution
+
+## 📋 Context Management & Session Optimization
+
+### CLAUDE.md Best Practices
+
+**Keep It Minimal**: Only essential project-wide patterns and commands. Avoid overwhelming Claude with too many rules.
+
+**Modular Documentation**: Break complex information into separate files:
+```bash
+# Project structure
+├── CLAUDE.md              # Core guidance (this file)  
+├── .claude/
+│   ├── commands/           # Custom slash commands
+│   ├── architecture.md     # System architecture details
+│   ├── api-patterns.md     # API conventions and patterns
+│   └── settings.json       # Hooks and configuration
+```
+
+### Session Management Tips
+
+#### Context Loading Strategy
+```bash
+# Start of session: Read only what's needed
+Read: CLAUDE.md                    # Always first
+Read: src/types/domains/           # Type definitions
+Task: "Analyze current task scope" # Determine additional context needs
+
+# Load context incrementally as needed
+# Don't preload everything - let Claude request specific files
+```
+
+#### Strategic Use of /compact
+- **Use when**: Context exceeds 50k tokens or conversation becomes sluggish
+- **Don't use**: For every conversation - only when context is bloated
+- **Before compacting**: Ensure all important context is saved to files
+
+#### Breaking Down Complex Tasks
+```bash
+# For tasks > 1 day of work, use plan mode
+1. Switch to plan mode for architectural planning
+2. Break into 8-hour discrete chunks with clear acceptance criteria  
+3. Save plan to TODO.md file
+4. Execute one chunk at a time with /clear between chunks
+5. Reference TODO.md for context continuity
+```
+
+### Token Optimization Patterns
+
+#### File Reference Strategy
+```bash
+# Prefer specific file references over bulk reads
+@src/components/SearchInterface.tsx  # Specific component
+@src/types/domains/candidate.ts      # Specific types
+
+# Avoid reading entire directories unless necessary
+# Let Claude request additional files as needed
+```
+
+#### Prompt Reuse System
+```bash
+# Maintain a prompt notebook for repeated operations
+# Store in external notepad, copy/paste into Claude
+
+# Common patterns:
+"Read all files related to [feature] before making changes"
+"Run quality checks: typecheck, lint, build, test" 
+"Update TODO.md with progress and next steps"
+```
+
+## 🎯 Community-Proven Workflow Patterns
+
+### The "Junior Developer" Management Approach
+
+**Treat Claude like a skilled junior developer** - provide clear guidance, check work, and adapt to its strengths/weaknesses:
+
+```bash
+# 1. Clear Task Definition
+"Implement user authentication using Supabase. 
+Read: src/auth/, src/components/AuthForm.tsx
+Check existing patterns before implementing."
+
+# 2. Incremental Development
+"Start with basic email auth, then add Google OAuth"
+# Wait for completion, review, then continue
+
+# 3. Continuous Validation  
+"Run tests after each change. If any fail, fix immediately."
+```
+
+### Adaptive CLAUDE.md Evolution
+
+**Organic Growth Strategy** - Let your CLAUDE.md file evolve based on real issues:
+
+```bash
+# 1. Start minimal - only core project info
+# 2. When Claude makes mistakes, add specific directives
+# 3. Periodically clean up outdated rules
+# 4. Keep under 1000 lines for optimal performance
+```
+
+### The 3-Tier Documentation System
+
+#### Foundation Tier (CLAUDE.md)
+- Project overview and core patterns
+- Quality commands and git workflow
+- Essential hooks and automation
+
+#### Component Tier (.claude/ directory)
+```bash
+├── .claude/
+│   ├── architecture.md     # System design patterns
+│   ├── api-patterns.md     # API conventions
+│   ├── testing-guide.md    # Testing strategies
+│   └── deployment.md       # Deploy procedures
+```
+
+#### Feature Tier (inline comments)
+- Implementation-specific details
+- Complex business logic explanations
+- Temporary notes for active development
+
+### Multi-Agent Coordination Patterns
+
+#### Parallel Research Workflow
+```bash
+# Launch multiple agents for comprehensive analysis
+Task: "Security audit" | "Performance analysis" | "Code review"
+  prompt="1) Check for vulnerabilities 2) Identify bottlenecks 3) Review code quality"
+
+# Consolidate findings
+"Summarize findings from all three audits and prioritize issues"
+```
+
+#### Specialized Sub-Agent Pattern
+```bash
+# Database Agent
+Task: "Database optimization"
+  prompt="Focus only on: query performance, index usage, schema efficiency"
+
+# Frontend Agent  
+Task: "UI/UX improvements"
+  prompt="Focus only on: component reusability, accessibility, responsive design"
+
+# Security Agent
+Task: "Security hardening" 
+  prompt="Focus only on: input validation, auth flows, data protection"
+```
+
 ## 🤖 AI Assistant Tools & Workflows
 
 ### Todo Management (ALWAYS USE)
@@ -667,14 +915,114 @@ npm test             # Run tests
 Task: "Run quality checks" prompt="Execute typecheck, lint, build, and tests in parallel"
 ```
 
+## 🚀 Community Tips & Advanced Patterns
+
+### Directory-Style Resource Discovery
+
+Check out these community resources for advanced Claude Code workflows:
+
+- **Awesome Claude Code**: https://github.com/hesreallyhim/awesome-claude-code
+- **3-Tier Documentation**: Smart context loading based on task complexity
+- **Multi-Agent Workflows**: Specialized sub-agents for different concerns
+- **Performance Benchmarks**: Community-proven prompting patterns for coding tasks
+
+### MCP Server Integration Tips
+
+```bash
+# Template patterns for common MCP setups
+- Database connectors with connection pooling
+- File handlers with proper error boundaries  
+- API wrappers with rate limiting
+- Integration examples for server composition
+```
+
+### Hook Development Best Practices
+
+#### Testing Hook Configurations
+```bash
+# Test hooks safely in development
+echo 'console.log("Hook test")' > .claude/test-hook.js
+# Add to settings.json temporarily, test, then remove
+```
+
+#### Common Hook Patterns
+```bash
+# Notification Hook (for external integrations)
+"Notification": [{
+  "matcher": ".*",
+  "hooks": [{
+    "type": "command",
+    "command": "curl -X POST https://webhook.site/your-id -d 'Claude notification'"
+  }]
+}]
+
+# Performance Monitoring Hook
+"PostToolUse": [{
+  "matcher": "Bash",
+  "hooks": [{
+    "type": "command", 
+    "command": "echo $(date): $CLAUDE_TOOL_ARGS >> .claude/performance.log"
+  }]
+}]
+```
+
+### Emergency Recovery Commands
+
+```bash
+# When context gets corrupted or confused
+/clear                  # Clear conversation, keep file context
+/compact               # Compress conversation, maintain context
+Task: "Sanity check"   # Verify current state and requirements
+
+# When hooks malfunction  
+mv .claude/settings.json .claude/settings.json.bak  # Disable hooks
+# Fix hook configuration, then restore
+
+# When CLAUDE.md isn't loading
+Read: CLAUDE.md        # Force explicit read
+Task: "Verify CLAUDE.md is loaded and understood"
+```
+
+### Session Optimization Checklist
+
+#### Before Starting Work
+- [ ] TodoRead to check existing tasks
+- [ ] Read CLAUDE.md for project context  
+- [ ] Verify working directory is correct
+- [ ] Check git status for uncommitted changes
+- [ ] Run mcp__ide__getDiagnostics for code health
+
+#### During Development
+- [ ] Break tasks into <8 hour chunks
+- [ ] Mark todos in_progress → completed immediately
+- [ ] Read files explicitly before editing
+- [ ] Use Task agents for parallel research
+- [ ] Update TODO.md for complex projects
+
+#### After Task Completion
+- [ ] Run quality checks: typecheck, lint, build, test
+- [ ] Update todos to completed status
+- [ ] Commit changes if requested
+- [ ] Document any new patterns in CLAUDE.md
+
+#### Performance Optimization
+- [ ] Use specific @file references vs broad directory reads
+- [ ] Leverage hooks for automated quality checks
+- [ ] /compact only when context exceeds 50k tokens
+- [ ] Break large conversations with /clear between discrete tasks
+
 ---
+
+**Community Edition - Optimized for Claude Code Power Users**
 
 **Remember**:
 - ALWAYS use TodoWrite/TodoRead for task management
-- Use Task agents for research and parallel work
-- Run quality checks before marking todos complete
-- Keep users in-app (no external redirects)
-- Test with rate limits in mind
+- Use Task agents for research and parallel work  
+- Implement hooks for repetitive quality checks
+- Keep CLAUDE.md focused and evolving
+- Break complex tasks into discrete 8-hour chunks
+- Use /compact strategically, not automatically
+- Test with rate limits and hooks in mind
 
-**Version**: 4.0 (Enhanced Tools)
-**Updated**: January 2025
+**Version**: 5.0 (Community-Optimized + Hooks)
+**Updated**: July 2025
