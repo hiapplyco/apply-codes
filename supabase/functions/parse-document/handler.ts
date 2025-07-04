@@ -127,6 +127,12 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
       )
     }
 
+    // Check for Gemini API key before any processing
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('Gemini API key not configured. Please contact support.');
+    }
+
     // For PDFs, use Gemini's native PDF processing with inline data
     if ((file as File).type === 'application/pdf') {
       console.log('Processing PDF with Gemini native PDF support...')
@@ -157,13 +163,7 @@ export async function handleRequest(req: Request, deps: Dependencies = {}): Prom
 
     console.log('File uploaded, starting Gemini processing...')
 
-    // Check for Gemini API key
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('Gemini API key not configured. Please contact support.');
-    }
-
-    // Initialize Gemini
+    // Initialize Gemini (geminiApiKey already defined and validated above)
     const genAI = deps.googleAI || new GoogleGenerativeAI(geminiApiKey);
     const fileManager = deps.fileManager || new GoogleAIFileManager(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
