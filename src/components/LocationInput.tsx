@@ -68,35 +68,48 @@ const LocationInput: React.FC<LocationInputProps> = ({
   } | null>(null);
 
   const initializeAutocomplete = useCallback(() => {
-    if (!inputRef.current || !window.google?.maps?.places) return;
+    console.log('Attempting to initialize autocomplete...');
+    console.log('Input ref exists:', !!inputRef.current);
+    console.log('Google maps available:', !!window.google?.maps?.places);
+    
+    if (!inputRef.current || !window.google?.maps?.places) {
+      console.log('Prerequisites not met for autocomplete initialization');
+      return;
+    }
 
     try {
-      // Use the newer PlaceAutocompleteElement if available, fallback to legacy Autocomplete
-      if (window.google.maps.places.PlaceAutocompleteElement) {
-        // Note: This is the newer API but requires different implementation
-        // For now, continue with legacy API with deprecation awareness
-      }
+      console.log('Creating Google Places Autocomplete...');
       
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
         inputRef.current,
         {
-          types: ['(cities)'],
-          fields: ['formatted_address', 'place_id', 'geometry', 'address_components']
+          types: ['geocode'], // Changed from '(cities)' to 'geocode' for broader location search
+          fields: ['formatted_address', 'place_id', 'geometry', 'address_components'],
+          componentRestrictions: { country: [] } // Allow all countries
         }
       );
 
+      console.log('Autocomplete created successfully, adding listener...');
+
       autocompleteRef.current.addListener('place_changed', () => {
+        console.log('Place changed event fired');
         const place = autocompleteRef.current?.getPlace();
+        console.log('Selected place:', place);
         
         if (place?.geometry && place.formatted_address) {
+          console.log('Valid place selected:', place.formatted_address);
           onLocationSelect({
             formatted_address: place.formatted_address,
             place_id: place.place_id || '',
             geometry: place.geometry,
             address_components: place.address_components || []
           });
+        } else {
+          console.log('Invalid place selected - missing geometry or address');
         }
       });
+      
+      console.log('Autocomplete initialization completed successfully');
     } catch (err) {
       console.error('Error initializing autocomplete:', err);
       setError('Failed to initialize location search');
@@ -126,8 +139,12 @@ const LocationInput: React.FC<LocationInputProps> = ({
     script.defer = true;
     
     script.onload = () => {
+      console.log('Google Maps API loaded successfully');
       setIsLoaded(true);
-      initializeAutocomplete();
+      // Add a small delay to ensure Google Maps is fully initialized
+      setTimeout(() => {
+        initializeAutocomplete();
+      }, 100);
     };
     
     script.onerror = () => {
