@@ -71,6 +71,12 @@ const LocationInput: React.FC<LocationInputProps> = ({
     if (!inputRef.current || !window.google?.maps?.places) return;
 
     try {
+      // Use the newer PlaceAutocompleteElement if available, fallback to legacy Autocomplete
+      if (window.google.maps.places.PlaceAutocompleteElement) {
+        // Note: This is the newer API but requires different implementation
+        // For now, continue with legacy API with deprecation awareness
+      }
+      
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
         inputRef.current,
         {
@@ -98,6 +104,15 @@ const LocationInput: React.FC<LocationInputProps> = ({
   }, [onLocationSelect]);
 
   useEffect(() => {
+    // Check if API key is available
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+    
+    if (!apiKey) {
+      console.error('Google Maps API key not found. Please set VITE_GOOGLE_API_KEY in your .env file');
+      setError('Google Maps API key not configured. Location search is unavailable.');
+      return;
+    }
+
     // Check if Google Maps API is already loaded
     if (window.google && window.google.maps) {
       initializeAutocomplete();
@@ -106,7 +121,7 @@ const LocationInput: React.FC<LocationInputProps> = ({
 
     // Load Google Maps API
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_API_KEY}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     

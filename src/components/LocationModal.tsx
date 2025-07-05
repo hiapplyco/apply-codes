@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, MapPin, Check } from 'lucide-react';
 import LocationInput from './LocationInput';
@@ -58,12 +58,12 @@ const LocationModal: React.FC<LocationModalProps> = ({
             <MapPin className="h-5 w-5 text-purple-600" />
             Set Search Location
           </DialogTitle>
+          <DialogDescription>
+            Enter a location to focus your candidate search. You can search by city, state, ZIP code, or country.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="text-sm text-gray-600">
-            Enter a location to focus your candidate search. You can search by:
-          </div>
           
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex items-center gap-2">
