@@ -16,7 +16,9 @@ import {
   Filter,
   Search,
   Copy,
-  CheckCircle
+  CheckCircle,
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { URLScrapeButton } from "@/components/url-scraper";
+import { useProfileEnrichment } from "@/components/search/hooks/useProfileEnrichment";
 
 interface Project {
   id: string;
@@ -66,6 +69,10 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [enrichingCandidate, setEnrichingCandidate] = useState<string | null>(null);
+  
+  // Use profile enrichment hook
+  const { enrichProfile, isLoading: isEnriching } = useProfileEnrichment();
 
   useEffect(() => {
     if (user && projectId) {
@@ -206,6 +213,49 @@ const ProjectDetail = () => {
     window.URL.revokeObjectURL(url);
 
     toast.success("Candidates exported successfully");
+  };
+
+  const handleEnrichCandidate = async (candidate: SavedCandidate) => {
+    if (!candidate.linkedin_url) {
+      toast.error("No LinkedIn URL available for this candidate");
+      return;
+    }
+
+    setEnrichingCandidate(candidate.id);
+    
+    try {
+      const enrichedData = await enrichProfile(candidate.linkedin_url);
+      
+      if (enrichedData) {
+        // Update the candidate in the database with the enriched data
+        const { error } = await supabase
+          .from('saved_candidates')
+          .update({
+            work_email: enrichedData.work_email || candidate.work_email,
+            personal_emails: enrichedData.personal_emails || candidate.personal_emails,
+            mobile_phone: enrichedData.mobile_phone || candidate.mobile_phone,
+            profile_summary: enrichedData.bio || enrichedData.summary || candidate.profile_summary,
+            // Update other fields if they exist in enrichedData
+            ...(enrichedData.job_title && { job_title: enrichedData.job_title }),
+            ...(enrichedData.job_company_name && { company: enrichedData.job_company_name }),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', candidate.id);
+
+        if (error) {
+          console.error('Error updating candidate:', error);
+          toast.error('Failed to save enriched data');
+        } else {
+          // Refresh the candidates list to show updated data
+          fetchProjectData();
+          toast.success('Contact information updated successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error enriching candidate:', error);
+    } finally {
+      setEnrichingCandidate(null);
+    }
   };
 
   const filteredCandidates = candidates.filter(candidate => {
@@ -423,7 +473,7 @@ const ProjectDetail = () => {
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
@@ -439,6 +489,30 @@ const ProjectDetail = () => {
                           View LinkedIn
                         </a>
                       </Button>
+                      
+                      {/* Nymeria Get Contact Button - Show if missing contact info */}
+                      {(!candidate.work_email && !candidate.personal_emails?.length && !candidate.mobile_phone) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEnrichCandidate(candidate)}
+                          disabled={enrichingCandidate === candidate.id}
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                        >
+                          {enrichingCandidate === candidate.id ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Getting Contact...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Get Contact Info
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      
                       <Button
                         size="sm"
                         variant="outline"

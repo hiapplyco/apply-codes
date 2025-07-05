@@ -38,7 +38,7 @@ interface Integration {
   subcategory?: 'Enterprise' | 'Mid-Market' | 'SMB';
   description: string;
   logo: string;
-  status: 'connected' | 'available' | 'coming_soon';
+  status: 'connected' | 'available';
   features: string[];
   aiFeatures?: string[];
   uniqueValue?: string[];
@@ -51,6 +51,41 @@ interface Integration {
 
 const integrations: Integration[] = [
   // Enterprise HRIS
+  {
+    id: 'bullhorn',
+    name: 'Bullhorn',
+    category: 'ATS',
+    subcategory: 'Enterprise',
+    description: 'ATS & CRM platform for staffing agencies and recruiting firms',
+    logo: '🎯',
+    status: 'available',
+    features: [
+      'ATS & CRM unified platform',
+      'Candidate relationship management',
+      'Job order management',
+      'Interview scheduling',
+      'Compliance tracking',
+      'Mobile recruiting app'
+    ],
+    aiFeatures: [
+      'AI candidate matching',
+      'Predictive placement success',
+      'Automated job distribution',
+      'Smart candidate sourcing'
+    ],
+    uniqueValue: [
+      'RESTful API with OAuth 2.0',
+      'Multi-tenant architecture',
+      'Staffing industry focus',
+      '100+ vetted tech partners',
+      'Open API customization',
+      'Real-time webhook support'
+    ],
+    setupTime: '3-5 business days',
+    employeeRange: '50+',
+    popular: true,
+    badge: 'Staffing Leader'
+  },
   {
     id: 'workday',
     name: 'Workday HCM',
@@ -78,7 +113,7 @@ const integrations: Integration[] = [
       'Multi-tenant architecture',
       'Complex approval workflows'
     ],
-    setupTime: '2-3 hours',
+    setupTime: '3-5 business days',
     employeeRange: '5,000+',
     popular: true,
     badge: 'Enterprise Leader'
@@ -110,7 +145,7 @@ const integrations: Integration[] = [
       '40+ country localization',
       'Module-based architecture'
     ],
-    setupTime: '2-4 hours',
+    setupTime: '2-3 weeks',
     employeeRange: '5,000+',
     badge: 'Global Standard'
   },
@@ -141,7 +176,7 @@ const integrations: Integration[] = [
       'Industry configurations',
       'Mobile-first architecture'
     ],
-    setupTime: '3-5 hours',
+    setupTime: '2-3 weeks',
     employeeRange: '5,000+',
     badge: 'Analytics Powerhouse'
   },
@@ -172,7 +207,7 @@ const integrations: Integration[] = [
       'Union management',
       'Real-time labor analytics'
     ],
-    setupTime: '2-3 hours',
+    setupTime: '3-5 business days',
     employeeRange: '1,000+',
     badge: 'Workforce Expert'
   },
@@ -203,7 +238,7 @@ const integrations: Integration[] = [
       'Tax compliance automation',
       'Mobile self-service'
     ],
-    setupTime: '1-2 hours',
+    setupTime: '1-2 weeks',
     employeeRange: '50-999',
     popular: true,
     badge: 'Payroll Leader'
@@ -237,7 +272,7 @@ const integrations: Integration[] = [
       'Built-in video interviewing',
       'Advanced CRM features'
     ],
-    setupTime: '1-2 hours',
+    setupTime: '1-2 weeks',
     employeeRange: 'All sizes',
     badge: 'Enterprise ATS'
   },
@@ -267,7 +302,7 @@ const integrations: Integration[] = [
       'EEOC/OFCCP reporting',
       'Mobile recruiting app'
     ],
-    setupTime: '30 minutes',
+    setupTime: '1-2 business days',
     employeeRange: '100+',
     popular: true,
     badge: 'Best Practices'
@@ -298,7 +333,7 @@ const integrations: Integration[] = [
       'Chrome extension',
       'Email integration'
     ],
-    setupTime: '30 minutes',
+    setupTime: '1-2 business days',
     employeeRange: '100+',
     popular: true,
     badge: 'Relationship First'
@@ -329,7 +364,7 @@ const integrations: Integration[] = [
       'Mobile recruiting',
       'Global platform'
     ],
-    setupTime: '20 minutes',
+    setupTime: '1-2 business days',
     pricing: 'Free tier available',
     employeeRange: 'All sizes',
     badge: 'Free Option'
@@ -363,7 +398,7 @@ const integrations: Integration[] = [
       'Custom workflows',
       'Integrated ATS'
     ],
-    setupTime: '30 minutes',
+    setupTime: '1-2 business days',
     employeeRange: '25-500',
     popular: true,
     badge: 'SMB Favorite'
@@ -395,7 +430,7 @@ const integrations: Integration[] = [
       'Social news feed',
       'Peer recognition'
     ],
-    setupTime: '1 hour',
+    setupTime: '3-5 business days',
     employeeRange: '50-1000',
     badge: 'Culture Focused'
   },
@@ -426,7 +461,7 @@ const integrations: Integration[] = [
       'Financial wellness',
       'Contractor payments'
     ],
-    setupTime: '10 minutes',
+    setupTime: '1-2 business days',
     employeeRange: '1-100',
     popular: true,
     badge: 'Easy Setup'
@@ -458,7 +493,7 @@ const integrations: Integration[] = [
       'Mobile-first design',
       'Partner marketplace'
     ],
-    setupTime: '1 hour',
+    setupTime: '3-5 business days',
     employeeRange: '50-1000',
     badge: 'Industry Expert'
   },
@@ -489,7 +524,7 @@ const integrations: Integration[] = [
       'Flexible workflows',
       'Global capabilities'
     ],
-    setupTime: '45 minutes',
+    setupTime: '2-3 business days',
     employeeRange: '50-2000',
     badge: 'Modern Choice'
   },
@@ -520,7 +555,7 @@ const integrations: Integration[] = [
       'GDPR compliant',
       'Custom attributes'
     ],
-    setupTime: '45 minutes',
+    setupTime: '2-3 business days',
     employeeRange: '10-2000',
     badge: 'European Leader'
   },
@@ -552,7 +587,7 @@ const integrations: Integration[] = [
       'Global employment',
       'No-code automation'
     ],
-    setupTime: '45 minutes',
+    setupTime: '2-3 business days',
     employeeRange: 'All sizes',
     popular: true,
     badge: 'Unified Platform'
@@ -583,7 +618,7 @@ const integrations: Integration[] = [
       'Mobile-first',
       'Direct data access'
     ],
-    setupTime: '1-2 hours',
+    setupTime: '1-2 weeks',
     employeeRange: '50+',
     badge: 'Single Database'
   },
@@ -615,7 +650,7 @@ const integrations: Integration[] = [
       'Custom forms',
       'Mobile check-in'
     ],
-    setupTime: '30 minutes',
+    setupTime: '1-2 business days',
     pricing: 'Free for 5 users',
     employeeRange: '5-500',
     badge: 'Free Tier'
@@ -646,7 +681,7 @@ const integrations: Integration[] = [
       'Zoho integration',
       'Custom modules'
     ],
-    setupTime: '20 minutes',
+    setupTime: '1-2 business days',
     pricing: 'Free forever plan',
     employeeRange: 'All sizes',
     badge: 'Free Forever'
@@ -677,26 +712,26 @@ const integrations: Integration[] = [
       'Simple UI',
       'Quick setup'
     ],
-    setupTime: '15 minutes',
+    setupTime: '1-2 business days',
     pricing: 'Free for 50 employees',
     employeeRange: '1-500',
     badge: 'Quick Start'
   },
 
-  // Coming Soon - CRM
+  // CRM Integrations
   {
     id: 'salesforce',
     name: 'Salesforce',
     category: 'CRM',
     description: 'Connect Salesforce CRM for candidate relationship management',
     logo: '☁️',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Contact sync', 'Lead tracking', 'Campaign integration', 'Custom fields'],
     aiFeatures: ['Einstein AI insights', 'Predictive scoring', 'Automated workflows'],
     uniqueValue: ['Market leader', 'Extensive ecosystem', 'Custom apps'],
-    setupTime: '2-3 hours',
+    setupTime: '3-5 business days',
     employeeRange: 'All sizes',
-    badge: 'Coming Q2 2025'
+    badge: 'Enterprise CRM'
   },
   {
     id: 'hubspot',
@@ -704,14 +739,30 @@ const integrations: Integration[] = [
     category: 'CRM',
     description: 'Integrate HubSpot for marketing and candidate nurturing',
     logo: '🧡',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Contact management', 'Email campaigns', 'Pipeline tracking', 'Analytics'],
     aiFeatures: ['AI content assistant', 'Predictive lead scoring', 'Smart workflows'],
     uniqueValue: ['All-in-one platform', 'Free CRM', 'Marketing automation'],
-    setupTime: '1 hour',
+    setupTime: '3-5 business days',
     pricing: 'Free tier available',
     employeeRange: 'All sizes',
-    badge: 'Coming Q2 2025'
+    badge: 'Enterprise CRM'
+  },
+  
+  // Not Listed Card
+  {
+    id: 'not-listed',
+    name: 'Not Listed?',
+    category: 'CRM',
+    description: 'Don\'t see your platform? We can integrate with any system that has an API.',
+    logo: '✨',
+    status: 'available',
+    features: ['Custom API integration', 'Dedicated support', 'Tailored solution', 'Any platform supported'],
+    aiFeatures: ['AI-powered integration mapping', 'Smart data transformation', 'Automated testing'],
+    uniqueValue: ['100% custom solution', 'Enterprise support', 'Rapid deployment', 'Any API supported'],
+    setupTime: '1-3 weeks',
+    employeeRange: 'All sizes',
+    badge: 'Custom Solution'
   },
 ];
 
@@ -742,8 +793,7 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'connected': return 'bg-green-100 text-green-700 border-green-200';
     case 'available': return 'bg-blue-100 text-blue-700 border-blue-200';
-    case 'coming_soon': return 'bg-gray-100 text-gray-500 border-gray-200';
-    default: return '';
+    default: return 'bg-blue-100 text-blue-700 border-blue-200';
   }
 };
 
@@ -816,6 +866,146 @@ export default function IntegrationsEnhanced() {
     } else {
       navigate('/login');
     }
+  };
+
+  // Get integration-specific setup steps
+  const getIntegrationSteps = (integration: Integration) => {
+    const integrationSteps: Record<string, string[]> = {
+      'bullhorn': [
+        'OAuth 2.0 app registration with Bullhorn',
+        'API client configuration with proper scopes',
+        'Webhook setup for real-time data sync'
+      ],
+      'greenhouse': [
+        'API key creation in Greenhouse Dev Center',
+        'Permission configuration for required endpoints', 
+        'Webhook configuration for candidate updates'
+      ],
+      'lever': [
+        'OAuth 2.0 application setup via partner program',
+        'API authentication with refresh token management',
+        'Custom integration testing and validation'
+      ],
+      'workday': [
+        'Integration System User (ISU) setup',
+        'OAuth 2.0 client registration and domain permissions',
+        'Security group configuration and testing'
+      ],
+      'bamboohr': [
+        'API key generation with proper permissions',
+        'OAuth 2.0 transition for enhanced security',
+        'Data sync validation and webhook setup'
+      ],
+      'salesforce': [
+        'Connected App creation in Salesforce',
+        'OAuth 2.0 scope configuration',
+        'REST API endpoint integration and testing'
+      ],
+      'hubspot': [
+        'OAuth app creation in HubSpot developer portal',
+        'Scope configuration for CRM data access',
+        'Token management and refresh automation'
+      ],
+      'rippling': [
+        'API access setup in Company Settings',
+        'OAuth 2.0 Bearer token configuration',
+        'User Management and SSO integration'
+      ]
+    };
+    
+    return integrationSteps[integration.id] || [
+      'OAuth/API authentication setup',
+      'Data sync configuration',
+      'Integration testing and validation'
+    ];
+  };
+
+  // Create email CTA for integration requests
+  const createIntegrationEmail = (integration: Integration) => {
+    const steps = getIntegrationSteps(integration);
+    const subject = encodeURIComponent(`Integration Request: ${integration.name}`);
+    const body = encodeURIComponent(
+      `Hi Martin,\n\nI would like to integrate ${integration.name} with my Apply recruitment platform.\n\n` +
+      `Platform Details:\n` +
+      `• System: ${integration.name}\n` +
+      `• Category: ${integration.category}${integration.subcategory ? ` (${integration.subcategory})` : ''}\n` +
+      `• Company Size: ${integration.employeeRange || 'Not specified'}\n` +
+      `• Expected Setup Time: ${integration.setupTime}\n\n` +
+      `Key Features I'm interested in:\n` +
+      integration.features.slice(0, 5).map(feature => `• ${feature}`).join('\n') + '\n\n' +
+      `Technical Integration Steps Required:\n` +
+      steps.map(step => `• ${step}`).join('\n') + '\n\n' +
+      `Please provide:\n` +
+      `• Integration development timeline\n` +
+      `• Required authentication credentials/setup\n` +
+      `• Testing and deployment process\n` +
+      `• Ongoing maintenance requirements\n\n` +
+      `Looking forward to streamlining our recruitment workflow with ${integration.name}.\n\n` +
+      `Best regards`
+    );
+    return `mailto:martin@hiapply.co?subject=${subject}&body=${body}`;
+  };
+
+  // Handle integration request email
+  const handleIntegrationRequest = (integration: Integration) => {
+    if (integration.id === 'not-listed') {
+      // For not listed, prompt user to specify the platform
+      const platformName = prompt('What platform would you like to integrate with Apply?');
+      if (platformName && platformName.trim()) {
+        const subject = encodeURIComponent(`Custom Integration Request: ${platformName}`);
+        const body = encodeURIComponent(
+          `Hi Martin,\n\nI would like to integrate ${platformName} with my Apply recruitment platform.\n\n` +
+          `Platform Details:\n` +
+          `• System: ${platformName}\n` +
+          `• Category: ${integration.category}\n` +
+          `• Expected Setup Time: ${integration.setupTime}\n\n` +
+          `This platform is not currently listed in your integration marketplace, but I understand you can integrate with any system that has an API.\n\n` +
+          `Key Features I'm looking for:\n` +
+          `• Data synchronization\n` +
+          `• Real-time updates\n` +
+          `• Automated workflows\n` +
+          `• Custom field mapping\n\n` +
+          `Please provide:\n` +
+          `• Feasibility assessment for ${platformName} integration\n` +
+          `• Integration development timeline\n` +
+          `• Required API documentation and credentials\n` +
+          `• Testing and deployment process\n` +
+          `• Ongoing maintenance requirements\n\n` +
+          `Looking forward to discussing this custom integration opportunity.\n\n` +
+          `Best regards`
+        );
+        window.location.href = `mailto:martin@hiapply.co?subject=${subject}&body=${body}`;
+      }
+    } else {
+      // For listed integrations, create full integration request
+      window.location.href = createIntegrationEmail(integration);
+    }
+  };
+
+  // Handle custom integration request
+  const handleCustomIntegrationRequest = (platformName: string) => {
+    const subject = encodeURIComponent(`Custom Integration Request: ${platformName}`);
+    const body = encodeURIComponent(
+      `Hi Martin,\n\nI would like to request a custom integration with ${platformName} for my Apply recruitment platform.\n\n` +
+      `Platform Details:\n` +
+      `• System: ${platformName}\n` +
+      `• Category: To be determined\n` +
+      `• Current Solution: [Please describe current workflow]\n\n` +
+      `Integration Requirements:\n` +
+      `• Please provide details about required functionality\n` +
+      `• API documentation or technical specifications\n` +
+      `• Expected data sync frequency\n` +
+      `• Authentication method preferences\n\n` +
+      `Technical Information Needed:\n` +
+      `• Integration development timeline\n` +
+      `• Required authentication credentials/setup\n` +
+      `• Testing and deployment process\n` +
+      `• Ongoing maintenance requirements\n` +
+      `• Estimated setup cost and timeframe\n\n` +
+      `Please let me know if ${platformName} integration is possible and what the process would involve.\n\n` +
+      `Best regards`
+    );
+    window.location.href = `mailto:martin@hiapply.co?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -994,7 +1184,7 @@ export default function IntegrationsEnhanced() {
                 className={cn(
                   "border-2 border-black p-6 cursor-pointer transition-all duration-200",
                   "hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1",
-                  integration.status === 'coming_soon' && "opacity-75"
+                  false
                 )}
                 onClick={() => setSelectedIntegration(integration)}
               >
@@ -1034,23 +1224,20 @@ export default function IntegrationsEnhanced() {
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t">
-                  <div className="flex items-center gap-2">
-                    {integration.status === 'connected' && (
-                      <>
-                        <Check className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-600">Connected</span>
-                      </>
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleIntegrationRequest(integration);
+                    }}
+                    variant="default"
+                    className={cn(
+                      "border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
                     )}
-                    {integration.status === 'available' && (
-                      <>
-                        <Plus className="w-4 h-4 text-purple-600" />
-                        <span className="text-sm font-medium text-purple-600">Connect</span>
-                      </>
-                    )}
-                    {integration.status === 'coming_soon' && (
-                      <span className="text-sm font-medium text-gray-400">Coming Soon</span>
-                    )}
-                  </div>
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Get Connected
+                  </Button>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <Clock className="w-3 h-3" />
                     {integration.setupTime}
@@ -1064,6 +1251,36 @@ export default function IntegrationsEnhanced() {
                 )}
               </Card>
             ))}
+
+            {/* Not Listed Card */}
+            <Card
+              className={cn(
+                "border-2 border-dashed border-gray-300 p-6 cursor-pointer transition-all duration-200",
+                "hover:border-purple-500 hover:bg-purple-50"
+              )}
+              onClick={() => {
+                const customPlatform = prompt("Enter the name of the platform you'd like to integrate:");
+                if (customPlatform && customPlatform.trim()) {
+                  handleCustomIntegrationRequest(customPlatform.trim());
+                }
+              }}
+            >
+              <div className="flex flex-col items-center justify-center text-center min-h-[200px]">
+                <div className="text-4xl mb-4">🔗</div>
+                <h3 className="font-bold text-lg mb-2">Not Listed?</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Don't see your platform? Click here to request a custom integration.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Request Integration
+                </Button>
+              </div>
+            </Card>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1073,7 +1290,7 @@ export default function IntegrationsEnhanced() {
                 className={cn(
                   "border-2 border-black p-6 cursor-pointer transition-all duration-200",
                   "hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5",
-                  integration.status === 'coming_soon' && "opacity-75"
+                  false
                 )}
                 onClick={() => setSelectedIntegration(integration)}
               >
@@ -1119,17 +1336,60 @@ export default function IntegrationsEnhanced() {
                   </div>
                   <Button
                     variant={integration.status === 'available' ? 'default' : 'outline'}
-                    disabled={integration.status === 'coming_soon'}
-                    className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleIntegrationRequest(integration);
+                    }}
+                    className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                   >
-                    {integration.status === 'connected' && 'Manage'}
-                    {integration.status === 'available' && 'Connect'}
-                    {integration.status === 'coming_soon' && 'Coming Soon'}
+                    Get Connected
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
               </Card>
             ))}
+
+            {/* Not Listed Card - List View */}
+            <Card
+              className={cn(
+                "border-2 border-dashed border-gray-300 p-6 cursor-pointer transition-all duration-200",
+                "hover:border-purple-500 hover:bg-purple-50"
+              )}
+              onClick={() => {
+                const customPlatform = prompt("Enter the name of the platform you'd like to integrate:");
+                if (customPlatform && customPlatform.trim()) {
+                  handleCustomIntegrationRequest(customPlatform.trim());
+                }
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="text-5xl">🔗</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-bold text-xl">Not Listed?</h3>
+                      <Badge variant="outline" className="text-xs">
+                        Custom
+                      </Badge>
+                    </div>
+                    <p className="text-gray-600 mb-3">
+                      Don't see your platform? Request a custom integration with any system you need.
+                    </p>
+                    <div className="flex items-center gap-1 text-sm">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span>Contact for timeline</span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                >
+                  Request Integration
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </Card>
           </div>
         )}
 
@@ -1259,38 +1519,25 @@ export default function IntegrationsEnhanced() {
 
                 <div className="flex gap-3 pt-4">
                   {selectedIntegration.status === 'connected' && (
-                    <>
-                      <Button 
-                        variant="outline"
-                        className="flex-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Settings
-                      </Button>
-                      <Button 
-                        variant="destructive"
-                        className="flex-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                      >
-                        Disconnect
-                      </Button>
-                    </>
-                  )}
-                  {selectedIntegration.status === 'available' && (
                     <Button 
+                      onClick={() => handleIntegrationRequest(selectedIntegration)}
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white 
                                border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
                                hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Connect {selectedIntegration.name}
+                      Get Connected
                     </Button>
                   )}
-                  {selectedIntegration.status === 'coming_soon' && (
+                  {selectedIntegration.status === 'available' && (
                     <Button 
-                      disabled 
-                      className="w-full cursor-not-allowed"
+                      onClick={() => handleIntegrationRequest(selectedIntegration)}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white 
+                               border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
+                               hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                     >
-                      Coming Soon
+                      <Plus className="w-4 h-4 mr-2" />
+                      Get Connected
                     </Button>
                   )}
                 </div>

@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Check, 
-  Settings, 
-  ExternalLink, 
-  Loader2, 
   Building2,
   Users,
   Briefcase,
@@ -20,9 +17,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
 
 interface PlatformIntegration {
   id: string;
@@ -30,7 +24,7 @@ interface PlatformIntegration {
   category: 'ATS' | 'HRIS' | 'CRM' | 'Email' | 'Calendar';
   description: string;
   logo: string;
-  status: 'connected' | 'available' | 'coming_soon';
+  status: 'connected' | 'available';
   features: string[];
   setupTime: string;
   lastSync?: string;
@@ -39,6 +33,16 @@ interface PlatformIntegration {
 
 const platformIntegrations: PlatformIntegration[] = [
   {
+    id: 'bullhorn',
+    name: 'Bullhorn',
+    category: 'ATS',
+    description: 'ATS & CRM platform for staffing agencies and recruiting firms',
+    logo: '🎯',
+    status: 'available',
+    features: ['ATS & CRM unified platform', 'Job order management', 'Interview scheduling', 'Compliance tracking'],
+    setupTime: '3-5 business days'
+  },
+  {
     id: 'greenhouse',
     name: 'Greenhouse',
     category: 'ATS',
@@ -46,7 +50,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '🌿',
     status: 'available',
     features: ['Candidate Sync', 'Job Import', 'Interview Scheduling', 'Real-time Updates'],
-    setupTime: '5 minutes'
+    setupTime: '1-2 business days'
   },
   {
     id: 'lever',
@@ -56,7 +60,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '📊',
     status: 'available',
     features: ['Pipeline Sync', 'Candidate Import', 'Stage Tracking', 'Notes Sync'],
-    setupTime: '5 minutes'
+    setupTime: '1-2 business days'
   },
   {
     id: 'workday',
@@ -66,7 +70,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '☁️',
     status: 'available',
     features: ['Employee Import', 'Org Chart', 'Skills Mapping', 'Department Sync'],
-    setupTime: '15 minutes'
+    setupTime: '3-5 business days'
   },
   {
     id: 'bamboohr',
@@ -76,7 +80,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '🎋',
     status: 'connected',
     features: ['Employee Sync', 'Department Structure', 'Role Mapping', 'Skills Import'],
-    setupTime: '10 minutes',
+    setupTime: '1-2 business days',
     lastSync: '2 hours ago',
     recordsCount: 247
   },
@@ -88,7 +92,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '💧',
     status: 'available',
     features: ['Full Employee Sync', 'Payroll Integration', 'Benefits Data', 'Time Tracking'],
-    setupTime: '10 minutes'
+    setupTime: '1-2 business days'
   },
   {
     id: 'salesforce',
@@ -96,9 +100,9 @@ const platformIntegrations: PlatformIntegration[] = [
     category: 'CRM',
     description: 'Connect with Salesforce CRM for lead and contact management',
     logo: '⛅',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Contact Sync', 'Lead Import', 'Account Mapping', 'Opportunity Tracking'],
-    setupTime: '15 minutes'
+    setupTime: '3-5 business days'
   },
   {
     id: 'outlook',
@@ -108,7 +112,7 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '📧',
     status: 'available',
     features: ['Calendar Sync', 'Email Templates', 'Meeting Scheduling', 'Contact Import'],
-    setupTime: '3 minutes'
+    setupTime: '1-2 business days'
   },
   {
     id: 'gmail',
@@ -118,16 +122,14 @@ const platformIntegrations: PlatformIntegration[] = [
     logo: '📬',
     status: 'connected',
     features: ['Gmail Sync', 'Calendar Integration', 'Contact Import', 'Drive Access'],
-    setupTime: '3 minutes',
+    setupTime: '1-2 business days',
     lastSync: '30 minutes ago',
     recordsCount: 1203
   }
 ];
 
 const PlatformIntegrations: React.FC = () => {
-  const { user } = useAuth();
-  const [integrations, setIntegrations] = useState<PlatformIntegration[]>(platformIntegrations);
-  const [isConnecting, setIsConnecting] = useState<string | null>(null);
+  const [integrations] = useState<PlatformIntegration[]>(platformIntegrations);
   const [activeTab, setActiveTab] = useState('all');
 
   const filteredIntegrations = integrations.filter(integration => {
@@ -137,45 +139,91 @@ const PlatformIntegrations: React.FC = () => {
     return integration.category.toLowerCase() === activeTab;
   });
 
-  const handleConnect = async (integrationId: string) => {
-    setIsConnecting(integrationId);
+  // Get integration-specific setup steps
+  const getIntegrationSteps = (integration: PlatformIntegration) => {
+    const integrationSteps: Record<string, string[]> = {
+      'bullhorn': [
+        'OAuth 2.0 app registration with Bullhorn',
+        'API client configuration with proper scopes',
+        'Webhook setup for real-time data sync'
+      ],
+      'greenhouse': [
+        'API key creation in Greenhouse Dev Center',
+        'Permission configuration for required endpoints',
+        'Webhook configuration for candidate updates'
+      ],
+      'lever': [
+        'OAuth 2.0 application setup via partner program',
+        'API authentication with refresh token management',
+        'Custom integration testing and validation'
+      ],
+      'workday': [
+        'Integration System User (ISU) setup',
+        'OAuth 2.0 client registration and domain permissions',
+        'Security group configuration and testing'
+      ],
+      'bamboohr': [
+        'API key generation with proper permissions',
+        'OAuth 2.0 transition for enhanced security',
+        'Data sync validation and webhook setup'
+      ],
+      'rippling': [
+        'API access setup in Company Settings',
+        'OAuth 2.0 Bearer token configuration',
+        'User Management and SSO integration'
+      ]
+    };
     
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setIntegrations(prev => prev.map(int => 
-        int.id === integrationId 
-          ? { ...int, status: 'connected' as const, lastSync: 'Just now', recordsCount: Math.floor(Math.random() * 1000) + 100 }
-          : int
-      ));
-      
-      const integration = integrations.find(i => i.id === integrationId);
-      toast.success(`Successfully connected to ${integration?.name}!`);
-    } catch (error) {
-      toast.error('Failed to connect integration. Please try again.');
-    } finally {
-      setIsConnecting(null);
+    return integrationSteps[integration.id] || [
+      'OAuth/API authentication setup',
+      'Data sync configuration',
+      'Integration testing and validation'
+    ];
+  };
+
+  // Create email CTA for integration requests
+  const createIntegrationEmail = (integration: PlatformIntegration) => {
+    const steps = getIntegrationSteps(integration);
+    const subject = encodeURIComponent(`Integration Request: ${integration.name}`);
+    const body = encodeURIComponent(
+      `Hi Martin,\n\nI would like to integrate ${integration.name} with my Apply recruitment platform.\n\n` +
+      `Platform Details:\n` +
+      `• System: ${integration.name}\n` +
+      `• Category: ${integration.category}\n` +
+      `• Expected Setup Time: ${integration.setupTime}\n\n` +
+      `Key Features I'm interested in:\n` +
+      integration.features.slice(0, 4).map(feature => `• ${feature}`).join('\n') + '\n\n' +
+      `Technical Integration Steps Required:\n` +
+      steps.map(step => `• ${step}`).join('\n') + '\n\n' +
+      `Please provide:\n` +
+      `• Integration development timeline\n` +
+      `• Required authentication credentials/setup\n` +
+      `• Testing and deployment process\n` +
+      `• Ongoing maintenance requirements\n\n` +
+      `Looking forward to streamlining our recruitment workflow with ${integration.name}.\n\n` +
+      `Best regards`
+    );
+    return `mailto:martin@hiapply.co?subject=${subject}&body=${body}`;
+  };
+
+  // Handle integration request email
+  const handleIntegrationRequest = (integration: PlatformIntegration) => {
+    // All integrations are available, create full integration request
+    window.location.href = createIntegrationEmail(integration);
+  };
+
+  const handleConnect = async (integrationId: string) => {
+    const integration = integrations.find(i => i.id === integrationId);
+    if (integration) {
+      handleIntegrationRequest(integration);
     }
   };
 
-  const handleDisconnect = async (integrationId: string) => {
-    const integration = integrations.find(i => i.id === integrationId);
-    
-    setIntegrations(prev => prev.map(int => 
-      int.id === integrationId 
-        ? { ...int, status: 'available' as const, lastSync: undefined, recordsCount: undefined }
-        : int
-    ));
-    
-    toast.success(`Disconnected from ${integration?.name}`);
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'connected': return 'bg-green-100 text-green-800 border-green-300';
       case 'available': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'coming_soon': return 'bg-gray-100 text-gray-600 border-gray-300';
       default: return 'bg-gray-100 text-gray-600 border-gray-300';
     }
   };
@@ -184,7 +232,6 @@ const PlatformIntegrations: React.FC = () => {
     switch (status) {
       case 'connected': return 'Connected';
       case 'available': return 'Available';
-      case 'coming_soon': return 'Coming Soon';
       default: return 'Unknown';
     }
   };
@@ -324,53 +371,31 @@ const PlatformIntegrations: React.FC = () => {
 
                 <div className="flex gap-2">
                   {integration.status === 'connected' ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => handleDisconnect(integration.id)}
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        Manage
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDisconnect(integration.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Disconnect
-                      </Button>
-                    </>
+                    <Button
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                      size="sm"
+                      onClick={() => handleIntegrationRequest(integration)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Get Connected
+                    </Button>
                   ) : integration.status === 'available' ? (
                     <Button
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
                       size="sm"
                       onClick={() => handleConnect(integration.id)}
-                      disabled={isConnecting === integration.id}
                     >
-                      {isConnecting === integration.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Connect
-                        </>
-                      )}
+                      <Plus className="w-4 h-4 mr-2" />
+                      Get Connected
                     </Button>
                   ) : (
                     <Button
-                      variant="outline"
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
                       size="sm"
-                      className="flex-1"
-                      disabled
+                      onClick={() => handleIntegrationRequest(integration)}
                     >
-                      <Clock className="w-4 h-4 mr-2" />
-                      Coming Soon
+                      <Plus className="w-4 h-4 mr-2" />
+                      Notify Me
                     </Button>
                   )}
                 </div>

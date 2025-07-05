@@ -1081,7 +1081,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           <Textarea
             value={jobDescription}
             onChange={(event) => setJobDescription(event.target.value)}
-            placeholder="Enter custom instructions or requirements (optional)...\n\nThis area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
+            placeholder="Enter custom instructions or requirements (optional)...
+
+This area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
             className="min-h-[120px] mb-4"
           />
 

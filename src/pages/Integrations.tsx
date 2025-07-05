@@ -8,13 +8,24 @@ interface Integration {
   category: 'ATS' | 'HRIS' | 'CRM';
   description: string;
   logo: string;
-  status: 'connected' | 'available' | 'coming_soon';
+  status: 'connected' | 'available';
   features: string[];
   setupTime: string;
   popular?: boolean;
 }
 
 const integrations: Integration[] = [
+  {
+    id: 'bullhorn',
+    name: 'Bullhorn',
+    category: 'ATS',
+    description: 'ATS & CRM platform for staffing agencies and recruiting firms',
+    logo: '🎯',
+    status: 'available',
+    features: ['ATS & CRM unified platform', 'Job order management', 'Interview scheduling', 'Compliance tracking'],
+    setupTime: '1-2 weeks',
+    popular: true,
+  },
   {
     id: 'greenhouse',
     name: 'Greenhouse',
@@ -23,7 +34,7 @@ const integrations: Integration[] = [
     logo: '🌿',
     status: 'available',
     features: ['Candidate sync', 'Job posting import', 'Status updates', 'Two-way sync'],
-    setupTime: '5 minutes',
+    setupTime: '1-2 business days',
     popular: true,
   },
   {
@@ -34,7 +45,7 @@ const integrations: Integration[] = [
     logo: '📊',
     status: 'available',
     features: ['Candidate import', 'Application tracking', 'Interview scheduling', 'Analytics'],
-    setupTime: '5 minutes',
+    setupTime: '1-2 business days',
     popular: true,
   },
   {
@@ -45,7 +56,7 @@ const integrations: Integration[] = [
     logo: '☁️',
     status: 'available',
     features: ['Employee data sync', 'Requisition management', 'Onboarding', 'Reporting'],
-    setupTime: '10 minutes',
+    setupTime: '2-3 weeks',
   },
   {
     id: 'bamboohr',
@@ -55,7 +66,7 @@ const integrations: Integration[] = [
     logo: '🎋',
     status: 'available',
     features: ['Employee records', 'Time tracking', 'Performance', 'Reports'],
-    setupTime: '5 minutes',
+    setupTime: '1-2 business days',
   },
   {
     id: 'salesforce',
@@ -63,9 +74,9 @@ const integrations: Integration[] = [
     category: 'CRM',
     description: 'Connect Salesforce CRM for candidate relationship management',
     logo: '☁️',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Contact sync', 'Lead tracking', 'Campaign integration', 'Custom fields'],
-    setupTime: '15 minutes',
+    setupTime: '1-2 weeks',
   },
   {
     id: 'hubspot',
@@ -73,9 +84,9 @@ const integrations: Integration[] = [
     category: 'CRM',
     description: 'Integrate HubSpot for marketing and candidate nurturing',
     logo: '🧡',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Contact management', 'Email campaigns', 'Pipeline tracking', 'Analytics'],
-    setupTime: '10 minutes',
+    setupTime: '2-3 weeks',
   },
   {
     id: 'rippling',
@@ -85,7 +96,7 @@ const integrations: Integration[] = [
     logo: '💧',
     status: 'available',
     features: ['Employee sync', 'Payroll data', 'Benefits admin', 'Compliance'],
-    setupTime: '10 minutes',
+    setupTime: '2-3 weeks',
     popular: true,
   },
   {
@@ -94,9 +105,9 @@ const integrations: Integration[] = [
     category: 'ATS',
     description: 'Modern recruiting software for high-growth teams',
     logo: '🚀',
-    status: 'coming_soon',
+    status: 'available',
     features: ['Analytics-first', 'Automation', 'Scheduling', 'Sourcing'],
-    setupTime: '5 minutes',
+    setupTime: '1-2 business days',
   },
 ];
 
@@ -105,6 +116,29 @@ export default function Integrations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'CRM'>('all');
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
+
+  // Create email CTA for integration requests
+  const createIntegrationEmail = (integration: Integration) => {
+    const subject = encodeURIComponent(`Integration Request: ${integration.name}`);
+    const body = encodeURIComponent(
+      `Hi Martin,\n\nI would like to integrate ${integration.name} with my Apply recruitment platform.\n\n` +
+      `Platform Details:\n` +
+      `• System: ${integration.name}\n` +
+      `• Category: ${integration.category}\n` +
+      `• Expected Setup Time: ${integration.setupTime}\n\n` +
+      `Key Features I'm interested in:\n` +
+      integration.features.slice(0, 4).map(feature => `• ${feature}`).join('\n') + '\n\n' +
+      `Please reach out with the integration path forward and timeline.\n\n` +
+      `Best regards`
+    );
+    return `mailto:martin@hiapply.co?subject=${subject}&body=${body}`;
+  };
+
+  // Handle integration request email
+  const handleIntegrationRequest = (integration: Integration) => {
+    // All integrations are available, create full integration request
+    window.location.href = createIntegrationEmail(integration);
+  };
 
   const filteredIntegrations = integrations.filter((integration) => {
     const matchesSearch = integration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -185,7 +219,7 @@ export default function Integrations() {
               className={`bg-white rounded-xl border-2 border-black p-6 
                        shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
                        transition-all duration-200 hover:scale-[1.02] cursor-pointer
-                       ${integration.status === 'coming_soon' ? 'opacity-75' : ''}`}
+                       `}`}
               onClick={() => setSelectedIntegration(integration)}
             >
               <div className="flex items-start justify-between mb-4">
@@ -210,23 +244,20 @@ export default function Integrations() {
               </p>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {integration.status === 'connected' && (
-                    <>
-                      <Check className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-600">Connected</span>
-                    </>
-                  )}
-                  {integration.status === 'available' && (
-                    <>
-                      <Plus className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-purple-600">Connect</span>
-                    </>
-                  )}
-                  {integration.status === 'coming_soon' && (
-                    <span className="text-sm font-medium text-gray-400">Coming Soon</span>
-                  )}
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIntegrationRequest(integration);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg border-2 border-black font-semibold text-sm transition-all
+                           shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]
+                           bg-purple-600 text-white hover:bg-purple-700`}
+                >
+                  <div className="flex items-center gap-1">
+                    <Plus className="w-3 h-3" />
+                    Get Connected
+                  </div>
+                </button>
                 <span className="text-xs text-gray-500">{integration.setupTime}</span>
               </div>
             </div>
@@ -295,35 +326,27 @@ export default function Integrations() {
 
               <div className="flex gap-3">
                 {selectedIntegration.status === 'connected' && (
-                  <>
-                    <button className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-lg 
-                                   border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
-                                   hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all 
-                                   duration-200 font-semibold flex items-center justify-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </button>
-                    <button className="flex-1 py-3 px-4 bg-red-600 text-white rounded-lg 
-                                   border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
-                                   hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all 
-                                   duration-200 font-semibold">
-                      Disconnect
-                    </button>
-                  </>
-                )}
-                {selectedIntegration.status === 'available' && (
-                  <button className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg 
-                                 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
-                                 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all 
-                                 duration-200 font-semibold flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => handleIntegrationRequest(selectedIntegration)}
+                    className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg 
+                             border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
+                             hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all 
+                             duration-200 font-semibold flex items-center justify-center gap-2"
+                  >
                     <Plus className="w-4 h-4" />
-                    Connect {selectedIntegration.name}
+                    Get Connected
                   </button>
                 )}
-                {selectedIntegration.status === 'coming_soon' && (
-                  <button disabled className="w-full py-3 px-4 bg-gray-200 text-gray-400 rounded-lg 
-                                         border-2 border-gray-300 cursor-not-allowed font-semibold">
-                    Coming Soon
+                {selectedIntegration.status === 'available' && (
+                  <button 
+                    onClick={() => handleIntegrationRequest(selectedIntegration)}
+                    className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg 
+                             border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
+                             hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all 
+                             duration-200 font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Get Connected
                   </button>
                 )}
               </div>

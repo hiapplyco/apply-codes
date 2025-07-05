@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Globe, Search, FileText, X } from 'lucide-react';
+import { Upload, Globe, Search, FileText, X, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectContext } from '@/context/ProjectContext';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchModal';
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
+import LocationModal from '@/components/LocationModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -22,10 +23,18 @@ export interface ContextButtonsProps {
   
   /** Callback when content is processed and ready */
   onContentProcessed?: (content: {
-    type: 'upload' | 'firecrawl' | 'perplexity';
+    type: 'upload' | 'firecrawl' | 'perplexity' | 'location';
     text: string;
     metadata?: Record<string, any>;
     projectId?: string;
+  }) => void;
+  
+  /** Callback when location is selected */
+  onLocationSelected?: (location: {
+    formatted_address: string;
+    place_id: string;
+    geometry: any;
+    address_components: any[];
   }) => void;
   
   /** Enable/disable specific buttons */
@@ -33,6 +42,7 @@ export interface ContextButtonsProps {
     upload?: boolean;
     firecrawl?: boolean;
     perplexity?: boolean;
+    location?: boolean;
   };
   
   /** Custom styling classes */
@@ -50,7 +60,8 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   size = 'default',
   variant = 'inline',
   onContentProcessed,
-  enabledButtons = { upload: true, firecrawl: true, perplexity: true },
+  onLocationSelected,
+  enabledButtons = { upload: true, firecrawl: true, perplexity: true, location: true },
   className,
   showLabels = true,
   compact = false
@@ -58,6 +69,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   const { selectedProject } = useProjectContext();
   const [isPerplexityModalOpen, setIsPerplexityModalOpen] = useState(false);
   const [isFirecrawlModalOpen, setIsFirecrawlModalOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   // File input ref for upload functionality
@@ -65,7 +77,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
 
   // Universal context item storage function
   const saveContextItem = useCallback(async (item: {
-    type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input';
+    type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input' | 'location_input';
     title: string;
     content: string;
     summary?: string;
@@ -248,6 +260,96 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     }
   }, [selectedProject, context, onContentProcessed, saveContextItem]);
 
+  const handleLocationSelect = useCallback(async (location: {
+    formatted_address: string;
+    place_id: string;
+    geometry: any;
+    address_components: any[];
+  }) => {
+    setIsProcessing('location');
+
+    try {
+      // Extract location components for better boolean generation
+      const locationData = {
+        formatted_address: location.formatted_address,
+        place_id: location.place_id,
+        geometry: location.geometry,
+        address_components: location.address_components
+      };
+
+      // Parse location components
+      const parsedLocation = parseLocationComponents(location.address_components);
+      const locationString = generateLocationString(parsedLocation);
+
+      // Save to context items
+      await saveContextItem({
+        type: 'location_input',
+        title: `Location: ${location.formatted_address}`,
+        content: locationString,
+        summary: `Search location set to ${location.formatted_address}`,
+        metadata: {
+          ...locationData,
+          parsedLocation,
+          selectedAt: new Date().toISOString()
+        }
+      });
+
+      // Call the location selected callback
+      onLocationSelected?.(locationData);
+
+      // Call content processed callback for consistency
+      onContentProcessed?.({
+        type: 'location',
+        text: locationString,
+        metadata: {
+          ...locationData,
+          parsedLocation,
+          context
+        },
+        projectId: selectedProject?.id
+      });
+
+      toast.success(`Location set to ${location.formatted_address}`);
+    } catch (error) {
+      console.error('Location processing error:', error);
+      toast.error('Failed to process location');
+    } finally {
+      setIsProcessing(null);
+    }
+  }, [selectedProject, context, onContentProcessed, onLocationSelected, saveContextItem]);
+
+  // Helper function to parse location components
+  const parseLocationComponents = (components: any[]) => {
+    const parsed: any = {};
+    components.forEach(component => {
+      const types = component.types;
+      if (types.includes('locality')) {
+        parsed.city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
+        parsed.state = component.long_name;
+        parsed.stateShort = component.short_name;
+      } else if (types.includes('administrative_area_level_2')) {
+        parsed.county = component.long_name;
+      } else if (types.includes('country')) {
+        parsed.country = component.long_name;
+        parsed.countryShort = component.short_name;
+      } else if (types.includes('postal_code')) {
+        parsed.zipCode = component.long_name;
+      }
+    });
+    return parsed;
+  };
+
+  // Helper function to generate location string for boolean search
+  const generateLocationString = (parsed: any) => {
+    const parts = [];
+    if (parsed.city) parts.push(parsed.city);
+    if (parsed.state) parts.push(parsed.state, parsed.stateShort);
+    if (parsed.county) parts.push(parsed.county);
+    if (parsed.zipCode) parts.push(parsed.zipCode);
+    return parts.join(', ');
+  };
+
   // Dynamic button sizing
   const buttonSize = size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'default';
   const iconSize = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
@@ -357,6 +459,31 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
         </Button>
       )}
 
+      {/* Location Button */}
+      {enabledButtons.location && (
+        <Button
+          variant="outline"
+          size={buttonSize}
+          onClick={() => setIsLocationModalOpen(true)}
+          disabled={isProcessing === 'location'}
+          className={buttonStyles}
+          type="button"
+        >
+          {isProcessing === 'location' ? (
+            <div className="animate-spin">
+              <MapPin className={iconSize} />
+            </div>
+          ) : (
+            <MapPin className={iconSize} />
+          )}
+          {showLabels && !compact && (
+            <span className="ml-2">
+              {isProcessing === 'location' ? 'Processing...' : 'Location'}
+            </span>
+          )}
+        </Button>
+      )}
+
       {/* Modals */}
       <URLScrapeModal
         isOpen={isFirecrawlModalOpen}
@@ -369,6 +496,12 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
         isOpen={isPerplexityModalOpen}
         onClose={() => setIsPerplexityModalOpen(false)}
         onSearchResult={handlePerplexityResult}
+      />
+
+      <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onLocationSelect={handleLocationSelect}
       />
     </div>
   );

@@ -21,7 +21,7 @@ export interface ContextBarProps extends Omit<ContextButtonsProps, 'context' | '
   
   /** Callback when content is processed and ready */
   onContentProcessed?: (content: {
-    type: 'upload' | 'firecrawl' | 'perplexity';
+    type: 'upload' | 'firecrawl' | 'perplexity' | 'location';
     text: string;
     metadata?: Record<string, any>;
     projectId?: string;

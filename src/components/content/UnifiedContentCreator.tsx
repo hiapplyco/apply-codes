@@ -3,11 +3,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Loader2, FileText, Info } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextBar } from "@/components/context/ContextBar";
@@ -28,11 +29,16 @@ export const UnifiedContentCreator = () => {
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [rawContent, setRawContent] = useState("");
   const [contextContent, setContextContent] = useState<string>("");
-  const [projectContext, setProjectContext] = useState<string>("");
   const [showGenerationDialog, setShowGenerationDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
 
   const { selectedProject } = useProjectContext();
   const contentOptions = contentTypes.recruiter_hr_content;
+  const filteredOptions = contentOptions.filter(option => 
+    option.content_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    option.tooltip.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleContextContent = async (content: any) => {
     try {
@@ -158,22 +164,62 @@ export const UnifiedContentCreator = () => {
               Content Type
             </Label>
             <div className="flex items-center gap-2">
-              <Select value={selectedContentType} onValueChange={setSelectedContentType}>
+              <Select 
+                value={selectedContentType} 
+                onValueChange={setSelectedContentType}
+                open={isSelectOpen}
+                onOpenChange={(open) => {
+                  setIsSelectOpen(open);
+                  if (!open) setSearchTerm("");
+                }}
+              >
                 <SelectTrigger 
                   id="content-type"
-                  className="w-full border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                  className="w-full border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] transition-all duration-200"
                 >
                   <SelectValue placeholder="Select content type..." />
                 </SelectTrigger>
-                <SelectContent className="border-2 border-black">
-                  {contentOptions.map((option) => (
-                    <SelectItem key={option.content_type} value={option.content_type}>
-                      <span className="flex items-center gap-2">
-                        <span>{option.emoji}</span>
-                        <span>{option.content_type}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
+                <SelectContent className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] max-h-[60vh] overflow-hidden">
+                  {/* Search Input */}
+                  <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search content types..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 h-8 text-sm border-0 focus:ring-1 focus:ring-purple-500 bg-gray-50"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Scrollable Options */}
+                  <div className="max-h-[50vh] overflow-y-auto overscroll-contain">
+                    {filteredOptions.length > 0 ? (
+                      filteredOptions.map((option) => (
+                        <SelectItem 
+                          key={option.content_type} 
+                          value={option.content_type}
+                          className="cursor-pointer hover:bg-purple-50 focus:bg-purple-50 py-3 px-4 text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">{option.emoji}</span>
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{option.content_type}</div>
+                              <div className="text-xs text-gray-500 mt-1 line-clamp-2">{option.tooltip}</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-4 py-8 text-center text-gray-500">
+                        <Search className="mx-auto h-6 w-6 mb-2 opacity-50" />
+                        <p className="text-sm">No content types found</p>
+                        <p className="text-xs mt-1">Try adjusting your search</p>
+                      </div>
+                    )}
+                  </div>
                 </SelectContent>
               </Select>
               {selectedOption && (
