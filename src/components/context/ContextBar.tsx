@@ -72,10 +72,10 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 
   // Layout-specific styling
   const layoutStyles = cn(
-    compact ? "flex gap-2 items-center" : "flex gap-4 items-center",
+    compact ? "flex gap-2 items-center" : "flex flex-col gap-4 sm:flex-row sm:items-center",
     layout === 'vertical' && "flex-col items-start",
     layout === 'stacked' && "flex-col sm:flex-row sm:items-center",
-    compact ? "flex-wrap" : "flex-wrap sm:flex-nowrap" // Responsive wrapping
+    "flex-wrap" // Always allow wrapping for responsiveness
   );
 
   return (
@@ -101,9 +101,9 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         {/* Project Selector */}
         {showProjectSelector && (
           <div className={cn(
-            "flex-shrink-0",
+            "flex-shrink-0 w-full sm:w-auto sm:min-w-[240px] sm:max-w-[320px]",
             layout === 'vertical' && "w-full",
-            layout === 'horizontal' && "w-64"
+            layout === 'horizontal' && "sm:w-64"
           )}>
             <ProjectSelector
               label={projectSelectorProps?.label}
@@ -116,13 +116,14 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 
         {/* Context Buttons */}
         <div className={cn(
-          "flex-shrink-0",
+          "flex-shrink-0 w-full sm:w-auto",
           layout === 'vertical' && "w-full",
           layout === 'stacked' && "w-full sm:w-auto"
         )}>
           <ContextButtons
             context={context}
             onContentProcessed={onContentProcessed}
+            variant="responsive"
             {...contextButtonsProps}
           />
         </div>

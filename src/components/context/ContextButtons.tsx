@@ -18,8 +18,8 @@ export interface ContextButtonsProps {
   /** Size variant for responsive layouts */
   size?: 'sm' | 'default' | 'lg';
   
-  /** Display variant - inline, toolbar, or floating */
-  variant?: 'inline' | 'toolbar' | 'floating';
+  /** Display variant - inline, toolbar, floating, or responsive */
+  variant?: 'inline' | 'toolbar' | 'floating' | 'responsive';
   
   /** Callback when content is processed and ready */
   onContentProcessed?: (content: {
@@ -370,6 +370,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     variant === 'toolbar' && "bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 rounded-lg",
     variant === 'floating' && "fixed bottom-6 right-6 z-50 bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-lg p-3",
     variant === 'inline' && "items-center",
+    variant === 'responsive' && "flex-wrap items-center justify-start",
     className
   );
 

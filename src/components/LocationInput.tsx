@@ -141,6 +141,31 @@ const LocationInput: React.FC<LocationInputProps> = ({
     script.onload = () => {
       console.log('Google Maps API loaded successfully');
       setIsLoaded(true);
+      
+      // Add CSS for Google Places dropdown z-index
+      const style = document.createElement('style');
+      style.textContent = `
+        .pac-container {
+          z-index: 9999 !important;
+          border-radius: 8px;
+          border: 2px solid #000;
+          box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+          margin-top: 4px;
+        }
+        .pac-item {
+          cursor: pointer;
+          padding: 8px 12px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .pac-item:hover {
+          background-color: #f3f4f6;
+        }
+        .pac-item-selected {
+          background-color: #e5e7eb;
+        }
+      `;
+      document.head.appendChild(style);
+      
       // Add a small delay to ensure Google Maps is fully initialized
       setTimeout(() => {
         initializeAutocomplete();
@@ -185,17 +210,17 @@ const LocationInput: React.FC<LocationInputProps> = ({
   }
 
   return (
-    <div className="location-input-container relative">
+    <div className="location-input-container relative z-50">
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
             <MapPin className="h-4 w-4 text-gray-400" />
           </div>
           <input
             ref={inputRef}
             type="text"
             placeholder={placeholder}
-            className="block w-full pl-10 pr-10 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm"
+            className="block w-full pl-10 pr-10 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm relative z-20"
             onKeyDown={handleKeyDown}
             autoComplete="off"
           />
