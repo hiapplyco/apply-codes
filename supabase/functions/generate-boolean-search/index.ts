@@ -86,10 +86,31 @@ Deno.serve(async (req: Request) => {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     // Extract location information from context items
-    const locationItems = contextItems?.filter(item => item.type === 'location_input') || []
+    // Handle both 'location_input' type and 'manual_input' with location metadata
+    const locationItems = contextItems?.filter(item => 
+      item.type === 'location_input' || 
+      (item.type === 'manual_input' && item.metadata?.isLocationContext) ||
+      (item.type === 'manual_input' && item.title?.includes('Location:'))
+    ) || []
+    
+    console.log('🎯 EDGE FUNCTION LOCATION PROCESSING:');
+    console.log('1. Total context items received:', contextItems?.length || 0);
+    console.log('2. Location items found:', locationItems.length);
+    console.log('3. Location items details:', locationItems.map(item => ({
+      type: item.type,
+      title: item.title,
+      hasMetadata: !!item.metadata,
+      hasParsedLocation: !!item.metadata?.parsedLocation,
+      metadata: item.metadata
+    })));
+    
     const locationInfo = locationItems.map(item => {
       if (item.metadata?.parsedLocation) {
         const loc = item.metadata.parsedLocation
+        console.log('   ✅ Processing location with parsed data:', {
+          formatted_address: item.metadata.formatted_address,
+          parsedLocation: loc
+        });
         return {
           formatted_address: item.metadata.formatted_address,
           city: loc.city,
@@ -99,9 +120,18 @@ Deno.serve(async (req: Request) => {
           country: loc.country,
           zipCode: loc.zipCode
         }
+      } else {
+        console.log('   ⚠️ Location item missing parsed data:', {
+          type: item.type,
+          title: item.title,
+          hasMetadata: !!item.metadata,
+          metadata: item.metadata
+        });
       }
       return null
     }).filter(Boolean)
+    
+    console.log('4. Final location info for prompt:', locationInfo);
 
     const prompt = `You are an expert LinkedIn recruiter with 10+ years of experience creating sophisticated boolean search strings. Generate a comprehensive, precise LinkedIn boolean search string for this job posting.
 
@@ -185,10 +215,12 @@ Output a single, production-ready boolean search string that balances:
 
 Return ONLY the boolean search string with no explanation, markdown, or formatting.`
 
-    console.log('Generating content with Gemini...')
+    console.log('5. Generating content with Gemini...');
+    console.log('   - Location count in prompt:', locationInfo.length);
+    console.log('   - Context items count in prompt:', contextItems?.length || 0);
     const result = await model.generateContent(prompt)
     const searchString = result.response.text().trim()
-    console.log('Generated search string:', searchString)
+    console.log('6. Generated search string:', searchString)
 
     if (!searchString) {
       console.error('Empty search string generated')

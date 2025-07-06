@@ -12,16 +12,16 @@ export const LoadMoreButton = ({ onClick, isLoading }: LoadMoreButtonProps) => {
     <div className="mt-6 flex justify-center">
       <button 
         onClick={onClick}
-        className="px-4 py-2 bg-[#8B5CF6] text-white rounded-md hover:bg-[#7C3AED] transition-colors"
+        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:scale-105 font-semibold"
         disabled={isLoading}
       >
         {isLoading ? (
           <>
             <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
-            Loading...
+            Loading More Results...
           </>
         ) : (
-          'Load More Results'
+          'Load More Results (Next 10)'
         )}
       </button>
     </div>

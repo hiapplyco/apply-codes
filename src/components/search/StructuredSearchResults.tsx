@@ -14,6 +14,7 @@ import { SearchSummaryHeader } from './components/SearchSummaryHeader';
 import { SearchFiltersPanel } from './components/SearchFiltersPanel';
 import { useSearchFilters } from './hooks/useSearchFilters';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
+import { LoadMoreButton } from './components/LoadMoreButton';
 
 export interface StructuredSearchResultsProps {
   searchString: string;
@@ -274,12 +275,28 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
       {/* Search Summary Header */}
       <SearchSummaryHeader
         totalResults={hasActiveFilters ? totalFiltered : totalResults}
-        currentPage={currentPage}
-        resultsPerPage={resultsPerPage}
+        currentPage={1}
+        resultsPerPage={displayResults.length} // Show actual loaded results
         searchQuery={searchString}
         onExport={handleExport}
         onFilter={handleFilter}
       />
+
+      {/* Pagination Status */}
+      {displayResults.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg border">
+          <div className="text-sm text-gray-600">
+            Showing <span className="font-semibold">{displayResults.length}</span> of{' '}
+            <span className="font-semibold">{totalResults.toLocaleString()}</span> profiles
+            {hasMore && <span className="text-purple-600 ml-2">• More available</span>}
+          </div>
+          {hasMore && (
+            <div className="text-xs text-gray-500">
+              Page {currentPage} of {Math.ceil(totalResults / resultsPerPage)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search Filters Panel */}
       {showFilters && (
@@ -329,6 +346,14 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
             )}
           </div>
         </div>
+      )}
+
+      {/* Manual Load More Button */}
+      {hasMore && !isLoadingMore && (
+        <LoadMoreButton 
+          onClick={loadMoreResults}
+          isLoading={isLoadingMore}
+        />
       )}
       
       {hasReachedEnd && displayResults.length > 0 && (

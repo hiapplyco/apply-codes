@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,10 @@ import { FirecrawlService } from '@/utils/FirecrawlService';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import BooleanExplainer from '@/components/BooleanExplainer';
 import { BooleanExplanation } from '@/types/boolean-explanation';
+import LocationModal from '@/components/LocationModal';
+import ProjectLocationService from '@/services/ProjectLocationService';
+import { useProjectContext } from '@/context/ProjectContext';
+import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -90,10 +94,14 @@ const extractLocationFromSnippet = (snippet: string): string | undefined => {
 export default function MinimalSearchForm({ userId, selectedProjectId }: MinimalSearchFormProps) {
   // Debug version to help with cache issues
   console.log('MinimalSearchForm v3.1 loaded', { userId, selectedProjectId });
+  
+  // Get project context
+  const { selectedProject } = useProjectContext();
   const [jobDescription, setJobDescription] = useState('');
   const [booleanString, setBooleanString] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showBooleanAnimation, setShowBooleanAnimation] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
   const [expandedProfiles, setExpandedProfiles] = useState<Set<number>>(new Set());
@@ -116,6 +124,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [isSearchingPerplexity, setIsSearchingPerplexity] = useState(false);
   const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [showPerplexityDialog, setShowPerplexityDialog] = useState(false);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailContext, setEmailContext] = useState('');
   const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
@@ -215,6 +224,205 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     } finally {
       setIsScrapingUrl(false);
     }
+  };
+
+  // Context management functions
+  const saveContextItem = useCallback(async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
+    console.log('💾 saveContextItem called with:', { 
+      item, 
+      userId, 
+      selectedProjectId: selectedProject?.id || selectedProjectId,
+      selectedProject: selectedProject?.name,
+      timestamp: new Date().toISOString()
+    });
+    try {
+      const { data, error } = await supabase
+        .from('context_items')
+        .insert([{
+          ...item,
+          user_id: userId,
+          project_id: selectedProject?.id || selectedProjectId || null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newContextItem: ContextItem = {
+        ...data,
+        isExpanded: false
+      };
+
+      console.log('Adding new context item to state:', newContextItem);
+      setContextItems(prev => {
+        const updated = [newContextItem, ...prev];
+        console.log('Updated context items:', updated);
+        return updated;
+      });
+      return newContextItem;
+    } catch (error) {
+      console.error('Error saving context item:', error);
+      toast.error('Failed to save context item');
+      return null;
+    }
+  }, [userId, selectedProject, selectedProjectId]);
+
+  // Location selection handler with stable reference
+  const handleLocationSelect = useCallback(async (location: {
+    formatted_address: string;
+    place_id: string;
+    geometry: any;
+    address_components: any[];
+  }) => {
+    console.log('🎯 MinimalSearchForm.handleLocationSelect called with:', location);
+    console.log('📋 Selected project:', selectedProject);
+    console.log('🗂️ Context items count:', contextItems.length);
+    
+    // Prevent duplicate processing of the same location
+    // Prevent rapid duplicate selections
+    const currentTime = Date.now();
+    const lastSelectionKey = `location_${location.formatted_address}`;
+    const lastSelectionTime = sessionStorage.getItem(lastSelectionKey);
+    
+    if (lastSelectionTime && currentTime - parseInt(lastSelectionTime) < 2000) {
+      console.log('🚫 Preventing duplicate location selection:', location.formatted_address);
+      return;
+    }
+    
+    sessionStorage.setItem(lastSelectionKey, currentTime.toString());
+    
+    // Clean up old entries after 5 seconds
+    setTimeout(() => {
+      sessionStorage.removeItem(lastSelectionKey);
+    }, 5000);
+    
+    try {
+      // Show loading state
+      toast.loading('Adding location...', { id: 'location-add' });
+
+      if (!selectedProject) {
+        // Save without project association but warn user
+        console.warn('No project selected - saving location as general context');
+      }
+
+      // Check if this location already exists as a context item
+      const existingLocation = contextItems.find(item => 
+        item.type === 'manual_input' && 
+        item.title.includes(location.formatted_address)
+      );
+      
+      if (existingLocation) {
+        console.log('🔄 Location already exists as context item:', existingLocation);
+        toast.success('Location already added to context', { id: 'location-add' });
+        return;
+      }
+
+      // Parse location components for better context
+      const parsedLocation = parseLocationComponents(location.address_components);
+      const locationString = generateLocationString(parsedLocation);
+
+      console.log('Parsed location:', parsedLocation);
+      console.log('Location string:', locationString);
+
+      // Save as context item for immediate use with location_input type
+      const contextItem = await saveContextItem({
+        type: 'manual_input',
+        title: `Location: ${location.formatted_address}`,
+        content: locationString,
+        summary: `Search location set to ${location.formatted_address}`,
+        metadata: {
+          formatted_address: location.formatted_address,
+          place_id: location.place_id,
+          geometry: location.geometry,
+          address_components: location.address_components,
+          parsedLocation,
+          selectedAt: new Date().toISOString(),
+          projectId: selectedProject?.id || null,
+          isLocationContext: true // Mark this as location context for easier filtering
+        }
+      });
+      
+      console.log('🗺️ Location context item created:', {
+        id: contextItem?.id,
+        type: contextItem?.type,
+        title: contextItem?.title,
+        hasMetadata: !!contextItem?.metadata,
+        parsedLocation: contextItem?.metadata?.parsedLocation
+      });
+
+      console.log('Context item saved:', contextItem);
+
+      if (contextItem) {
+        toast.success(`Location "${location.formatted_address}" added to context`, { id: 'location-add' });
+      } else {
+        toast.error('Failed to save location', { id: 'location-add' });
+      }
+
+      // TODO: Add location to project using the new service once migration is applied
+      // const projectLocation = await ProjectLocationService.addLocationToProject({
+      //   project_id: selectedProject.id,
+      //   formatted_address: location.formatted_address,
+      //   place_id: location.place_id,
+      //   geometry: location.geometry,
+      //   address_components: location.address_components,
+      //   notes: `Added for targeted sourcing on ${new Date().toLocaleDateString()}`
+      // });
+
+      setShowLocationDialog(false);
+      
+      // Success notification with project context
+      if (selectedProject) {
+        toast.success(
+          `Location "${location.formatted_address}" added to project "${selectedProject.name}"`,
+          { 
+            id: 'location-add',
+            description: 'This location will be used for targeted boolean search generation'
+          }
+        );
+      } else {
+        toast.success(
+          `Location "${location.formatted_address}" added as general context`,
+          { 
+            id: 'location-add',
+            description: 'Select a project to associate this location with a specific search'
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Location processing error:', error);
+      toast.error('Failed to add location to project', { id: 'location-add' });
+    }
+  }, [selectedProject, contextItems, saveContextItem]);
+
+  // Helper functions for location processing
+  const parseLocationComponents = (components: any[]) => {
+    const parsed: any = {};
+    components.forEach(component => {
+      const types = component.types;
+      if (types.includes('locality')) {
+        parsed.city = component.long_name;
+      } else if (types.includes('administrative_area_level_1')) {
+        parsed.state = component.long_name;
+        parsed.stateShort = component.short_name;
+      } else if (types.includes('administrative_area_level_2')) {
+        parsed.county = component.long_name;
+      } else if (types.includes('country')) {
+        parsed.country = component.long_name;
+        parsed.countryShort = component.short_name;
+      } else if (types.includes('postal_code')) {
+        parsed.zipCode = component.long_name;
+      }
+    });
+    return parsed;
+  };
+
+  const generateLocationString = (parsed: any) => {
+    const parts = [];
+    if (parsed.city) parts.push(parsed.city);
+    if (parsed.state) parts.push(parsed.state, parsed.stateShort);
+    if (parsed.county) parts.push(parsed.county);
+    if (parsed.zipCode) parts.push(parsed.zipCode);
+    return parts.join(', ');
   };
 
   // File upload with enhanced async processing
@@ -420,6 +628,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
 
     setIsGenerating(true);
+    setShowBooleanAnimation(true);
     try {
       // Prepare context items for the edge function
       const contextData = contextItems.map(item => ({
@@ -428,12 +637,37 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         content: item.content,
         summary: item.summary,
         source_url: item.source_url,
-        file_name: item.file_name
+        file_name: item.file_name,
+        metadata: item.metadata
       }));
+
+      // Enhanced location data logging
+      const locationItems = contextItems.filter(item => 
+        item.type === 'manual_input' && item.title?.includes('Location:')
+      );
+      
+      console.log('🎯 LOCATION DATA FLOW TRACE:');
+      console.log('1. Total context items:', contextItems.length);
+      console.log('2. Location items found:', locationItems.length);
+      console.log('3. Location items details:', locationItems.map(item => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        content: item.content?.substring(0, 100),
+        hasMetadata: !!item.metadata,
+        metadata: item.metadata
+      })));
+      console.log('4. Context data being sent to edge function:', contextData.map(item => ({
+        type: item.type,
+        title: item.title,
+        hasMetadata: !!item.metadata,
+        metadata: item.metadata
+      })));
 
       console.log('Generating boolean search with:', {
         hasCustomInstructions: !!jobDescription.trim(),
         contextItemsCount: contextItems.length,
+        locationItemsCount: locationItems.length,
         customInstructionsLength: jobDescription.length
       });
 
@@ -468,6 +702,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.error('Failed to generate boolean search');
     } finally {
       setIsGenerating(false);
+      setShowBooleanAnimation(false);
     }
   };
 
@@ -759,35 +994,6 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
-  // Context management functions
-  const saveContextItem = async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
-    try {
-      const { data, error } = await supabase
-        .from('context_items')
-        .insert([{
-          ...item,
-          user_id: userId,
-          project_id: selectedProjectId || null
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newContextItem: ContextItem = {
-        ...data,
-        isExpanded: false
-      };
-
-      setContextItems(prev => [newContextItem, ...prev]);
-      return newContextItem;
-    } catch (error) {
-      console.error('Error saving context item:', error);
-      toast.error('Failed to save context item');
-      return null;
-    }
-  };
-
   const toggleContextExpansion = (id: string) => {
     setContextItems(prev => 
       prev.map(item => 
@@ -813,6 +1019,38 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
+  const clearAllContextItems = async () => {
+    if (contextItems.length === 0) return;
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to clear all ${contextItems.length} context item${contextItems.length !== 1 ? 's' : ''}? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Show loading toast
+      toast.loading('Clearing all context items...', { id: 'clear-all' });
+
+      // Delete all context items for the current user and project
+      const { error } = await supabase
+        .from('context_items')
+        .delete()
+        .eq('user_id', userId)
+        .eq('project_id', selectedProject?.id || null);
+
+      if (error) throw error;
+
+      // Update local state
+      setContextItems([]);
+      toast.success('All context items cleared', { id: 'clear-all' });
+    } catch (error) {
+      console.error('Error clearing all context items:', error);
+      toast.error('Failed to clear all context items', { id: 'clear-all' });
+    }
+  };
+
   const loadContextItems = useCallback(async () => {
     if (!userId) return;
     
@@ -824,8 +1062,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (selectedProjectId) {
-        query = query.eq('project_id', selectedProjectId);
+      const projectId = selectedProject?.id || selectedProjectId;
+      console.log('Loading context items for:', { userId, projectId, selectedProject: selectedProject?.name });
+      
+      if (projectId) {
+        query = query.eq('project_id', projectId);
       } else {
         query = query.is('project_id', null);
       }
@@ -834,6 +1075,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (error) throw error;
 
+      console.log('Context items loaded:', data);
       setContextItems(data.map(item => ({ ...item, isExpanded: false })));
     } catch (error) {
       console.error('Error loading context items:', error);
@@ -845,7 +1087,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   // Load context items when component mounts or project changes
   useEffect(() => {
     loadContextItems();
-  }, [userId, selectedProjectId, loadContextItems]);
+  }, [userId, selectedProjectId, selectedProject?.id, loadContextItems]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -1076,6 +1318,24 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                       </div>
                     </DialogContent>
               </Dialog>
+
+              {/* Location Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setShowLocationDialog(true)}
+                  >
+                    <MapPin className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add location context with Google Places</p>
+                  <p className="text-xs text-gray-500 mt-1">Set geographic preferences for targeted boolean search generation</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           
           <Textarea
@@ -1090,9 +1350,20 @@ This area is for your specific search instructions, filtering criteria, or addit
           {/* Context Items Thumbnails */}
           {contextItems.length > 0 && (
             <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Added Context ({contextItems.length} item{contextItems.length !== 1 ? 's' : ''})
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">
+                  Added Context ({contextItems.length} item{contextItems.length !== 1 ? 's' : ''})
+                </h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllContextItems}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 text-xs px-2 py-1"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Clear All
+                </Button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {contextItems.map((item) => (
                   <div
@@ -1104,6 +1375,11 @@ This area is for your specific search instructions, filtering criteria, or addit
                         {item.type === 'url_scrape' && <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                         {item.type === 'file_upload' && <FileText className="w-4 h-4 text-green-500 flex-shrink-0" />}
                         {item.type === 'perplexity_search' && <img src="/assets/perplexity.svg" alt="Perplexity" className="w-4 h-4 flex-shrink-0" />}
+                        {item.type === 'manual_input' && (
+                          item.title?.includes('Location:') ? 
+                            <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0" /> :
+                            <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                        )}
                         <span className="text-xs font-medium text-gray-800 truncate">
                           {item.title}
                         </span>
@@ -1175,7 +1451,7 @@ This area is for your specific search instructions, filtering criteria, or addit
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ButtonLoading 
-              isLoading={isGenerating}
+              isLoading={isGenerating && !showBooleanAnimation}
               loadingText="Generating..."
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -1721,6 +1997,13 @@ This area is for your specific search instructions, filtering criteria, or addit
         </Card>
       )}
 
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={showLocationDialog}
+        onClose={() => setShowLocationDialog(false)}
+        onLocationSelect={handleLocationSelect}
+      />
+
       {/* Boolean Explanation Dialog */}
       <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1739,6 +2022,13 @@ This area is for your specific search instructions, filtering criteria, or addit
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Enhanced Boolean Generation Animation */}
+      <BooleanGenerationAnimation
+        isOpen={showBooleanAnimation}
+        onComplete={() => setShowBooleanAnimation(false)}
+        estimatedTimeMs={120000}
+      />
       </div>
     </TooltipProvider>
   );

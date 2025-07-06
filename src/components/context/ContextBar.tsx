@@ -72,10 +72,10 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 
   // Layout-specific styling
   const layoutStyles = cn(
-    compact ? "flex gap-2 items-center" : "flex flex-col gap-4 sm:flex-row sm:items-center",
-    layout === 'vertical' && "flex-col items-start",
-    layout === 'stacked' && "flex-col sm:flex-row sm:items-center",
-    "flex-wrap" // Always allow wrapping for responsiveness
+    compact ? "flex gap-4 items-center justify-between" : "flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between",
+    layout === 'vertical' && "flex-col items-start gap-6",
+    layout === 'stacked' && "flex-col sm:flex-row sm:items-center sm:gap-6",
+    "w-full"
   );
 
   return (
@@ -98,39 +98,43 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 
       {/* Main Content */}
       <div className={layoutStyles}>
-        {/* Project Selector */}
+        {/* Left side: Project Selector */}
         {showProjectSelector && (
           <div className={cn(
-            "flex-shrink-0 w-full sm:w-auto sm:min-w-[240px] sm:max-w-[320px]",
-            layout === 'vertical' && "w-full",
-            layout === 'horizontal' && "sm:w-64"
+            "flex-shrink-0 w-full lg:w-auto lg:min-w-[300px] lg:max-w-sm",
+            layout === 'vertical' && "w-full max-w-none"
           )}>
-            <ProjectSelector
-              label={projectSelectorProps?.label}
-              placeholder={projectSelectorProps?.placeholder || "Select project for context"}
-              className={cn("w-full", projectSelectorProps?.className)}
-              required={projectSelectorProps?.required}
-            />
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Project
+              </label>
+              <ProjectSelector
+                placeholder={projectSelectorProps?.placeholder || "Choose a project to save..."}
+                className={cn("w-full", projectSelectorProps?.className)}
+                required={projectSelectorProps?.required}
+              />
+            </div>
           </div>
         )}
 
-        {/* Context Buttons */}
+        {/* Right side: Context Buttons */}
         <div className={cn(
-          "flex-shrink-0 w-full sm:w-auto",
+          "flex-shrink-0 w-full lg:w-auto",
           layout === 'vertical' && "w-full",
-          layout === 'stacked' && "w-full sm:w-auto"
+          !showProjectSelector && "w-full"
         )}>
           <ContextButtons
             context={context}
             onContentProcessed={onContentProcessed}
-            variant="responsive"
+            variant="inline"
+            size="default"
             {...contextButtonsProps}
           />
         </div>
 
         {/* Project Status Indicator */}
         {selectedProject && !compact && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 ml-auto">
+          <div className="flex items-center gap-2 text-sm text-gray-600 lg:ml-auto mt-2 lg:mt-0">
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span>Content will be saved to <strong>{selectedProject.name}</strong></span>
           </div>

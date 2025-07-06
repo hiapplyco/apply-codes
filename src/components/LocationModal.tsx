@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, MapPin, Check } from 'lucide-react';
 import LocationInput from './LocationInput';
@@ -34,7 +34,14 @@ const LocationModal: React.FC<LocationModalProps> = ({
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
 
   const handleLocationInputSelect = (location: LocationData) => {
+    console.log('🗺️ LocationModal.handleLocationInputSelect called with:', location);
     setSelectedLocation(location);
+    
+    // Immediately save the location and close modal
+    console.log('🚀 Immediately calling onLocationSelect and closing modal');
+    onLocationSelect(location);
+    onClose();
+    setSelectedLocation(null);
   };
 
   const handleConfirm = () => {
@@ -52,7 +59,9 @@ const LocationModal: React.FC<LocationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <DialogPortal>
+        <DialogOverlay className="z-[1000]" />
+        <DialogContent className="sm:max-w-[500px] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] z-[1001]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <MapPin className="h-5 w-5 text-purple-600" />
@@ -132,7 +141,8 @@ const LocationModal: React.FC<LocationModalProps> = ({
             </Button>
           </div>
         </div>
-      </DialogContent>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };

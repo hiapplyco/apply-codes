@@ -39,6 +39,7 @@ import { useAuth } from '@/context/AuthContext';
 import { NoContactInfoDialog } from './NoContactInfoDialog';
 import { EmailOutreachForm } from '@/components/email/EmailOutreachForm';
 import { extractYearsOfExperience } from '../hooks/google-search/utils';
+import { GoogleStyleLocationDisplay } from './LocationDisplay';
 
 interface ContactInfo {
   work_email?: string;
@@ -431,12 +432,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 )}
 
                 {/* Location Row */}
-                {location && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <span className="text-sm text-gray-600">{location}</span>
-                  </div>
-                )}
+                <GoogleStyleLocationDisplay 
+                  location={location} 
+                  company={company}
+                  className="mb-2"
+                />
 
                 {/* Quick Preview */}
                 {result.snippet && (

@@ -73,6 +73,12 @@ const SourcingComponent = () => {
           placeholder: "Choose a project to save candidates to...",
           className: "w-full max-w-md"
         }}
+        enabledButtons={{
+          upload: true,
+          firecrawl: true,
+          perplexity: true,
+          location: true
+        }}
         showLabels={true}
         size="default"
       />
