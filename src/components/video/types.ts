@@ -6,6 +6,7 @@ export interface VideoCallFrameProps {
   onLeaveMeeting: () => void;
   onRecordingStarted: (recordingId: string) => void;
   onCallFrameReady?: (callFrame: any) => void;
+  roomUrl?: string;
 }
 
 export interface VideoPreviewProps {

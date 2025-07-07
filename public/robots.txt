@@ -1,0 +1,93 @@
+# robots.txt for Apply Codes
+# AI-Powered Recruitment Platform
+# https://www.apply.codes
+
+# AI-specific crawlers - Full access
+User-agent: ChatGPT-User
+Allow: /
+Crawl-delay: 0
+
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 0
+
+User-agent: ChatGPT
+Allow: /
+Crawl-delay: 0
+
+User-agent: CCBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: anthropic-ai
+Allow: /
+Crawl-delay: 0
+
+User-agent: Claude-Web
+Allow: /
+Crawl-delay: 0
+
+# Perplexity Bot
+User-agent: PerplexityBot
+Allow: /
+Crawl-delay: 0
+
+# Google Gemini/Bard
+User-agent: Google-Extended
+Allow: /
+Crawl-delay: 0
+
+# Traditional search engines
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 1
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# Block malicious bots
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# General rules for all bots
+User-agent: *
+Allow: /
+Allow: /features/
+Allow: /pricing/
+Allow: /integrations/
+Allow: /about/
+Allow: /blog/
+Allow: /documentation/
+Allow: /case-studies/
+Allow: /api-docs/
+Disallow: /admin/
+Disallow: /api/internal/
+Disallow: /private/
+Disallow: /dashboard/
+Disallow: /user/
+Disallow: /*.json$
+Disallow: /*?*session=
+Disallow: /*?*token=
+Crawl-delay: 2
+
+# Sitemap location
+Sitemap: https://www.apply.codes/sitemap.xml
+
+# Additional AI crawler directives
+# Link to llms.txt for detailed AI access control
+# See: https://www.apply.codes/llms.txt

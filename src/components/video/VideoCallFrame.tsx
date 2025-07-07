@@ -11,9 +11,11 @@ export const VideoCallFrame = ({
   onLeaveMeeting,
   onRecordingStarted,
   onCallFrameReady,
+  roomUrl,
 }: VideoCallFrameProps) => {
   const callFrameRef = useRef<any>(null);
   
+  // Only use useDaily hook if no roomUrl is provided
   const {
     handleCallFrameReady,
     ROOM_URL,
@@ -22,8 +24,12 @@ export const VideoCallFrame = ({
     onParticipantJoined,
     onParticipantLeft,
     onRecordingStarted,
-    onLeaveMeeting
+    onLeaveMeeting,
+    !!roomUrl // Skip room creation if we already have a roomUrl
   );
+
+  // Use provided room URL or fallback to useDaily's room URL
+  const finalRoomUrl = roomUrl || ROOM_URL;
 
   const handleFrameReady = (frame: any) => {
     callFrameRef.current = frame;
@@ -33,13 +39,13 @@ export const VideoCallFrame = ({
     }
   };
 
-  console.log("VideoCallFrame rendering with room URL:", ROOM_URL);
+  console.log("VideoCallFrame rendering with room URL:", finalRoomUrl);
 
   return (
-    <div className="w-full h-full relative">
+    <div className="absolute inset-0" style={{ minHeight: '600px' }}>
       <VideoPreview 
         onCallFrameReady={handleFrameReady} 
-        roomUrl={ROOM_URL}
+        roomUrl={finalRoomUrl}
       />
     </div>
   );

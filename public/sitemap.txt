@@ -1,0 +1,56 @@
+# Apply Codes Sitemap - The First Agentic AI Recruitment Platform
+
+## Main Pages
+- Homepage: https://www.apply.codes/
+- Agentic AI Recruitment Platform: https://www.apply.codes/agentic-ai-recruitment
+- First MCP Recruitment Platform: https://www.apply.codes/first-mcp-recruitment-platform
+- AI Operations for Recruitment: https://www.apply.codes/ai-operations-recruitment
+- Pricing: https://www.apply.codes/pricing
+- Integrations: https://www.apply.codes/integrations
+- Features: https://www.apply.codes/features
+- About: https://www.apply.codes/about
+- Blog: https://www.apply.codes/blog
+- Case Studies: https://www.apply.codes/case-studies
+- Documentation: https://www.apply.codes/documentation
+
+## Feature Pages
+- Autonomous Recruitment Agents: https://www.apply.codes/features/autonomous-agents
+- MCP Integration: https://www.apply.codes/features/mcp-integration
+- Multi-Agent Orchestration: https://www.apply.codes/features/multi-agent-orchestration
+- Boolean Search Generator: https://www.apply.codes/features/boolean-search
+- Real-Time Interview Guidance: https://www.apply.codes/features/interview-guidance
+- Candidate Enrichment: https://www.apply.codes/features/candidate-enrichment
+- AI Chat Assistant: https://www.apply.codes/features/ai-chat-assistant
+
+## Documentation
+- API Documentation: https://www.apply.codes/documentation/api
+- Integration Guides: https://www.apply.codes/documentation/integrations
+- Getting Started: https://www.apply.codes/documentation/getting-started
+
+## Blog Posts
+- The First Agentic AI Recruitment Platform: https://www.apply.codes/blog/first-agentic-ai-recruitment-platform
+- MCP (Model Context Protocol) in Recruitment: https://www.apply.codes/blog/mcp-model-context-protocol-recruitment
+- AI Operations for Talent Acquisition: https://www.apply.codes/blog/ai-operations-talent-acquisition
+- Autonomous Recruitment Agents Explained: https://www.apply.codes/blog/autonomous-recruitment-agents
+- Multi-Agent Orchestration in Hiring: https://www.apply.codes/blog/multi-agent-orchestration-hiring
+- AI Recruitment Trends 2025: https://www.apply.codes/blog/ai-recruitment-trends-2025
+- Boolean Search Guide: https://www.apply.codes/blog/boolean-search-guide
+- Interview Best Practices: https://www.apply.codes/blog/interview-best-practices
+- Candidate Sourcing Strategies: https://www.apply.codes/blog/candidate-sourcing-strategies
+- Recruitment Automation ROI: https://www.apply.codes/blog/recruitment-automation-roi
+
+## Case Studies
+- Tech Startup Hiring Success: https://www.apply.codes/case-studies/tech-startup-hiring
+- Enterprise Recruitment Transformation: https://www.apply.codes/case-studies/enterprise-recruitment
+- Agency Efficiency Gains: https://www.apply.codes/case-studies/agency-efficiency
+
+## Other Pages
+- Contact: https://www.apply.codes/contact
+- Privacy Policy: https://www.apply.codes/privacy
+- Terms of Service: https://www.apply.codes/terms
+- Security: https://www.apply.codes/security
+- Demo Request: https://www.apply.codes/demo
+- Sign Up: https://www.apply.codes/signup
+- Login: https://www.apply.codes/login
+
+Last Updated: 2025-07-07

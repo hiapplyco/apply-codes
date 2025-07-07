@@ -11,7 +11,8 @@ export const useDaily = (
   onParticipantJoined?: (participant: any) => void,
   onParticipantLeft?: (participant: any) => void,
   onRecordingStarted?: (recordingId: string) => void,
-  onLeaveMeeting?: () => void
+  onLeaveMeeting?: () => void,
+  skipRoomCreation?: boolean // Add option to skip room creation
 ) => {
   const [ROOM_URL, setRoomUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -20,7 +21,17 @@ export const useDaily = (
   const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
+    // Skip room creation if requested
+    if (skipRoomCreation) {
+      setIsLoading(false);
+      return;
+    }
+    
+    // Prevent duplicate effect calls
+    let cancelled = false;
+    
     const createRoom = async () => {
+      if (cancelled) return;
       try {
         setIsLoading(true);
         const { data, error } = await supabase.functions.invoke('create-daily-room');
@@ -61,7 +72,12 @@ export const useDaily = (
     };
 
     createRoom();
-  }, [retryCount]);
+
+    // Cleanup function
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount, skipRoomCreation]);
 
   const handleCallFrameReady = useCallback((callFrame: any) => {
     if (!callFrame) return;

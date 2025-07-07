@@ -4,6 +4,7 @@ import { TranscriptionProcessor } from '@/components/video/TranscriptionProcesso
 import { MeetingDataManager } from '@/components/video/MeetingDataManager';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
+import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useScreeningSession } from '@/hooks/useScreeningSession';
 import { ContextBar } from '@/components/context/ContextBar';
@@ -113,6 +114,7 @@ interface Participant {
 
 export default function Meeting() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
   const { sessionId } = useScreeningSession();
   const firecrawlService = new FirecrawlService();
@@ -261,12 +263,33 @@ export default function Meeting() {
         toast.success('Kickoff materials processed successfully');
       }
 
-      setIsInMeeting(true);
-      setActiveTab('meeting');
-      startTimeRef.current = new Date();
+      // Create Daily room for the meeting
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+        body: {
+          projectId: selectedProjectId,
+          meetingType: meetingType,
+          title: meetingTitle,
+          userId: user?.id
+        }
+      });
+
+      if (roomError) {
+        console.error('Error creating Daily room:', roomError);
+        throw new Error(roomError.message || 'Failed to create meeting room');
+      }
+
+      if (roomData?.url) {
+        console.log('Daily room created successfully:', roomData.url);
+        setIsInMeeting(true);
+        setActiveTab('meeting');
+        startTimeRef.current = new Date();
+        toast.success('Meeting room created successfully!');
+      } else {
+        throw new Error('No room URL returned from API');
+      }
     } catch (error) {
       console.error('Failed to start meeting:', error);
-      toast.error('Failed to start meeting');
+      toast.error(error instanceof Error ? error.message : 'Failed to start meeting');
     } finally {
       setIsLoading(false);
     }

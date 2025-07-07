@@ -1,22 +1,26 @@
 
 import { useEffect, useRef, useState } from "react";
-import DailyIframe, { DailyCall, DailyEventObjectFatalError } from "@daily-co/daily-js";
+import { DailyCall, DailyEventObjectFatalError } from "@daily-co/daily-js";
 import { VideoPreviewProps } from "./types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { dailySingleton } from "@/lib/dailySingleton";
 
 export const VideoPreview = ({ onCallFrameReady, roomUrl }: VideoPreviewProps) => {
   const callWrapperRef = useRef<HTMLDivElement>(null);
-  const callFrameRef = useRef<DailyCall | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mountedRef = useRef(true);
+
+  // Track component mount state
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
-    // Clean up any existing callFrame before creating a new one
-    if (callFrameRef.current) {
-      console.log("Cleaning up existing Daily frame");
-      callFrameRef.current.destroy();
-      callFrameRef.current = null;
-    }
+    let isCancelled = false;
 
     if (!callWrapperRef.current) return;
     
@@ -33,91 +37,78 @@ export const VideoPreview = ({ onCallFrameReady, roomUrl }: VideoPreviewProps) =
       try {
         setIsLoading(true);
         
-        callFrameRef.current = DailyIframe.createFrame(callWrapperRef.current, {
-          showLeaveButton: true,
-          showFullscreenButton: true,
-          url: roomUrl,
-          theme: {
-            colors: {
-              accent: '#9b87f5',        // Primary purple
-              accentText: '#FFFFFF',    // White text on purple
-              background: '#F8F5FF',    // Light purple background
-              backgroundAccent: '#EDE9FF', // Slightly darker purple background
-              baseText: '#4A2B1C',      // Dark brown text
-              border: '#7E69AB',        // Secondary purple
-              mainAreaBg: '#2C1810',    // Dark brown main area
-              mainAreaBgAccent: '#4A2B1C', // Medium brown tiles
-              mainAreaText: '#FFFFFF',   // White text in main area
-              supportiveText: '#8B6B5C', // Light brown supportive text
-            },
-          },
-          iframeStyle: {
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            width: '100%',
-            height: '100%',
-            border: '0',
-            borderRadius: '8px',
-            zIndex: '1',
-          },
-        });
+        // Ensure component is still mounted before creating frame
+        if (!mountedRef.current || !callWrapperRef.current || isCancelled) {
+          console.log("Component unmounted or wrapper not ready, skipping frame creation");
+          return;
+        }
 
-        console.log("Daily frame created, loading...");
-        await callFrameRef.current.load();
-        console.log("Daily frame loaded, calling onCallFrameReady");
+        // Use singleton to create or get the Daily frame
+        const frame = await dailySingleton.getOrCreateCallFrame(
+          callWrapperRef.current,
+          roomUrl
+        );
+
+        if (isCancelled) {
+          console.log("Component unmounted during frame creation, skipping setup");
+          return;
+        }
+
+        console.log("Daily frame ready, setting up event handlers...");
         
-        callFrameRef.current.on('camera-error', () => {
+        frame.on('camera-error', () => {
           toast.error('Unable to access camera. Please check your permissions.');
         });
 
-        callFrameRef.current.on('error', (event: DailyEventObjectFatalError) => {
+        frame.on('error', (event: DailyEventObjectFatalError) => {
           console.error('Daily.co error:', event);
           toast.error('An error occurred while connecting to the video call.');
         });
 
-        callFrameRef.current.on('joining-meeting', () => {
+        frame.on('joining-meeting', () => {
           console.log('Joining meeting...');
         });
 
-        callFrameRef.current.on('joined-meeting', () => {
+        frame.on('joined-meeting', () => {
           console.log('Successfully joined meeting');
           toast.success('Successfully joined meeting!');
         });
 
-        callFrameRef.current.on('recording-started', (event: any) => {
+        frame.on('recording-started', (event: any) => {
           console.log('Recording started:', event);
         });
 
-        callFrameRef.current.on('recording-stopped', (event: any) => {
+        frame.on('recording-stopped', (event: any) => {
           console.log('Recording stopped:', event);
         });
 
-        callFrameRef.current.on('recording-error', (event: any) => {
+        frame.on('recording-error', (event: any) => {
           console.error('Recording error:', event);
           toast.error('Recording error occurred');
         });
 
-        callFrameRef.current.on('left-meeting', () => {
+        frame.on('left-meeting', () => {
           toast.info('You have left the meeting');
         });
 
         setIsLoading(false);
-        onCallFrameReady(callFrameRef.current);
-      } catch (error) {
+        onCallFrameReady(frame);
+      } catch (error: any) {
         console.error("Error initializing call frame:", error);
         setIsLoading(false);
-        toast.error('Failed to initialize video call. Please try refreshing the page.');
+        if (error.message?.includes('Duplicate DailyIframe')) {
+          toast.error('Video call already active. Please refresh the page if you see this error.');
+        } else {
+          toast.error('Failed to initialize video call. Please try refreshing the page.');
+        }
       }
     };
 
     initializeCallFrame();
 
     return () => {
-      if (callFrameRef.current) {
-        console.log("Cleaning up Daily frame");
-        callFrameRef.current.destroy();
-      }
+      isCancelled = true;
+      console.log("VideoPreview component unmounting");
     };
   }, [onCallFrameReady, roomUrl]);
 
@@ -132,8 +123,8 @@ export const VideoPreview = ({ onCallFrameReady, roomUrl }: VideoPreviewProps) =
       )}
       <div 
         ref={callWrapperRef} 
-        className="w-full h-full"
-        style={{ minHeight: '100vh' }}
+        className="w-full h-full relative"
+        style={{ minHeight: '600px', backgroundColor: 'transparent' }}
       />
     </div>
   );

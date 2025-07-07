@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { VideoCallFrame } from '@/components/video/VideoCallFrame';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { useNavigate } from 'react-router-dom';
+import { InterviewContext } from '@/types/interview';
+import { dailySingleton } from '@/lib/dailySingleton';
 import { 
   Video, 
   Users, 
@@ -42,17 +45,36 @@ interface Participant {
 }
 
 export default function MeetingSimplified() {
+  console.log('MeetingSimplified component rendering...');
+  
   const navigate = useNavigate();
-  const { selectedProjectId } = useProjectContext();
+  const { user } = useAuth();
+  const { selectedProjectId, selectedProject } = useProjectContext();
+  
+  console.log('MeetingSimplified state:', { user: user?.id, selectedProjectId });
   
   // Meeting state
   const [meetingStep, setMeetingStep] = useState<'welcome' | 'setup' | 'meeting'>('welcome');
   const [meetingPurpose, setMeetingPurpose] = useState<'interview' | 'kickoff' | 'other'>('interview');
+
+  // Clean up Daily instance on unmount if in meeting view
+  useEffect(() => {
+    return () => {
+      if (meetingStep === 'meeting') {
+        console.log('MeetingSimplified unmounting, cleaning up Daily instance');
+        dailySingleton.destroyCallFrame();
+      }
+    };
+  }, [meetingStep]);
+  
+  console.log('Current meeting step:', meetingStep);
+  console.log('Current meeting purpose:', meetingPurpose);
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+  const [roomUrl, setRoomUrl] = useState<string>('');
   
   // Interview context
   const [interviewContext, setInterviewContext] = useState<InterviewContext | null>(null);
@@ -123,31 +145,70 @@ export default function MeetingSimplified() {
   };
 
   const startMeeting = async () => {
-    if (!selectedProjectId) {
-      toast.error('Please select a project first');
-      return;
-    }
+    console.log('startMeeting called with:', {
+      selectedProjectId,
+      meetingPurpose,
+      jobTitle,
+      user: user?.id
+    });
 
-    if (meetingPurpose === 'interview' && !jobTitle) {
+    if (meetingPurpose === 'interview' && !jobTitle.trim()) {
       toast.error('Please enter a job title');
       return;
     }
 
     setIsLoading(true);
     
-    // Simulate meeting setup
-    setTimeout(() => {
-      setMeetingStep('meeting');
+    try {
+      // Create Daily room for the meeting
+      console.log('Invoking create-daily-room with:', {
+        projectId: selectedProjectId,
+        meetingType: meetingPurpose,
+        title: jobTitle || 'Meeting',
+        userId: user?.id
+      });
+
+      const { data, error } = await supabase.functions.invoke('create-daily-room', {
+        body: {
+          projectId: selectedProjectId || null, // Optional project association
+          meetingType: meetingPurpose,
+          title: jobTitle || 'Meeting',
+          userId: user?.id
+        }
+      });
+
+      console.log('create-daily-room response:', { data, error });
+
+      if (error) {
+        console.error('Error creating Daily room:', error);
+        throw new Error(error.message || 'Failed to create meeting room');
+      }
+
+      if (data?.url) {
+        console.log('Daily room created successfully:', data.url);
+        setRoomUrl(data.url);
+        setMeetingStep('meeting');
+        toast.success('Meeting room created successfully!');
+      } else {
+        throw new Error('No room URL returned from API');
+      }
+    } catch (error) {
+      console.error('Failed to start meeting:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to start meeting');
+    } finally {
       setIsLoading(false);
-      toast.success('Meeting started successfully!');
-    }, 1500);
+    }
   };
 
-  const endMeeting = () => {
+  const endMeeting = async () => {
+    // Destroy the Daily instance when ending the meeting
+    await dailySingleton.destroyCallFrame();
+    
     setMeetingStep('welcome');
     setJobTitle('');
     setJobDescription('');
     setResumeFile(null);
+    setRoomUrl('');
     toast.success('Meeting ended');
   };
 
@@ -306,7 +367,7 @@ export default function MeetingSimplified() {
             <ContextBar
               context="meeting"
               title="Meeting Context & Project"
-              description="Select a project and add context for your meeting through uploads, web scraping, or AI search"
+              description="Optionally select a project to save meeting data, and add context through uploads, web scraping, or AI search"
               onContentProcessed={async (content) => {
                 try {
                   // Process with orchestration
@@ -327,10 +388,10 @@ export default function MeetingSimplified() {
               }}
               projectSelectorProps={{
                 placeholder: "Select project for this meeting...",
-                className: "w-full max-w-md"
+                className: "w-full"
               }}
-              showLabels={true}
-              size="default"
+              showLabels={false}
+              size="compact"
               layout="stacked"
             />
             
@@ -355,7 +416,10 @@ export default function MeetingSimplified() {
                     </label>
                     <Input
                       value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
+                      onChange={(e) => {
+                        console.log('Job title changing to:', e.target.value);
+                        setJobTitle(e.target.value);
+                      }}
                       placeholder="e.g., Senior Software Engineer"
                       className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
                     />
@@ -433,8 +497,19 @@ export default function MeetingSimplified() {
               </Alert>
 
               <Button
-                onClick={startMeeting}
-                disabled={!selectedProjectId || (meetingPurpose === 'interview' && !jobTitle) || isLoading || isContextProcessing}
+                onClick={(e) => {
+                  console.log('Start Meeting button clicked!');
+                  console.log('Button state:', {
+                    selectedProjectId,
+                    meetingPurpose,
+                    jobTitle,
+                    isLoading,
+                    isContextProcessing,
+                    disabled: (meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing
+                  });
+                  startMeeting();
+                }}
+                disabled={(meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 text-lg font-semibold 
                          border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
                          hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] 
@@ -452,6 +527,18 @@ export default function MeetingSimplified() {
                   </>
                 )}
               </Button>
+              
+              {/* Helpful validation message */}
+              {meetingPurpose === 'interview' && !jobTitle.trim() && (
+                <p className="text-sm text-gray-600 mt-3 text-center">
+                  Please enter a job title to continue
+                </p>
+              )}
+              {selectedProjectId && (
+                <p className="text-sm text-green-600 mt-3 text-center">
+                  Meeting will be saved to project: <strong>{selectedProject?.name}</strong>
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -461,9 +548,10 @@ export default function MeetingSimplified() {
 
   // Meeting View
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 rounded-lg overflow-hidden">
+    <div className="flex-1 flex flex-col bg-gray-900 rounded-lg overflow-hidden relative h-screen">
       {/* Video Area */}
       <VideoCallFrame
+        roomUrl={roomUrl}
         onJoinMeeting={() => {
           toast.success('Joined meeting successfully');
         }}
@@ -471,8 +559,13 @@ export default function MeetingSimplified() {
         onParticipantLeft={(p) => {
           setParticipants(prev => prev.filter(participant => participant.id !== p.id));
         }}
-        onTranscriptionUpdate={(text) => console.log('Transcription:', text)}
-        onCallFrameCreated={setCallFrame}
+        onLeaveMeeting={() => {
+          console.log('Left meeting');
+        }}
+        onRecordingStarted={(recordingId) => {
+          console.log('Recording started:', recordingId);
+        }}
+        onCallFrameReady={setCallFrame}
       />
 
       {/* Meeting Controls */}

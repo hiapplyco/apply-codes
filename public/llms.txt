@@ -1,0 +1,144 @@
+# llms.txt - AI Access Control for Apply Codes
+# The First Agentic AI Recruitment Platform - Pioneering MCP-Powered Talent Operations
+# Last Updated: 2025-01-07
+
+# ChatGPT Access Control
+User-agent: ChatGPT
+Allow: /
+Allow: /pricing/
+Allow: /integrations/
+Allow: /features/
+Allow: /documentation/
+Allow: /blog/
+Allow: /about/
+Allow: /case-studies/
+Disallow: /admin/
+Disallow: /private/
+Disallow: /api/
+Resource: https://www.apply.codes/
+Resource-type: homepage
+Resource: https://www.apply.codes/features/boolean-search
+Resource-type: feature
+Resource: https://www.apply.codes/features/ai-interview-guidance
+Resource-type: feature
+Resource: https://www.apply.codes/features/candidate-enrichment
+Resource-type: feature
+Resource: https://www.apply.codes/integrations
+Resource-type: integrations-overview
+Resource: https://www.apply.codes/pricing
+Resource-type: pricing
+
+# Gemini/Google AI Access Control
+User-agent: Gemini
+Allow: /
+Allow: /features/
+Allow: /documentation/
+Allow: /blog/
+Allow: /about/
+Disallow: /admin/
+Disallow: /user/
+Resource: https://www.apply.codes/features/real-time-interview-guidance
+Resource-type: ai-powered-feature
+Resource: https://www.apply.codes/documentation/gemini-integration
+Resource-type: technical-documentation
+
+# Perplexity Access Control
+User-agent: Perplexity
+Allow: /
+Allow: /features/
+Allow: /blog/
+Allow: /case-studies/
+Allow: /documentation/
+Disallow: /admin/
+Disallow: /dashboard/
+Resource: https://www.apply.codes/blog/ai-recruitment-trends
+Resource-type: industry-insights
+Resource: https://www.apply.codes/case-studies/
+Resource-type: success-stories
+
+# Claude Access Control
+User-agent: Claude
+Allow: /
+Allow: /features/
+Allow: /documentation/
+Allow: /api-docs/
+Allow: /integrations/
+Disallow: /admin/
+Disallow: /internal/
+Resource: https://www.apply.codes/documentation/api
+Resource-type: api-documentation
+Resource: https://www.apply.codes/features/ai-chat-assistant
+Resource-type: feature
+
+# General AI Crawlers
+User-agent: AI
+Allow: /
+Allow: /features/
+Allow: /pricing/
+Allow: /about/
+Allow: /blog/
+Disallow: /admin/
+Disallow: /user/
+Disallow: /api/internal/
+
+# Optional Metadata
+[Platform-Info]
+Name: Apply Codes - The First Agentic AI Recruitment Platform
+Description: The world's first Agentic AI recruitment platform leveraging MCP (Model Context Protocol), LLM orchestration, and autonomous AI agents for end-to-end talent operations. Pioneering AI ops and recruitment ops automation.
+Category: Agentic AI, HR Technology, Recruitment Automation, AI Operations, MCP Platform
+Primary-Features: Autonomous AI Agents, MCP-Powered Workflows, LLM Orchestration, Real-Time Interview AI, Multi-Agent Recruitment Ops, AI-Driven Talent Intelligence
+Core-Technologies: MCP (Model Context Protocol), Gemini 2.0, WebSocket Architecture, Agentic AI Framework, LLM Pipeline, AI Operations Platform
+Integration-Partners: Daily.co, Gemini AI, Nymeria, SendGrid, 20+ ATS platforms, MCP Servers
+Target-Audience: AI-Forward Companies, Recruitment Operations Teams, Talent Ops Leaders, HR Tech Innovators, Enterprise Talent Acquisition
+
+[Content-Topics]
+Topic: Agentic AI recruitment platform
+Topic: First MCP-powered recruitment system
+Topic: Autonomous recruitment agents
+Topic: AI operations for talent acquisition
+Topic: LLM orchestration in HR tech
+Topic: Model Context Protocol recruitment
+Topic: Multi-agent recruitment workflows
+Topic: AI ops recruitment automation
+Topic: Recruitment operations platform
+Topic: Agentic talent intelligence
+Topic: MCP server integration for HR
+Topic: LLM-powered interview guidance
+Topic: Autonomous candidate sourcing
+Topic: AI agent orchestration platform
+Topic: Next-generation recruitment ops
+
+[Key-Questions]
+Question: What is Agentic AI recruitment?
+Question: How does Apply use MCP (Model Context Protocol) for recruitment?
+Question: What is the first Agentic AI recruitment platform?
+Question: How do autonomous recruitment agents work?
+Question: What is AI operations (AI ops) in talent acquisition?
+Question: How does LLM orchestration improve hiring?
+Question: What are multi-agent recruitment workflows?
+Question: How does Apply's MCP integration work?
+Question: What is recruitment operations automation?
+Question: How do AI agents source candidates autonomously?
+Question: What makes Apply the first Agentic AI recruitment firm?
+Question: How does Model Context Protocol transform HR tech?
+Question: What is agentic talent intelligence?
+Question: How to implement AI ops in recruitment?
+Question: Why is Apply pioneering Agentic AI for hiring?
+
+[Technical-Capabilities]
+Feature: MCP (Model Context Protocol) server architecture
+Feature: Autonomous AI agent orchestration
+Feature: Multi-agent recruitment workflows
+Feature: LLM pipeline with Gemini 2.0 Flash
+Feature: Agentic AI framework for talent operations
+Feature: Real-time AI ops monitoring dashboard
+Feature: WebSocket-based agent communication
+Feature: 35+ AI-powered edge functions
+Feature: Distributed agent execution engine
+Feature: MCP tool integration for recruitment
+Feature: AI agent memory and context management
+Feature: Autonomous decision-making for sourcing
+Feature: LLM orchestration for interview intelligence
+Feature: Agent-to-agent collaboration protocols
+Feature: AI operations (AI ops) platform
+Feature: First-in-industry Agentic recruitment system

@@ -4,6 +4,7 @@ import { TranscriptionProcessor } from '@/components/video/TranscriptionProcesso
 import { MeetingDataManager } from '@/components/video/MeetingDataManager';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
+import { useAuth } from '@/context/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useScreeningSession } from '@/hooks/useScreeningSession';
 import { useInterviewCoPilot } from '@/hooks/useInterviewCoPilot';
@@ -44,6 +45,12 @@ import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { InterviewContext, TranscriptEntry } from '@/types/interview';
 import { Resizable } from 're-resizable';
+import { InterviewGuidanceSidebar } from '@/components/interview/InterviewGuidanceSidebar';
+import { CompetencySetup } from '@/components/interview/CompetencySetup';
+import { useDailyTranscription } from '@/hooks/useDailyTranscription';
+import { useInterviewGuidance } from '@/hooks/useInterviewGuidance';
+import { useInterviewStore } from '@/stores/interviewStore';
+import type { InterviewCompetency } from '@/types/interview';
 
 type MeetingType = 'kickoff' | 'interview' | 'screening';
 
@@ -114,6 +121,7 @@ interface Participant {
 
 export default function MeetingEnhanced() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
   const { sessionId } = useScreeningSession();
   
@@ -126,6 +134,8 @@ export default function MeetingEnhanced() {
   
   // Interview context
   const [interviewContext, setInterviewContext] = useState<InterviewContext | null>(null);
+  const [competencies, setCompetencies] = useState<InterviewCompetency[]>([]);
+  const [showGuidance, setShowGuidance] = useState(false);
   
   // Video call state
   const [callFrame, setCallFrame] = useState<any>(null);
@@ -148,6 +158,27 @@ export default function MeetingEnhanced() {
   
   // WebSocket for real-time features
   useWebSocket(sessionId);
+  
+  // Interview store
+  const { setContext: setInterviewStoreContext } = useInterviewStore();
+  
+  // Real-time transcription hook
+  const { startTranscription, stopTranscription } = useDailyTranscription({
+    callObject: callFrame,
+    sessionId: sessionId || '',
+    meetingId: interviewContext?.meetingId || '',
+    enabled: isInMeeting && meetingType === 'interview' && !!callFrame,
+    onTranscript: (speaker, text) => {
+      console.log(`${speaker}: ${text}`);
+    },
+  });
+  
+  // Interview guidance hook
+  const { updateContext: updateGuidanceContext } = useInterviewGuidance({
+    sessionId: sessionId || '',
+    meetingId: interviewContext?.meetingId || '',
+    enabled: isInMeeting && meetingType === 'interview' && showGuidance,
+  });
   
   const currentConfig = meetingConfigs[meetingType];
 
@@ -225,13 +256,53 @@ export default function MeetingEnhanced() {
 
     setIsLoading(true);
     try {
-      setIsInMeeting(true);
-      setActiveTab('meeting');
-      startTimeRef.current = new Date();
-      toast.success('Meeting started successfully');
+      // Create Daily room for the meeting
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
+        body: {
+          projectId: selectedProjectId,
+          meetingType: meetingType,
+          title: meetingTitle,
+          userId: user?.id
+        }
+      });
+
+      if (roomError) {
+        console.error('Error creating Daily room:', roomError);
+        throw new Error(roomError.message || 'Failed to create meeting room');
+      }
+
+      if (roomData?.url) {
+        console.log('Daily room created successfully:', roomData.url);
+        
+        // Update interview context with meeting ID if interview type
+        if (meetingType === 'interview' && interviewContext) {
+          const updatedContext = {
+            ...interviewContext,
+            meetingId: roomData.roomId || roomData.url,
+            sessionId: sessionId || '',
+            jobRole: interviewContext.position,
+            competencies: competencies,
+            stage: 'intro' as const,
+          };
+          
+          // Update store and guidance system
+          setInterviewStoreContext(updatedContext);
+          updateGuidanceContext(updatedContext);
+          
+          // Enable guidance for interviews
+          setShowGuidance(true);
+        }
+        
+        setIsInMeeting(true);
+        setActiveTab('meeting');
+        startTimeRef.current = new Date();
+        toast.success('Meeting room created successfully!');
+      } else {
+        throw new Error('No room URL returned from API');
+      }
     } catch (error) {
       console.error('Failed to start meeting:', error);
-      toast.error('Failed to start meeting');
+      toast.error(error instanceof Error ? error.message : 'Failed to start meeting');
     } finally {
       setIsLoading(false);
     }
@@ -241,6 +312,10 @@ export default function MeetingEnhanced() {
     const endTime = new Date();
     
     try {
+      // Stop transcription if active
+      if (meetingType === 'interview') {
+        await stopTranscription();
+      }
       if (meetingType === 'interview' && interviewContext) {
         // Generate interview report
         const report = await endInterview();
@@ -424,8 +499,20 @@ export default function MeetingEnhanced() {
               {/* Setup Content */}
               <Card className="border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                 {meetingType === 'interview' && currentConfig.features.interviewPrep ? (
-                  <div className="p-6">
+                  <div className="p-6 space-y-6">
                     <InterviewPrepEnhanced onPrepComplete={handleInterviewPrepComplete} />
+                    
+                    {/* Competency Setup for Interview Guidance */}
+                    <div className="border-t-2 border-gray-200 pt-6">
+                      <CompetencySetup
+                        jobRole={interviewContext?.position || 'Software Engineer'}
+                        onCompetenciesSet={(comps) => {
+                          setCompetencies(comps);
+                          toast.success(`${comps.length} competencies configured for interview guidance`);
+                        }}
+                        initialCompetencies={competencies}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="p-6 space-y-4">
@@ -629,6 +716,14 @@ export default function MeetingEnhanced() {
                     )}
                   </div>
                 </Resizable>
+              )}
+              
+              {/* Interview Guidance Sidebar */}
+              {meetingType === 'interview' && showGuidance && (
+                <InterviewGuidanceSidebar 
+                  defaultExpanded={true}
+                  className="z-40"
+                />
               )}
             </div>
           )}

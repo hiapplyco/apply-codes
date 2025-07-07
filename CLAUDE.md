@@ -415,6 +415,7 @@ Bash: "npm run typecheck && npm run lint && npm run test"
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Supabase (PostgreSQL, Edge Functions)
 - **AI**: Google Gemini 2.5 Flash (gemini-2.5-flash)
+- **Video**: Daily.co (video conferencing API)
 - **Deployment**: Vercel (Frontend), Supabase (Backend)
 
 ### Key Features
@@ -424,6 +425,10 @@ Bash: "npm run typecheck && npm run lint && npm run test"
 - 📁 Project management for candidates
 - 📊 Analytics and reporting
 - 🎯 Multi-platform search
+- 🎥 Video meetings with Daily.co integration
+- 🎤 Real-time interview guidance with AI tips
+- 📈 Live competency tracking during interviews
+- 🔊 Real-time transcription with speaker identification
 
 ### URLs & IDs
 - **Production**: https://www.apply.codes
@@ -494,11 +499,13 @@ git cherry-pick <commit-hash-from-reference>
 apply-codes/
 ├── src/
 │   ├── components/      # React components
+│   │   └── video/      # Daily.co video components
 │   ├── pages/          # Page components
 │   ├── hooks/          # Custom React hooks
 │   ├── types/          # TypeScript types
 │   │   └── domains/    # Domain-specific types
 │   ├── lib/            # Utilities and helpers
+│   │   └── dailySingleton.ts # Daily.co singleton manager
 │   └── test/           # Test utilities
 ├── supabase/
 │   ├── functions/      # 35+ Edge functions
@@ -619,6 +626,8 @@ Supabase Dashboard:
 - `enhance-job-description`
 - `search-contacts`
 - `chat-assistant`
+- `create-daily-room` - Creates Daily.co meeting rooms
+- `interview-guidance-ws` - WebSocket for real-time interview AI assistance
 
 ## Integrations
 
@@ -626,6 +635,7 @@ Supabase Dashboard:
 1. **Nymeria API** - Contact enrichment (implemented)
 2. **Google Gemini** - All AI operations
 3. **SendGrid** - Email delivery (partial)
+4. **Daily.co** - Video conferencing (implemented)
 
 ### Planned Integrations
 See `/docs/integrations/integrations-prd.md` for comprehensive roadmap:
@@ -679,6 +689,18 @@ Task: "Deploy edge function" prompt="Use Supabase Dashboard to deploy [function-
 **CORS Errors**
 ```bash
 Task: "Fix CORS" prompt="Add proper CORS headers to edge function and handle OPTIONS"
+```
+
+**Daily.co Video Meeting Issues**
+```bash
+# Duplicate Daily instance errors
+Task: "Fix duplicate Daily instance" prompt="Implement singleton pattern in src/lib/dailySingleton.ts"
+
+# Video not displaying
+Task: "Debug video display" prompt="Check if frame.join() is called after loading, verify container styling"
+
+# Meeting room creation failures
+Task: "Debug room creation" prompt="Check create-daily-room edge function logs, verify Daily.co API key"
 ```
 
 ## Key Guidelines
@@ -1024,5 +1046,160 @@ Task: "Verify CLAUDE.md is loaded and understood"
 - Use /compact strategically, not automatically
 - Test with rate limits and hooks in mind
 
-**Version**: 5.0 (Community-Optimized + Hooks)
+## Video Meeting Implementation (Daily.co)
+
+### Architecture Overview
+The video meeting feature uses Daily.co for WebRTC video conferencing, with a singleton pattern to prevent duplicate instances.
+
+#### Key Components:
+1. **`src/lib/dailySingleton.ts`** - Singleton manager for Daily instances
+   - Prevents duplicate Daily.co instances
+   - Handles concurrent creation attempts
+   - Manages instance lifecycle and cleanup
+
+2. **`src/components/video/VideoPreview.tsx`** - Main video display component
+   - Uses singleton to create/get Daily frame
+   - Handles loading states and error messages
+   - Auto-joins meeting after frame creation
+
+3. **`src/pages/MeetingSimplified.tsx`** - Meeting workflow page
+   - Three-step flow: welcome → setup → meeting
+   - Optional project association (not required)
+   - Cleans up Daily instance on unmount
+
+4. **`supabase/functions/create-daily-room`** - Room creation edge function
+   - Creates Daily.co rooms via API
+   - Associates rooms with projects (optional)
+   - Returns room URL for client
+
+### Common Implementation Patterns:
+
+#### Singleton Pattern for Daily.co
+```typescript
+// Always use the singleton to prevent duplicate instances
+import { dailySingleton } from "@/lib/dailySingleton";
+
+const frame = await dailySingleton.getOrCreateCallFrame(
+  containerElement,
+  roomUrl
+);
+```
+
+#### Optional Project Association
+```typescript
+// Projects are optional - pass null if no project selected
+const { data } = await supabase.functions.invoke('create-daily-room', {
+  body: {
+    projectId: selectedProjectId || null, // Optional
+    meetingType: 'interview',
+    title: 'Meeting Title',
+    userId: user?.id
+  }
+});
+```
+
+#### Proper Cleanup
+```typescript
+// Always clean up Daily instance when done
+const endMeeting = async () => {
+  await dailySingleton.destroyCallFrame();
+  // Reset state, navigate away, etc.
+};
+```
+
+### Troubleshooting Video Meetings:
+
+1. **Duplicate instance errors**: Singleton pattern should prevent these
+2. **Video not showing**: Ensure `frame.join()` is called after loading
+3. **Container styling**: Use `absolute inset-0` with min-height
+4. **Permissions**: Browser must grant camera/microphone access
+5. **Join timeout**: Increased to 30 seconds, non-blocking if auto-join fails
+
+## Real-Time Interview Guidance System
+
+### Overview
+AI-powered interview assistance providing real-time tips, competency tracking, and contextual guidance during live interviews.
+
+### Architecture Components
+
+1. **WebSocket Gateway** (`interview-guidance-ws`)
+   - Real-time bidirectional communication
+   - Gemini 2.0 Flash integration for low-latency tips
+   - Context-aware guidance generation
+   - 3-second debounce for optimal API usage
+
+2. **Context Management**
+   - **Hierarchical layers**: Core → Resume → Recent → Immediate
+   - `InterviewContextManager` class for operations
+   - Zustand store for state management
+   - Types in `src/types/interview.ts`
+
+3. **Real-Time Transcription**
+   - `useDailyTranscription` hook for Daily.co integration
+   - Speaker diarization support
+   - Intelligent buffering to prevent API flooding
+   - Auto-start on meeting join
+
+4. **UI Components**
+   - `InterviewGuidanceSidebar`: Collapsible panel with tips & tracking
+   - `CompetencySetup`: Pre-interview competency configuration
+   - Real-time coverage visualization
+   - Auto-dismissing tips based on priority
+
+5. **Performance Optimizations**
+   - LRU cache for analysis results (70% API reduction)
+   - IndexedDB for persistent storage
+   - Web Workers for heavy computations
+   - Intelligent buffering and debouncing
+
+### Usage
+
+#### 1. Setup Competencies (Pre-Interview)
+```typescript
+// In MeetingEnhanced, configure competencies before starting
+const competencies = [
+  { name: 'System Design', category: 'technical', required: true },
+  { name: 'Communication', category: 'behavioral', required: true },
+  // ... more competencies
+];
+```
+
+#### 2. During Interview
+- AI tips appear in collapsible sidebar
+- Competency coverage updates in real-time
+- Tips prioritized by importance (high/medium/low)
+- Suggested follow-up questions provided
+
+#### 3. Key Hooks
+```typescript
+// Interview guidance management
+const { updateContext, sendTranscript } = useInterviewGuidance({
+  sessionId, meetingId, enabled: true
+});
+
+// Transcription integration
+const { startTranscription } = useDailyTranscription({
+  callObject, sessionId, meetingId
+});
+```
+
+### Configuration
+```typescript
+const guidanceConfig = {
+  maxTipsVisible: 5,
+  tipDisplayDuration: 20000, // 20 seconds
+  transcriptBufferSize: 20,
+  analysisDebounceMs: 3000,
+  geminiModel: 'gemini-2.0-flash-exp'
+};
+```
+
+### Troubleshooting Interview Guidance
+
+1. **Tips not appearing**: Check WebSocket connection in sidebar header
+2. **No transcription**: Verify Daily.co transcription is enabled
+3. **Competency tracking stuck**: Ensure competencies are configured
+4. **High latency**: Check network and Gemini API status
+
+**Version**: 5.2 (Community-Optimized + Hooks + Video + Interview Guidance)
 **Updated**: July 2025
