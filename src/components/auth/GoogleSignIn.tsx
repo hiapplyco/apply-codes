@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { trackEvent, trackRecruiterSignup, trackFormSubmit } from '@/lib/analytics';
 
 interface GoogleCredentialResponse {
   credential: string;
@@ -83,11 +84,22 @@ export function GoogleSignIn({ onSuccess, redirectTo = '/dashboard' }: GoogleSig
           if (error) {
             console.error('Google sign-in error:', error);
             toast.error(error.message || 'Failed to sign in with Google');
+            trackFormSubmit('Google Auth', false);
             return;
           }
 
           if (data.user) {
             toast.success('Successfully signed in with Google!');
+            
+            // Track successful Google sign-in
+            const isNewUser = data.user.created_at === data.user.updated_at;
+            if (isNewUser) {
+              trackRecruiterSignup(true);
+              trackEvent('Sign Up', { method: 'google' });
+            } else {
+              trackEvent('Sign In', { method: 'google' });
+            }
+            trackFormSubmit('Google Auth', true);
             
             // Call onSuccess callback if provided
             if (onSuccess) {

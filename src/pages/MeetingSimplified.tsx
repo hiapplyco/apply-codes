@@ -11,6 +11,7 @@ import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { useNavigate } from 'react-router-dom';
 import { InterviewContext } from '@/types/interview';
 import { dailySingleton } from '@/lib/dailySingleton';
+import { trackVideoMeeting, trackEvent } from '@/lib/analytics';
 import { 
   Video, 
   Users, 
@@ -189,6 +190,15 @@ export default function MeetingSimplified() {
         setRoomUrl(data.url);
         setMeetingStep('meeting');
         toast.success('Meeting room created successfully!');
+        
+        // Track meeting start
+        const meetingId = data.url.split('/').pop() || 'unknown';
+        trackVideoMeeting('start', meetingId);
+        trackEvent('Video Meeting', {
+          action: 'start',
+          meetingType: meetingPurpose,
+          hasProject: selectedProjectId ? 1 : 0
+        });
       } else {
         throw new Error('No room URL returned from API');
       }
@@ -201,6 +211,16 @@ export default function MeetingSimplified() {
   };
 
   const endMeeting = async () => {
+    // Track meeting end
+    if (roomUrl) {
+      const meetingId = roomUrl.split('/').pop() || 'unknown';
+      trackVideoMeeting('end', meetingId);
+      trackEvent('Video Meeting', {
+        action: 'end',
+        meetingType: meetingPurpose
+      });
+    }
+    
     // Destroy the Daily instance when ending the meeting
     await dailySingleton.destroyCallFrame();
     

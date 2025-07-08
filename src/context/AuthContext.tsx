@@ -3,6 +3,7 @@ import { createContext, useContext, useMemo } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { supabase } from "@/integrations/supabase/client";
+import { trackEvent, trackRecruiterSignup, trackFormSubmit } from "@/lib/analytics";
 
 interface AuthContextType {
   session: Session | null;
@@ -37,8 +38,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) {
+        trackEvent('Sign In', { method: 'email' });
+        trackFormSubmit('Sign In', true);
+      } else {
+        trackFormSubmit('Sign In', false);
+      }
       return { error };
     } catch (error) {
+      trackFormSubmit('Sign In', false);
       return { error: error as Error };
     }
   };
@@ -46,8 +54,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
+      if (!error) {
+        trackRecruiterSignup(true);
+        trackEvent('Sign Up', { method: 'email' });
+      } else {
+        trackRecruiterSignup(false);
+      }
       return { error };
     } catch (error) {
+      trackRecruiterSignup(false);
       return { error: error as Error };
     }
   };
@@ -55,6 +70,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
+      if (!error) {
+        trackEvent('Sign Out', {});
+      }
       return { error };
     } catch (error) {
       return { error: error as Error };

@@ -5,6 +5,7 @@ import { VideoPreviewProps } from "./types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { dailySingleton } from "@/lib/dailySingleton";
+import { trackVideoMeeting, trackEvent } from "@/lib/analytics";
 
 export const VideoPreview = ({ onCallFrameReady, roomUrl }: VideoPreviewProps) => {
   const callWrapperRef = useRef<HTMLDivElement>(null);
@@ -72,6 +73,14 @@ export const VideoPreview = ({ onCallFrameReady, roomUrl }: VideoPreviewProps) =
         frame.on('joined-meeting', () => {
           console.log('Successfully joined meeting');
           toast.success('Successfully joined meeting!');
+          
+          // Track meeting join
+          const meetingId = roomUrl.split('/').pop() || 'unknown';
+          trackVideoMeeting('join', meetingId);
+          trackEvent('Video Meeting', {
+            action: 'join',
+            source: 'video_preview'
+          });
         });
 
         frame.on('recording-started', (event: any) => {

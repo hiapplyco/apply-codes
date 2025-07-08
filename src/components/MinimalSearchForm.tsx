@@ -19,6 +19,7 @@ import LocationModal from '@/components/LocationModal';
 import ProjectLocationService from '@/services/ProjectLocationService';
 import { useProjectContext } from '@/context/ProjectContext';
 import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
+import { trackBooleanGeneration, trackCandidateSearch, trackEvent } from '@/lib/analytics';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -694,12 +695,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         } else {
           toast.success('Boolean search generated from custom instructions!');
         }
+        
+        // Track successful boolean generation
+        trackBooleanGeneration(jobDescription, true);
       } else {
         throw new Error('No search string generated');
       }
     } catch (error) {
       console.error('Error generating boolean search:', error);
       toast.error('Failed to generate boolean search');
+      trackBooleanGeneration(jobDescription, false);
     } finally {
       setIsGenerating(false);
       setShowBooleanAnimation(false);
@@ -782,9 +787,19 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         setBooleanCollapsed(true);
         
         toast.success(`Found ${data.items.length} results`);
+        
+        // Track successful search
+        trackCandidateSearch('google_cse', data.items.length, {
+          hasLocation: selectedLocation ? 'yes' : 'no',
+          booleanLength: booleanString.length.toString()
+        });
       } else {
         setSearchResults([]);
         toast.info('No results found');
+        trackCandidateSearch('google_cse', 0, {
+          hasLocation: selectedLocation ? 'yes' : 'no',
+          booleanLength: booleanString.length.toString()
+        });
       }
     } catch (error) {
       console.error('Error searching:', error);
@@ -870,12 +885,21 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       if (contactData) {
         setContactInfo(prev => ({ ...prev, [index]: contactData }));
         toast.success('Contact information retrieved!');
+        // Track successful enrichment
+        trackProfileEnrichment(candidate.link, true);
+        trackEvent('Profile Enrichment', { 
+          source: 'search_results',
+          hasEmail: contactData.email ? 1 : 0,
+          hasPhone: contactData.phone ? 1 : 0
+        });
       } else {
         toast.error('No contact information found');
+        trackProfileEnrichment(candidate.link, false);
       }
     } catch (error) {
       console.error('Contact enrichment failed:', error);
       toast.error('Failed to get contact information');
+      trackProfileEnrichment(candidate.link, false);
     } finally {
       setLoadingContact(prev => {
         const newSet = new Set(prev);

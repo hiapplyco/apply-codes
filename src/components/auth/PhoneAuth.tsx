@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Phone, ArrowLeft, Shield } from 'lucide-react';
+import { trackEvent, trackRecruiterSignup, trackFormSubmit } from '@/lib/analytics';
 
 interface PhoneAuthProps {
   onSuccess?: () => void;
@@ -65,9 +66,11 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
 
       if (error) {
         toast.error(error.message || 'Failed to send verification code');
+        trackEvent('Phone OTP Send', { success: 0 });
       } else {
         toast.success('Verification code sent!');
         setShowOtpInput(true);
+        trackEvent('Phone OTP Send', { success: 1 });
       }
     } catch (error) {
       toast.error('An unexpected error occurred');
@@ -99,8 +102,19 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
 
       if (error) {
         toast.error(error.message || 'Invalid verification code');
+        trackFormSubmit('Phone Auth', false);
       } else if (data.user) {
         toast.success('Successfully signed in!');
+        
+        // Track successful phone sign-in
+        const isNewUser = data.user.created_at === data.user.updated_at;
+        if (isNewUser) {
+          trackRecruiterSignup(true);
+          trackEvent('Sign Up', { method: 'phone' });
+        } else {
+          trackEvent('Sign In', { method: 'phone' });
+        }
+        trackFormSubmit('Phone Auth', true);
         
         if (onSuccess) {
           onSuccess();

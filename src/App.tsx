@@ -35,6 +35,7 @@ import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
 import { DashboardAnalytics } from "@/pages/DashboardAnalytics";
+import { PageTracker } from "@/components/analytics/PageTracker";
 
 function App() {
   console.log('App component rendering...');
@@ -45,6 +46,7 @@ function App() {
         <ProjectProvider>
           <ClarvidaAuthProvider>
             <Router>
+              <PageTracker />
               <Toaster position="top-center" />
               <Routes>
             {/* Public routes */}

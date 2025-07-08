@@ -7,6 +7,7 @@ import { SearchType } from "../types";
 import { generateSummary } from "./utils/generateSummary";
 import { createJob } from "./utils/createJob";
 import { useProjectContext } from "@/context/ProjectContext";
+import { trackBooleanGeneration, trackEvent } from "@/lib/analytics";
 
 /**
  * Hook for handling search form submission
@@ -69,6 +70,7 @@ export const useSearchFormSubmitter = (
         }
         onJobCreated(jobId, searchText, result.data);
         toast.success("Analysis complete!");
+        trackEvent('Clarvida Analysis', { success: 1 });
       } else {
         // For the regular search flow
         if (!result?.searchString) {
@@ -85,11 +87,24 @@ export const useSearchFormSubmitter = (
 
         onJobCreated(jobId, searchText);
         toast.success("Search string generated successfully!");
+        trackBooleanGeneration(searchText, true);
+        trackEvent('Boolean Generation', { 
+          searchType,
+          inputLength: searchText.length,
+          hasCompany: searchType === 'candidates-at-company' ? 1 : 0
+        });
       }
 
     } catch (error) {
       console.error('Error processing content:', error);
       toast.error(error instanceof Error ? error.message : "Failed to process content. Please try again.");
+      
+      // Track failures
+      if (source === 'clarvida') {
+        trackEvent('Clarvida Analysis', { success: 0 });
+      } else {
+        trackBooleanGeneration(searchText, false);
+      }
     } finally {
       setIsProcessing(false);
     }
