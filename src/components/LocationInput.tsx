@@ -163,10 +163,30 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
         inputRef.current,
         {
           types: ['geocode'], // Only geographic locations
-          fields: ['formatted_address', 'place_id', 'geometry', 'address_components']
-          // Removed componentRestrictions to avoid API error
+          fields: ['formatted_address', 'place_id', 'geometry', 'address_components'],
+          strictBounds: false
         }
       );
+      
+      console.log('✅ Autocomplete instance created:', autocompleteRef.current);
+      console.log('📍 Input element:', inputRef.current);
+      
+      // Force the autocomplete dropdown to append to body for proper z-index handling
+      // Use MutationObserver to detect when pac-container is added
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(() => {
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer && pacContainer.parentElement !== document.body) {
+            console.log('🔧 Moving pac-container to body for proper z-index');
+            document.body.appendChild(pacContainer);
+          }
+        });
+      });
+      
+      observer.observe(document.body, { childList: true, subtree: true });
+      
+      // Store observer for cleanup
+      (window as any).__pacObserver = observer;
 
       // Add place changed listener
       autocompleteRef.current.addListener('place_changed', () => {
@@ -303,7 +323,7 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       style.id = 'google-places-styles';
       style.textContent = `
         .pac-container {
-          z-index: 999999 !important;
+          z-index: 9999999 !important;
           border-radius: 8px;
           border: 2px solid #000;
           box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
@@ -311,6 +331,8 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
           background: white !important;
           font-family: inherit;
           position: fixed !important;
+          top: auto !important;
+          left: auto !important;
         }
         .pac-item {
           cursor: pointer !important;
@@ -374,8 +396,9 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
         style.remove();
       }
       // Cleanup observer
-      if ((window as any).placesObserver) {
-        (window as any).placesObserver.disconnect();
+      if ((window as any).__pacObserver) {
+        (window as any).__pacObserver.disconnect();
+        delete (window as any).__pacObserver;
         delete (window as any).placesObserver;
       }
     };
@@ -386,6 +409,14 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
     const cleanup = loadGoogleMapsAPI();
     return cleanup;
   }, []); // Empty dependency array to run only once
+
+  // Re-initialize autocomplete when API loads
+  useEffect(() => {
+    if (isApiLoaded && inputRef.current && !isInitialized.current) {
+      console.log('🔄 API loaded, initializing autocomplete...');
+      initializeAutocomplete();
+    }
+  }, [isApiLoaded, initializeAutocomplete]);
 
   // Handle manual input (Enter key)
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
