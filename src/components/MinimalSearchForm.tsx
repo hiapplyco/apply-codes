@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { CandidateAnalysis } from '@/components/search/CandidateAnalysis';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -1792,7 +1793,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                           size="sm" 
                           variant="outline"
                           onClick={() => saveCandidate(result, index)}
-                          disabled={savingCandidates.has(index) || savedCandidates.has(index) || !selectedProjectId}
+                          disabled={savingCandidates.has(index) || savedCandidates.has(index) || (!selectedProjectId && !selectedProject)}
                         >
                           {savedCandidates.has(index) ? (
                             <>
@@ -1897,6 +1898,22 @@ This area is for your specific search instructions, filtering criteria, or addit
             Click "Search LinkedIn Profiles" to find candidates
           </p>
         </Card>
+      )}
+      
+      {/* Candidate Analysis Section */}
+      {searchResults.length > 0 && (
+        <div className="mt-6">
+          <CandidateAnalysis 
+            candidates={searchResults}
+            jobDescription={jobDescription}
+            onCandidateSelect={(candidate) => {
+              const index = searchResults.findIndex(r => r.link === candidate.link);
+              if (index !== -1) {
+                toggleProfileExpansion(index);
+              }
+            }}
+          />
+        </div>
       )}
 
       {/* Email Generation Dialog */}

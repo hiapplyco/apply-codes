@@ -34,7 +34,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  const resultsPerPage = 10;
+  const resultsPerPage = 25; // Increased results per page for better user experience
 
   // Store enriched contact data per profile URL
   const [enrichedProfiles, setEnrichedProfiles] = useState<Record<string, any>>({});

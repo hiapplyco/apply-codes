@@ -44,7 +44,7 @@ serve(async (req) => {
     if (searchParams.limit) {
       queryParams.append('limit', Math.min(25, Math.max(1, searchParams.limit)).toString());
     } else {
-      queryParams.append('limit', '10'); // Default limit
+      queryParams.append('limit', '25'); // Increased default limit to maximum allowed by Nymeria
     }
     
     if (searchParams.offset) {

@@ -13,7 +13,7 @@ export const useGoogleSearch = (
   searchType: SearchType = "candidates",
   jobId?: number
 ) => {
-  const resultsPerPage = 10;
+  const resultsPerPage = 25; // Increased results per page for better user experience
   
   // State management
   const { state, setState } = useSearchState(initialSearchString);
