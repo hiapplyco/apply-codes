@@ -3,6 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { 
   TrendingUp, 
   Award, 
@@ -14,7 +19,9 @@ import {
   XCircle,
   BarChart3,
   Users,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { SearchResult } from '@/types/search';
 import { useAuth } from '@/context/AuthContext';
@@ -49,6 +56,7 @@ export const CandidateAnalysis: React.FC<CandidateAnalysisProps> = ({
   const { user } = useAuth();
   const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
   const [comparisonMode, setComparisonMode] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true); // Default to expanded
 
   // Analyze and rank candidates
   const analyzedCandidates = useMemo(() => {
@@ -239,14 +247,45 @@ export const CandidateAnalysis: React.FC<CandidateAnalysisProps> = ({
         </Card>
       )}
 
-      {/* Ranked Candidates */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="w-5 h-5" />
-          Top Candidates for Outreach
-        </h3>
-        
-        {analyzedCandidates.slice(0, 10).map((candidate) => (
+      {/* Ranked Candidates Dropdown */}
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <div className="border-2 border-purple-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full p-6 flex items-center justify-between hover:bg-purple-50/50 text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-md group-hover:shadow-lg transition-shadow">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                    Top Candidates for Outreach
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    {analyzedCandidates.length} candidates ranked by AI match score
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  {analyzedCandidates.filter(c => c.score.overall >= 70).length} High Matches
+                </Badge>
+                <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
+                  {isExpanded ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </div>
+              </div>
+            </Button>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent>
+            <div className="border-t border-purple-100 p-6 space-y-4 bg-white/50">
+              {analyzedCandidates.slice(0, 10).map((candidate) => (
           <Card 
             key={candidate.link} 
             className={`cursor-pointer transition-all ${
@@ -336,8 +375,11 @@ export const CandidateAnalysis: React.FC<CandidateAnalysisProps> = ({
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
     </div>
   );
 };

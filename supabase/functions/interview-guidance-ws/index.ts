@@ -351,8 +351,20 @@ serve(async (req) => {
     // Return WebSocket URL if not upgrading
     if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
       const host = req.headers.get("host") || "";
-      const wsProtocol = host.includes("localhost") ? "ws" : "wss";
-      const wsUrl = `${wsProtocol}://${host}/functions/v1/interview-guidance-ws`;
+      const origin = req.headers.get("origin") || "";
+      
+      // Determine the correct WebSocket URL based on environment
+      let wsUrl: string;
+      if (host.includes("localhost")) {
+        wsUrl = `ws://${host}/functions/v1/interview-guidance-ws`;
+      } else if (host.includes("supabase.co")) {
+        // Use the project-specific domain
+        wsUrl = `wss://${host}/functions/v1/interview-guidance-ws`;
+      } else {
+        // Fallback to constructing from origin
+        const projectRef = origin.match(/https:\/\/(.+?)\.supabase\.co/)?.[1] || "kxghaajojntkqrmvsngn";
+        wsUrl = `wss://${projectRef}.supabase.co/functions/v1/interview-guidance-ws`;
+      }
       
       return new Response(
         JSON.stringify({

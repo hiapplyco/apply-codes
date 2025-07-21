@@ -1177,38 +1177,62 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 max-w-4xl mx-auto p-6">
-        <div>
-          <h1 className="text-3xl font-bold text-purple-600 mb-2">Boolean Search Generator</h1>
-          <p className="text-gray-600">
-            Generate boolean search strings and find candidates with Google Search + Nymeria enrichment
+      <div className="space-y-8 max-w-5xl mx-auto p-4">
+        {/* Hero Section with Better Visual Hierarchy */}
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg">
+              <Search className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">Boolean Search Generator</h1>
+          </div>
+          <p className="text-gray-600 text-lg max-w-3xl leading-relaxed">
+            Generate intelligent boolean search strings and find qualified candidates with Google Search + Nymeria enrichment
           </p>
         </div>
 
-        {/* Job Description Input with Input Methods */}
+        {/* Step 1: Custom Instructions & Context */}
         <Collapsible open={!requirementsCollapsed} onOpenChange={(open) => setRequirementsCollapsed(!open)}>
-          <Card className="p-6 border-2 border-gray-300">
+          <Card className="border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
             <CollapsibleTrigger asChild>
-              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded">
-                <h2 className="text-xl font-semibold">1. Custom Instructions & Context</h2>
-                <div className="flex items-center gap-2">
-                  {requirementsCollapsed ? (
-                    <EyeOff className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-500" />
-                  )}
+              <div className="p-6 cursor-pointer group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-purple-100 text-purple-700 rounded-full font-bold text-lg">
+                      1
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                        Custom Instructions & Context
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">Add requirements and context to improve search accuracy</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
+                    {requirementsCollapsed ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </div>
                 </div>
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="flex gap-2 mb-4">
-              {/* URL Scraper Button */}
-              <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+              <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  {/* URL Scraper Button */}
+                  <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                      >
                         <Link className="w-4 h-4" />
+                        <span className="text-sm font-medium">Scrape</span>
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
@@ -1261,14 +1285,14 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0"
+                    className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploadingFile}
                   >
                     <ButtonLoading isLoading={isUploadingFile}>
                       <Upload className="w-4 h-4" />
+                      <span className="text-sm font-medium">Upload</span>
                     </ButtonLoading>
                   </Button>
                 </TooltipTrigger>
@@ -1290,12 +1314,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="outline" 
+                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                      >
                         <img 
                           src="/assets/perplexity.svg" 
                           alt="Perplexity" 
                           className="w-4 h-4" 
                         />
+                        <span className="text-sm font-medium">Search</span>
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
@@ -1348,12 +1376,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
-                    size="sm" 
                     variant="outline" 
-                    className="h-8 w-8 p-0"
+                    className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
                     onClick={() => setShowLocationDialog(true)}
                   >
                     <MapPin className="w-4 h-4" />
+                    <span className="text-sm font-medium">Location</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -1372,28 +1400,29 @@ This area is for your specific search instructions, filtering criteria, or addit
             className="min-h-[120px] mb-4"
           />
 
-          {/* Context Items Thumbnails */}
-          {contextItems.length > 0 && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-700">
-                  Added Context ({contextItems.length} item{contextItems.length !== 1 ? 's' : ''})
-                </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearAllContextItems}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 text-xs px-2 py-1"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  Clear All
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {/* Context Items */}
+                {contextItems.length > 0 && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        Added Context ({contextItems.length} item{contextItems.length !== 1 ? 's' : ''})
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearAllContextItems}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs h-7 px-2"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Clear All
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {contextItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      <div
+                        key={item.id}
+                        className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 group"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -1468,68 +1497,81 @@ This area is for your specific search instructions, filtering criteria, or addit
                 ))}
               </div>
             </div>
-          )}
-          
-          <Button
-            onClick={generateBooleanSearch}
-            disabled={!jobDescription.trim() || isGenerating}
-            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ButtonLoading 
-              isLoading={isGenerating && !showBooleanAnimation}
-              loadingText="Generating..."
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Boolean Search
-            </ButtonLoading>
-          </Button>
+                )}
+                
+                <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
+                  <Button
+                    onClick={generateBooleanSearch}
+                    disabled={!jobDescription.trim() || isGenerating}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2.5"
+                  >
+                    <ButtonLoading 
+                      isLoading={isGenerating && !showBooleanAnimation}
+                      loadingText="Generating..."
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate Boolean Search
+                    </ButtonLoading>
+                  </Button>
+                </div>
             </CollapsibleContent>
           </Card>
         </Collapsible>
 
-      {/* Boolean Search String */}
+      {/* Step 2: Boolean Search String */}
       {booleanString && (
         <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
-          <Card className="p-6 border-2 border-purple-400 bg-purple-50">
+          <Card className="border-2 border-purple-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-purple-50 to-blue-50">
             <CollapsibleTrigger asChild>
-              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-purple-100 -m-2 p-2 rounded">
-                <h2 className="text-xl font-semibold">2. Boolean Search String</h2>
-                <div className="flex items-center gap-2">
-                  {booleanCollapsed ? (
-                    <EyeOff className="w-4 h-4 text-gray-500" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-500" />
-                  )}
+              <div className="p-6 cursor-pointer group">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full font-bold text-lg shadow-md">
+                      2
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                        Boolean Search String
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">Edit and refine your generated search query</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
+                    {booleanCollapsed ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </div>
                 </div>
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-          <div className="space-y-4">
-            <Textarea
-              value={booleanString}
+              <div className="px-6 pb-6 pt-2 border-t border-purple-100">
+                <div className="space-y-4">
+                  <Textarea
+                    value={booleanString}
               onChange={(event) => setBooleanString(event.target.value)}
               className="font-mono min-h-[120px] resize-y"
               placeholder="Generated Boolean search string will appear here..."
             />
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => copyToClipboard(booleanString)}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 sm:flex-none"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy
-                </Button>
-                <Button
-                  onClick={handleExplainBoolean}
-                  variant="outline"
-                  size="sm"
-                  disabled={isExplaining || !booleanString.trim()}
-                  className="flex-1 sm:flex-none"
-                >
-                  <ButtonLoading 
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => copyToClipboard(booleanString)}
+                        variant="outline"
+                        className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button
+                        onClick={handleExplainBoolean}
+                        variant="outline"
+                        disabled={isExplaining || !booleanString.trim()}
+                        className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                      >
+                        <ButtonLoading 
                     isLoading={isExplaining}
                     loadingText="Analyzing..."
                   >
@@ -1538,24 +1580,24 @@ This area is for your specific search instructions, filtering criteria, or addit
                     <span className="sm:hidden">Explain</span>
                   </ButtonLoading>
                 </Button>
+                    </div>
+                    <Button
+                      onClick={searchGoogle}
+                      disabled={isSearching}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 sm:ml-auto"
+                    >
+                      <ButtonLoading 
+                        isLoading={isSearching}
+                        loadingText="Searching..."
+                      >
+                        <Search className="w-4 h-4 mr-2" />
+                        <span className="hidden sm:inline">Search LinkedIn Profiles</span>
+                        <span className="sm:hidden">Search LinkedIn</span>
+                      </ButtonLoading>
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Button
-                onClick={searchGoogle}
-                disabled={isSearching}
-                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-                size="sm"
-              >
-                <ButtonLoading 
-                  isLoading={isSearching}
-                  loadingText="Searching..."
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Search LinkedIn Profiles</span>
-                  <span className="sm:hidden">Search LinkedIn</span>
-                </ButtonLoading>
-              </Button>
-            </div>
-          </div>
             </CollapsibleContent>
           </Card>
         </Collapsible>
@@ -1564,9 +1606,9 @@ This area is for your specific search instructions, filtering criteria, or addit
       {/* Boolean Explanation */}
       {booleanExplanation && (
         <Collapsible open={!explanationCollapsed} onOpenChange={(open) => setExplanationCollapsed(!open)}>
-          <Card className="p-6 border-2 border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <Card className="border-2 border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-r from-indigo-50 to-purple-50">
             <CollapsibleTrigger asChild>
-              <div className="flex justify-between items-center mb-4 cursor-pointer hover:bg-indigo-100 -m-2 p-2 rounded transition-colors">
+              <div className="p-6 cursor-pointer group">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-100 rounded-lg">
                     <Lightbulb className="w-5 h-5 text-indigo-600" />
@@ -1627,10 +1669,21 @@ This area is for your specific search instructions, filtering criteria, or addit
           loadingText="Searching LinkedIn profiles..."
           className="mb-6"
         >
-          <Card className="p-6 border-2 border-green-400">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">3. Search Results ({searchResults.length})</h2>
-            <div className="space-x-2">
+          <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
+                    3
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      Search Results ({searchResults.length})
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
               <Badge variant="outline">{selectedProfiles.size} selected</Badge>
               <Button
                 onClick={openEmailDialog}

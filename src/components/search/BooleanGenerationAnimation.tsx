@@ -103,10 +103,13 @@ const ANIMATION_STEPS: AnimationStep[] = [
   }
 ];
 
+// Calculate total duration from steps
+const TOTAL_DURATION = ANIMATION_STEPS.reduce((sum, step) => sum + step.duration, 0) * 1000; // Convert to ms
+
 export const BooleanGenerationAnimation: React.FC<BooleanGenerationAnimationProps> = ({
   isOpen,
   onComplete,
-  estimatedTimeMs = 120000 // 2 minutes default
+  estimatedTimeMs = TOTAL_DURATION
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentDetailIndex, setCurrentDetailIndex] = useState(0);
@@ -115,7 +118,12 @@ export const BooleanGenerationAnimation: React.FC<BooleanGenerationAnimationProp
 
   const currentStep = ANIMATION_STEPS[currentStepIndex];
   const totalSteps = ANIMATION_STEPS.length;
-  const progressPercentage = ((currentStepIndex + 1) / totalSteps) * 100;
+  
+  // Calculate progress including detail completion within current step
+  const completedSteps = currentStepIndex;
+  const currentStepProgress = (currentDetailIndex + 1) / currentStep.details.length;
+  const totalProgress = (completedSteps + currentStepProgress) / totalSteps;
+  const progressPercentage = totalProgress * 100;
 
   // Calculate estimated time remaining
   const timeRemaining = Math.max(0, estimatedTimeMs - elapsedTime);
@@ -135,31 +143,33 @@ export const BooleanGenerationAnimation: React.FC<BooleanGenerationAnimationProp
 
     const stepDuration = currentStep.duration * 1000; // Convert to ms
     const detailInterval = stepDuration / currentStep.details.length;
-
-    const timer = setInterval(() => {
+    
+    // Timer for elapsed time (updates every second)
+    const elapsedTimer = setInterval(() => {
       setElapsedTime(prev => prev + 1000);
-      
-      // Advance detail every interval
-      setCurrentDetailIndex(prev => {
-        const nextIndex = prev + 1;
-        if (nextIndex >= currentStep.details.length) {
-          // Move to next step
-          if (currentStepIndex < totalSteps - 1) {
-            setCurrentStepIndex(currentStepIndex + 1);
-            return 0;
-          } else {
-            // Animation complete
-            setIsCompleting(true);
-            setTimeout(() => onComplete?.(), 1000);
-            return prev;
-          }
-        }
-        return nextIndex;
-      });
+    }, 1000);
+    
+    // Timer for advancing details
+    const detailTimer = setInterval(() => {
+      if (currentDetailIndex < currentStep.details.length - 1) {
+        // Advance to next detail
+        setCurrentDetailIndex(prev => prev + 1);
+      } else if (currentStepIndex < totalSteps - 1) {
+        // Move to next step
+        setCurrentStepIndex(prev => prev + 1);
+        setCurrentDetailIndex(0);
+      } else if (!isCompleting) {
+        // Animation complete
+        setIsCompleting(true);
+        setTimeout(() => onComplete?.(), 1000);
+      }
     }, detailInterval);
 
-    return () => clearInterval(timer);
-  }, [isOpen, currentStepIndex, currentStep, totalSteps, onComplete]);
+    return () => {
+      clearInterval(elapsedTimer);
+      clearInterval(detailTimer);
+    };
+  }, [isOpen, currentStepIndex, currentStep, totalSteps, onComplete, currentDetailIndex, isCompleting]);
 
   if (!isOpen) return null;
 

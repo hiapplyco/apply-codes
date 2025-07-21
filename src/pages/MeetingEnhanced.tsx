@@ -28,7 +28,8 @@ import {
   Maximize2,
   Minimize2,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
+  Brain
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -276,14 +277,52 @@ export default function MeetingEnhanced() {
         
         // Update interview context with meeting ID if interview type
         if (meetingType === 'interview' && interviewContext) {
+          // Use default competencies if none are set
+          const finalCompetencies = competencies.length > 0 ? competencies : [
+            {
+              id: 'tech-1',
+              name: 'Technical Skills',
+              description: 'Core technical abilities required for the role',
+              category: 'technical' as const,
+              required: true,
+              coverageLevel: 0
+            },
+            {
+              id: 'tech-2',
+              name: 'Problem Solving',
+              description: 'Ability to analyze and solve complex problems',
+              category: 'technical' as const,
+              required: true,
+              coverageLevel: 0
+            },
+            {
+              id: 'behav-1',
+              name: 'Communication',
+              description: 'Clear and effective communication skills',
+              category: 'behavioral' as const,
+              required: true,
+              coverageLevel: 0
+            },
+            {
+              id: 'behav-2',
+              name: 'Team Collaboration',
+              description: 'Working effectively with team members',
+              category: 'behavioral' as const,
+              required: false,
+              coverageLevel: 0
+            }
+          ];
+          
           const updatedContext = {
             ...interviewContext,
             meetingId: roomData.roomId || roomData.url,
             sessionId: sessionId || '',
             jobRole: interviewContext.position,
-            competencies: competencies,
+            competencies: finalCompetencies,
             stage: 'intro' as const,
           };
+          
+          console.log('Interview context being set:', updatedContext);
           
           // Update store and guidance system
           setInterviewStoreContext(updatedContext);
@@ -604,14 +643,27 @@ export default function MeetingEnhanced() {
                           )} />
                         </Button>
                       )}
-                      <Button
-                        onClick={() => setIsChatOpen(!isChatOpen)}
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
+                      {meetingType !== 'interview' && (
+                        <Button
+                          onClick={() => setIsChatOpen(!isChatOpen)}
+                          variant="outline"
+                          size="icon"
+                          className="rounded-full"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {meetingType === 'interview' && (
+                        <Button
+                          onClick={() => setShowGuidance(!showGuidance)}
+                          variant={showGuidance ? "secondary" : "outline"}
+                          size="icon"
+                          className="rounded-full"
+                          title="Toggle AI Interview Guidance"
+                        >
+                          <Brain className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         onClick={endMeeting}
                         variant="destructive"
@@ -718,14 +770,15 @@ export default function MeetingEnhanced() {
                 </Resizable>
               )}
               
-              {/* Interview Guidance Sidebar */}
-              {meetingType === 'interview' && showGuidance && (
-                <InterviewGuidanceSidebar 
-                  defaultExpanded={true}
-                  className="z-40"
-                />
-              )}
             </div>
+            
+            {/* Interview Guidance Sidebar */}
+            {meetingType === 'interview' && showGuidance && (
+              <InterviewGuidanceSidebar 
+                defaultExpanded={true}
+                className="z-40"
+              />
+            )}
           )}
         </div>
 

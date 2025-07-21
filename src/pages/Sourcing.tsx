@@ -54,34 +54,38 @@ const SourcingComponent = () => {
   };
 
   return (
-    <div className="container max-w-4xl py-8 space-y-8">
-      {/* Page header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold text-[#8B5CF6]">Candidate Sourcing</h1>
-        <p className="text-gray-600 text-lg">
-          Find qualified candidates, research companies, or discover talent at specific organizations
-        </p>
+    <div className="container max-w-5xl py-6 space-y-6">
+      {/* Enhanced Page Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white shadow-lg">
+        <div className="max-w-4xl">
+          <h1 className="text-4xl font-bold mb-3">Candidate Sourcing</h1>
+          <p className="text-lg opacity-95 leading-relaxed">
+            Find qualified candidates, research companies, or discover talent at specific organizations with AI-powered search
+          </p>
+        </div>
       </div>
       
-      {/* Context Bar with Project Selector and Context Buttons */}
-      <ContextBar
-        context="sourcing"
-        title="Project & Context"
-        description="Select a project and add context through uploads, web scraping, or AI search"
-        onContentProcessed={handleContextContent}
-        projectSelectorProps={{
-          placeholder: "Choose a project to save candidates to...",
-          className: "w-full max-w-md"
-        }}
-        enabledButtons={{
-          upload: true,
-          firecrawl: true,
-          perplexity: true,
-          location: true
-        }}
-        showLabels={true}
-        size="default"
-      />
+      {/* Project & Context Selection */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        <ContextBar
+          context="sourcing"
+          title="Project & Context"
+          description="Select a project and add context through uploads, web scraping, or AI search"
+          onContentProcessed={handleContextContent}
+          projectSelectorProps={{
+            placeholder: "Choose a project to save candidates to...",
+            className: "w-full max-w-md"
+          }}
+          enabledButtons={{
+            upload: true,
+            firecrawl: true,
+            perplexity: true,
+            location: true
+          }}
+          showLabels={true}
+          size="default"
+        />
+      </div>
 
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>
