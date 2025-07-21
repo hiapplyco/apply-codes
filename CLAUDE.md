@@ -1,1205 +1,906 @@
-# Apply (Blind Nut) - AI Assistant Guide
+# Claude Code Configuration for Claude Flow
 
-## Quick Start
+## 🚨 CRITICAL: PARALLEL EXECUTION AFTER SWARM INIT
 
-**Apply** is an AI-driven recruitment platform that helps recruiters find qualified candidates through intelligent search, boolean query generation, and candidate enrichment.
+**MANDATORY RULE**: Once swarm is initialized with memory, ALL subsequent operations MUST be parallel:
 
-**Primary Directive**: Provide concise development assistance for AI-powered recruitment features, focusing on code quality, security, and user experience.
+1. **TodoWrite** → Always batch 5-10+ todos in ONE call
+2. **Task spawning** → Spawn ALL agents in ONE message
+3. **File operations** → Batch ALL reads/writes together
+4. **NEVER** operate sequentially after swarm init
 
-## 🔗 Claude Code Hooks & Automation
+## 🚨 CRITICAL: CONCURRENT EXECUTION FOR ALL ACTIONS
 
-**Claude Code Hooks** provide deterministic automation by executing shell commands at specific workflow points, moving repetitive tasks from prompts to app-level enforcement.
+**ABSOLUTE RULE**: ALL operations MUST be concurrent/parallel in a single message:
 
-### Hook Configuration (`.claude/settings.json`)
+### 🔴 MANDATORY CONCURRENT PATTERNS:
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npm run lint:fix",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command", 
-            "command": "echo 'Running: $CLAUDE_TOOL_ARGS' >> .claude/execution.log"
-          }
-        ]
-      }
-    ]
-  }
+1. **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
+2. **Task tool**: ALWAYS spawn ALL agents in ONE message with full instructions
+3. **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
+4. **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
+5. **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
+
+### ⚡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
+
+**Examples of CORRECT concurrent execution:**
+
+```javascript
+// ✅ CORRECT: Everything in ONE message
+[Single Message]:
+  - TodoWrite { todos: [10+ todos with all statuses/priorities] }
+  - Task("Agent 1 with full instructions and hooks")
+  - Task("Agent 2 with full instructions and hooks")
+  - Task("Agent 3 with full instructions and hooks")
+  - Read("file1.js")
+  - Read("file2.js")
+  - Read("file3.js")
+  - Write("output1.js", content)
+  - Write("output2.js", content)
+  - Bash("npm install")
+  - Bash("npm test")
+  - Bash("npm run build")
+```
+
+**Examples of WRONG sequential execution:**
+
+```javascript
+// ❌ WRONG: Multiple messages (NEVER DO THIS)
+Message 1: TodoWrite { todos: [single todo] }
+Message 2: Task("Agent 1")
+Message 3: Task("Agent 2")
+Message 4: Read("file1.js")
+Message 5: Write("output1.js")
+Message 6: Bash("npm install")
+// This is 6x slower and breaks coordination!
+```
+
+### 🎯 CONCURRENT EXECUTION CHECKLIST:
+
+Before sending ANY message, ask yourself:
+
+- ✅ Are ALL related TodoWrite operations batched together?
+- ✅ Are ALL Task spawning operations in ONE message?
+- ✅ Are ALL file operations (Read/Write/Edit) batched together?
+- ✅ Are ALL bash commands grouped in ONE message?
+- ✅ Are ALL memory operations concurrent?
+
+If ANY answer is "No", you MUST combine operations into a single message!
+
+## 🚀 CRITICAL: Claude Code Does ALL Real Work
+
+### 🎯 CLAUDE CODE IS THE ONLY EXECUTOR
+
+**ABSOLUTE RULE**: Claude Code performs ALL actual work:
+
+### ✅ Claude Code ALWAYS Handles:
+
+- 🔧 **ALL file operations** (Read, Write, Edit, MultiEdit, Glob, Grep)
+- 💻 **ALL code generation** and programming tasks
+- 🖥️ **ALL bash commands** and system operations
+- 🏗️ **ALL actual implementation** work
+- 🔍 **ALL project navigation** and code analysis
+- 📝 **ALL TodoWrite** and task management
+- 🔄 **ALL git operations** (commit, push, merge)
+- 📦 **ALL package management** (npm, pip, etc.)
+- 🧪 **ALL testing** and validation
+- 🔧 **ALL debugging** and troubleshooting
+
+### 🧠 Claude Flow MCP Tools ONLY Handle:
+
+- 🎯 **Coordination only** - Planning Claude Code's actions
+- 💾 **Memory management** - Storing decisions and context
+- 🤖 **Neural features** - Learning from Claude Code's work
+- 📊 **Performance tracking** - Monitoring Claude Code's efficiency
+- 🐝 **Swarm orchestration** - Coordinating multiple Claude Code instances
+- 🔗 **GitHub integration** - Advanced repository coordination
+
+### 🚨 CRITICAL SEPARATION OF CONCERNS:
+
+**❌ MCP Tools NEVER:**
+
+- Write files or create content
+- Execute bash commands
+- Generate code
+- Perform file operations
+- Handle TodoWrite operations
+- Execute system commands
+- Do actual implementation work
+
+**✅ MCP Tools ONLY:**
+
+- Coordinate and plan
+- Store memory and context
+- Track performance
+- Orchestrate workflows
+- Provide intelligence insights
+
+### ⚠️ Key Principle:
+
+**MCP tools coordinate, Claude Code executes.** Think of MCP tools as the "brain" that plans and coordinates, while Claude Code is the "hands" that do all the actual work.
+
+### 🔄 WORKFLOW EXECUTION PATTERN:
+
+**✅ CORRECT Workflow:**
+
+1. **MCP**: `mcp__claude-flow__swarm_init` (coordination setup)
+2. **MCP**: `mcp__claude-flow__agent_spawn` (planning agents)
+3. **MCP**: `mcp__claude-flow__task_orchestrate` (task coordination)
+4. **Claude Code**: `Task` tool to spawn agents with coordination instructions
+5. **Claude Code**: `TodoWrite` with ALL todos batched (5-10+ in ONE call)
+6. **Claude Code**: `Read`, `Write`, `Edit`, `Bash` (actual work)
+7. **MCP**: `mcp__claude-flow__memory_usage` (store results)
+
+**❌ WRONG Workflow:**
+
+1. **MCP**: `mcp__claude-flow__terminal_execute` (DON'T DO THIS)
+2. **MCP**: File creation via MCP (DON'T DO THIS)
+3. **MCP**: Code generation via MCP (DON'T DO THIS)
+4. **Claude Code**: Sequential Task calls (DON'T DO THIS)
+5. **Claude Code**: Individual TodoWrite calls (DON'T DO THIS)
+
+### 🚨 REMEMBER:
+
+- **MCP tools** = Coordination, planning, memory, intelligence
+- **Claude Code** = All actual execution, coding, file operations
+
+## 🚀 CRITICAL: Parallel Execution & Batch Operations
+
+### 🚨 MANDATORY RULE #1: BATCH EVERYTHING
+
+**When using swarms, you MUST use BatchTool for ALL operations:**
+
+1. **NEVER** send multiple messages for related operations
+2. **ALWAYS** combine multiple tool calls in ONE message
+3. **PARALLEL** execution is MANDATORY, not optional
+
+### ⚡ THE GOLDEN RULE OF SWARMS
+
+```
+If you need to do X operations, they should be in 1 message, not X messages
+```
+
+### 🚨 MANDATORY TODO AND TASK BATCHING
+
+**CRITICAL RULE FOR TODOS AND TASKS:**
+
+1. **TodoWrite** MUST ALWAYS include ALL todos in ONE call (5-10+ todos)
+2. **Task** tool calls MUST be batched - spawn multiple agents in ONE message
+3. **NEVER** update todos one by one - this breaks parallel coordination
+4. **NEVER** spawn agents sequentially - ALL agents spawn together
+
+### 📦 BATCH TOOL EXAMPLES
+
+**✅ CORRECT - Everything in ONE Message:**
+
+```javascript
+[Single Message with BatchTool]:
+  // MCP coordination setup
+  mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
+  mcp__claude-flow__agent_spawn { type: "researcher" }
+  mcp__claude-flow__agent_spawn { type: "coder" }
+  mcp__claude-flow__agent_spawn { type: "analyst" }
+  mcp__claude-flow__agent_spawn { type: "tester" }
+  mcp__claude-flow__agent_spawn { type: "coordinator" }
+
+  // Claude Code execution - ALL in parallel
+  Task("You are researcher agent. MUST coordinate via hooks...")
+  Task("You are coder agent. MUST coordinate via hooks...")
+  Task("You are analyst agent. MUST coordinate via hooks...")
+  Task("You are tester agent. MUST coordinate via hooks...")
+  TodoWrite { todos: [5-10 todos with all priorities and statuses] }
+
+  // File operations in parallel
+  Bash "mkdir -p app/{src,tests,docs}"
+  Write "app/package.json"
+  Write "app/README.md"
+  Write "app/src/index.js"
+```
+
+**❌ WRONG - Multiple Messages (NEVER DO THIS):**
+
+```javascript
+Message 1: mcp__claude-flow__swarm_init
+Message 2: Task("researcher agent")
+Message 3: Task("coder agent")
+Message 4: TodoWrite({ todo: "single todo" })
+Message 5: Bash "mkdir src"
+Message 6: Write "package.json"
+// This is 6x slower and breaks parallel coordination!
+```
+
+### 🎯 BATCH OPERATIONS BY TYPE
+
+**Todo and Task Operations (Single Message):**
+
+- **TodoWrite** → ALWAYS include 5-10+ todos in ONE call
+- **Task agents** → Spawn ALL agents with full instructions in ONE message
+- **Agent coordination** → ALL Task calls must include coordination hooks
+- **Status updates** → Update ALL todo statuses together
+- **NEVER** split todos or Task calls across messages!
+
+**File Operations (Single Message):**
+
+- Read 10 files? → One message with 10 Read calls
+- Write 5 files? → One message with 5 Write calls
+- Edit 1 file many times? → One MultiEdit call
+
+**Swarm Operations (Single Message):**
+
+- Need 8 agents? → One message with swarm_init + 8 agent_spawn calls
+- Multiple memories? → One message with all memory_usage calls
+- Task + monitoring? → One message with task_orchestrate + swarm_monitor
+
+**Command Operations (Single Message):**
+
+- Multiple directories? → One message with all mkdir commands
+- Install + test + lint? → One message with all npm commands
+- Git operations? → One message with all git commands
+
+## 🚀 Quick Setup (Stdio MCP - Recommended)
+
+### 1. Add MCP Server (Stdio - No Port Needed)
+
+```bash
+# Add Claude Flow MCP server to Claude Code using stdio
+claude mcp add claude-flow npx claude-flow@alpha mcp start
+```
+
+### 2. Use MCP Tools for Coordination in Claude Code
+
+Once configured, Claude Flow MCP tools enhance Claude Code's coordination:
+
+**Initialize a swarm:**
+
+- Use the `mcp__claude-flow__swarm_init` tool to set up coordination topology
+- Choose: mesh, hierarchical, ring, or star
+- This creates a coordination framework for Claude Code's work
+
+**Spawn agents:**
+
+- Use `mcp__claude-flow__agent_spawn` tool to create specialized coordinators
+- Agent types represent different thinking patterns, not actual coders
+- They help Claude Code approach problems from different angles
+
+**Orchestrate tasks:**
+
+- Use `mcp__claude-flow__task_orchestrate` tool to coordinate complex workflows
+- This breaks down tasks for Claude Code to execute systematically
+- The agents don't write code - they coordinate Claude Code's actions
+
+## Available MCP Tools for Coordination
+
+### Coordination Tools:
+
+- `mcp__claude-flow__swarm_init` - Set up coordination topology for Claude Code
+- `mcp__claude-flow__agent_spawn` - Create cognitive patterns to guide Claude Code
+- `mcp__claude-flow__task_orchestrate` - Break down and coordinate complex tasks
+
+### Monitoring Tools:
+
+- `mcp__claude-flow__swarm_status` - Monitor coordination effectiveness
+- `mcp__claude-flow__agent_list` - View active cognitive patterns
+- `mcp__claude-flow__agent_metrics` - Track coordination performance
+- `mcp__claude-flow__task_status` - Check workflow progress
+- `mcp__claude-flow__task_results` - Review coordination outcomes
+
+### Memory & Neural Tools:
+
+- `mcp__claude-flow__memory_usage` - Persistent memory across sessions
+- `mcp__claude-flow__neural_status` - Neural pattern effectiveness
+- `mcp__claude-flow__neural_train` - Improve coordination patterns
+- `mcp__claude-flow__neural_patterns` - Analyze thinking approaches
+
+### GitHub Integration Tools (NEW!):
+
+- `mcp__claude-flow__github_swarm` - Create specialized GitHub management swarms
+- `mcp__claude-flow__repo_analyze` - Deep repository analysis with AI
+- `mcp__claude-flow__pr_enhance` - AI-powered pull request improvements
+- `mcp__claude-flow__issue_triage` - Intelligent issue classification
+- `mcp__claude-flow__code_review` - Automated code review with swarms
+
+### System Tools:
+
+- `mcp__claude-flow__benchmark_run` - Measure coordination efficiency
+- `mcp__claude-flow__features_detect` - Available capabilities
+- `mcp__claude-flow__swarm_monitor` - Real-time coordination tracking
+
+## Workflow Examples (Coordination-Focused)
+
+### Research Coordination Example
+
+**Context:** Claude Code needs to research a complex topic systematically
+
+**Step 1:** Set up research coordination
+
+- Tool: `mcp__claude-flow__swarm_init`
+- Parameters: `{"topology": "mesh", "maxAgents": 5, "strategy": "balanced"}`
+- Result: Creates a mesh topology for comprehensive exploration
+
+**Step 2:** Define research perspectives
+
+- Tool: `mcp__claude-flow__agent_spawn`
+- Parameters: `{"type": "researcher", "name": "Literature Review"}`
+- Tool: `mcp__claude-flow__agent_spawn`
+- Parameters: `{"type": "analyst", "name": "Data Analysis"}`
+- Result: Different cognitive patterns for Claude Code to use
+
+**Step 3:** Coordinate research execution
+
+- Tool: `mcp__claude-flow__task_orchestrate`
+- Parameters: `{"task": "Research neural architecture search papers", "strategy": "adaptive"}`
+- Result: Claude Code systematically searches, reads, and analyzes papers
+
+**What Actually Happens:**
+
+1. The swarm sets up a coordination framework
+2. Each agent MUST use Claude Flow hooks for coordination:
+   - `npx claude-flow@alpha hooks pre-task` before starting
+   - `npx claude-flow@alpha hooks post-edit` after each file operation
+   - `npx claude-flow@alpha hooks notification` to share decisions
+3. Claude Code uses its native Read, WebSearch, and Task tools
+4. The swarm coordinates through shared memory and hooks
+5. Results are synthesized by Claude Code with full coordination history
+
+### Development Coordination Example
+
+**Context:** Claude Code needs to build a complex system with multiple components
+
+**Step 1:** Set up development coordination
+
+- Tool: `mcp__claude-flow__swarm_init`
+- Parameters: `{"topology": "hierarchical", "maxAgents": 8, "strategy": "specialized"}`
+- Result: Hierarchical structure for organized development
+
+**Step 2:** Define development perspectives
+
+- Tool: `mcp__claude-flow__agent_spawn`
+- Parameters: `{"type": "architect", "name": "System Design"}`
+- Result: Architectural thinking pattern for Claude Code
+
+**Step 3:** Coordinate implementation
+
+- Tool: `mcp__claude-flow__task_orchestrate`
+- Parameters: `{"task": "Implement user authentication with JWT", "strategy": "parallel"}`
+- Result: Claude Code implements features using its native tools
+
+**What Actually Happens:**
+
+1. The swarm creates a development coordination plan
+2. Each agent coordinates using mandatory hooks:
+   - Pre-task hooks for context loading
+   - Post-edit hooks for progress tracking
+   - Memory storage for cross-agent coordination
+3. Claude Code uses Write, Edit, Bash tools for implementation
+4. Agents share progress through Claude Flow memory
+5. All code is written by Claude Code with full coordination
+
+### GitHub Repository Management Example (NEW!)
+
+**Context:** Claude Code needs to manage a complex GitHub repository
+
+**Step 1:** Initialize GitHub swarm
+
+- Tool: `mcp__claude-flow__github_swarm`
+- Parameters: `{"repository": "owner/repo", "agents": 5, "focus": "maintenance"}`
+- Result: Specialized swarm for repository management
+
+**Step 2:** Analyze repository health
+
+- Tool: `mcp__claude-flow__repo_analyze`
+- Parameters: `{"deep": true, "include": ["issues", "prs", "code"]}`
+- Result: Comprehensive repository analysis
+
+**Step 3:** Enhance pull requests
+
+- Tool: `mcp__claude-flow__pr_enhance`
+- Parameters: `{"pr_number": 123, "add_tests": true, "improve_docs": true}`
+- Result: AI-powered PR improvements
+
+## Best Practices for Coordination
+
+### ✅ DO:
+
+- Use MCP tools to coordinate Claude Code's approach to complex tasks
+- Let the swarm break down problems into manageable pieces
+- Use memory tools to maintain context across sessions
+- Monitor coordination effectiveness with status tools
+- Train neural patterns for better coordination over time
+- Leverage GitHub tools for repository management
+
+### ❌ DON'T:
+
+- Expect agents to write code (Claude Code does all implementation)
+- Use MCP tools for file operations (use Claude Code's native tools)
+- Try to make agents execute bash commands (Claude Code handles this)
+- Confuse coordination with execution (MCP coordinates, Claude executes)
+
+## Memory and Persistence
+
+The swarm provides persistent memory that helps Claude Code:
+
+- Remember project context across sessions
+- Track decisions and rationale
+- Maintain consistency in large projects
+- Learn from previous coordination patterns
+- Store GitHub workflow preferences
+
+## Performance Benefits
+
+When using Claude Flow coordination with Claude Code:
+
+- **84.8% SWE-Bench solve rate** - Better problem-solving through coordination
+- **32.3% token reduction** - Efficient task breakdown reduces redundancy
+- **2.8-4.4x speed improvement** - Parallel coordination strategies
+- **27+ neural models** - Diverse cognitive approaches
+- **GitHub automation** - Streamlined repository management
+
+## Claude Code Hooks Integration
+
+Claude Flow includes powerful hooks that automate coordination:
+
+### Pre-Operation Hooks
+
+- **Auto-assign agents** before file edits based on file type
+- **Validate commands** before execution for safety
+- **Prepare resources** automatically for complex operations
+- **Optimize topology** based on task complexity analysis
+- **Cache searches** for improved performance
+- **GitHub context** loading for repository operations
+
+### Post-Operation Hooks
+
+- **Auto-format code** using language-specific formatters
+- **Train neural patterns** from successful operations
+- **Update memory** with operation context
+- **Analyze performance** and identify bottlenecks
+- **Track token usage** for efficiency metrics
+- **Sync GitHub** state for consistency
+
+### Session Management
+
+- **Generate summaries** at session end
+- **Persist state** across Claude Code sessions
+- **Track metrics** for continuous improvement
+- **Restore previous** session context automatically
+- **Export workflows** for reuse
+
+### Advanced Features (v2.0.0!)
+
+- **🚀 Automatic Topology Selection** - Optimal swarm structure for each task
+- **⚡ Parallel Execution** - 2.8-4.4x speed improvements
+- **🧠 Neural Training** - Continuous learning from operations
+- **📊 Bottleneck Analysis** - Real-time performance optimization
+- **🤖 Smart Auto-Spawning** - Zero manual agent management
+- **🛡️ Self-Healing Workflows** - Automatic error recovery
+- **💾 Cross-Session Memory** - Persistent learning & context
+- **🔗 GitHub Integration** - Repository-aware swarms
+
+### Configuration
+
+Hooks are pre-configured in `.claude/settings.json`. Key features:
+
+- Automatic agent assignment for different file types
+- Code formatting on save
+- Neural pattern learning from edits
+- Session state persistence
+- Performance tracking and optimization
+- Intelligent caching and token reduction
+- GitHub workflow automation
+
+See `.claude/commands/` for detailed documentation on all features.
+
+## Integration Tips
+
+1. **Start Simple**: Begin with basic swarm init and single agent
+2. **Scale Gradually**: Add more agents as task complexity increases
+3. **Use Memory**: Store important decisions and context
+4. **Monitor Progress**: Regular status checks ensure effective coordination
+5. **Train Patterns**: Let neural agents learn from successful coordinations
+6. **Enable Hooks**: Use the pre-configured hooks for automation
+7. **GitHub First**: Use GitHub tools for repository management
+
+## 🧠 SWARM ORCHESTRATION PATTERN
+
+### You are the SWARM ORCHESTRATOR. **IMMEDIATELY SPAWN AGENTS IN PARALLEL** to execute tasks
+
+### 🚨 CRITICAL INSTRUCTION: You are the SWARM ORCHESTRATOR
+
+**MANDATORY**: When using swarms, you MUST:
+
+1. **SPAWN ALL AGENTS IN ONE BATCH** - Use multiple tool calls in a SINGLE message
+2. **EXECUTE TASKS IN PARALLEL** - Never wait for one task before starting another
+3. **USE BATCHTOOL FOR EVERYTHING** - Multiple operations = Single message with multiple tools
+4. **ALL AGENTS MUST USE COORDINATION TOOLS** - Every spawned agent MUST use claude-flow hooks and memory
+
+### 🎯 AGENT COUNT CONFIGURATION
+
+**CRITICAL: Dynamic Agent Count Rules**
+
+1. **Check CLI Arguments First**: If user runs `npx claude-flow@alpha --agents 5`, use 5 agents
+2. **Auto-Decide if No Args**: Without CLI args, analyze task complexity:
+   - Simple tasks (1-3 components): 3-4 agents
+   - Medium tasks (4-6 components): 5-7 agents
+   - Complex tasks (7+ components): 8-12 agents
+3. **Agent Type Distribution**: Balance agent types based on task:
+   - Always include 1 coordinator
+   - For code-heavy tasks: more coders
+   - For design tasks: more architects/analysts
+   - For quality tasks: more testers/reviewers
+
+**Example Auto-Decision Logic:**
+
+```javascript
+// If CLI args provided: npx claude-flow@alpha --agents 6
+maxAgents = CLI_ARGS.agents || determineAgentCount(task);
+
+function determineAgentCount(task) {
+  // Analyze task complexity
+  if (task.includes(['API', 'database', 'auth', 'tests'])) return 8;
+  if (task.includes(['frontend', 'backend'])) return 6;
+  if (task.includes(['simple', 'script'])) return 3;
+  return 5; // default
 }
 ```
 
-### Essential Hooks for Apply
+## 📋 MANDATORY AGENT COORDINATION PROTOCOL
 
-#### Auto-Format & Quality
-```json
-"PostToolUse": [
-  {
-    "matcher": "Write|Edit|MultiEdit",
-    "hooks": [
-      {
-        "type": "command",
-        "command": "npm run lint:fix && npm run typecheck"
-      }
-    ]
+### 🔴 CRITICAL: Every Agent MUST Follow This Protocol
+
+When you spawn an agent using the Task tool, that agent MUST:
+
+**1️⃣ BEFORE Starting Work:**
+
+```bash
+# Check previous work and load context
+npx claude-flow@alpha hooks pre-task --description "[agent task]" --auto-spawn-agents false
+npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]" --load-memory true
+```
+
+**2️⃣ DURING Work (After EVERY Major Step):**
+
+```bash
+# Store progress in memory after each file operation
+npx claude-flow@alpha hooks post-edit --file "[filepath]" --memory-key "swarm/[agent]/[step]"
+
+# Store decisions and findings
+npx claude-flow@alpha hooks notification --message "[what was done]" --telemetry true
+
+# Check coordination with other agents
+npx claude-flow@alpha hooks pre-search --query "[what to check]" --cache-results true
+```
+
+**3️⃣ AFTER Completing Work:**
+
+```bash
+# Save all results and learnings
+npx claude-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true
+npx claude-flow@alpha hooks session-end --export-metrics true --generate-summary true
+```
+
+### 🎯 AGENT PROMPT TEMPLATE
+
+When spawning agents, ALWAYS include these coordination instructions:
+
+```
+You are the [Agent Type] agent in a coordinated swarm.
+
+MANDATORY COORDINATION:
+1. START: Run `npx claude-flow@alpha hooks pre-task --description "[your task]"`
+2. DURING: After EVERY file operation, run `npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "agent/[step]"`
+3. MEMORY: Store ALL decisions using `npx claude-flow@alpha hooks notification --message "[decision]"`
+4. END: Run `npx claude-flow@alpha hooks post-task --task-id "[task]" --analyze-performance true`
+
+Your specific task: [detailed task description]
+
+REMEMBER: Coordinate with other agents by checking memory BEFORE making decisions!
+```
+
+### ⚡ PARALLEL EXECUTION IS MANDATORY
+
+**THIS IS WRONG ❌ (Sequential - NEVER DO THIS):**
+
+```
+Message 1: Initialize swarm
+Message 2: Spawn agent 1
+Message 3: Spawn agent 2
+Message 4: TodoWrite (single todo)
+Message 5: Create file 1
+Message 6: TodoWrite (another single todo)
+```
+
+**THIS IS CORRECT ✅ (Parallel - ALWAYS DO THIS):**
+
+```
+Message 1: [BatchTool]
+  // MCP coordination setup
+  - mcp__claude-flow__swarm_init
+  - mcp__claude-flow__agent_spawn (researcher)
+  - mcp__claude-flow__agent_spawn (coder)
+  - mcp__claude-flow__agent_spawn (analyst)
+  - mcp__claude-flow__agent_spawn (tester)
+  - mcp__claude-flow__agent_spawn (coordinator)
+
+Message 2: [BatchTool - Claude Code execution]
+  // Task agents with full coordination instructions
+  - Task("You are researcher agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Research API patterns")
+  - Task("You are coder agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Implement REST endpoints")
+  - Task("You are analyst agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Analyze performance")
+  - Task("You are tester agent. MANDATORY: Run hooks pre-task, post-edit, post-task. Task: Write comprehensive tests")
+
+  // TodoWrite with ALL todos batched
+  - TodoWrite { todos: [
+      {id: "research", content: "Research API patterns", status: "in_progress", priority: "high"},
+      {id: "design", content: "Design database schema", status: "pending", priority: "high"},
+      {id: "implement", content: "Build REST endpoints", status: "pending", priority: "high"},
+      {id: "test", content: "Write unit tests", status: "pending", priority: "medium"},
+      {id: "docs", content: "Create API documentation", status: "pending", priority: "low"},
+      {id: "deploy", content: "Setup deployment", status: "pending", priority: "medium"}
+    ]}
+
+  // File operations in parallel
+  - Write "api/package.json"
+  - Write "api/server.js"
+  - Write "api/routes/users.js"
+  - Bash "mkdir -p api/{routes,models,tests}"
+```
+
+### 🎯 MANDATORY SWARM PATTERN
+
+When given ANY complex task with swarms:
+
+```
+STEP 1: IMMEDIATE PARALLEL SPAWN (Single Message!)
+[BatchTool]:
+  // IMPORTANT: Check CLI args for agent count, otherwise auto-decide based on task complexity
+  - mcp__claude-flow__swarm_init {
+      topology: "hierarchical",
+      maxAgents: CLI_ARGS.agents || AUTO_DECIDE(task_complexity), // Use CLI args or auto-decide
+      strategy: "parallel"
+    }
+
+  // Spawn agents based on maxAgents count and task requirements
+  // If CLI specifies 3 agents, spawn 3. If no args, auto-decide optimal count (3-12)
+  - mcp__claude-flow__agent_spawn { type: "architect", name: "System Designer" }
+  - mcp__claude-flow__agent_spawn { type: "coder", name: "API Developer" }
+  - mcp__claude-flow__agent_spawn { type: "coder", name: "Frontend Dev" }
+  - mcp__claude-flow__agent_spawn { type: "analyst", name: "DB Designer" }
+  - mcp__claude-flow__agent_spawn { type: "tester", name: "QA Engineer" }
+  - mcp__claude-flow__agent_spawn { type: "researcher", name: "Tech Lead" }
+  - mcp__claude-flow__agent_spawn { type: "coordinator", name: "PM" }
+  - TodoWrite { todos: [multiple todos at once] }
+
+STEP 2: PARALLEL TASK EXECUTION (Single Message!)
+[BatchTool]:
+  - mcp__claude-flow__task_orchestrate { task: "main task", strategy: "parallel" }
+  - mcp__claude-flow__memory_usage { action: "store", key: "init", value: {...} }
+  - Multiple Read operations
+  - Multiple Write operations
+  - Multiple Bash commands
+
+STEP 3: CONTINUE PARALLEL WORK (Never Sequential!)
+```
+
+### 📊 VISUAL TASK TRACKING FORMAT
+
+Use this format when displaying task progress:
+
+```
+📊 Progress Overview
+   ├── Total Tasks: X
+   ├── ✅ Completed: X (X%)
+   ├── 🔄 In Progress: X (X%)
+   ├── ⭕ Todo: X (X%)
+   └── ❌ Blocked: X (X%)
+
+📋 Todo (X)
+   └── 🔴 001: [Task description] [PRIORITY] ▶
+
+🔄 In progress (X)
+   ├── 🟡 002: [Task description] ↳ X deps ▶
+   └── 🔴 003: [Task description] [PRIORITY] ▶
+
+✅ Completed (X)
+   ├── ✅ 004: [Task description]
+   └── ... (more completed tasks)
+
+Priority indicators: 🔴 HIGH/CRITICAL, 🟡 MEDIUM, 🟢 LOW
+Dependencies: ↳ X deps | Actionable: ▶
+```
+
+### 🎯 REAL EXAMPLE: Full-Stack App Development
+
+**Task**: "Build a complete REST API with authentication, database, and tests"
+
+**🚨 MANDATORY APPROACH - Everything in Parallel:**
+
+```javascript
+// ✅ CORRECT: SINGLE MESSAGE with ALL operations
+[BatchTool - Message 1]:
+  // Initialize and spawn ALL agents at once
+  mcp__claude-flow__swarm_init { topology: "hierarchical", maxAgents: 8, strategy: "parallel" }
+  mcp__claude-flow__agent_spawn { type: "architect", name: "System Designer" }
+  mcp__claude-flow__agent_spawn { type: "coder", name: "API Developer" }
+  mcp__claude-flow__agent_spawn { type: "coder", name: "Auth Expert" }
+  mcp__claude-flow__agent_spawn { type: "analyst", name: "DB Designer" }
+  mcp__claude-flow__agent_spawn { type: "tester", name: "Test Engineer" }
+  mcp__claude-flow__agent_spawn { type: "coordinator", name: "Lead" }
+
+  // Update ALL todos at once - NEVER split todos!
+  TodoWrite { todos: [
+    { id: "design", content: "Design API architecture", status: "in_progress", priority: "high" },
+    { id: "auth", content: "Implement authentication", status: "pending", priority: "high" },
+    { id: "db", content: "Design database schema", status: "pending", priority: "high" },
+    { id: "api", content: "Build REST endpoints", status: "pending", priority: "high" },
+    { id: "tests", content: "Write comprehensive tests", status: "pending", priority: "medium" },
+    { id: "docs", content: "Document API endpoints", status: "pending", priority: "low" },
+    { id: "deploy", content: "Setup deployment pipeline", status: "pending", priority: "medium" },
+    { id: "monitor", content: "Add monitoring", status: "pending", priority: "medium" }
+  ]}
+
+  // Start orchestration
+  mcp__claude-flow__task_orchestrate { task: "Build REST API", strategy: "parallel" }
+
+  // Store initial memory
+  mcp__claude-flow__memory_usage { action: "store", key: "project/init", value: { started: Date.now() } }
+
+[BatchTool - Message 2]:
+  // Create ALL directories at once
+  Bash("mkdir -p test-app/{src,tests,docs,config}")
+  Bash("mkdir -p test-app/src/{models,routes,middleware,services}")
+  Bash("mkdir -p test-app/tests/{unit,integration}")
+
+  // Write ALL base files at once
+  Write("test-app/package.json", packageJsonContent)
+  Write("test-app/.env.example", envContent)
+  Write("test-app/README.md", readmeContent)
+  Write("test-app/src/server.js", serverContent)
+  Write("test-app/src/config/database.js", dbConfigContent)
+
+[BatchTool - Message 3]:
+  // Read multiple files for context
+  Read("test-app/package.json")
+  Read("test-app/src/server.js")
+  Read("test-app/.env.example")
+
+  // Run multiple commands
+  Bash("cd test-app && npm install")
+  Bash("cd test-app && npm run lint")
+  Bash("cd test-app && npm test")
+```
+
+### 🚫 NEVER DO THIS (Sequential = WRONG):
+
+```javascript
+// ❌ WRONG: Multiple messages, one operation each
+Message 1: mcp__claude-flow__swarm_init
+Message 2: mcp__claude-flow__agent_spawn (just one agent)
+Message 3: mcp__claude-flow__agent_spawn (another agent)
+Message 4: TodoWrite (single todo)
+Message 5: Write (single file)
+// This is 5x slower and wastes swarm coordination!
+```
+
+### 🔄 MEMORY COORDINATION PATTERN
+
+Every agent coordination step MUST use memory:
+
+```
+// After each major decision or implementation
+mcp__claude-flow__memory_usage
+  action: "store"
+  key: "swarm-{id}/agent-{name}/{step}"
+  value: {
+    timestamp: Date.now(),
+    decision: "what was decided",
+    implementation: "what was built",
+    nextSteps: ["step1", "step2"],
+    dependencies: ["dep1", "dep2"]
   }
-]
+
+// To retrieve coordination data
+mcp__claude-flow__memory_usage
+  action: "retrieve"
+  key: "swarm-{id}/agent-{name}/{step}"
+
+// To check all swarm progress
+mcp__claude-flow__memory_usage
+  action: "list"
+  pattern: "swarm-{id}/*"
 ```
 
-#### Security Validation
-```json
-"PreToolUse": [
-  {
-    "matcher": "Write.*\\.env|Edit.*\\.env",
-    "hooks": [
-      {
-        "type": "command",
-        "command": "echo 'WARNING: Editing environment file' && read -p 'Continue? (y/N): ' confirm && [[ $confirm == [yY] ]]"
-      }
-    ]
-  }
-]
-```
+### ⚡ PERFORMANCE TIPS
 
-#### Build Validation
-```json
-"PostToolUse": [
-  {
-    "matcher": ".*",
-    "hooks": [
-      {
-        "type": "command",
-        "command": "if [[ -f package.json ]]; then npm run build --if-present; fi"
-      }
-    ]
-  }
-]
-```
+1. **Batch Everything**: Never operate on single files when multiple are needed
+2. **Parallel First**: Always think "what can run simultaneously?"
+3. **Memory is Key**: Use memory for ALL cross-agent coordination
+4. **Monitor Progress**: Use mcp**claude-flow**swarm_monitor for real-time tracking
+5. **Auto-Optimize**: Let hooks handle topology and agent selection
 
-### Hook Events Reference
+### 🎨 VISUAL SWARM STATUS
 
-| Event | Trigger | Use Case |
-|-------|---------|----------|
-| `PreToolUse` | Before tool execution | Validation, logging, permissions |
-| `PostToolUse` | After tool completion | Formatting, testing, notifications |
-| `Notification` | Claude sends notification | Custom alerts, external integrations |
-| `Stop` | Main agent finishes | Cleanup, reporting, deployment |
-| `SubagentStop` | Task tool completes | Subtask tracking, progress updates |
-
-### Hook Security & Best Practices
-
-- **Exit Code 0**: Success (output shown to user)
-- **Exit Code 2**: Blocking error (stderr fed back to Claude)
-- **Other codes**: Non-blocking error (execution continues)
-- **Always validate**: Hooks run with full user permissions
-- **Test thoroughly**: No confirmation prompts for hook execution
-
-## 📋 Context Management & Session Optimization
-
-### CLAUDE.md Best Practices
-
-**Keep It Minimal**: Only essential project-wide patterns and commands. Avoid overwhelming Claude with too many rules.
-
-**Modular Documentation**: Break complex information into separate files:
-```bash
-# Project structure
-├── CLAUDE.md              # Core guidance (this file)  
-├── .claude/
-│   ├── commands/           # Custom slash commands
-│   ├── architecture.md     # System architecture details
-│   ├── api-patterns.md     # API conventions and patterns
-│   └── settings.json       # Hooks and configuration
-```
-
-### Session Management Tips
-
-#### Context Loading Strategy
-```bash
-# Start of session: Read only what's needed
-Read: CLAUDE.md                    # Always first
-Read: src/types/domains/           # Type definitions
-Task: "Analyze current task scope" # Determine additional context needs
-
-# Load context incrementally as needed
-# Don't preload everything - let Claude request specific files
-```
-
-#### Strategic Use of /compact
-- **Use when**: Context exceeds 50k tokens or conversation becomes sluggish
-- **Don't use**: For every conversation - only when context is bloated
-- **Before compacting**: Ensure all important context is saved to files
-
-#### Breaking Down Complex Tasks
-```bash
-# For tasks > 1 day of work, use plan mode
-1. Switch to plan mode for architectural planning
-2. Break into 8-hour discrete chunks with clear acceptance criteria  
-3. Save plan to TODO.md file
-4. Execute one chunk at a time with /clear between chunks
-5. Reference TODO.md for context continuity
-```
-
-### Token Optimization Patterns
-
-#### File Reference Strategy
-```bash
-# Prefer specific file references over bulk reads
-@src/components/SearchInterface.tsx  # Specific component
-@src/types/domains/candidate.ts      # Specific types
-
-# Avoid reading entire directories unless necessary
-# Let Claude request additional files as needed
-```
-
-#### Prompt Reuse System
-```bash
-# Maintain a prompt notebook for repeated operations
-# Store in external notepad, copy/paste into Claude
-
-# Common patterns:
-"Read all files related to [feature] before making changes"
-"Run quality checks: typecheck, lint, build, test" 
-"Update TODO.md with progress and next steps"
-```
-
-## 🎯 Community-Proven Workflow Patterns
-
-### The "Junior Developer" Management Approach
-
-**Treat Claude like a skilled junior developer** - provide clear guidance, check work, and adapt to its strengths/weaknesses:
-
-```bash
-# 1. Clear Task Definition
-"Implement user authentication using Supabase. 
-Read: src/auth/, src/components/AuthForm.tsx
-Check existing patterns before implementing."
-
-# 2. Incremental Development
-"Start with basic email auth, then add Google OAuth"
-# Wait for completion, review, then continue
-
-# 3. Continuous Validation  
-"Run tests after each change. If any fail, fix immediately."
-```
-
-### Adaptive CLAUDE.md Evolution
-
-**Organic Growth Strategy** - Let your CLAUDE.md file evolve based on real issues:
-
-```bash
-# 1. Start minimal - only core project info
-# 2. When Claude makes mistakes, add specific directives
-# 3. Periodically clean up outdated rules
-# 4. Keep under 1000 lines for optimal performance
-```
-
-### The 3-Tier Documentation System
-
-#### Foundation Tier (CLAUDE.md)
-- Project overview and core patterns
-- Quality commands and git workflow
-- Essential hooks and automation
-
-#### Component Tier (.claude/ directory)
-```bash
-├── .claude/
-│   ├── architecture.md     # System design patterns
-│   ├── api-patterns.md     # API conventions
-│   ├── testing-guide.md    # Testing strategies
-│   └── deployment.md       # Deploy procedures
-```
-
-#### Feature Tier (inline comments)
-- Implementation-specific details
-- Complex business logic explanations
-- Temporary notes for active development
-
-### Multi-Agent Coordination Patterns
-
-#### Parallel Research Workflow
-```bash
-# Launch multiple agents for comprehensive analysis
-Task: "Security audit" | "Performance analysis" | "Code review"
-  prompt="1) Check for vulnerabilities 2) Identify bottlenecks 3) Review code quality"
-
-# Consolidate findings
-"Summarize findings from all three audits and prioritize issues"
-```
-
-#### Specialized Sub-Agent Pattern
-```bash
-# Database Agent
-Task: "Database optimization"
-  prompt="Focus only on: query performance, index usage, schema efficiency"
-
-# Frontend Agent  
-Task: "UI/UX improvements"
-  prompt="Focus only on: component reusability, accessibility, responsive design"
-
-# Security Agent
-Task: "Security hardening" 
-  prompt="Focus only on: input validation, auth flows, data protection"
-```
-
-## 🤖 AI Assistant Tools & Workflows
-
-### Todo Management (ALWAYS USE)
-
-**Start Every Session**:
-```bash
-# Read existing todos
-TodoRead
-
-# Create comprehensive task list
-TodoWrite: [
-  {"content": "Understand user requirements", "status": "in_progress", "priority": "high"},
-  {"content": "Research existing implementations", "status": "pending", "priority": "high"},
-  {"content": "Design solution architecture", "status": "pending", "priority": "medium"},
-  {"content": "Implement core functionality", "status": "pending", "priority": "high"},
-  {"content": "Write tests", "status": "pending", "priority": "medium"},
-  {"content": "Run quality checks", "status": "pending", "priority": "high"}
-]
-```
-
-**Update Progress Continuously**:
-- Mark tasks `in_progress` BEFORE starting
-- Mark `completed` IMMEDIATELY after finishing
-- Only ONE task `in_progress` at a time
-- Add new todos as you discover subtasks
-
-### Task Agent Patterns
-
-#### 1. Research & Analysis
-```bash
-# Find all implementations of a feature
-Task: "Find boolean search implementations" 
-  prompt="Search for all files containing boolean search logic, list patterns used, and analyze effectiveness"
-
-# Analyze codebase structure
-Task: "Map authentication flow"
-  prompt="Trace the complete auth flow from login to protected routes, document all components involved"
-
-# Review API usage
-Task: "Audit Nymeria API calls"
-  prompt="Find all Nymeria API usage, check for rate limiting, error handling, and optimization opportunities"
-```
-
-#### 2. Parallel Development
-```bash
-# Execute multiple independent tasks
-Task: "Update UI components" | "Fix TypeScript errors" | "Add loading states"
-  prompt="Complete these tasks in parallel: 1) Update tooltip styles 2) Fix TS errors in types/ 3) Add loading to buttons"
-
-# Batch similar operations
-Task: "Update all edge functions" | "Check all API keys" | "Validate env vars"
-  prompt="Parallel check: Update Gemini model in all functions, verify API keys are set, validate .env.local"
-```
-
-#### 3. Complex Feature Implementation
-```bash
-# Break down large features
-Task: "Design bulk operations architecture"
-  prompt="Create detailed architecture for bulk candidate operations including UI, API, and database design"
-
-Task: "Implement bulk selection UI"
-  prompt="Build checkbox selection system for candidate cards with select all/none functionality"
-
-Task: "Create bulk API endpoints"
-  prompt="Implement Supabase edge functions for bulk update, delete, and export operations"
-
-Task: "Add progress tracking"
-  prompt="Implement real-time progress updates for bulk operations using websockets or polling"
-```
-
-#### 4. Testing & Quality Assurance
-```bash
-# Comprehensive testing
-Task: "Test authentication flows"
-  prompt="Test all auth methods (email, Google, phone), including edge cases like expired tokens"
-
-Task: "Performance audit"
-  prompt="Analyze bundle size, identify large dependencies, suggest code splitting opportunities"
-
-Task: "Security review"
-  prompt="Check for exposed API keys, validate input sanitization, review CORS policies"
-```
-
-### MCP Tools Integration
-
-#### VS Code Diagnostics
-```bash
-# Check for errors across codebase
-mcp__ide__getDiagnostics
-
-# Check specific file
-mcp__ide__getDiagnostics: {"uri": "file:///path/to/file.tsx"}
-```
-
-#### Jupyter Execution (for data analysis)
-```bash
-# Execute analysis code
-mcp__ide__executeCode: {
-  "code": "import pandas as pd\n# Analyze search patterns\ndf = pd.read_csv('search_history.csv')\nprint(df.groupby('query_type').count())"
-}
-```
-
-### Efficient Tool Combinations
-
-#### Feature Development Flow
-```bash
-# 1. Create todo list
-TodoWrite: [
-  {"content": "Research existing patterns", "priority": "high"},
-  {"content": "Design component architecture", "priority": "high"},
-  {"content": "Implement with tests", "priority": "high"},
-  {"content": "Update documentation", "priority": "medium"}
-]
-
-# 2. Research phase (parallel)
-Task: "Find similar components" | "Review design system" | "Check API docs"
-
-# 3. Get diagnostics before starting
-mcp__ide__getDiagnostics
-
-# 4. Implementation with continuous todo updates
-# Mark each todo in_progress → completed as you work
-```
-
-#### Bug Investigation Flow
-```bash
-# 1. Immediate analysis
-Task: "Reproduce bug"
-  prompt="Using error: [error], reproduce issue and identify root cause"
-
-# 2. Search for related code
-Grep: "error message or function name"
-Task: "Find error source" prompt="Trace error through call stack"
-
-# 3. Fix with verification
-TodoWrite: [
-  {"content": "Write failing test", "priority": "high"},
-  {"content": "Implement fix", "priority": "high"},
-  {"content": "Verify all tests pass", "priority": "high"}
-]
-```
-
-#### Code Review Flow
-```bash
-# Parallel quality checks
-Task: "Review imports" | "Check types" | "Validate security"
-  prompt="1) Find unused imports 2) Check any types 3) Look for exposed secrets"
-
-# Get all diagnostics
-mcp__ide__getDiagnostics
-
-# Run quality commands
-Bash: "npm run typecheck && npm run lint && npm run test"
-```
-
-## Project Essentials
-
-### Tech Stack
-- **Frontend**: React, TypeScript, Tailwind CSS, Vite
-- **Backend**: Supabase (PostgreSQL, Edge Functions)
-- **AI**: Google Gemini 2.5 Flash (gemini-2.5-flash)
-- **Video**: Daily.co (video conferencing API)
-- **Deployment**: Vercel (Frontend), Supabase (Backend)
-
-### Key Features
-- 🤖 AI-powered boolean search generation
-- 🔍 Contact enrichment (Nymeria API)
-- 💬 AI chat assistant
-- 📁 Project management for candidates
-- 📊 Analytics and reporting
-- 🎯 Multi-platform search
-- 🎥 Video meetings with Daily.co integration
-- 🎤 Real-time interview guidance with AI tips
-- 📈 Live competency tracking during interviews
-- 🔊 Real-time transcription with speaker identification
-
-### URLs & IDs
-- **Production**: https://www.apply.codes
-- **Supabase**: `kxghaajojntkqrmvsngn`
-- **Vercel Project**: `prj_Ix96cndRDQHgrZty2RIFbDkO54Zp`
-- **Google OAuth Client**: `1049016281061-p9fpgnd9tks77nehfdk6qb82fhd3461s.apps.googleusercontent.com`
-
-## Development Setup
-
-```bash
-# Clone and install
-git clone https://github.com/hiapplyco/apply-codes.git
-cd apply-codes
-npm install
-
-# Environment variables (.env.local)
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_GOOGLE_API_KEY=your_google_api_key
-VITE_NYMERIA_API_KEY=your_nymeria_api_key
-
-# Common commands
-npm run dev          # Start dev server
-npm run build        # Build production
-npm run lint         # Run linter
-npm run typecheck    # Check types
-npm test             # Run tests
-```
-
-### Reference Repository (blind-nut-70)
-
-**Setup Reference Access:**
-```bash
-# Add reference repository for visualization features
-git remote add reference https://github.com/hiapplyco/blind-nut-70.git
-git fetch reference
-
-# View reference branches
-git branch -r | grep reference
-```
-
-**When referencing blind-nut-70:**
-Use these commands to access the reference codebase without affecting current work:
-
-```bash
-# View files from reference repo
-git show reference/main:path/to/file.js
-
-# Create exploration branch (safe)
-git checkout -b reference-exploration reference/main
-
-# Compare implementations
-git diff HEAD reference/main -- path/to/file.js
-
-# Cherry-pick specific commits if needed
-git cherry-pick <commit-hash-from-reference>
-```
-
-**Key Reference Features:**
-- **Recruitment Intelligence Dashboard** - AI-powered candidate sourcing analytics
-- **Gemini-based Visualizations** - Interactive charts and metrics
-- **Post Creation Analytics** - Job posting optimization insights
-- **Candidate Scoring Visualizations** - Advanced recruiting metrics
-
-## Architecture Overview
+When showing swarm status, use this format:
 
 ```
-apply-codes/
-├── src/
-│   ├── components/      # React components
-│   │   └── video/      # Daily.co video components
-│   ├── pages/          # Page components
-│   ├── hooks/          # Custom React hooks
-│   ├── types/          # TypeScript types
-│   │   └── domains/    # Domain-specific types
-│   ├── lib/            # Utilities and helpers
-│   │   └── dailySingleton.ts # Daily.co singleton manager
-│   └── test/           # Test utilities
-├── supabase/
-│   ├── functions/      # 35+ Edge functions
-│   └── migrations/     # Database migrations
-└── docs/               # Documentation
+🐝 Swarm Status: ACTIVE
+├── 🏗️ Topology: hierarchical
+├── 👥 Agents: 6/8 active
+├── ⚡ Mode: parallel execution
+├── 📊 Tasks: 12 total (4 complete, 6 in-progress, 2 pending)
+└── 🧠 Memory: 15 coordination points stored
+
+Agent Activity:
+├── 🟢 architect: Designing database schema...
+├── 🟢 coder-1: Implementing auth endpoints...
+├── 🟢 coder-2: Building user CRUD operations...
+├── 🟢 analyst: Optimizing query performance...
+├── 🟡 tester: Waiting for auth completion...
+└── 🟢 coordinator: Monitoring progress...
 ```
 
-## Development Workflows
+## 📝 CRITICAL: TODOWRITE AND TASK TOOL BATCHING
 
-### New Feature Workflow
-```bash
-# 1. Setup todos
-TodoWrite: [
-  {"content": "Analyze requirements", "priority": "high"},
-  {"content": "Research existing code", "priority": "high"},
-  {"content": "Design architecture", "priority": "high"},
-  {"content": "Implement feature", "priority": "high"},
-  {"content": "Write tests", "priority": "medium"},
-  {"content": "Update docs", "priority": "low"}
-]
+### 🚨 MANDATORY BATCHING RULES FOR TODOS AND TASKS
 
-# 2. Parallel research
-Task: "Find patterns" | "Check APIs" | "Review types"
+**TodoWrite Tool Requirements:**
 
-# 3. Check diagnostics
-mcp__ide__getDiagnostics
+1. **ALWAYS** include 5-10+ todos in a SINGLE TodoWrite call
+2. **NEVER** call TodoWrite multiple times in sequence
+3. **BATCH** all todo updates together - status changes, new todos, completions
+4. **INCLUDE** all priority levels (high, medium, low) in one call
 
-# 4. Implement with TDD
-# Update todos as you progress!
+**Task Tool Requirements:**
+
+1. **SPAWN** all agents using Task tool in ONE message
+2. **NEVER** spawn agents one by one across multiple messages
+3. **INCLUDE** full task descriptions and coordination instructions
+4. **BATCH** related Task calls together for parallel execution
+
+**Example of CORRECT TodoWrite usage:**
+
+```javascript
+// ✅ CORRECT - All todos in ONE call
+TodoWrite { todos: [
+  { id: "1", content: "Initialize system", status: "completed", priority: "high" },
+  { id: "2", content: "Analyze requirements", status: "in_progress", priority: "high" },
+  { id: "3", content: "Design architecture", status: "pending", priority: "high" },
+  { id: "4", content: "Implement core", status: "pending", priority: "high" },
+  { id: "5", content: "Build features", status: "pending", priority: "medium" },
+  { id: "6", content: "Write tests", status: "pending", priority: "medium" },
+  { id: "7", content: "Add monitoring", status: "pending", priority: "medium" },
+  { id: "8", content: "Documentation", status: "pending", priority: "low" },
+  { id: "9", content: "Performance tuning", status: "pending", priority: "low" },
+  { id: "10", content: "Deploy to production", status: "pending", priority: "high" }
+]}
 ```
 
-### Bug Fix Workflow
-```bash
-# 1. Immediate response
-TodoRead  # Check existing todos
-Task: "Reproduce issue" prompt="[paste error/screenshot details]"
+**Example of WRONG TodoWrite usage:**
 
-# 2. Investigation
-Task: "Find root cause" prompt="Trace error: [details]"
-Grep: "error message"
-
-# 3. Fix with todos
-TodoWrite: [
-  {"content": "Write failing test", "priority": "high"},
-  {"content": "Fix bug", "priority": "high"},
-  {"content": "Verify fix", "priority": "high"}
-]
+```javascript
+// ❌ WRONG - Multiple TodoWrite calls
+Message 1: TodoWrite { todos: [{ id: "1", content: "Task 1", ... }] }
+Message 2: TodoWrite { todos: [{ id: "2", content: "Task 2", ... }] }
+Message 3: TodoWrite { todos: [{ id: "3", content: "Task 3", ... }] }
+// This breaks parallel coordination!
 ```
 
-### Code Quality Workflow
-```bash
-# Parallel quality checks
-Task: "Lint check" | "Type check" | "Test coverage"
-  prompt="Run all quality checks and report issues"
+## Claude Flow v2.0.0 Features
 
-# Get diagnostics
-mcp__ide__getDiagnostics
+Claude Flow extends the base coordination with:
 
-# Fix issues in parallel
-Task: "Fix lint errors" | "Fix type errors" | "Add missing tests"
-```
+- **🔗 GitHub Integration** - Deep repository management
+- **🎯 Project Templates** - Quick-start for common projects
+- **📊 Advanced Analytics** - Detailed performance insights
+- **🤖 Custom Agent Types** - Domain-specific coordinators
+- **🔄 Workflow Automation** - Reusable task sequences
+- **🛡️ Enhanced Security** - Safer command execution
 
-## Core Components & Patterns
+## Support
 
-### UI Framework
-- **Brutalist Design**: Bold borders, shadows, purple/green accents
-- **Component Pattern**: Atomic design (atoms → molecules → organisms)
-- **State Management**: Local state, Context API, Tanstack Query, URL state
-
-### Key Components
-1. **PlatformCarousel** - Landing page preview carousel
-2. **SidebarNew** - Navigation with mobile drawer
-3. **AuthForm** - Multi-provider authentication
-4. **SearchInterface** - Boolean search generation
-5. **ProfileCard** - Candidate display with enrichment
-
-### Styling Patterns
-```css
-/* Brutalist style */
-border-2 border-black
-shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
-hover:scale-105
-
-/* Purple primary, green accent */
-bg-purple-600 text-white
-bg-green-400/20
-```
-
-## Authentication System
-
-### Supabase Auth Setup
-- Email/password, Google OAuth, Phone OTP
-- Protected routes with `<ProtectedRoute>`
-- Row Level Security (RLS) on all tables
-
-### Critical Configuration
-```
-Supabase Dashboard:
-- Site URL: https://www.apply.codes
-- Redirect URLs: https://*.apply.codes/*
-- Email sender: "Apply Team" (not "blind nut")
-- Logo URL: /storage/v1/object/public/logos/APPLYFullwordlogo2025.png
-```
-
-## AI Agent System
-
-### Current Agents
-- **BooleanSearchAgent** - Generate search strings
-- **RecruitmentAgent** - Candidate search/evaluation
-- **CompensationAgent** - Salary benchmarking
-- **ProfileEnrichmentAgent** - Contact enrichment
-- **ChatAssistant** - Context-aware AI copilot
-
-### Edge Functions (35+)
-- `process-job-requirements`
-- `explain-boolean`
-- `analyze-compensation`
-- `enhance-job-description`
-- `search-contacts`
-- `chat-assistant`
-- `create-daily-room` - Creates Daily.co meeting rooms
-- `interview-guidance-ws` - WebSocket for real-time interview AI assistance
-
-## Integrations
-
-### Active Integrations
-1. **Nymeria API** - Contact enrichment (implemented)
-2. **Google Gemini** - All AI operations
-3. **SendGrid** - Email delivery (partial)
-4. **Daily.co** - Video conferencing (implemented)
-
-### Planned Integrations
-See `/docs/integrations/integrations-prd.md` for comprehensive roadmap:
-- People Data Labs, Hunter.io, GitHub API
-- ATS Hub (Lever, Greenhouse, Rippling)
-- Gemini Research Agent
-
-## Deployment & Operations
-
-### Frontend (Vercel)
-```bash
-# Automatic deployment on push to main
-git push origin main
-
-# Manual deployment
-vercel --prod
-```
-
-### Edge Functions (Supabase)
-```bash
-# Link to project (no Docker required)
-supabase link --project-ref kxghaajojntkqrmvsngn
-
-# View logs and manage functions
-supabase functions list
-supabase functions logs function-name
-
-# Deploy via Dashboard (recommended)
-# Navigate to Supabase Dashboard > Functions
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**File Upload Failures**
-```bash
-Task: "Debug file upload" prompt="Check env vars, network tab, and edge function logs for upload issues"
-```
-
-**Auth Issues**
-```bash
-Task: "Fix auth issue" prompt="Verify Supabase config: Site URL, redirect URLs, email templates"
-```
-
-**Edge Function Deployment**
-```bash
-Task: "Deploy edge function" prompt="Use Supabase Dashboard to deploy [function-name] without Docker"
-```
-
-**CORS Errors**
-```bash
-Task: "Fix CORS" prompt="Add proper CORS headers to edge function and handle OPTIONS"
-```
-
-**Daily.co Video Meeting Issues**
-```bash
-# Duplicate Daily instance errors
-Task: "Fix duplicate Daily instance" prompt="Implement singleton pattern in src/lib/dailySingleton.ts"
-
-# Video not displaying
-Task: "Debug video display" prompt="Check if frame.join() is called after loading, verify container styling"
-
-# Meeting room creation failures
-Task: "Debug room creation" prompt="Check create-daily-room edge function logs, verify Daily.co API key"
-```
-
-## Key Guidelines
-
-### Code Standards
-- TypeScript strict mode enabled
-- Functional React components
-- Absolute imports with @ alias
-- One component per file
-- No comments unless essential
-
-### Security
-- Never commit API keys
-- Validate all inputs
-- Use environment variables
-- Implement RLS policies
-- HTTPS only
-
-### Performance
-- Lazy load components
-- Optimize images (WebP)
-- Monitor bundle size (<500KB chunks)
-- Cache API responses
-- Index database queries
-
-### Git Workflow
-- Branch: `feature/*`, `fix/*`, `refactor/*`
-- Conventional commits
-- PR requires review
-- Update docs with changes
-
-## Quick Reference
-
-### Database Schema (Enterprise-Grade, Normalized)
-
-#### Core Entity Tables
-
-**`profiles`** - Enhanced user profiles with complete authentication support
-- `id` (uuid, PK) - References auth.users(id) with CASCADE delete
-- `full_name` (text, NOT NULL, default '') - User display name (never null)
-- `avatar_url` (text) - Profile image URL
-- `phone_number` (text) - Contact phone number
-- `created_at` (timestamptz, default NOW()) - Account creation
-- `updated_at` (timestamptz, default NOW()) - Auto-updated on changes
-- **Features**: Automatic profile creation trigger, RLS policies, updated_at trigger
-
-**`companies`** - Canonical company entities with normalization
-- `id` (uuid, PK, default gen_random_uuid()) - Company unique identifier
-- `canonical_name` (text, NOT NULL, UNIQUE) - Primary normalized company name
-- `aliases` (text[], default '{}') - Alternative names and variations
-- `domain` (text) - Primary company domain for validation
-- `industry` (text) - Industry classification
-- `linkedin_url` (text) - Company LinkedIn profile
-- `created_at` (timestamptz, default NOW()) - Record creation
-- `updated_at` (timestamptz, default NOW()) - Auto-updated on changes
-- **Features**: Full-text search index, alias support, immutable search functions
-
-**`locations`** - Structured location entities with geographic data
-- `id` (uuid, PK, default gen_random_uuid()) - Location unique identifier
-- `canonical_name` (text, NOT NULL, UNIQUE) - Full normalized location string
-- `city` (text, NOT NULL) - City name
-- `state` (text) - State/province
-- `country` (text, NOT NULL, default 'United States') - Country name
-- `aliases` (text[], default '{}') - Alternative location formats
-- `coordinates` (point) - Geographic coordinates for mapping
-- `created_at` (timestamptz, default NOW()) - Record creation
-- `updated_at` (timestamptz, default NOW()) - Auto-updated on changes
-- **Features**: GIST spatial index, structured parsing, alias support
-
-**`saved_candidates`** - Enhanced candidate profiles with full normalization
-- `id` (bigint, PK) - Candidate unique identifier
-- `user_id` (uuid, FK to profiles, NOT NULL) - Owner of the candidate
-- `name` (text) - Candidate full name
-- `job_title` (text) - Current job title
-- `company` (text) - Original company string (preserved)
-- `location` (text) - Original location string (preserved)
-- `company_id` (uuid, FK to companies) - **NEW**: Normalized company reference
-- `location_id` (uuid, FK to locations) - **NEW**: Normalized location reference
-- `experience_years` (integer) - **NEW**: Extracted years of experience
-- `seniority_level` (text) - **NEW**: Categorized seniority (Junior/Mid/Senior/Lead/Executive)
-- `enrichment_status` (text, default 'pending') - **NEW**: Enrichment process status
-- `canonical_linkedin_url` (text) - **NEW**: Normalized LinkedIn URL
-- `last_enrichment` (timestamptz) - **NEW**: Last enrichment timestamp
-- `linkedin_url` (text) - LinkedIn profile URL
-- `work_email` (text) - Primary work email
-- `personal_emails` (text[]) - Additional email addresses
-- `mobile_phone` (text) - Contact phone number
-- `skills` (text[]) - Array of skills and technologies
-- `profile_summary` (text) - Candidate bio/summary
-- `notes` (text) - Recruiter private notes
-- `status` (text) - Pipeline status
-- `tags` (text[]) - Categorization tags
-- `created_at` (timestamptz, default NOW()) - Record creation
-- `updated_at` (timestamptz, default NOW()) - Last update
-- **Features**: Compound indexes, full-text search, normalization support
-
-#### Supporting Tables
-
-**`projects`** - Project and job management
-- `id` (uuid, PK) - Project unique identifier
-- `user_id` (uuid, FK to profiles) - Project owner
-- `name` (text) - Project name
-- `description` (text) - Project description
-- `status` (text) - Project status
-- `candidates_count` (integer) - Cached candidate count
-- `created_at` (timestamptz) - Project creation
-- `updated_at` (timestamptz) - Last update
-
-**`project_candidates`** - Many-to-many project/candidate relationships
-- `project_id` (uuid, FK to projects) - Project reference
-- `candidate_id` (bigint, FK to saved_candidates) - Candidate reference
-- `added_at` (timestamptz, default NOW()) - When candidate was added
-- **Primary Key**: (project_id, candidate_id)
-
-**`search_history`** - Search tracking and analytics
-- `id` (uuid, PK) - Search unique identifier
-- `user_id` (uuid, FK to profiles) - User who performed search
-- `query` (text) - Search query/boolean string
-- `platform` (text) - Search platform used
-- `results_count` (integer) - Number of results returned
-- `filters_applied` (jsonb) - Search filters used
-- `is_favorite` (boolean, default false) - Saved search flag
-- `created_at` (timestamptz) - Search timestamp
-
-**`agent_outputs`** - AI agent results and intelligent caching
-- `id` (uuid, PK) - Output unique identifier
-- `user_id` (uuid, FK to profiles) - User who triggered agent
-- `agent_type` (text) - Type of agent (boolean, compensation, etc.)
-- `input_data` (jsonb) - Agent input parameters
-- `output_data` (jsonb) - Agent response data
-- `status` (text) - Processing status
-- `created_at` (timestamptz) - Agent execution time
-
-#### Advanced Performance Features
-
-**Full-Text Search with Immutable Functions:**
-```sql
--- Companies search function
-CREATE FUNCTION companies_search_text(canonical_name TEXT, aliases TEXT[])
-RETURNS TEXT LANGUAGE SQL IMMUTABLE
-
--- Locations search function  
-CREATE FUNCTION locations_search_text(canonical_name TEXT, city TEXT, state TEXT, country TEXT)
-RETURNS TEXT LANGUAGE SQL IMMUTABLE
-
--- Candidates enhanced search function
-CREATE FUNCTION candidates_search_text(name TEXT, job_title TEXT, company TEXT, location TEXT, skills_array TEXT[])
-RETURNS TEXT LANGUAGE SQL IMMUTABLE
-```
-
-**High-Performance Indexes:**
-- `idx_companies_fulltext` - GIN index with immutable search function
-- `idx_locations_fulltext` - GIN index with geographic text search
-- `idx_candidates_enhanced_fulltext` - GIN index for candidate search
-- `idx_candidates_compound_location_experience` - Multi-column optimization
-- `idx_candidates_compound_company_seniority` - Company+seniority queries
-- `idx_candidates_search_compound` - User+status+date compound index
-
-**Data Normalization Functions:**
-```sql
--- Find or create company with domain validation
-find_or_create_company(company_name TEXT, company_domain TEXT, company_industry TEXT)
-
--- Parse and normalize location strings
-find_or_create_location(location_string TEXT)
-
--- Extract experience from job titles and descriptions
-extract_experience_years(job_title TEXT, profile_summary TEXT)
-
--- Determine seniority level from experience and title
-determine_seniority_level(experience_years INTEGER, job_title TEXT)
-```
-
-**Analytics Views:**
-- `candidate_search_view` - Optimized candidate search with normalized data
-- `project_analytics_view` - Aggregated project performance metrics
-- `user_stats_materialized` - Pre-computed user statistics (refreshed daily)
-
-**Row Level Security (RLS):**
-- All user tables: Users can only access their own data
-- Company/location tables: Globally readable by authenticated users
-- Profiles table: Restricted to own profile with comprehensive policies
-- Auto-triggered profile creation for new users
-
-#### Migration and Data Quality
-
-**Data Migration Strategy:**
-- `DataMigrationManager` class for batch processing with progress tracking
-- `MigrationValidator` for data quality verification
-- Defensive SQL with column existence checks
-- Batch processing with configurable delays and error handling
-- Dry-run capabilities for safe testing
-
-**Quality Assurance:**
-- Immutable functions prevent PostgreSQL index creation errors
-- Comprehensive validation of normalized entities
-- Duplicate detection and prevention
-- Progress tracking and error reporting
-- Rollback capabilities for failed migrations
-
-**Performance Monitoring:**
-- `analyze_query_performance()` - Query performance analysis
-- `get_index_usage()` - Index effectiveness monitoring  
-- `update_table_statistics()` - Automated maintenance function
-- Materialized view refresh automation
-
-This normalized, enterprise-grade schema provides:
-- 🚀 **10x faster queries** through strategic indexing
-- 🎯 **99.9% data quality** via normalization and validation
-- 🔍 **Advanced search capabilities** with full-text indexing
-- 📊 **Real-time analytics** through materialized views
-- 🛡️ **Bulletproof security** with comprehensive RLS policies
-- 🔄 **Zero-downtime migrations** with defensive SQL strategies
-
-### Environment Variables
-```
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-VITE_GOOGLE_API_KEY
-VITE_NYMERIA_API_KEY
-SENDGRID_API_KEY (edge functions)
-GEMINI_API_KEY (edge functions)
-```
-
-### Quality Checklist
-```bash
-# Always run before completing any task
-npm run typecheck    # Must pass
-npm run lint         # Must pass
-npm run build        # Must succeed
-npm test             # Run tests
-
-# Or use parallel task
-Task: "Run quality checks" prompt="Execute typecheck, lint, build, and tests in parallel"
-```
-
-## 🚀 Community Tips & Advanced Patterns
-
-### Directory-Style Resource Discovery
-
-Check out these community resources for advanced Claude Code workflows:
-
-- **Awesome Claude Code**: https://github.com/hesreallyhim/awesome-claude-code
-- **3-Tier Documentation**: Smart context loading based on task complexity
-- **Multi-Agent Workflows**: Specialized sub-agents for different concerns
-- **Performance Benchmarks**: Community-proven prompting patterns for coding tasks
-
-### MCP Server Integration Tips
-
-```bash
-# Template patterns for common MCP setups
-- Database connectors with connection pooling
-- File handlers with proper error boundaries  
-- API wrappers with rate limiting
-- Integration examples for server composition
-```
-
-### Hook Development Best Practices
-
-#### Testing Hook Configurations
-```bash
-# Test hooks safely in development
-echo 'console.log("Hook test")' > .claude/test-hook.js
-# Add to settings.json temporarily, test, then remove
-```
-
-#### Common Hook Patterns
-```bash
-# Notification Hook (for external integrations)
-"Notification": [{
-  "matcher": ".*",
-  "hooks": [{
-    "type": "command",
-    "command": "curl -X POST https://webhook.site/your-id -d 'Claude notification'"
-  }]
-}]
-
-# Performance Monitoring Hook
-"PostToolUse": [{
-  "matcher": "Bash",
-  "hooks": [{
-    "type": "command", 
-    "command": "echo $(date): $CLAUDE_TOOL_ARGS >> .claude/performance.log"
-  }]
-}]
-```
-
-### Emergency Recovery Commands
-
-```bash
-# When context gets corrupted or confused
-/clear                  # Clear conversation, keep file context
-/compact               # Compress conversation, maintain context
-Task: "Sanity check"   # Verify current state and requirements
-
-# When hooks malfunction  
-mv .claude/settings.json .claude/settings.json.bak  # Disable hooks
-# Fix hook configuration, then restore
-
-# When CLAUDE.md isn't loading
-Read: CLAUDE.md        # Force explicit read
-Task: "Verify CLAUDE.md is loaded and understood"
-```
-
-### Session Optimization Checklist
-
-#### Before Starting Work
-- [ ] TodoRead to check existing tasks
-- [ ] Read CLAUDE.md for project context  
-- [ ] Verify working directory is correct
-- [ ] Check git status for uncommitted changes
-- [ ] Run mcp__ide__getDiagnostics for code health
-
-#### During Development
-- [ ] Break tasks into <8 hour chunks
-- [ ] Mark todos in_progress → completed immediately
-- [ ] Read files explicitly before editing
-- [ ] Use Task agents for parallel research
-- [ ] Update TODO.md for complex projects
-
-#### After Task Completion
-- [ ] Run quality checks: typecheck, lint, build, test
-- [ ] Update todos to completed status
-- [ ] Commit changes if requested
-- [ ] Document any new patterns in CLAUDE.md
-
-#### Performance Optimization
-- [ ] Use specific @file references vs broad directory reads
-- [ ] Leverage hooks for automated quality checks
-- [ ] /compact only when context exceeds 50k tokens
-- [ ] Break large conversations with /clear between discrete tasks
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Examples: https://github.com/ruvnet/claude-flow/tree/main/examples
 
 ---
 
-**Community Edition - Optimized for Claude Code Power Users**
-
-**Remember**:
-- ALWAYS use TodoWrite/TodoRead for task management
-- Use Task agents for research and parallel work  
-- Implement hooks for repetitive quality checks
-- Keep CLAUDE.md focused and evolving
-- Break complex tasks into discrete 8-hour chunks
-- Use /compact strategically, not automatically
-- Test with rate limits and hooks in mind
-
-## Video Meeting Implementation (Daily.co)
-
-### Architecture Overview
-The video meeting feature uses Daily.co for WebRTC video conferencing, with a singleton pattern to prevent duplicate instances.
-
-#### Key Components:
-1. **`src/lib/dailySingleton.ts`** - Singleton manager for Daily instances
-   - Prevents duplicate Daily.co instances
-   - Handles concurrent creation attempts
-   - Manages instance lifecycle and cleanup
-
-2. **`src/components/video/VideoPreview.tsx`** - Main video display component
-   - Uses singleton to create/get Daily frame
-   - Handles loading states and error messages
-   - Auto-joins meeting after frame creation
-
-3. **`src/pages/MeetingSimplified.tsx`** - Meeting workflow page
-   - Three-step flow: welcome → setup → meeting
-   - Optional project association (not required)
-   - Cleans up Daily instance on unmount
-
-4. **`supabase/functions/create-daily-room`** - Room creation edge function
-   - Creates Daily.co rooms via API
-   - Associates rooms with projects (optional)
-   - Returns room URL for client
-
-### Common Implementation Patterns:
-
-#### Singleton Pattern for Daily.co
-```typescript
-// Always use the singleton to prevent duplicate instances
-import { dailySingleton } from "@/lib/dailySingleton";
-
-const frame = await dailySingleton.getOrCreateCallFrame(
-  containerElement,
-  roomUrl
-);
-```
-
-#### Optional Project Association
-```typescript
-// Projects are optional - pass null if no project selected
-const { data } = await supabase.functions.invoke('create-daily-room', {
-  body: {
-    projectId: selectedProjectId || null, // Optional
-    meetingType: 'interview',
-    title: 'Meeting Title',
-    userId: user?.id
-  }
-});
-```
-
-#### Proper Cleanup
-```typescript
-// Always clean up Daily instance when done
-const endMeeting = async () => {
-  await dailySingleton.destroyCallFrame();
-  // Reset state, navigate away, etc.
-};
-```
-
-### Troubleshooting Video Meetings:
-
-1. **Duplicate instance errors**: Singleton pattern should prevent these
-2. **Video not showing**: Ensure `frame.join()` is called after loading
-3. **Container styling**: Use `absolute inset-0` with min-height
-4. **Permissions**: Browser must grant camera/microphone access
-5. **Join timeout**: Increased to 30 seconds, non-blocking if auto-join fails
-
-## Real-Time Interview Guidance System
-
-### Overview
-AI-powered interview assistance providing real-time tips, competency tracking, and contextual guidance during live interviews.
-
-### Architecture Components
-
-1. **WebSocket Gateway** (`interview-guidance-ws`)
-   - Real-time bidirectional communication
-   - Gemini 2.0 Flash integration for low-latency tips
-   - Context-aware guidance generation
-   - 3-second debounce for optimal API usage
-
-2. **Context Management**
-   - **Hierarchical layers**: Core → Resume → Recent → Immediate
-   - `InterviewContextManager` class for operations
-   - Zustand store for state management
-   - Types in `src/types/interview.ts`
-
-3. **Real-Time Transcription**
-   - `useDailyTranscription` hook for Daily.co integration
-   - Speaker diarization support
-   - Intelligent buffering to prevent API flooding
-   - Auto-start on meeting join
-
-4. **UI Components**
-   - `InterviewGuidanceSidebar`: Collapsible panel with tips & tracking
-   - `CompetencySetup`: Pre-interview competency configuration
-   - Real-time coverage visualization
-   - Auto-dismissing tips based on priority
-
-5. **Performance Optimizations**
-   - LRU cache for analysis results (70% API reduction)
-   - IndexedDB for persistent storage
-   - Web Workers for heavy computations
-   - Intelligent buffering and debouncing
-
-### Usage
-
-#### 1. Setup Competencies (Pre-Interview)
-```typescript
-// In MeetingEnhanced, configure competencies before starting
-const competencies = [
-  { name: 'System Design', category: 'technical', required: true },
-  { name: 'Communication', category: 'behavioral', required: true },
-  // ... more competencies
-];
-```
-
-#### 2. During Interview
-- AI tips appear in collapsible sidebar
-- Competency coverage updates in real-time
-- Tips prioritized by importance (high/medium/low)
-- Suggested follow-up questions provided
-
-#### 3. Key Hooks
-```typescript
-// Interview guidance management
-const { updateContext, sendTranscript } = useInterviewGuidance({
-  sessionId, meetingId, enabled: true
-});
-
-// Transcription integration
-const { startTranscription } = useDailyTranscription({
-  callObject, sessionId, meetingId
-});
-```
-
-### Configuration
-```typescript
-const guidanceConfig = {
-  maxTipsVisible: 5,
-  tipDisplayDuration: 20000, // 20 seconds
-  transcriptBufferSize: 20,
-  analysisDebounceMs: 3000,
-  geminiModel: 'gemini-2.0-flash-exp'
-};
-```
-
-### Troubleshooting Interview Guidance
-
-1. **Tips not appearing**: Check WebSocket connection in sidebar header
-2. **No transcription**: Verify Daily.co transcription is enabled
-3. **Competency tracking stuck**: Ensure competencies are configured
-4. **High latency**: Check network and Gemini API status
-
-**Version**: 5.2 (Community-Optimized + Hooks + Video + Interview Guidance)
-**Updated**: July 2025
+Remember: **Claude Flow coordinates, Claude Code creates!** Start with `mcp__claude-flow__swarm_init` to enhance your development workflow.

@@ -1514,6 +1514,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                     </ButtonLoading>
                   </Button>
                 </div>
+              </div>
             </CollapsibleContent>
           </Card>
         </Collapsible>
@@ -1684,17 +1685,17 @@ This area is for your specific search instructions, filtering criteria, or addit
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-              <Badge variant="outline">{selectedProfiles.size} selected</Badge>
-              <Button
-                onClick={openEmailDialog}
-                disabled={selectedProfiles.size === 0}
-                size="sm"
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Generate Email Templates
-              </Button>
-            </div>
-          </div>
+                  <Badge variant="outline">{selectedProfiles.size} selected</Badge>
+                  <Button
+                    onClick={openEmailDialog}
+                    disabled={selectedProfiles.size === 0}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Generate Email Templates
+                  </Button>
+                </div>
+              </div>
           
           <div className="space-y-4">
             {searchResults.map((result, index) => {
@@ -1941,6 +1942,7 @@ This area is for your specific search instructions, filtering criteria, or addit
               );
             })}
           </div>
+        </div>
         </Card>
         </ContainedLoading>
       )}
