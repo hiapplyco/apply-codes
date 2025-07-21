@@ -207,7 +207,7 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       console.log('✅ Autocomplete initialized successfully');
 
       // Add MutationObserver to handle dropdown click events
-      const observer = new MutationObserver((mutations) => {
+      const dropdownObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
             const addedNodes = Array.from(mutation.addedNodes);
@@ -273,13 +273,13 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       });
       
       // Observe the document body for dropdown changes
-      observer.observe(document.body, {
+      dropdownObserver.observe(document.body, {
         childList: true,
         subtree: true
       });
       
       // Store observer for cleanup
-      (window as any).placesObserver = observer;
+      (window as any).placesObserver = dropdownObserver;
 
     } catch (error) {
       console.error('❌ Failed to initialize autocomplete:', error);
