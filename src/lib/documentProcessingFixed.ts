@@ -13,17 +13,18 @@ class ClientDocumentProcessor {
       // Dynamic import to avoid bundling issues
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Import the legacy build which includes the worker
-      const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.entry');
+      // Use the version number from the imported library
+      const pdfVersion = pdfjsLib.version || '3.11.174';
       
-      // Set up the worker properly
-      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+      // Set worker source to CDN with exact version
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfVersion}/pdf.worker.min.js`;
       
       const arrayBuffer = await file.arrayBuffer();
       
-      // Load the PDF document with simplified options
+      // Load the PDF document with worker disabled if CDN fails
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
+        disableWorker: true, // This will run PDF.js in the main thread
         verbosity: 0 // Suppress console warnings
       });
       
