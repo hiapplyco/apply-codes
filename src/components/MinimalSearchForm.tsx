@@ -13,7 +13,7 @@ import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
-import { SimpleDocumentProcessor as DocumentProcessor } from '@/lib/simplePdfProcessor';
+import { DocumentProcessor } from '@/lib/modernPdfProcessor';
 import BooleanExplainer from '@/components/BooleanExplainer';
 import { BooleanExplanation } from '@/types/boolean-explanation';
 import LocationModal from '@/components/LocationModal';
