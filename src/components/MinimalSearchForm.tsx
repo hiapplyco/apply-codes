@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { CandidateAnalysis } from '@/components/search/CandidateAnalysis';
+import { CompactCandidateAnalysis } from '@/components/search/CompactCandidateAnalysis';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
@@ -13,7 +13,7 @@ import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FirecrawlService } from '@/utils/FirecrawlService';
-import { DocumentProcessor } from '@/lib/documentProcessing';
+import { DocumentProcessor } from '@/lib/documentProcessingFixed';
 import BooleanExplainer from '@/components/BooleanExplainer';
 import { BooleanExplanation } from '@/types/boolean-explanation';
 import LocationModal from '@/components/LocationModal';
@@ -1958,7 +1958,7 @@ This area is for your specific search instructions, filtering criteria, or addit
       {/* Candidate Analysis Section */}
       {searchResults.length > 0 && (
         <div className="mt-6">
-          <CandidateAnalysis 
+          <CompactCandidateAnalysis 
             candidates={searchResults}
             jobDescription={jobDescription}
             onCandidateSelect={(candidate) => {

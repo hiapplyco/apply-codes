@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -10,11 +10,14 @@ import { useProfileEnrichment } from './hooks/useProfileEnrichment';
 import { ContactSearchModal } from './ContactSearchModal';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProfileCard } from './components/ProfileCard';
+import { CompactProfileCard } from './components/CompactProfileCard';
 import { SearchSummaryHeader } from './components/SearchSummaryHeader';
 import { SearchFiltersPanel } from './components/SearchFiltersPanel';
+import { LayoutToggle, ViewMode, DensityMode } from './components/LayoutToggle';
 import { useSearchFilters } from './hooks/useSearchFilters';
 import { useInfiniteScroll } from './hooks/useInfiniteScroll';
 import { LoadMoreButton } from './components/LoadMoreButton';
+import { cn } from '@/lib/utils';
 
 export interface StructuredSearchResultsProps {
   searchString: string;
@@ -34,7 +37,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  const resultsPerPage = 25; // Increased results per page for better user experience
+  const resultsPerPage = 10; // Google CSE API limit per request
 
   // Store enriched contact data per profile URL
   const [enrichedProfiles, setEnrichedProfiles] = useState<Record<string, any>>({});
@@ -49,6 +52,11 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   
   // Omitted profiles state
   const [omittedProfiles, setOmittedProfiles] = useState<Set<string>>(new Set());
+  
+  // Layout state
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [densityMode, setDensityMode] = useState<DensityMode>('comfortable');
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   
   // Use search filters hook
   const {
@@ -280,6 +288,14 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         searchQuery={searchString}
         onExport={handleExport}
         onFilter={handleFilter}
+        extraActions={
+          <LayoutToggle
+            viewMode={viewMode}
+            densityMode={densityMode}
+            onViewModeChange={setViewMode}
+            onDensityModeChange={setDensityMode}
+          />
+        }
       />
 
       {/* Pagination Status */}
@@ -314,22 +330,66 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
       )}
 
       {/* Results Grid */}
-      <div className="space-y-3">
-        {displayResults.map((result, index) => (
-          <ProfileCard
-            key={`${result.link}-${index}`}
-            result={result}
-            index={index}
-            onGetContactInfo={handleGetContactInfo}
-            onSearchContacts={handleSearchContacts}
-            contactInfo={enrichedProfiles[result.link]}
-            isLoadingContact={loadingProfiles.has(result.link)}
-            jobId={jobId}
-            searchString={searchString}
-            onOmit={handleOmitProfile}
-            isOmitted={omittedProfiles.has(result.link)}
-          />
-        ))}
+      <div className={cn(
+        viewMode === 'grid' 
+          ? cn(
+              'grid',
+              densityMode === 'compact' && 'gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+              densityMode === 'comfortable' && 'gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+              densityMode === 'spacious' && 'gap-6 grid-cols-1 md:grid-cols-2'
+            )
+          : viewMode === 'list' 
+            ? cn(
+                densityMode === 'compact' && 'space-y-2',
+                densityMode === 'comfortable' && 'space-y-3',
+                densityMode === 'spacious' && 'space-y-4'
+              )
+            : cn(
+                densityMode === 'compact' && 'space-y-1',
+                densityMode === 'comfortable' && 'space-y-2',
+                densityMode === 'spacious' && 'space-y-3'
+              )
+      )}>
+        {displayResults.map((result, index) => {
+          const isExpanded = expandedCard === result.link;
+          
+          if (viewMode === 'grid' || viewMode === 'list') {
+            return (
+              <CompactProfileCard
+                key={`${result.link}-${index}`}
+                result={result}
+                index={index}
+                onGetContactInfo={handleGetContactInfo}
+                onSearchContacts={handleSearchContacts}
+                contactInfo={enrichedProfiles[result.link]}
+                isLoadingContact={loadingProfiles.has(result.link)}
+                jobId={jobId}
+                searchString={searchString}
+                onOmit={handleOmitProfile}
+                isOmitted={omittedProfiles.has(result.link)}
+                onExpand={() => setExpandedCard(isExpanded ? null : result.link)}
+                viewMode={viewMode}
+              />
+            );
+          }
+          
+          // Compact view - use regular ProfileCard but in a modal/drawer
+          return (
+            <ProfileCard
+              key={`${result.link}-${index}`}
+              result={result}
+              index={index}
+              onGetContactInfo={handleGetContactInfo}
+              onSearchContacts={handleSearchContacts}
+              contactInfo={enrichedProfiles[result.link]}
+              isLoadingContact={loadingProfiles.has(result.link)}
+              jobId={jobId}
+              searchString={searchString}
+              onOmit={handleOmitProfile}
+              isOmitted={omittedProfiles.has(result.link)}
+            />
+          );
+        })}
       </div>
 
       {/* Infinite Scroll Indicators */}

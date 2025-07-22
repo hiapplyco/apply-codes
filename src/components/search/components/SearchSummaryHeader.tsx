@@ -20,6 +20,7 @@ interface SearchSummaryHeaderProps {
   searchQuery?: string;
   onExport?: () => void;
   onFilter?: () => void;
+  extraActions?: React.ReactNode;
 }
 
 export const SearchSummaryHeader: React.FC<SearchSummaryHeaderProps> = ({
@@ -28,7 +29,8 @@ export const SearchSummaryHeader: React.FC<SearchSummaryHeaderProps> = ({
   resultsPerPage,
   searchQuery,
   onExport,
-  onFilter
+  onFilter,
+  extraActions
 }) => {
   const startResult = (currentPage - 1) * resultsPerPage + 1;
   const endResult = Math.min(currentPage * resultsPerPage, totalResults);
@@ -70,6 +72,8 @@ export const SearchSummaryHeader: React.FC<SearchSummaryHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {extraActions}
+          
           {onFilter && (
             <Button
               size="sm"
