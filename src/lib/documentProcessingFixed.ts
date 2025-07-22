@@ -13,21 +13,21 @@ class ClientDocumentProcessor {
       // Dynamic import to avoid bundling issues
       const pdfjsLib = await import('pdfjs-dist');
       
-      // Use a more reliable approach - no worker to avoid CORS issues
-      pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+      // Import the legacy build which includes the worker
+      const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.entry');
+      
+      // Set up the worker properly
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
       
       const arrayBuffer = await file.arrayBuffer();
       
-      // Load the PDF document
-      const pdf = await pdfjsLib.getDocument({ 
+      // Load the PDF document with simplified options
+      const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-        disableFontFace: true, // Disable font loading to speed up
-        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-        cMapPacked: true
-      }).promise;
+        verbosity: 0 // Suppress console warnings
+      });
+      
+      const pdf = await loadingTask.promise;
       
       let fullText = '';
       const totalPages = pdf.numPages;
