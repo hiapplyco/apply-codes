@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,6 +102,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [jobDescription, setJobDescription] = useState('');
   const [booleanString, setBooleanString] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [displayedResults, setDisplayedResults] = useState(10); // Start with 10 results
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Default to grid view
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false); // Make AI analysis optional
   const [isGenerating, setIsGenerating] = useState(false);
   const [showBooleanAnimation, setShowBooleanAnimation] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -774,7 +777,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       
       if (data.items) {
         // Map Google search results to SearchResult objects with location extraction
-        const mappedResults: SearchResult[] = data.items.slice(0, 10).map((item: any) => ({
+        const mappedResults: SearchResult[] = data.items.map((item: any) => ({
           title: item.title,
           link: item.link,
           snippet: item.snippet,
@@ -1685,6 +1688,26 @@ This area is for your specific search instructions, filtering criteria, or addit
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center border rounded-lg p-1">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="h-7 px-2"
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="h-7 px-2"
+                    >
+                      <List className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
                   <Badge variant="outline">{selectedProfiles.size} selected</Badge>
                   <Button
                     onClick={openEmailDialog}
@@ -1697,26 +1720,29 @@ This area is for your specific search instructions, filtering criteria, or addit
                 </div>
               </div>
           
-          <div className="space-y-4">
-            {searchResults.map((result, index) => {
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+            {searchResults.slice(0, displayedResults).map((result, index) => {
               const isExpanded = expandedProfiles.has(index);
               const analysis = analysisResults[index];
               const contact = contactInfo[index];
               
               return (
-                <div key={index} className="border rounded-lg overflow-hidden">
+                <div key={index} className={`border rounded-lg overflow-hidden ${
+                  viewMode === 'grid' ? 'h-full flex flex-col' : ''
+                }`}>
                   {/* Main Card */}
                   <div
-                    className={`p-4 cursor-pointer transition-colors ${
+                    className={`${viewMode === 'grid' ? 'p-3 flex-1 flex flex-col' : 'p-4'} cursor-pointer transition-colors ${
                       selectedProfiles.has(index)
                         ? 'border-green-500 bg-green-50'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                     onClick={() => toggleProfileExpansion(index)}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                    {viewMode === 'grid' ? (
+                      // Grid View - Compact Card
+                      <div className="flex flex-col h-full">
+                        <div className="flex items-start justify-between mb-2">
                           <input
                             type="checkbox"
                             checked={selectedProfiles.has(index)}
@@ -1724,43 +1750,92 @@ This area is for your specific search instructions, filtering criteria, or addit
                               e.stopPropagation();
                               toggleProfileSelection(index);
                             }}
-                            className="w-4 h-4"
+                            className="w-4 h-4 mt-0.5"
                           />
-                          <h3 className="font-semibold text-blue-600 hover:underline">
-                            {result.title}
-                          </h3>
+                          <a
+                            href={result.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{result.snippet}</p>
+                        <h3 className="font-semibold text-sm text-blue-600 hover:underline line-clamp-2 mb-2">
+                          {result.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 line-clamp-3 flex-1">{result.snippet}</p>
                         {result.location && (
-                          <p className="text-xs text-purple-600 mt-1 font-medium">
+                          <p className="text-xs text-purple-600 mt-2 font-medium">
                             📍 {result.location}
                           </p>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">{result.displayLink}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <p className="text-xs text-gray-500 truncate">{result.displayLink}</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleProfileExpansion(index);
+                            }}
+                            className="h-6 px-2 text-xs"
+                          >
+                            {isExpanded ? 'Less' : 'More'}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        <a
-                          href={result.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleProfileExpansion(index);
-                          }}
-                          className="h-6 w-6 p-0"
-                        >
-                          {isExpanded ? '-' : '+'}
-                        </Button>
+                    ) : (
+                      // List View - Original Layout
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedProfiles.has(index)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                toggleProfileSelection(index);
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <h3 className="font-semibold text-blue-600 hover:underline">
+                              {result.title}
+                            </h3>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{result.snippet}</p>
+                          {result.location && (
+                            <p className="text-xs text-purple-600 mt-1 font-medium">
+                              📍 {result.location}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">{result.displayLink}</p>
+                        </div>
+                        <div className="flex gap-2 ml-4">
+                          <a
+                            href={result.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleProfileExpansion(index);
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
+                            {isExpanded ? '-' : '+'}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Expanded Content */}
@@ -1942,6 +2017,19 @@ This area is for your specific search instructions, filtering criteria, or addit
               );
             })}
           </div>
+          
+          {/* Load More Button */}
+          {searchResults.length > displayedResults && (
+            <div className="mt-6 text-center">
+              <Button
+                onClick={() => setDisplayedResults(prev => prev + 10)}
+                variant="outline"
+                className="w-full max-w-xs"
+              >
+                Load More ({searchResults.length - displayedResults} remaining)
+              </Button>
+            </div>
+          )}
         </div>
         </Card>
         </ContainedLoading>
@@ -1955,8 +2043,25 @@ This area is for your specific search instructions, filtering criteria, or addit
         </Card>
       )}
       
+      {/* AI Analysis Button */}
+      {searchResults.length > 0 && !showAIAnalysis && (
+        <div className="mt-6 text-center">
+          <Button
+            onClick={() => setShowAIAnalysis(true)}
+            className="bg-purple-600 hover:bg-purple-700"
+            size="lg"
+          >
+            <Sparkles className="w-5 h-5 mr-2" />
+            Analyze Candidates with AI
+          </Button>
+          <p className="text-sm text-gray-600 mt-2">
+            Get AI-powered insights and rankings for all {searchResults.length} candidates
+          </p>
+        </div>
+      )}
+      
       {/* Candidate Analysis Section */}
-      {searchResults.length > 0 && (
+      {searchResults.length > 0 && showAIAnalysis && (
         <div className="mt-6">
           <CompactCandidateAnalysis 
             candidates={searchResults}
