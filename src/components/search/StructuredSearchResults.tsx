@@ -14,9 +14,8 @@ import { CompactProfileCard } from './components/CompactProfileCard';
 import { SearchSummaryHeader } from './components/SearchSummaryHeader';
 import { SearchFiltersPanel } from './components/SearchFiltersPanel';
 import { LayoutToggle, ViewMode, DensityMode } from './components/LayoutToggle';
+import { Pagination } from './components/Pagination';
 import { useSearchFilters } from './hooks/useSearchFilters';
-import { useInfiniteScroll } from './hooks/useInfiniteScroll';
-import { LoadMoreButton } from './components/LoadMoreButton';
 import { cn } from '@/lib/utils';
 
 export interface StructuredSearchResultsProps {
@@ -32,12 +31,11 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
 }) => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  const resultsPerPage = 10; // Google CSE API limit per request
+  const resultsPerPage = 25; // Google CSE API limit per request
 
   // Store enriched contact data per profile URL
   const [enrichedProfiles, setEnrichedProfiles] = useState<Record<string, any>>({});
@@ -78,26 +76,23 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
 
   useEffect(() => {
     if (searchString) {
-      resetAndLoadResults();
+      loadResults(1);
     }
-  }, [searchString, resetAndLoadResults]);
+  }, [searchString]);
 
   // Reset results when filters change (no need to reset page since we removed pagination)
   useEffect(() => {
     // Filters are applied client-side, no need to reload
   }, [filters]);
 
-  const resetAndLoadResults = async () => {
+  const loadResults = async (page: number) => {
     setIsLoading(true);
     setError(null);
-    setResults([]);
-    setCurrentPage(1);
-    setHasReachedEnd(false);
     
     try {
       const { data, error } = await fetchSearchResults(
         searchString,
-        1,
+        page,
         searchType,
         resultsPerPage
       );
@@ -113,7 +108,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         const processedResults = processSearchResults(data);
         setResults(processedResults);
         setTotalResults(parseInt(data.searchInformation?.totalResults || '0'));
-        setCurrentPage(1);
+        setCurrentPage(page);
         
         // Check if we've reached the end (Google CSE has a limit)
         if (processedResults.length < resultsPerPage) {
@@ -129,57 +124,11 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
     }
   };
 
-  const loadMoreResults = async () => {
-    if (isLoadingMore || hasReachedEnd) return;
-    
-    setIsLoadingMore(true);
-    const nextPage = currentPage + 1;
-    
-    try {
-      const { data, error } = await fetchSearchResults(
-        searchString,
-        nextPage,
-        searchType,
-        resultsPerPage
-      );
-
-      if (error) {
-        console.error('Error fetching more results:', error);
-        toast.error('Failed to load more results');
-        return;
-      }
-
-      if (data) {
-        const processedResults = processSearchResults(data);
-        
-        // Check if we got fewer results than expected (reached end)
-        if (processedResults.length < resultsPerPage) {
-          setHasReachedEnd(true);
-        }
-        
-        // Append new results to existing ones
-        setResults(prev => [...prev, ...processedResults]);
-        setCurrentPage(nextPage);
-      }
-    } catch (error) {
-      console.error('Error loading more results:', error);
-      toast.error('Failed to load more results');
-    } finally {
-      setIsLoadingMore(false);
-    }
+  const handlePageChange = (page: number) => {
+    loadResults(page);
   };
 
-  // Calculate if we have more results to load
-  const hasMore = !hasReachedEnd && results.length < totalResults;
   
-  // Set up infinite scroll
-  const { ref: infiniteScrollRef } = useInfiniteScroll({
-    onLoadMore: loadMoreResults,
-    hasMore,
-    isLoading: isLoadingMore,
-    threshold: 0.1,
-    rootMargin: '200px'
-  });
 
   const handleGetContactInfo = async (profileUrl: string, profileName: string) => {
     try {
@@ -298,20 +247,13 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         }
       />
 
-      {/* Pagination Status */}
+      {/* Pagination */}
       {displayResults.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg border">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-semibold">{displayResults.length}</span> of{' '}
-            <span className="font-semibold">{totalResults.toLocaleString()}</span> profiles
-            {hasMore && <span className="text-purple-600 ml-2">• More available</span>}
-          </div>
-          {hasMore && (
-            <div className="text-xs text-gray-500">
-              Page {currentPage} of {Math.ceil(totalResults / resultsPerPage)}
-            </div>
-          )}
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(totalResults / resultsPerPage)}
+          onPageChange={handlePageChange}
+        />
       )}
 
       {/* Search Filters Panel */}
@@ -392,29 +334,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         })}
       </div>
 
-      {/* Infinite Scroll Indicators */}
-      {hasMore && (
-        <div ref={infiniteScrollRef} className="flex justify-center py-4">
-          <div className="flex items-center gap-2 text-gray-600">
-            {isLoadingMore ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading more results...</span>
-              </>
-            ) : (
-              <span className="text-sm">Scroll down for more results</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Manual Load More Button */}
-      {hasMore && !isLoadingMore && (
-        <LoadMoreButton 
-          onClick={loadMoreResults}
-          isLoading={isLoadingMore}
-        />
-      )}
+      
       
       {hasReachedEnd && displayResults.length > 0 && (
         <div className="flex justify-center py-4">

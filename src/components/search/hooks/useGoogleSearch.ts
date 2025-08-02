@@ -11,9 +11,9 @@ import { useSearchStorage } from "./google-search/useSearchStorage";
 export const useGoogleSearch = (
   initialSearchString: string,
   searchType: SearchType = "candidates",
-  jobId?: number
+  jobId?: number,
+  resultsPerPage: number = 10
 ) => {
-  const resultsPerPage = 25; // Increased results per page for better user experience
   
   // State management
   const { state, setState } = useSearchState(initialSearchString);

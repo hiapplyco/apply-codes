@@ -5,10 +5,12 @@ import { KickoffForm } from "@/components/kickoff-call/KickoffForm";
 import { FileUploadSection } from "@/components/kickoff-call/FileUploadSection";
 import { FileList } from "@/components/kickoff-call/FileList";
 import { SummaryCard } from "@/components/kickoff-call/SummaryCard";
+import { MultimodalInput } from "@/components/kickoff-call/MultimodalInput";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ContextBar } from "@/components/context/ContextBar";
 import { useContextIntegration } from "@/hooks/useContextIntegration";
+import { TranscriptionService } from "@/lib/transcriptionService";
 
 interface Summary {
   id: string;
@@ -28,6 +30,9 @@ const KickOffCall = () => {
   const { processContent } = useContextIntegration({
     context: 'meeting'
   });
+  
+  // Initialize transcription service
+  const transcriptionService = new TranscriptionService();
 
   const handleFileUpload = (filePath: string, fileName: string, text: string) => {
     setUploadedFiles(prev => [...prev, { name: fileName, path: filePath }]);
@@ -97,6 +102,119 @@ const KickOffCall = () => {
     }
   };
 
+  const handleMultimodalFileUpload = async (file: File) => {
+    setIsProcessing(true);
+    try {
+      const fileId = `file-${Date.now()}`;
+      const fileName = file.name;
+      
+      // Handle different file types
+      if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+        // Transcribe audio/video files
+        const result = await transcriptionService.transcribeFile(file);
+        
+        setUploadedFiles(prev => [...prev, { name: fileName, path: fileId }]);
+        setSummaries(prev => [...prev, {
+          id: fileId,
+          title: `${fileName} (Transcription)`,
+          content: result.text.length > 200 ? result.text.substring(0, 200) + "..." : result.text,
+          source: `${file.type.startsWith('audio/') ? 'Audio' : 'Video'}: ${fileName}`
+        }]);
+        
+        toast.success(`Transcribed ${fileName} successfully`);
+      } else {
+        // For other files, read as text
+        const text = await file.text();
+        handleFileUpload(fileId, fileName, text);
+      }
+    } catch (error) {
+      console.error('File processing error:', error);
+      toast.error(`Failed to process ${file.name}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAudioCapture = async (audioBlob: Blob) => {
+    setIsProcessing(true);
+    try {
+      const result = await transcriptionService.transcribeAudio(audioBlob);
+      const audioId = `audio-${Date.now()}`;
+      
+      setUploadedFiles(prev => [...prev, { 
+        name: 'Audio Recording', 
+        path: audioId 
+      }]);
+      
+      setSummaries(prev => [...prev, {
+        id: audioId,
+        title: 'Audio Recording Transcription',
+        content: result.text.length > 200 ? result.text.substring(0, 200) + "..." : result.text,
+        source: `Audio Recording (${Math.floor(result.duration || 0)}s)`
+      }]);
+      
+      // Extract key points
+      if (result.text.length > 100) {
+        const keyPoints = await transcriptionService.extractKeyPoints(result.text);
+        if (keyPoints.length > 0) {
+          setSummaries(prev => [...prev, {
+            id: `${audioId}-keypoints`,
+            title: 'Key Points from Audio',
+            content: keyPoints.join('\n'),
+            source: 'AI Analysis'
+          }]);
+        }
+      }
+      
+      toast.success('Audio transcribed successfully');
+    } catch (error) {
+      console.error('Audio processing error:', error);
+      toast.error('Failed to transcribe audio');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVideoCapture = async (videoBlob: Blob) => {
+    setIsProcessing(true);
+    try {
+      const result = await transcriptionService.transcribeVideo(videoBlob);
+      const videoId = `video-${Date.now()}`;
+      
+      setUploadedFiles(prev => [...prev, { 
+        name: 'Video Recording', 
+        path: videoId 
+      }]);
+      
+      setSummaries(prev => [...prev, {
+        id: videoId,
+        title: 'Video Recording Transcription',
+        content: result.text.length > 200 ? result.text.substring(0, 200) + "..." : result.text,
+        source: `Video Recording (${Math.floor(result.duration || 0)}s)`
+      }]);
+      
+      // Extract key points
+      if (result.text.length > 100) {
+        const keyPoints = await transcriptionService.extractKeyPoints(result.text);
+        if (keyPoints.length > 0) {
+          setSummaries(prev => [...prev, {
+            id: `${videoId}-keypoints`,
+            title: 'Key Points from Video',
+            content: keyPoints.join('\n'),
+            source: 'AI Analysis'
+          }]);
+        }
+      }
+      
+      toast.success('Video transcribed successfully');
+    } catch (error) {
+      console.error('Video processing error:', error);
+      toast.error('Failed to transcribe video');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="container max-w-4xl py-8 space-y-8">
       {/* Page header */}
@@ -148,6 +266,12 @@ const KickOffCall = () => {
           <FileUploadSection 
             onFileUpload={handleFileUpload}
             isProcessing={isProcessing}
+          />
+          
+          <MultimodalInput
+            onFileUpload={handleMultimodalFileUpload}
+            onAudioCapture={handleAudioCapture}
+            onVideoCapture={handleVideoCapture}
           />
           
           <FileList 

@@ -69,7 +69,7 @@ export const fetchSearchResults = async (
     // Make request to Google CSE API with the properly formatted search string
     const cseUrl = `https://www.googleapis.com/customsearch/v1?key=${keyData.key}&cx=${cseId}&q=${encodeURIComponent(
       finalSearchString
-    )}&start=${startIndex}`;
+    )}&start=${startIndex}&num=${resultsPerPage}`;
     
     console.log("🔍 [CRITICAL] Making CSE request with full search constraints");
     
