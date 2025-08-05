@@ -50,3 +50,6 @@ claude-flow
 claude-flow.bat
 claude-flow.ps1
 hive-mind-prompt-*.txt
+# Ignore claude-flow metrics (conflicts with Claude Code)
+.claude-flow/
+claude-flow*
