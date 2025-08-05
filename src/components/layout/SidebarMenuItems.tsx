@@ -22,16 +22,16 @@ export const menuItems: MenuItem[] = [
     tooltip: 'Access all recruitment tools and see your activity overview'
   },
   { 
-    title: 'Chat', 
-    path: '/chat', 
-    icon: MessageSquare,
-    tooltip: 'Your AI recruitment copilot for real-time guidance and task automation'
-  },
-  { 
     title: 'Sourcing', 
     path: '/sourcing', 
     icon: Search,
     tooltip: 'Generate powerful boolean searches to find perfect candidates across LinkedIn, Indeed, and other platforms'
+  },
+  { 
+    title: 'Search History', 
+    path: '/search-history', 
+    icon: Clock,
+    tooltip: 'View your search database, saved candidates, and manage recruitment projects'
   },
   { 
     title: 'Meeting', 
@@ -40,16 +40,22 @@ export const menuItems: MenuItem[] = [
     tooltip: 'All-in-one space for kickoffs, interviews, and screening calls with AI assistance'
   },
   { 
+    title: 'Chat Assistant', 
+    path: '/chat', 
+    icon: MessageSquare,
+    tooltip: 'Your AI recruitment copilot for real-time guidance and task automation'
+  },
+  { 
     title: 'Create Content', 
-    path: '/content-creation', 
+    path: '/linkedin-post', 
     icon: PlusCircle,
-    tooltip: 'Generate engaging LinkedIn posts and job postings to attract top talent'
+    tooltip: 'Generate engaging LinkedIn posts to attract top talent'
   },
   { 
     title: 'Profile', 
     path: '/profile', 
     icon: User,
-    tooltip: 'Manage your account settings, view usage analytics, and search history'
+    tooltip: 'Manage your account settings, view usage analytics, and subscription'
   },
 ];
 
