@@ -10,7 +10,8 @@ import {
   User, 
   Loader2,
   Minimize2,
-  Maximize2
+  Maximize2,
+  Move
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -57,6 +58,13 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   const [contextContent, setContextContent] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Dragging state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [customPosition, setCustomPosition] = useState<{ x: number; y: number } | null>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   // Context integration for chat
   const { processContent } = useContextIntegration({
@@ -161,6 +169,66 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     }
   };
 
+  // Handle drag start
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const rect = (isOpen ? chatRef : dragRef).current?.getBoundingClientRect();
+    if (rect) {
+      setDragPosition({
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      });
+    }
+  };
+
+  // Handle drag move
+  const handleDragMove = (e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const newX = clientX - dragPosition.x;
+    const newY = clientY - dragPosition.y;
+    
+    // Ensure it stays within viewport
+    const maxX = window.innerWidth - (isOpen ? 384 : 56); // 384px = w-96, 56px = w-14
+    const maxY = window.innerHeight - (isOpen ? 600 : 56);
+    
+    setCustomPosition({
+      x: Math.min(Math.max(0, newX), maxX),
+      y: Math.min(Math.max(0, newY), maxY)
+    });
+  };
+
+  // Handle drag end
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Add global event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      const handleMove = (e: MouseEvent | TouchEvent) => handleDragMove(e);
+      const handleEnd = () => handleDragEnd();
+      
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleMove);
+        document.removeEventListener('touchend', handleEnd);
+      };
+    }
+  }, [isDragging, dragPosition.x, dragPosition.y, isOpen]);
+
   // Position classes
   const positionClasses = {
     'bottom-right': 'bottom-6 right-6',
@@ -168,39 +236,77 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     'top-right': 'top-6 right-6',
     'top-left': 'top-6 left-6'
   };
+  
+  // Get position style
+  const getPositionStyle = () => {
+    if (customPosition) {
+      return {
+        left: `${customPosition.x}px`,
+        top: `${customPosition.y}px`,
+        right: 'auto',
+        bottom: 'auto'
+      };
+    }
+    return {};
+  };
 
   // Chat trigger button
   if (!isOpen) {
     return (
-      <Button
-        onClick={() => setIsOpen(true)}
+      <div
+        ref={dragRef}
         className={cn(
-          "fixed z-50 w-14 h-14 rounded-full bg-purple-600 hover:bg-purple-700 text-white",
-          "border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
-          "hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-200",
-          positionClasses[position],
+          "fixed z-50 w-14 h-14",
+          !customPosition && positionClasses[position],
+          isDragging && "cursor-grabbing",
           className
         )}
-        type="button"
+        style={getPositionStyle()}
       >
-        <MessageCircle className="w-6 h-6" />
-      </Button>
+        <Button
+          onClick={() => setIsOpen(true)}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+          className={cn(
+            "w-full h-full rounded-full bg-purple-600 hover:bg-purple-700 text-white",
+            "border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+            "hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-shadow duration-200",
+            "cursor-move active:cursor-grabbing"
+          )}
+          type="button"
+        >
+          <MessageCircle className="w-6 h-6" />
+        </Button>
+        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+          Drag to move • Click to open
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className={cn(
-      "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
-      "flex flex-col transition-all duration-300",
-      positionClasses[position],
-      isMinimized ? "w-80 h-16" : "w-96 h-[600px]",
-      className
-    )}>
+    <div 
+      ref={chatRef}
+      className={cn(
+        "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
+        "flex flex-col transition-all duration-300",
+        !customPosition && positionClasses[position],
+        isMinimized ? "w-80 h-16" : "w-96 h-[600px]",
+        isDragging && "select-none",
+        className
+      )}
+      style={getPositionStyle()}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b-2 border-black bg-purple-50 rounded-t-lg">
+      <div 
+        className="flex items-center justify-between p-4 border-b-2 border-black bg-purple-50 rounded-t-lg cursor-move"
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+      >
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-purple-600" />
           <span className="font-semibold text-purple-900">AI Assistant</span>
+          {isDragging && <Move className="w-4 h-4 text-purple-600 animate-pulse" />}
         </div>
         <div className="flex items-center gap-1">
           <Button
