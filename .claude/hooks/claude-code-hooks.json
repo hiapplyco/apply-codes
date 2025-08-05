@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "user_prompt_submission": {
+      "description": "Validates and enhances prompts before processing",
+      "script": "bash -c 'echo \"Processing request for Apply.codes recruitment platform...\"'",
+      "enabled": true
+    },
+    "subagent_stop": {
+      "description": "Fires when subagents complete their tasks",
+      "script": "bash -c 'echo \"✅ Subagent task completed\"'",
+      "enabled": true
+    },
+    "pre_compaction": {
+      "description": "Optimizes context before compaction",
+      "script": "bash -c 'echo \"🗜️ Optimizing context for Apply.codes...\"'",
+      "enabled": true
+    },
+    "session_start": {
+      "description": "Initialize Apply.codes development environment",
+      "script": "bash -c 'cd /Users/jms/Development/apply-codes && git status && echo \"📊 Apply.codes environment ready\"'",
+      "enabled": true
+    }
+  },
+  "custom_workflows": {
+    "deploy_edge_function": {
+      "description": "Deploy Supabase edge function with validation",
+      "pre_hook": "npm run typecheck",
+      "command": "npx supabase functions deploy",
+      "post_hook": "bash .claude/hooks/post-edge-deploy.sh"
+    },
+    "run_recruitment_search": {
+      "description": "Execute full recruitment search workflow",
+      "steps": [
+        "Analyze job requirements",
+        "Generate boolean query",
+        "Execute search across platforms",
+        "Parse and rank candidates",
+        "Generate report"
+      ]
+    },
+    "code_review": {
+      "description": "Automated code review before commits",
+      "command": "bash .claude/hooks/pre-commit.sh"
+    }
+  }
+}

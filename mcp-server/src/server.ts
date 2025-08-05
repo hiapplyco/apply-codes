@@ -1,5 +1,18 @@
 #!/usr/bin/env node
 
+// Load environment variables
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Try to load from parent directory first (for development)
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Also try current directory
+dotenv.config();
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -7,6 +20,7 @@ import {
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
 // Import all tool controllers
@@ -17,6 +31,7 @@ import { interviewTools } from './controllers/interview-tools.js';
 import { BaseMCPTool } from './utils/base-tool.js';
 import { MCPServerConfig, MCPSession, MCPError, ValidationError } from './types/mcp.js';
 import { secretsManager } from './services/secrets-manager.js';
+import { RECRUITMENT_MCP_SYSTEM_PROMPT, getToolSelectionPrompt } from './prompts/system-prompts.js';
 
 class ApplyMCPServer {
   private server: Server;
@@ -128,7 +143,61 @@ class ApplyMCPServer {
 
     // Handle prompts/list request  
     this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
-      return { prompts: [] }; // Return empty array for now
+      return { 
+        prompts: [
+          {
+            name: 'recruitment-search-guide',
+            description: 'Guidelines for using Apply.codes recruitment search tools effectively',
+            arguments: []
+          },
+          {
+            name: 'tool-selection-help', 
+            description: 'Get specific guidance on which tool to use for a given query',
+            arguments: [
+              {
+                name: 'userQuery',
+                description: 'The user query to analyze',
+                required: true
+              }
+            ]
+          }
+        ]
+      };
+    });
+
+    // Handle prompts/get request
+    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      
+      if (name === 'recruitment-search-guide') {
+        return {
+          description: 'Complete guide for using Apply.codes recruitment tools',
+          messages: [
+            {
+              role: 'system',
+              content: {
+                type: 'text',
+                text: RECRUITMENT_MCP_SYSTEM_PROMPT
+              }
+            }
+          ]
+        };
+      } else if (name === 'tool-selection-help' && args?.userQuery) {
+        return {
+          description: 'Specific guidance for your query',
+          messages: [
+            {
+              role: 'system', 
+              content: {
+                type: 'text',
+                text: getToolSelectionPrompt(args.userQuery as string)
+              }
+            }
+          ]
+        };
+      }
+      
+      throw new MCPError('Unknown prompt', 'PROMPT_NOT_FOUND');
     });
 
     // Error handling

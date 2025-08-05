@@ -1,0 +1,75 @@
+{
+  "project": "Apply.codes AI Recruitment Platform",
+  "version": "1.0.0",
+  "settings": {
+    "autoRunTests": false,
+    "autoFormat": true,
+    "contextManagement": {
+      "maxFiles": 10,
+      "priorityPaths": [
+        "src/components",
+        "supabase/functions",
+        "mcp-server/src"
+      ]
+    }
+  },
+  "agents": {
+    "enabled": true,
+    "defaultAgent": "mcp-orchestrator",
+    "agentModels": {
+      "recruitment-analyst": "claude-3-sonnet",
+      "mcp-orchestrator": "claude-3-opus",
+      "code-reviewer": "claude-3-haiku"
+    }
+  },
+  "hooks": {
+    "preCommit": ".claude/hooks/pre-commit.sh",
+    "postDeploy": ".claude/hooks/post-edge-deploy.sh",
+    "sessionStart": "cd /Users/jms/Development/apply-codes && git status"
+  },
+  "commands": {
+    "shortcuts": {
+      "fc": "find-candidates",
+      "oj": "optimize-job",
+      "df": "deploy-function",
+      "tm": "test-mcp"
+    }
+  },
+  "memory": {
+    "imports": [
+      "@/Users/jms/Development/CLAUDE.md"
+    ],
+    "contextRules": [
+      "Always read files before modifying",
+      "Run typecheck and lint before commits",
+      "Use MCP tools for recruitment operations",
+      "Follow contract first prompting approach"
+    ]
+  },
+  "development": {
+    "testCommand": "npm test",
+    "lintCommand": "npm run lint",
+    "typeCheckCommand": "npm run typecheck",
+    "buildCommand": "npm run build",
+    "devServer": "npm run dev"
+  },
+  "integrations": {
+    "mcp": {
+      "enabled": true,
+      "port": 3000,
+      "tools": [
+        "boolean_search",
+        "analyze_job_requirements",
+        "parse_resume",
+        "compare_documents",
+        "get_market_intelligence",
+        "generate_interview_questions",
+        "create_recruitment_plan"
+      ]
+    },
+    "supabase": {
+      "localUrl": "http://localhost:54321",
+      "functions": "supabase/functions"
+    }
+  }
+}

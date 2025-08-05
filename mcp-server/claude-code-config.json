@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "apply-codes": {
+      "command": "node",
+      "args": ["/Users/jms/Development/apply-codes/mcp-server/dist/server.js"],
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "timeout": 30000
+    }
+  }
+}

@@ -75,6 +75,18 @@ async function testRealSearch() {
               if (content.searchQuery.booleanQuery) {
                 console.log(`   📝 Boolean Query Used: ${content.searchQuery.booleanQuery}`);
               }
+              
+              // Display the actual candidates
+              if (content.candidates && content.candidates.length > 0) {
+                console.log('\n   🎯 Top Candidates:');
+                content.candidates.slice(0, 5).forEach((candidate, idx) => {
+                  console.log(`\n   ${idx + 1}. ${candidate.name}`);
+                  console.log(`      Title: ${candidate.title} at ${candidate.company}`);
+                  console.log(`      Location: ${candidate.location}`);
+                  console.log(`      Profile: ${candidate.profileUrl}`);
+                  console.log(`      Match Score: ${(candidate.matchScore * 100).toFixed(0)}%`);
+                });
+              }
             }
           } catch (e) {
             console.log(`   📄 Raw response: ${response.result.content[0].text.substring(0, 200)}...`);

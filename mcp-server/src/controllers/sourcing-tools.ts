@@ -8,7 +8,7 @@ export class GenerateBooleanQueryTool extends BaseMCPTool {
   constructor() {
     super(
       'generate_boolean_query',
-      'Generate advanced boolean search queries for candidate sourcing across different platforms',
+      '⚠️ DEPRECATED - Use boolean_search tool instead. Only use this if you need JUST the query without executing search.',
       z.object({
         requiredSkills: z.array(z.string()).describe('Required technical skills'),
         optionalSkills: z.array(z.string()).optional().describe('Optional/preferred skills'),
@@ -127,7 +127,7 @@ export class SearchCandidatesTool extends BaseMCPTool {
   constructor() {
     super(
       'search_candidates',
-      'Search for candidates across multiple platforms using AI-powered matching',
+      '⚠️ LOW-LEVEL TOOL - Use boolean_search instead for better results. Only use this if you already have a boolean query.',
       z.object({
         keywords: z.string().describe('Search keywords (skills, job titles, etc.)'),
         location: z.string().optional().describe('Geographic location or "remote"'),
@@ -1290,10 +1290,14 @@ export class GetMarketIntelligenceTool extends BaseMCPTool {
   }
 }
 
+// Import the boolean search tool
+import { booleanSearchTool } from './boolean-search-tool.js';
+
 // Export all sourcing tools
 export const sourcingTools = [
   new GenerateBooleanQueryTool(),
   new SearchCandidatesTool(),
   new AnalyzeJobRequirementsTool(),
   new GetMarketIntelligenceTool(),
+  booleanSearchTool, // Add the new two-step boolean search tool
 ];
