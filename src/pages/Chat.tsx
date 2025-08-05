@@ -217,68 +217,65 @@ Provide helpful, specific advice based on their data. Be conversational but prof
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-6xl mx-auto p-6">
-      <div className="mb-6 flex-shrink-0">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <Bot className="w-8 h-8 text-purple-600" />
-              AI Recruitment Assistant
-            </h1>
-            <p className="text-gray-600">
-              Your intelligent copilot for recruitment insights and automation
-            </p>
+    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-7xl mx-auto p-4">
+      {/* Compact Header */}
+      <div className="mb-4 flex-shrink-0">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Bot className="w-6 h-6 text-purple-600" />
+            AI Assistant
+          </h1>
+          <div className="flex items-center gap-2">
+            {/* Compact Context Bar */}
+            <ContextBar
+              context="chat"
+              title=""
+              description=""
+              onContentProcessed={async (content) => {
+                try {
+                  await processContent(content);
+                  setContextContent(content.text);
+                  
+                  const contextMessage: Message = {
+                    id: `context-${Date.now()}`,
+                    role: 'assistant',
+                    content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses.`,
+                    timestamp: new Date()
+                  };
+                  setMessages(prev => [...prev, contextMessage]);
+                  
+                  toast.success(`${content.type} context added`);
+                } catch (error) {
+                  console.error('Chat context processing error:', error);
+                }
+              }}
+              projectSelectorProps={{
+                placeholder: "Project",
+                className: "w-32"
+              }}
+              showLabels={false}
+              size="sm"
+              layout="horizontal"
+              compact={true}
+              className="border-none shadow-none bg-transparent"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowContext(!showContext)}
+              className="h-9"
+            >
+              <Info className="w-4 h-4" />
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowContext(!showContext)}
-          >
-            <Info className="w-4 h-4 mr-2" />
-            {showContext ? 'Hide' : 'Show'} Context
-          </Button>
         </div>
-
-        {/* Context Bar */}
-        <ContextBar
-          context="chat"
-          title="Chat Context & Project"
-          description="Select a project and add context to enhance your AI conversations"
-          onContentProcessed={async (content) => {
-            try {
-              await processContent(content);
-              setContextContent(content.text);
-              
-              // Add context message to chat
-              const contextMessage: Message = {
-                id: `context-${Date.now()}`,
-                role: 'assistant',
-                content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses to your questions.`,
-                timestamp: new Date()
-              };
-              setMessages(prev => [...prev, contextMessage]);
-              
-              toast.success(`${content.type} context added to chat`);
-            } catch (error) {
-              console.error('Chat context processing error:', error);
-            }
-          }}
-          projectSelectorProps={{
-            placeholder: "Select a project (optional)",
-            className: "w-64"
-          }}
-          showLabels={true}
-          size="default"
-          layout="horizontal"
-        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
-        {/* Main Chat Area */}
-        <div className="lg:col-span-3 min-h-0">
+      <div className="flex gap-4 flex-1 min-h-0">
+        {/* Main Chat Area - Now takes most space */}
+        <div className="flex-1 min-h-0">
           <Card className="h-full flex flex-col border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)]">
-            <ScrollArea className="flex-1 p-6">
+            <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
                 {messages.map((message) => (
                   <div
@@ -293,7 +290,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                       </div>
                     )}
                     <div
-                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                      className={`max-w-[70%] rounded-lg px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-purple-600 text-white'
                           : 'bg-gray-100 text-gray-900'
@@ -355,69 +352,71 @@ Provide helpful, specific advice based on their data. Be conversational but prof
           </Card>
         </div>
 
-        {/* Context Panel */}
-        <div className={`lg:col-span-1 min-h-0 ${showContext ? 'block' : 'hidden lg:block'}`}>
-          <Card className="h-full border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] overflow-hidden">
-            <CardContent className="p-6 h-full overflow-y-auto">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
-                Your Context
-              </h3>
+        {/* Compact Context Panel - Only shows when toggled */}
+        {showContext && (
+          <div className="w-80 min-h-0">
+            <Card className="h-full border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] overflow-hidden">
+              <CardContent className="p-4 h-full overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                    Context
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowContext(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
 
               {userContext ? (
                 <div className="space-y-6">
-                  {/* Statistics */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-sm text-gray-600 uppercase">Statistics</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-2 bg-purple-50 rounded">
-                        <div className="flex items-center gap-2">
-                          <Search className="w-4 h-4 text-purple-600" />
-                          <span className="text-sm">Searches</span>
-                        </div>
-                        <Badge variant="secondary">{userContext.totalSearches}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
-                        <div className="flex items-center gap-2">
-                          <Folder className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm">Projects</span>
-                        </div>
-                        <Badge variant="secondary">{userContext.totalProjects}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-green-600" />
-                          <span className="text-sm">Candidates</span>
-                        </div>
-                        <Badge variant="secondary">{userContext.totalCandidates}</Badge>
-                      </div>
+                  {/* Compact Statistics */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="text-center p-2 bg-purple-50 rounded">
+                      <Search className="w-4 h-4 text-purple-600 mx-auto mb-1" />
+                      <div className="text-xs text-gray-600">Searches</div>
+                      <div className="font-bold text-sm">{userContext.totalSearches}</div>
+                    </div>
+                    <div className="text-center p-2 bg-blue-50 rounded">
+                      <Folder className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+                      <div className="text-xs text-gray-600">Projects</div>
+                      <div className="font-bold text-sm">{userContext.totalProjects}</div>
+                    </div>
+                    <div className="text-center p-2 bg-green-50 rounded">
+                      <Users className="w-4 h-4 text-green-600 mx-auto mb-1" />
+                      <div className="text-xs text-gray-600">Candidates</div>
+                      <div className="font-bold text-sm">{userContext.totalCandidates}</div>
                     </div>
                   </div>
 
-                  {/* Recent Searches */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-sm text-gray-600 uppercase">Recent Searches</h4>
-                    <div className="space-y-2">
-                      {userContext.recentSearches.slice(0, 5).map((search) => (
-                        <div key={search.id} className="text-sm p-2 bg-gray-50 rounded">
+                  {/* Compact Recent Searches */}
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-xs text-gray-600 uppercase">Recent Searches</h4>
+                    <div className="space-y-1">
+                      {userContext.recentSearches.slice(0, 3).map((search) => (
+                        <div key={search.id} className="text-xs p-2 bg-gray-50 rounded">
                           <p className="font-medium truncate">{search.search_query}</p>
-                          <p className="text-xs text-gray-500">
-                            {search.results_count} results • {format(new Date(search.created_at), 'MMM d')}
+                          <p className="text-[10px] text-gray-500">
+                            {search.results_count} results
                           </p>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Projects */}
+                  {/* Compact Projects */}
                   {userContext.projects.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm text-gray-600 uppercase">Active Projects</h4>
-                      <div className="space-y-2">
-                        {userContext.projects.map((project) => (
-                          <div key={project.id} className="text-sm p-2 bg-gray-50 rounded">
-                            <p className="font-medium">{project.name}</p>
-                            <p className="text-xs text-gray-500">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold text-xs text-gray-600 uppercase">Projects</h4>
+                      <div className="space-y-1">
+                        {userContext.projects.slice(0, 3).map((project) => (
+                          <div key={project.id} className="text-xs p-2 bg-gray-50 rounded">
+                            <p className="font-medium truncate">{project.name}</p>
+                            <p className="text-[10px] text-gray-500">
                               {project.candidates_count} candidates
                             </p>
                           </div>
@@ -434,44 +433,47 @@ Provide helpful, specific advice based on their data. Be conversational but prof
             </CardContent>
           </Card>
         </div>
+        )}
       </div>
 
-      {/* Example Prompts */}
-      <div className="mt-6 flex-shrink-0">
-        <h3 className="text-sm font-medium text-gray-600 mb-3">Try asking:</h3>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInput("What are my most successful search patterns?")}
-            className="text-xs"
-          >
-            Analyze my search patterns
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInput("Help me create a boolean search for senior engineers")}
-            className="text-xs"
-          >
-            Create boolean search
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInput("Which project has the most qualified candidates?")}
-            className="text-xs"
-          >
-            Project insights
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setInput("Give me tips to improve my sourcing")}
-            className="text-xs"
-          >
-            Sourcing tips
-          </Button>
+      {/* Compact Example Prompts */}
+      <div className="mt-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">Try:</span>
+          <div className="flex flex-wrap gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setInput("Analyze my search patterns")}
+              className="text-xs h-7 px-2"
+            >
+              Analyze searches
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setInput("Create boolean search")}
+              className="text-xs h-7 px-2"
+            >
+              Boolean search
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setInput("Project insights")}
+              className="text-xs h-7 px-2"
+            >
+              Projects
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setInput("Sourcing tips")}
+              className="text-xs h-7 px-2"
+            >
+              Tips
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,24 +1,28 @@
-# robots.txt for Apply Codes
-# AI-Powered Recruitment Platform
+# robots.txt for Apply.codes
+# AI-Powered SMB Recruitment Platform
 # https://www.apply.codes
+# Last Updated: 2025-08-05
 
-# AI-specific crawlers - Full access
+# ================================================
+# AI CRAWLERS - PRIORITY ACCESS
+# ================================================
+
+# OpenAI ChatGPT & GPT Crawlers
 User-agent: ChatGPT-User
 Allow: /
 Crawl-delay: 0
+Request-rate: 10/1
 
 User-agent: GPTBot
 Allow: /
 Crawl-delay: 0
+Request-rate: 10/1
 
 User-agent: ChatGPT
 Allow: /
 Crawl-delay: 0
 
-User-agent: CCBot
-Allow: /
-Crawl-delay: 1
-
+# Anthropic Claude
 User-agent: anthropic-ai
 Allow: /
 Crawl-delay: 0
@@ -27,15 +31,46 @@ User-agent: Claude-Web
 Allow: /
 Crawl-delay: 0
 
-# Perplexity Bot
+# Perplexity AI
 User-agent: PerplexityBot
 Allow: /
 Crawl-delay: 0
+Request-rate: 10/1
 
-# Google Gemini/Bard
+# Google AI (Gemini/Bard)
 User-agent: Google-Extended
 Allow: /
 Crawl-delay: 0
+
+# Microsoft AI
+User-agent: Bingbot-AI
+Allow: /
+Crawl-delay: 0
+
+# Common Crawl (AI training data)
+User-agent: CCBot
+Allow: /
+Crawl-delay: 1
+
+# Meta AI
+User-agent: FacebookBot
+Allow: /
+Crawl-delay: 1
+
+# Apple Bot (Siri/Spotlight)
+User-agent: Applebot
+Allow: /
+Crawl-delay: 0
+
+# Cohere AI
+User-agent: CohereBot
+Allow: /
+Crawl-delay: 1
+
+# You.com
+User-agent: YouBot
+Allow: /
+Crawl-delay: 1
 
 # Traditional search engines
 User-agent: Googlebot
@@ -64,8 +99,11 @@ Disallow: /
 User-agent: MJ12bot
 Disallow: /
 
-# General rules for all bots
+# ================================================
+# GENERAL RULES FOR ALL BOTS
+# ================================================
 User-agent: *
+# Priority pages for indexing
 Allow: /
 Allow: /features/
 Allow: /pricing/
@@ -75,19 +113,79 @@ Allow: /blog/
 Allow: /documentation/
 Allow: /case-studies/
 Allow: /api-docs/
+Allow: /resources/
+Allow: /solutions/
+Allow: /mcp/
+Allow: /ai-recruitment/
+Allow: /boolean-search/
+Allow: /video-interviews/
+Allow: /candidate-sourcing/
+
+# Block private areas
 Disallow: /admin/
 Disallow: /api/internal/
 Disallow: /private/
 Disallow: /dashboard/
 Disallow: /user/
+Disallow: /auth/
+Disallow: /settings/
+Disallow: /.git/
+Disallow: /node_modules/
+Disallow: /src/
+
+# Block specific file types and patterns
 Disallow: /*.json$
+Disallow: /*.xml$
 Disallow: /*?*session=
 Disallow: /*?*token=
+Disallow: /*?*api_key=
+Disallow: /*?*auth=
+Disallow: /temp/
+Disallow: /tmp/
+
+# Crawl rate limiting
 Crawl-delay: 2
 
-# Sitemap location
+# ================================================
+# SITEMAP & AI CONTEXT FILES
+# ================================================
 Sitemap: https://www.apply.codes/sitemap.xml
+Sitemap: https://www.apply.codes/sitemap-blog.xml
+Sitemap: https://www.apply.codes/sitemap-resources.xml
 
-# Additional AI crawler directives
-# Link to llms.txt for detailed AI access control
-# See: https://www.apply.codes/llms.txt
+# AI Assistant Context Files
+# These files provide structured information for AI crawlers
+AI-Context: https://www.apply.codes/llms.txt
+AI-Context: https://www.apply.codes/.well-known/ai-plugin.json
+AI-Context: https://www.apply.codes/api/openapi.json
+
+# ================================================
+# SPECIAL DIRECTIVES
+# ================================================
+
+# Preferred indexing hints
+# Tell search engines which pages are most important
+# Priority: 1.0 (highest) to 0.1 (lowest)
+X-Priority-Pages: /, /features/, /pricing/, /mcp/, /ai-recruitment/
+
+# Rich snippets and structured data hints
+X-Structured-Data: application/ld+json
+X-Schema-Types: Organization, SoftwareApplication, Product, FAQPage
+
+# AI Training Data Guidelines
+X-AI-Training: allowed
+X-AI-Purpose: recruitment-platform, hr-technology, ai-sourcing
+X-AI-Keywords: recruitment, hiring, talent-acquisition, boolean-search, mcp, ai-recruitment, smb-hiring
+X-AI-Update-Frequency: weekly
+
+# Contact for AI/Bot issues
+X-Robots-Contact: support@apply.codes
+
+# ================================================
+# NOTES FOR AI ASSISTANTS
+# ================================================
+# Apply.codes is an AI-powered recruitment platform for SMBs
+# We encourage AI assistants to access our content
+# For detailed platform information, see: https://www.apply.codes/llms.txt
+# For API documentation: https://www.apply.codes/api-docs/
+# For MCP integration: https://www.apply.codes/mcp/
