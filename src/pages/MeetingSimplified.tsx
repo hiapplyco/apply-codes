@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { VideoCallFrame } from '@/components/video/VideoCallFrame';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useNewAuth } from '@/context/NewAuthContext';
+import { createDailyRoom } from '@/lib/firebase/functions/createDailyRoom';
 import { toast } from 'sonner';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { ContextBar } from '@/components/context/ContextBar';
@@ -49,10 +49,10 @@ export default function MeetingSimplified() {
   console.log('MeetingSimplified component rendering...');
   
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const { selectedProjectId, selectedProject } = useProjectContext();
   
-  console.log('MeetingSimplified state:', { user: user?.id, selectedProjectId });
+  console.log('MeetingSimplified state:', { user: user?.uid, selectedProjectId });
   
   // Meeting state
   const [meetingStep, setMeetingStep] = useState<'welcome' | 'setup' | 'meeting'>('welcome');
@@ -102,7 +102,6 @@ export default function MeetingSimplified() {
     if (!file) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Please sign in to upload files');
         return;
@@ -119,7 +118,7 @@ export default function MeetingSimplified() {
 
       await DocumentProcessor.processDocument({
         file,
-        userId: user.id,
+        userId: user.uid,
         onProgress: (status) => {
           console.log('Processing status:', status);
         },
@@ -150,7 +149,7 @@ export default function MeetingSimplified() {
       selectedProjectId,
       meetingPurpose,
       jobTitle,
-      user: user?.id
+      user: user?.uid
     });
 
     if (meetingPurpose === 'interview' && !jobTitle.trim()) {
@@ -169,30 +168,25 @@ export default function MeetingSimplified() {
         userId: user?.id
       });
 
-      const { data, error } = await supabase.functions.invoke('create-daily-room', {
-        body: {
-          projectId: selectedProjectId || null, // Optional project association
-          meetingType: meetingPurpose,
-          title: jobTitle || 'Meeting',
-          userId: user?.id
-        }
+      const response = await createDailyRoom({
+        projectId: selectedProjectId || null,
+        meetingType: meetingPurpose,
+        title: jobTitle || 'Meeting',
+        userId: user?.uid
       });
 
-      console.log('create-daily-room response:', { data, error });
+      console.log('create-daily-room response:', response);
 
-      if (error) {
-        console.error('Error creating Daily room:', error);
-        throw new Error(error.message || 'Failed to create meeting room');
-      }
+      const dailyUrl = response?.room?.url || response?.url;
 
-      if (data?.url) {
-        console.log('Daily room created successfully:', data.url);
-        setRoomUrl(data.url);
+      if (dailyUrl) {
+        console.log('Daily room created successfully:', dailyUrl);
+        setRoomUrl(dailyUrl);
         setMeetingStep('meeting');
         toast.success('Meeting room created successfully!');
         
         // Track meeting start
-        const meetingId = data.url.split('/').pop() || 'unknown';
+        const meetingId = dailyUrl.split('/').pop() || 'unknown';
         trackVideoMeeting('start', meetingId);
         trackEvent('Video Meeting', {
           action: 'start',

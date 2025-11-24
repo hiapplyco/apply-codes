@@ -9,7 +9,7 @@ import {
   AgentMessage,
   AgentMetrics
 } from '@/types/orchestration';
-import { useAuth } from '@/context/AuthContext';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { useProjectContext } from '@/context/ProjectContext';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ interface OrchestrationState {
 }
 
 export const useOrchestration = (options?: UseOrchestrationOptions) => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const { currentProject } = useProjectContext();
   const orchestratorRef = useRef<AgentOrchestrator | null>(null);
   const messageBusRef = useRef<MessageBus | null>(null);

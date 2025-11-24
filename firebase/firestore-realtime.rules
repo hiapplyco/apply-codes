@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Presence documents for real-time collaboration
+    // Users can read all presence documents to see who's online
+    // Users can only write/update/delete their own presence
+    match /presence/{presenceId} {
+      allow read: if true; // Allow reading all presence for collaboration features
+
+      allow write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.keys().hasAll(['userId', 'documentId', 'name', 'lastSeen', 'isOnline']);
+
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+
+    // Chat messages for real-time messaging
+    // Users can read messages in sessions they participate in
+    // Users can only create messages with their own userId
+    match /chat_messages/{messageId} {
+      allow read: if request.auth != null;
+      // TODO: Add session-based access control when session management is implemented
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.keys().hasAll(['sessionId', 'role', 'content', 'timestamp', 'userId']) &&
+        request.resource.data.role in ['user', 'assistant', 'system'];
+
+      // Prevent updating or deleting messages for audit trail
+      allow update, delete: if false;
+    }
+
+    // Chat sessions for organizing messages
+    // Users can read/write their own sessions
+    match /chat_sessions/{sessionId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId &&
+        request.resource.data.keys().hasAll(['userId', 'createdAt']);
+    }
+
+    // User subscription details for real-time subscription updates
+    // Users can only access their own subscription data
+    match /user_subscription_details/{userId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == userId;
+
+      allow create: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.userId == userId &&
+        request.resource.data.keys().hasAll([
+          'userId', 'status', 'tier', 'trialStartDate', 'trialEndDate'
+        ]);
+    }
+
+    // Usage tracking for subscription limits
+    // Users can read their own usage data
+    // System can update usage counts (via Cloud Functions with admin access)
+    match /usage_tracking/{userId} {
+      allow read: if request.auth != null &&
+        request.auth.uid == userId;
+
+      // Usage updates should be handled by Cloud Functions with admin access
+      allow write: if false;
+    }
+
+    // Default deny all other documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

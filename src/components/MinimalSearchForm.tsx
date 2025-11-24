@@ -8,19 +8,24 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
+import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
 import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { DocumentProcessor } from '@/lib/modernPdfProcessor';
 import BooleanExplainer from '@/components/BooleanExplainer';
+import { functionBridge } from '@/lib/function-bridge';
 import { BooleanExplanation } from '@/types/boolean-explanation';
 import LocationModal from '@/components/LocationModal';
 import ProjectLocationService from '@/services/ProjectLocationService';
 import { useProjectContext } from '@/context/ProjectContext';
 import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
 import { trackBooleanGeneration, trackCandidateSearch, trackEvent } from '@/lib/analytics';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -50,7 +55,8 @@ interface ContextItem {
   source_url?: string;
   file_name?: string;
   file_type?: string;
-  created_at: string;
+  created_at?: string | Date | { toDate?: () => Date; seconds?: number; nanoseconds?: number };
+  project_id?: string | null;
   metadata?: Record<string, any>;
   isExpanded?: boolean;
 }
@@ -100,9 +106,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   // Get project context
   const { selectedProject } = useProjectContext();
   const [jobDescription, setJobDescription] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [booleanString, setBooleanString] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [displayedResults, setDisplayedResults] = useState(10); // Start with 10 results
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const resultsContainerRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Default to grid view
   const [showAIAnalysis, setShowAIAnalysis] = useState(false); // Make AI analysis optional
   const [isGenerating, setIsGenerating] = useState(false);
@@ -186,13 +195,31 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       });
 
       if (result.success && result.data?.text) {
+        // Generate summary from content (first 200 chars, strip markdown)
+        const stripped = result.data.text
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+          .replace(/[#*_`~]/g, '') // Remove markdown formatting
+          .replace(/\n+/g, ' ') // Replace newlines with spaces
+          .trim();
+        const summary = stripped.substring(0, 200) + (stripped.length > 200 ? '...' : '');
+
+        // Extract hostname from URL (handle URLs without protocol)
+        let hostname = urlInput;
+        try {
+          const url = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
+          hostname = new URL(url).hostname;
+        } catch (e) {
+          // If URL parsing fails, use the input as-is
+          hostname = urlInput.replace(/^https?:\/\//, '').split('/')[0];
+        }
+
         // Save to database (don't add to job description - keep visual only)
         await saveContextItem({
           type: 'url_scrape',
-          title: result.data.title || `Scraped from ${urlInput}`,
+          title: `Scraped: ${hostname}`,
           content: result.data.text,
           source_url: urlInput,
-          summary: result.data.summary,
+          summary: summary,
           metadata: {
             url: urlInput,
             success: true,
@@ -241,20 +268,23 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       timestamp: new Date().toISOString()
     });
     try {
-      const { data, error } = await supabase
-        .from('context_items')
-        .insert([{
+      const insertResult = await firestoreClient
+        .from<ContextItem>('context_items')
+        .insert({
           ...item,
           user_id: userId,
-          project_id: selectedProject?.id || selectedProjectId || null
-        }])
-        .select()
-        .single();
+          project_id: selectedProject?.id || selectedProjectId || null,
+          created_at: new Date().toISOString()
+        });
 
-      if (error) throw error;
+      if (insertResult.error) {
+        throw insertResult.error;
+      }
+
+      const inserted = Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data;
 
       const newContextItem: ContextItem = {
-        ...data,
+        ...inserted,
         isExpanded: false
       };
 
@@ -571,9 +601,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     try {
       console.log('Sending Perplexity query:', perplexityQuery);
       
-      const { data, error } = await supabase.functions.invoke('perplexity-search', {
-        body: { query: perplexityQuery },
-      });
+      const data = await functionBridge.perplexitySearch({ query: perplexityQuery });
+      const error = null;
 
       console.log('Perplexity response:', { data, error });
       
@@ -584,16 +613,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (data?.choices?.[0]?.message?.content) {
         const searchContent = data.choices[0].message.content;
-        
+
+        // Extract citations from Perplexity response
+        const citations = data.citations || [];
+
         // Save to database (don't add to job description - keep visual only)
         await saveContextItem({
-          type: 'perplexity_search',
-          title: `Perplexity search: "${perplexityQuery}"`,
+          type: 'perplexity',
+          title: `Search: ${perplexityQuery}`,
           content: searchContent,
           source_url: perplexityQuery, // Store query as source
-          summary: searchContent.length > 500 ? searchContent.substring(0, 500) + '...' : searchContent,
+          summary: searchContent.length > 150 ? searchContent.substring(0, 150) + '...' : searchContent,
           metadata: {
             query: perplexityQuery,
+            citations: citations,
             success: true,
             timestamp: new Date().toISOString(),
             response_data: data
@@ -626,9 +659,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   };
 
   const generateBooleanSearch = async () => {
-    // Require custom instructions (context items alone are not enough)
-    if (!jobDescription.trim()) {
-      toast.error('Please enter custom instructions or job requirements in the text area above');
+    // Require either custom instructions OR context items
+    if (!jobDescription.trim() && contextItems.length === 0) {
+      toast.error('Please add context items or enter custom instructions to generate a boolean search');
       return;
     }
 
@@ -669,24 +702,66 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         metadata: item.metadata
       })));
 
-      console.log('Generating boolean search with:', {
+      // Extract location context from context items
+      const locationContext = contextItems
+        .filter(item =>
+          item.type === 'location_input' ||
+          (item.type === 'manual_input' && item.metadata?.isLocationContext) ||
+          (item.type === 'manual_input' && item.title?.includes('Location:'))
+        )
+        .map(item => item.metadata?.formatted_address || item.content)
+        .filter(Boolean);
+
+      // Prepare project context
+      const projectContext = selectedProject ? {
+        id: selectedProject.id,
+        name: selectedProject.name,
+        description: selectedProject.description,
+        created_at: selectedProject.created_at
+      } : null;
+
+      console.log('Generating boolean search with FULL CONTEXT:', {
         hasCustomInstructions: !!jobDescription.trim(),
+        hasJobTitle: !!jobTitle.trim(),
+        hasProjectContext: !!projectContext,
+        projectName: projectContext?.name,
         contextItemsCount: contextItems.length,
         locationItemsCount: locationItems.length,
+        locationContext: locationContext,
+        contextTypes: contextItems.map(item => item.type),
         customInstructionsLength: jobDescription.length
       });
 
-      const { data, error } = await supabase.functions.invoke('generate-boolean-search', {
-        body: { 
-          description: jobDescription.trim() || '', // Send empty string if no custom instructions
-          contextItems: contextData
-        }
+      // Use function bridge to support both Firebase and Supabase
+      // Only send description if it has content (don't send empty string)
+      const payload: any = {
+        contextItems: contextData,
+        jobTitle: jobTitle.trim() || undefined,
+        projectContext: projectContext,
+        userId: userId || undefined
+      };
+
+      // Only add description if it's not empty
+      if (jobDescription.trim()) {
+        payload.description = jobDescription.trim();
+      }
+
+      console.log('📤 Payload being sent to generateBooleanSearch:', {
+        hasDescription: !!payload.description,
+        descriptionLength: payload.description?.length || 0,
+        contextItemsCount: payload.contextItems?.length || 0,
+        hasJobTitle: !!payload.jobTitle,
+        hasProjectContext: !!payload.projectContext
       });
 
-      if (error) throw error;
+      const result = await functionBridge.generateBooleanSearch(payload);
 
-      if (data?.searchString) {
-        setBooleanString(data.searchString);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to generate boolean search');
+      }
+
+      if (result.searchString) {
+        setBooleanString(result.searchString);
         
         // Collapse Requirements container to focus on Boolean section
         setRequirementsCollapsed(true);
@@ -723,12 +798,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     setIsExplaining(true);
     try {
-      const { data, error } = await supabase.functions.invoke('explain-boolean', {
-        body: {
+      const data = await functionBridge.explainBoolean({
           booleanString: booleanString,
           requirements: jobDescription.trim() || 'Boolean search explanation'
-        }
-      });
+        });
+      const error = null;
 
       if (error) throw error;
 
@@ -758,17 +832,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     setIsSearching(true);
     try {
       // Get the API key from Supabase edge function (same as original implementation)
-      const { data: keyData, error: keyError } = await supabase.functions.invoke('get-google-cse-key');
-      
-      if (keyError || !keyData?.key) {
+      const keyData = await functionBridge.getGoogleCseKey();
+
+      if (!keyData?.secret || !keyData.engineId) {
         throw new Error('Failed to get API key');
       }
 
       const searchQuery = `${booleanString} site:linkedin.com/in/`;
-      const cseId = keyData.debug?.cseId || 'b28705633bcb44cf0';
-      
+      const cseId = keyData.engineId;
+
       const response = await fetch(
-        `https://www.googleapis.com/customsearch/v1?key=${keyData.key}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}`
+        `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}`
       );
       
       if (!response.ok) throw new Error('Search failed');
@@ -815,9 +889,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   const enrichProfile = async (profileUrl: string): Promise<ContactInfo | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('get-contact-info', {
-        body: { linkedin_url: profileUrl }
-      });
+      const data = await functionBridge.getContactInfo({ linkedin_url: profileUrl });
+      const error = null;
 
       if (error) throw error;
       return data;
@@ -855,16 +928,15 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     setLoadingAnalysis(prev => new Set([...prev, index]));
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-candidate', {
-        body: {
+      const data = await functionBridge.analyzeCandidate({
           candidate: {
             name: candidate.title,
             profile: candidate.snippet,
             linkedin_url: candidate.link
           },
           requirements: jobDescription
-        }
-      });
+        });
+      const error = null;
 
       if (error) throw error;
 
@@ -941,18 +1013,24 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       console.log('Candidate data to save:', candidateData);
 
       // Save candidate to database
-      const { data: savedCandidate, error: candidateError } = await supabase
+      const insertCandidate = await firestoreClient
         .from('saved_candidates')
-        .insert([candidateData])
-        .select()
-        .single();
+        .insert({
+          ...candidateData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
 
-      console.log('Candidate save result:', { savedCandidate, candidateError });
-
-      if (candidateError) {
-        console.error('Error saving candidate:', candidateError);
-        throw candidateError;
+      if (insertCandidate.error) {
+        console.error('Error saving candidate:', insertCandidate.error);
+        throw insertCandidate.error;
       }
+
+      const savedCandidate = Array.isArray(insertCandidate.data)
+        ? insertCandidate.data[0]
+        : insertCandidate.data;
+
+      console.log('Candidate save result:', savedCandidate);
 
       // Add candidate to project if project is selected
       if (savedCandidate && selectedProjectId) {
@@ -961,18 +1039,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           projectId: selectedProjectId 
         });
         
-        const { error: projectError } = await supabase
+        const projectAssociation = await firestoreClient
           .from('project_candidates')
-          .insert([{
+          .insert({
             project_id: selectedProjectId,
-            candidate_id: savedCandidate.id
-          }]);
+            candidate_id: savedCandidate.id,
+            created_at: new Date().toISOString()
+          });
 
-        console.log('Project association result:', { projectError });
-
-        if (projectError) {
-          console.error('Error adding candidate to project:', projectError);
-          throw projectError;
+        if (projectAssociation.error) {
+          console.error('Error adding candidate to project:', projectAssociation.error);
+          throw projectAssociation.error;
         }
       }
 
@@ -987,9 +1064,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
         if (Object.keys(updateData).length > 0) {
           updateData.enrichment_status = 'completed';
-          await supabase
+          await firestoreClient
             .from('saved_candidates')
-            .update(updateData)
+            .update({
+              ...updateData,
+              updated_at: new Date().toISOString()
+            })
             .eq('id', savedCandidate.id);
         }
       }
@@ -999,15 +1079,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       
       // Store search in history with project context
       if (booleanString) {
-        await supabase
+        await firestoreClient
           .from('search_history')
-          .insert([{
+          .insert({
             search_query: booleanString,
             boolean_query: booleanString,
             platform: 'linkedin',
             results_count: searchResults.length,
-            project_id: selectedProjectId
-          }]);
+            project_id: selectedProjectId,
+            created_at: new Date().toISOString()
+          });
       }
 
     } catch (error) {
@@ -1032,12 +1113,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   const removeContextItem = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('context_items')
-        .delete()
-        .eq('id', id);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      await deleteDoc(doc(db, 'context_items', id));
 
       setContextItems(prev => prev.filter(item => item.id !== id));
       toast.success('Context item removed');
@@ -1058,17 +1138,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     if (!confirmed) return;
 
     try {
-      // Show loading toast
       toast.loading('Clearing all context items...', { id: 'clear-all' });
 
-      // Delete all context items for the current user and project
-      const { error } = await supabase
+      const deleteResult = await firestoreClient
         .from('context_items')
         .delete()
         .eq('user_id', userId)
         .eq('project_id', selectedProject?.id || null);
 
-      if (error) throw error;
+      if (deleteResult.error) {
+        throw deleteResult.error;
+      }
 
       // Update local state
       setContextItems([]);
@@ -1084,33 +1164,59 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     
     setLoadingContext(true);
     try {
-      let query = supabase
-        .from('context_items')
+      let query = firestoreClient
+        .from<ContextItem>('context_items')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('user_id', userId);
 
       const projectId = selectedProject?.id || selectedProjectId;
       console.log('Loading context items for:', { userId, projectId, selectedProject: selectedProject?.name });
-      
-      if (projectId) {
-        query = query.eq('project_id', projectId);
-      } else {
-        query = query.is('project_id', null);
-      }
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      console.log('Context items loaded:', data);
-      setContextItems(data.map(item => ({ ...item, isExpanded: false })));
+      const normalized = Array.isArray(data) ? data : data ? [data] : [];
+      const filtered = projectId
+        ? normalized.filter(item => item.project_id === projectId)
+        : normalized.filter(item => !item.project_id);
+
+      const sortByCreatedAtDesc = (items: ContextItem[]) => {
+        const getTimestamp = (value: any): number => {
+          if (!value) return 0;
+          if (value instanceof Date) return value.getTime();
+          if (typeof value === 'string') {
+            const parsed = new Date(value);
+            return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+          }
+          if (typeof value === 'object') {
+            if ('toDate' in value && typeof value.toDate === 'function') {
+              return value.toDate().getTime();
+            }
+            if ('seconds' in value && typeof value.seconds === 'number') {
+              const millis = value.seconds * 1000;
+              const nanos = typeof value.nanoseconds === 'number' ? value.nanoseconds / 1_000_000 : 0;
+              return millis + nanos;
+            }
+          }
+          return 0;
+        };
+
+        return [...items].sort((a, b) => getTimestamp(b.created_at) - getTimestamp(a.created_at));
+      };
+
+      const sortedItems = sortByCreatedAtDesc(filtered);
+
+      console.log('Context items loaded:', sortedItems);
+      setContextItems(sortedItems.map(item => ({ ...item, isExpanded: false })));
     } catch (error) {
       console.error('Error loading context items:', error);
     } finally {
       setLoadingContext(false);
     }
-  }, [userId, selectedProjectId]);
+  }, [userId, selectedProjectId, selectedProject?.id]);
 
   // Load context items when component mounts or project changes
   useEffect(() => {
@@ -1145,19 +1251,15 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         location: result.location
       }));
 
-      const { data, error } = await supabase.functions.invoke('generate-email-templates', {
-        body: {
-          candidates,
-          jobDescription,
-          context: emailContext.trim() || undefined
-        }
+      const response = await functionBridge.generateEmailTemplates({
+        candidates,
+        jobDescription,
+        context: emailContext.trim() || undefined
       });
 
-      if (error) throw error;
-
-      if (data?.success && data?.emailTemplates) {
-        setGeneratedEmails(data.emailTemplates);
-        toast.success(`Generated ${data.emailTemplates.length} email template(s)!`);
+      if (response?.success && response?.emailTemplates) {
+        setGeneratedEmails(response.emailTemplates);
+        toast.success(`Generated ${response.emailTemplates.length} email template(s)!`);
       } else {
         throw new Error('No email templates generated');
       }
@@ -1393,7 +1495,25 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                 </TooltipContent>
               </Tooltip>
             </div>
-          
+
+          {/* Job Title Input */}
+          <div className="space-y-2">
+            <label htmlFor="job-title" className="block text-sm font-medium text-gray-700">
+              Job Title <span className="text-gray-400 text-xs">(optional but recommended)</span>
+            </label>
+            <input
+              id="job-title"
+              type="text"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              placeholder="e.g., Senior Software Engineer, Product Manager, Data Scientist..."
+              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+            />
+            <p className="text-xs text-gray-500">
+              Providing a job title helps generate more accurate boolean search strings
+            </p>
+          </div>
+
           <Textarea
             value={jobDescription}
             onChange={(event) => setJobDescription(event.target.value)}
@@ -1425,19 +1545,29 @@ This area is for your specific search instructions, filtering criteria, or addit
                 {contextItems.map((item) => (
                       <div
                         key={item.id}
-                        className="border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 group"
+                        className={`border rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 group ${
+                          (item.type === 'perplexity' || item.type === 'perplexity_search')
+                            ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-white'
+                            : 'border-gray-200'
+                        }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         {item.type === 'url_scrape' && <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />}
                         {item.type === 'file_upload' && <FileText className="w-4 h-4 text-green-500 flex-shrink-0" />}
-                        {item.type === 'perplexity_search' && <img src="/assets/perplexity.svg" alt="Perplexity" className="w-4 h-4 flex-shrink-0" />}
+                        {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
+                          <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        )}
                         {item.type === 'manual_input' && (
-                          item.title?.includes('Location:') ? 
+                          item.title?.includes('Location:') ?
                             <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0" /> :
                             <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         )}
-                        <span className="text-xs font-medium text-gray-800 truncate">
+                        <span className={`text-xs font-medium truncate ${
+                          (item.type === 'perplexity' || item.type === 'perplexity_search')
+                            ? 'text-purple-900'
+                            : 'text-gray-800'
+                        }`}>
                           {item.title}
                         </span>
                       </div>
@@ -1459,19 +1589,38 @@ This area is for your specific search instructions, filtering criteria, or addit
                     
                     {/* Preview text */}
                     <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                      {item.summary || item.content.substring(0, 100) + (item.content.length > 100 ? '...' : '')}
+                      {(() => {
+                        const previewText = item.summary || item.content;
+                        // Strip markdown for Perplexity items
+                        if (item.type === 'perplexity' || item.type === 'perplexity_search') {
+                          const stripped = previewText
+                            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+                            .replace(/[#*_`~]/g, '') // Remove markdown formatting
+                            .replace(/\n+/g, ' ') // Replace newlines with spaces
+                            .trim();
+                          return stripped.substring(0, 150) + (stripped.length > 150 ? '...' : '');
+                        }
+                        return previewText.substring(0, 100) + (previewText.length > 100 ? '...' : '');
+                      })()}
                     </p>
                     
                     {/* Source info */}
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <span>
-                        {item.type === 'url_scrape' && item.source_url && (
-                          <span title={item.source_url}>{new URL(item.source_url).hostname}</span>
-                        )}
+                        {item.type === 'url_scrape' && item.source_url && (() => {
+                          try {
+                            const url = item.source_url.startsWith('http') ? item.source_url : `https://${item.source_url}`;
+                            return <span title={item.source_url}>{new URL(url).hostname}</span>;
+                          } catch (e) {
+                            // Fallback: extract hostname manually
+                            const hostname = item.source_url.replace(/^https?:\/\//, '').split('/')[0];
+                            return <span title={item.source_url}>{hostname}</span>;
+                          }
+                        })()}
                         {item.type === 'file_upload' && item.file_name && (
                           <span>{item.file_name}</span>
                         )}
-                        {item.type === 'perplexity_search' && (
+                        {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
                           <span>Web search</span>
                         )}
                       </span>
@@ -1481,18 +1630,41 @@ This area is for your specific search instructions, filtering criteria, or addit
                     {/* Expanded content */}
                     {item.isExpanded && (
                       <div className="mt-3 pt-2 border-t border-gray-200">
-                        <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-2 rounded border">
-                          {item.content}
-                        </div>
-                        {item.source_url && (
-                          <a
-                            href={item.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:underline mt-1 inline-block"
-                          >
-                            View original source ↗
-                          </a>
+                        {(item.type === 'perplexity' || item.type === 'perplexity_search') ? (
+                          <div className="max-h-96 overflow-y-auto">
+                            <PerplexityResult
+                              content={item.content}
+                              citations={item.metadata?.citations}
+                              query={item.metadata?.query || item.title}
+                              compact={false}
+                              className="text-xs"
+                            />
+                          </div>
+                        ) : item.type === 'url_scrape' ? (
+                          <div className="max-h-96 overflow-y-auto">
+                            <FirecrawlResult
+                              content={item.content}
+                              sourceUrl={item.source_url}
+                              compact={false}
+                              className="text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-2 rounded border">
+                              {item.content}
+                            </div>
+                            {item.source_url && (
+                              <a
+                                href={item.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-500 hover:underline mt-1 inline-block"
+                              >
+                                View original source ↗
+                              </a>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -1505,7 +1677,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                 <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
                   <Button
                     onClick={generateBooleanSearch}
-                    disabled={!jobDescription.trim() || isGenerating}
+                    disabled={(!jobDescription.trim() && contextItems.length === 0) || isGenerating}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2.5"
                   >
                     <ButtonLoading 
@@ -1688,6 +1860,18 @@ This area is for your specific search instructions, filtering criteria, or addit
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {/* AI Analysis Button - Moved to top */}
+                  {!showAIAnalysis && (
+                    <Button
+                      onClick={() => setShowAIAnalysis(true)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      size="sm"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Analyze with AI ({searchResults.length})
+                    </Button>
+                  )}
+                  
                   {/* View Mode Toggle */}
                   <div className="flex items-center border rounded-lg p-1">
                     <Button
@@ -1720,7 +1904,25 @@ This area is for your specific search instructions, filtering criteria, or addit
                 </div>
               </div>
           
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+          <div 
+            ref={resultsContainerRef}
+            className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}
+            style={{ maxHeight: viewMode === 'grid' ? '800px' : '600px', overflowY: 'auto' }}
+            onScroll={(e) => {
+              const element = e.currentTarget;
+              const { scrollTop, scrollHeight, clientHeight } = element;
+              const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+              
+              // Load more when scrolled to 90% and not already loading
+              if (scrollPercentage > 0.9 && displayedResults < searchResults.length && !isLoadingMore) {
+                setIsLoadingMore(true);
+                setTimeout(() => {
+                  setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
+                  setIsLoadingMore(false);
+                }, 500);
+              }
+            }}
+          >
             {searchResults.slice(0, displayedResults).map((result, index) => {
               const isExpanded = expandedProfiles.has(index);
               const analysis = analysisResults[index];
@@ -1762,10 +1964,26 @@ This area is for your specific search instructions, filtering criteria, or addit
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         </div>
-                        <h3 className="font-semibold text-sm text-blue-600 hover:underline line-clamp-2 mb-2">
-                          {result.title}
-                        </h3>
-                        <p className="text-xs text-gray-600 line-clamp-3 flex-1">{result.snippet}</p>
+                        <div className="mb-2">
+                          <h3 className="font-bold text-base text-gray-900 line-clamp-2 mb-1">
+                            {result.title.split(' | ')[0] || result.title.split(' - ')[0] || result.title}
+                          </h3>
+                          {(result.title.includes(' | ') || result.title.includes(' - ')) && (
+                            <p className="text-sm font-medium text-purple-600">
+                              {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-700 line-clamp-4 flex-1 leading-relaxed">{result.snippet}</p>
+                        
+                        {/* Skills extraction */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, 3).map((skill, skillIndex) => (
+                            <Badge key={skillIndex} variant="secondary" className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
                         {result.location && (
                           <p className="text-xs text-purple-600 mt-2 font-medium">
                             📍 {result.location}
@@ -1800,11 +2018,27 @@ This area is for your specific search instructions, filtering criteria, or addit
                               }}
                               className="w-4 h-4"
                             />
-                            <h3 className="font-semibold text-blue-600 hover:underline">
-                              {result.title}
-                            </h3>
+                            <div>
+                              <h3 className="font-bold text-xl text-gray-900">
+                                {result.title.split(' | ')[0] || result.title.split(' - ')[0] || result.title}
+                              </h3>
+                              {(result.title.includes(' | ') || result.title.includes(' - ')) && (
+                                <p className="text-lg font-medium text-purple-600 mt-1">
+                                  {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{result.snippet}</p>
+                          <p className="text-base text-gray-700 mt-3 leading-relaxed">{result.snippet}</p>
+                          
+                          {/* Skills tags for list view */}
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, 6).map((skill, skillIndex) => (
+                              <Badge key={skillIndex} variant="secondary" className="px-2 py-1 bg-purple-100 text-purple-700">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
                           {result.location && (
                             <p className="text-xs text-purple-600 mt-1 font-medium">
                               📍 {result.location}
@@ -2018,18 +2252,45 @@ This area is for your specific search instructions, filtering criteria, or addit
             })}
           </div>
           
-          {/* Load More Button */}
-          {searchResults.length > displayedResults && (
-            <div className="mt-6 text-center">
-              <Button
-                onClick={() => setDisplayedResults(prev => prev + 10)}
-                variant="outline"
-                className="w-full max-w-xs"
-              >
-                Load More ({searchResults.length - displayedResults} remaining)
-              </Button>
-            </div>
-          )}
+          {/* Load More Button & Status */}
+          <div className="mt-6 text-center border-t border-gray-200 pt-6">
+            {searchResults.length > displayedResults ? (
+              isLoadingMore ? (
+                <div className="flex items-center justify-center text-purple-600 py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
+                  <span className="font-medium">Loading more candidates...</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => {
+                      setIsLoadingMore(true);
+                      setTimeout(() => {
+                        setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
+                        setIsLoadingMore(false);
+                      }, 500);
+                    }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
+                    size="lg"
+                  >
+                    Load More Candidates ({searchResults.length - displayedResults} remaining)
+                  </Button>
+                  <p className="text-sm text-gray-600">
+                    Showing {displayedResults} of {searchResults.length} • Scroll for auto-loading
+                  </p>
+                </div>
+              )
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-800 font-medium">
+                  ✅ All {searchResults.length} candidates loaded
+                </p>
+                <p className="text-green-600 text-sm mt-1">
+                  Use "Analyze with AI" above for detailed insights
+                </p>
+              </div>
+            )}
+          </div>
         </div>
         </Card>
         </ContainedLoading>
@@ -2043,22 +2304,7 @@ This area is for your specific search instructions, filtering criteria, or addit
         </Card>
       )}
       
-      {/* AI Analysis Button */}
-      {searchResults.length > 0 && !showAIAnalysis && (
-        <div className="mt-6 text-center">
-          <Button
-            onClick={() => setShowAIAnalysis(true)}
-            className="bg-purple-600 hover:bg-purple-700"
-            size="lg"
-          >
-            <Sparkles className="w-5 h-5 mr-2" />
-            Analyze Candidates with AI
-          </Button>
-          <p className="text-sm text-gray-600 mt-2">
-            Get AI-powered insights and rankings for all {searchResults.length} candidates
-          </p>
-        </div>
-      )}
+      {/* AI Analysis Button - Moved to search results header */}
       
       {/* Candidate Analysis Section */}
       {searchResults.length > 0 && showAIAnalysis && (

@@ -1,9 +1,9 @@
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 
 export const MeetingTokenManager = () => {
   const createMeetingToken = async () => {
     try {
-      const { data: { secret: dailyApiKey } } = await supabase.functions.invoke('get-daily-key');
+      const { secret: dailyApiKey } = await functionBridge.getDailyKey();
       
       const response = await fetch('https://api.daily.co/v1/meeting-tokens', {
         method: 'POST',

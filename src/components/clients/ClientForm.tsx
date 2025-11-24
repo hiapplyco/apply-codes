@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { Client } from "./ClientList";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 interface ClientFormProps {
   client?: Client;
@@ -31,24 +32,26 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
 
   const onSubmit = async (data: FormData) => {
     try {
-      if (client?.id) {
-        const { error } = await supabase
-          .from("clients")
-          .update(data)
-          .eq("id", client.id);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-        if (error) throw error;
+      if (client?.id) {
+        const clientRef = doc(db, "clients", client.id);
+        await updateDoc(clientRef, {
+          ...data,
+          updated_at: serverTimestamp()
+        });
 
         toast({
           title: "Success",
           description: "Client updated successfully",
         });
       } else {
-        const { error } = await supabase
-          .from("clients")
-          .insert([data]);
-
-        if (error) throw error;
+        await addDoc(collection(db, "clients"), {
+          ...data,
+          created_at: serverTimestamp()
+        });
 
         toast({
           title: "Success",

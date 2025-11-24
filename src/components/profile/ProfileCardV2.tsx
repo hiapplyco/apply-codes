@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EnrichedInfoModal } from '../enriched-info-modal/EnrichedInfoModal';
 import { Profile, EnrichedProfileData } from '@/components/search/types';
 import { cn } from '@/lib/utils';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface ProfileCardProps {
   profile: any;
@@ -155,29 +156,32 @@ export const ProfileCardV2: React.FC<ProfileCardProps> = ({
       setError(null);
       
       try {
-        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/get-contact-info', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            profileUrl: profile.profile_url
-          })
+        const data = await functionBridge.getContactInfo({
+          profileUrl: profile.profile_url
         });
-        
-        if (!response.ok) {
-          throw new Error('Failed to enrich profile');
+
+        const payload = (data as any)?.data ?? data;
+
+        if (!payload) {
+          setEnrichedData(null);
+          toast({
+            title: "No contact information available",
+            description: "We could not find contact information for this profile yet."
+          });
+          return;
         }
-        
-        const data = await response.json();
-        
+
         const enrichedProfileData: EnrichedProfileData = {
           name: profile.profile_name,
           profile: profile,
-          ...(data.data || {}),
+          ...payload,
         };
         
         setEnrichedData(enrichedProfileData);
+        toast({
+          title: "Contact information ready",
+          description: "Enriched profile details are now available in the modal."
+        });
       } catch (err) {
         console.error('Error enriching profile:', err);
         setError(typeof err === 'object' && err !== null && 'message' in err 

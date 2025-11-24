@@ -1,23 +1,25 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 export const createChatSession = async (userId: string) => {
   const title = `Interview Session ${new Date().toLocaleString()}`;
-  
-  const { data: chatSession, error: chatError } = await supabase
-    .from('chat_sessions')
-    .insert({
-      title,
-      status: 'active',
-      user_id: userId
-    })
-    .select()
-    .single();
 
-  if (chatError) {
-    console.error('Error creating chat session:', chatError);
-    throw chatError;
+  if (!db) {
+    throw new Error("Firestore not initialized");
   }
 
-  return chatSession;
+  const docRef = await addDoc(collection(db, "chatSessions"), {
+    title,
+    status: 'active',
+    userId,
+    createdAt: serverTimestamp()
+  });
+
+  return {
+    id: docRef.id,
+    title,
+    status: 'active',
+    userId
+  };
 };

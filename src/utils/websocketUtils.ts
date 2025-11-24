@@ -1,16 +1,20 @@
 
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 export const initializeWebSocketConnection = async () => {
-  const { data: wsData, error: wsError } = await supabase.functions.invoke('initialize-daily-bot');
-  if (wsError) throw wsError;
-  return wsData.websocket_url;
+  const response = await functionBridge.initializeDailyBot();
+  if (!response?.websocket_url) {
+    throw new Error('Failed to initialize Daily bot connection');
+  }
+  return response.websocket_url;
 };
 
 export const setupWebSocketEventHandlers = (
   ws: WebSocket, 
-  sessionId: number | null,
+  sessionId: string | null,
   onError?: (error: ErrorEvent) => void
 ) => {
   ws.onopen = () => {
@@ -26,11 +30,12 @@ export const setupWebSocketEventHandlers = (
     try {
       const response = JSON.parse(event.data as string);
       
-      if (response.text && sessionId) {
-        await supabase.from('chat_messages').insert({
-          session_id: sessionId,
+      if (response.text && sessionId && db) {
+        await addDoc(collection(db, 'chatMessages'), {
+          sessionId,
           role: 'assistant',
-          content: response.text
+          content: response.text,
+          createdAt: serverTimestamp()
         });
 
         toast.success('Received response from assistant');

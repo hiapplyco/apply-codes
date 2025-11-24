@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { QueryClient } from "@tanstack/react-query";
 
 export const useResumeUpload = (jobId: number, userId: string) => {
@@ -26,9 +26,15 @@ export const useResumeUpload = (jobId: number, userId: string) => {
       formData.append('jobId', jobId.toString());
       formData.append('userId', userId);
 
-      const { data, error } = await supabase.functions.invoke('analyze-resume', {
-        body: formData,
-      });
+      // Convert FormData to a plain object for the function bridge
+      const payload = {
+        file: file,
+        jobId: jobId.toString(),
+        userId: userId
+      };
+
+      const data = await functionBridge.analyzeResume(payload);
+      const error = null;
 
       if (error) throw error;
 

@@ -1,11 +1,17 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { User as FirebaseUser } from "firebase/auth";
+import {
+  firebaseSignIn,
+  firebaseSignUp,
+  firebaseSignOut,
+  firebaseOnAuthStateChanged,
+  handleFirebaseError
+} from "@/lib/firebase";
 import { toast } from "sonner";
 
 interface ClarvidaAuthContextType {
-  session: Session | null;
+  session: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -23,88 +29,46 @@ const ClarvidaAuthContext = createContext<ClarvidaAuthContextType>({
 });
 
 export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Clarvida Auth Error:", error);
-          setSession(null);
-        } else {
-          setSession(data.session);
-        }
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Error checking Clarvida session:", err);
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    // Listen for Firebase auth changes
+    const unsubscribe = firebaseOnAuthStateChanged((user) => {
+      setSession(user);
       setIsLoading(false);
     });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email, 
-        password
-      });
-      
-      if (error) {
-        console.error("Clarvida signIn error:", error);
-        return { error };
-      }
-      
+      await firebaseSignIn(email, password);
       return { error: null };
     } catch (err) {
-      console.error("Unexpected error during Clarvida signIn:", err);
-      return { error: err };
+      const errorMessage = handleFirebaseError(err);
+      console.error("Clarvida signIn error:", err);
+      return { error: new Error(errorMessage) };
     }
   };
 
   const signUp = async (email: string, password: string) => {
     try {
-      // Get the full origin including protocol for redirects
-      const origin = window.location.origin;
-      const redirectTo = `${origin}/clarvida`;
-      
-      const { data, error } = await supabase.auth.signUp({
-        email, 
-        password,
-        options: {
-          emailRedirectTo: redirectTo
-        }
-      });
-      
-      if (error) {
-        console.error("Clarvida signUp error:", error);
-        return { error };
-      }
-      
+      await firebaseSignUp(email, password);
       return { error: null };
     } catch (err) {
-      console.error("Unexpected error during Clarvida signUp:", err);
-      return { error: err };
+      const errorMessage = handleFirebaseError(err);
+      console.error("Clarvida signUp error:", err);
+      return { error: new Error(errorMessage) };
     }
   };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await firebaseSignOut();
       toast.success("Successfully signed out from Clarvida!");
     } catch (err) {
       console.error("Error during Clarvida signOut:", err);

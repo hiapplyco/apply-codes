@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useNewAuth } from "@/context/NewAuthContext";
+import { chatAssistant } from "@/lib/firebase/functions/chatAssistant";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where
+} from "firebase/firestore";
 import { 
   Send, 
   Bot, 
@@ -56,7 +65,7 @@ interface UserContext {
 }
 
 const Chat = () => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,34 +98,49 @@ const Chat = () => {
 
   const fetchUserContext = async () => {
     try {
-      // Fetch user's search history
-      const { data: searches, count: searchCount } = await supabase
-        .from("search_history")
-        .select("*", { count: "exact" })
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+      if (!user || !db) return;
 
-      // Fetch user's projects
-      const { data: projects } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("user_id", user?.id)
-        .eq("is_archived", false)
-        .order("created_at", { ascending: false });
+      const searchQuery = query(
+        collection(db, "users", user.uid, "searchHistory"),
+        orderBy("createdAt", "desc"),
+        limit(10)
+      );
+      const searchSnapshot = await getDocs(searchQuery);
+      const searches = searchSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as any)
+      }));
 
-      // Fetch total candidates
-      const { count: candidateCount } = await supabase
-        .from("saved_candidates")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user?.id);
+      const projectsQuery = query(
+        collection(db, "projects"),
+        where("ownerId", "==", user.uid),
+        where("isArchived", "==", false)
+      );
+      const projectsSnapshot = await getDocs(projectsQuery);
+      const projects = projectsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as any)
+      }));
+
+      const candidatesSnapshot = await getDocs(collection(db, "users", user.uid, "savedCandidates"));
 
       setUserContext({
-        totalSearches: searchCount || 0,
-        totalProjects: projects?.length || 0,
-        totalCandidates: candidateCount || 0,
-        recentSearches: searches || [],
-        projects: projects || []
+        totalSearches: searches.length,
+        totalProjects: projects.length,
+        totalCandidates: candidatesSnapshot.size,
+        recentSearches: searches.map(search => ({
+          ...search,
+          created_at: search.createdAt || search.created_at || new Date().toISOString(),
+          results_count: search.results_count || 0,
+          search_query: search.search_query || '',
+          boolean_query: search.boolean_query || ''
+        })),
+        projects: projects.map(project => ({
+          id: project.id,
+          name: project.name,
+          description: project.description || '',
+          candidates_count: project.candidatesCount || project.candidates_count || 0
+        }))
       });
     } catch (error) {
       console.error("Error fetching user context:", error);
@@ -176,9 +200,8 @@ Provide helpful, specific advice based on their data. Be conversational but prof
     setIsLoading(true);
 
     try {
-      // Call our edge function
-      const { data, error } = await supabase.functions.invoke('chat-assistant', {
-        body: {
+      // Call our chat assistant function
+      const data = await chatAssistant({
           message: input.trim(),
           systemPrompt: generateSystemPrompt(),
           history: messages.slice(-10).map(message => ({
@@ -186,9 +209,9 @@ Provide helpful, specific advice based on their data. Be conversational but prof
             content: message.content
           })),
           projectId: selectedProjectId,
-          userId: user?.id
-        }
-      });
+          userId: user?.uid
+        });
+      const error = null;
 
       if (error) throw error;
 

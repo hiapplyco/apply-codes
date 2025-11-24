@@ -1,5 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 
+const getAssetUrl = (path: string) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.apply.codes';
+  return `${origin}${path}`;
+};
+
 interface EnhancedStructuredDataProps {
   type?: 'Organization' | 'SoftwareApplication' | 'FAQPage' | 'Product' | 'Service' | 'HowTo' | 'VideoObject' | 'WebPage' | 'Article' | 'Review';
   customData?: any;
@@ -12,7 +17,7 @@ export const EnhancedStructuredData = ({ type = 'Organization', customData }: En
     "name": "Apply - The First Agentic AI Recruitment Platform",
     "alternateName": "Apply Codes",
     "url": "https://www.apply.codes",
-    "logo": "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png",
+    "logo": getAssetUrl('/assets/apply-logo.svg'),
     "description": "The world's first Agentic AI recruitment platform. Pioneering MCP (Model Context Protocol) and autonomous AI agents for recruitment operations. Transform talent acquisition with AI ops, LLM orchestration, and multi-agent workflows.",
     "foundingDate": "2023",
     "slogan": "The First Agentic AI Recruitment Firm - Pioneering AI Operations in Talent Acquisition",
@@ -62,9 +67,7 @@ export const EnhancedStructuredData = ({ type = 'Organization', customData }: En
     "downloadUrl": "https://www.apply.codes/signup",
     "keywords": "Agentic AI, MCP, Model Context Protocol, LLM orchestration, AI operations, recruitment ops, autonomous agents, first agentic recruitment platform",
     "screenshot": [
-      "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/screenshots/apply-dashboard.png",
-      "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/screenshots/boolean-search.png",
-      "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/screenshots/interview-guidance.png"
+      getAssetUrl('/assets/apply-logo.svg')
     ],
     "offers": [{
       "@type": "Offer",
@@ -395,7 +398,7 @@ export const EnhancedStructuredData = ({ type = 'Organization', customData }: En
       "name": "Apply",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png"
+        "url": getAssetUrl('/assets/apply-logo.svg')
       }
     },
     "datePublished": customData?.datePublished || "2024-12-01",

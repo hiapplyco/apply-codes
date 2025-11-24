@@ -1,7 +1,31 @@
-import { ReactElement } from 'react';
+import { ReactElement, createContext } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Mock ProjectContext for tests
+const mockProjectContextValue = {
+  projects: [],
+  loading: false,
+  selectedProjectId: null,
+  selectedProject: undefined,
+  setSelectedProjectId: () => {},
+  createProject: async () => null,
+  updateProject: async () => true,
+  archiveProject: async () => true,
+  refetch: async () => {},
+};
+
+// Create a mock ProjectContext
+const ProjectContext = createContext(mockProjectContextValue);
+
+function MockProjectProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <ProjectContext.Provider value={mockProjectContextValue}>
+      {children}
+    </ProjectContext.Provider>
+  );
+}
 
 // Create a custom render function that includes providers
 const createTestQueryClient = () =>
@@ -33,9 +57,11 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          {children}
-        </BrowserRouter>
+        <MockProjectProvider>
+          <BrowserRouter>
+            {children}
+          </BrowserRouter>
+        </MockProjectProvider>
       </QueryClientProvider>
     );
   }

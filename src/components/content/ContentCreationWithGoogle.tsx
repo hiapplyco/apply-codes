@@ -25,7 +25,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -97,29 +97,23 @@ export const ContentCreationWithGoogle = () => {
 
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-content', {
-        body: {
-          contentType: selectedContentType,
-          userInput: userInput,
-          systemPrompt: selectedOption.system_prompt,
-        },
+      const response = await functionBridge.generateContent({
+        contentType: selectedContentType,
+        userInput,
+        systemPrompt: selectedOption.system_prompt,
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data && data.content) {
-        const htmlContent = advancedMarkdownToHtml(data.content);
+      if (response && response.content) {
+        const htmlContent = advancedMarkdownToHtml(response.content);
         
         setGeneratedContent({
           content: htmlContent,
-          markdown: data.markdown || data.content,
+          markdown: response.markdown || response.content,
         });
         setRawContent(htmlContent);
         toast.success("Content generated successfully!");
       } else {
-        throw new Error(`No content generated. Response: ${JSON.stringify(data)}`);
+        throw new Error(`No content generated. Response: ${JSON.stringify(response)}`);
       }
     } catch (error) {
       console.error("Error generating content:", error);
@@ -147,20 +141,16 @@ export const ContentCreationWithGoogle = () => {
 
     setIsExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('export-to-google-docs', {
-        body: {
-          content: rawContent,
-          title: `${selectedContentType} - ${new Date().toLocaleDateString()}`,
-          accountId: currentAccount.id
-        }
+      const exportResult = await functionBridge.exportToGoogleDocs({
+        content: rawContent,
+        title: `${selectedContentType} - ${new Date().toLocaleDateString()}`,
+        accountId: currentAccount.id
       });
-
-      if (error) throw error;
 
       setGeneratedContent(prev => prev ? {
         ...prev,
-        googleDocId: data.documentId,
-        googleDriveUrl: data.documentUrl
+        googleDocId: exportResult.documentId,
+        googleDriveUrl: exportResult.documentUrl
       } : null);
 
       toast.success("Content exported to Google Docs successfully!");
@@ -180,22 +170,18 @@ export const ContentCreationWithGoogle = () => {
 
     setIsImporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('import-from-google-docs', {
-        body: {
-          fileId,
-          accountId: currentAccount.id
-        }
+      const importResult = await functionBridge.importFromGoogleDocs({
+        fileId,
+        accountId: currentAccount.id
       });
 
-      if (error) throw error;
-
-      const htmlContent = advancedMarkdownToHtml(data.content);
+      const htmlContent = advancedMarkdownToHtml(importResult.content);
       
       setGeneratedContent({
         content: htmlContent,
-        markdown: data.content,
+        markdown: importResult.content,
         googleDocId: fileId,
-        googleDriveUrl: data.documentUrl
+        googleDriveUrl: importResult.documentUrl
       });
       setRawContent(htmlContent);
       

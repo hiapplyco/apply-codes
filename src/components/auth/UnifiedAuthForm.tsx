@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Mail, Phone, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { SocialAuthButtons } from "./SocialAuthButtons";
 import { PhoneAuth } from "./PhoneAuth";
 
@@ -18,48 +18,32 @@ export function UnifiedAuthForm({ redirectTo, onSuccess }: UnifiedAuthFormProps)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { signIn, signUp } = useNewAuth();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // First, try to sign in
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // First, try to sign in using the AuthContext (which uses the bridge)
+      const signInResult = await signIn(email, password);
 
-      if (signInError) {
+      if (signInResult.error) {
         // If sign in fails with invalid credentials, try to sign up
-        if (signInError.message.includes('Invalid login credentials')) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: redirectTo || `${window.location.origin}/dashboard`,
-            },
+        if (signInResult.error.message.includes('Invalid login credentials')) {
+          const signUpResult = await signUp(email, password);
+
+          if (signUpResult.error) {
+            throw signUpResult.error;
+          }
+
+          toast({
+            title: "Account created!",
+            description: "Please check your email to confirm your account.",
           });
-
-          if (signUpError) {
-            throw signUpError;
-          }
-
-          if (signUpData?.user?.identities?.length === 0) {
-            toast({
-              title: "Account already exists",
-              description: "Please sign in with your existing account or reset your password.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "Account created!",
-              description: "Please check your email to confirm your account.",
-            });
-            if (onSuccess) onSuccess();
-          }
+          if (onSuccess) onSuccess();
         } else {
-          throw signInError;
+          throw signInResult.error;
         }
       } else {
         // Sign in successful
@@ -139,7 +123,37 @@ export function UnifiedAuthForm({ redirectTo, onSuccess }: UnifiedAuthFormProps)
               <Label htmlFor="password">Password</Label>
               <button
                 type="button"
-                onClick={() => window.location.href = '/reset-password'}
+                onClick={async () => {
+                  if (email) {
+                    try {
+                      const result = await resetPasswordForEmail(email, { redirectTo: redirectTo || `${window.location.origin}/reset-password` });
+                      if (result.error) {
+                        toast({
+                          title: "Error",
+                          description: result.error.message,
+                          variant: "destructive",
+                        });
+                      } else {
+                        toast({
+                          title: "Password reset email sent",
+                          description: "Please check your email for password reset instructions.",
+                        });
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to send password reset email.",
+                        variant: "destructive",
+                      });
+                    }
+                  } else {
+                    toast({
+                      title: "Email required",
+                      description: "Please enter your email address first.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
                 className="text-sm text-[#8B5CF6] hover:underline"
               >
                 Forgot password?

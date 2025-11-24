@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { processJobRequirements } from "@/utils/jobRequirements";
-import { supabase } from "@/integrations/supabase/client";
 import { SearchTypeToggle } from "@/components/search/SearchTypeToggle";
 import { FormHeader } from "@/components/search/FormHeader";
 import { ContentTextarea } from "@/components/search/ContentTextarea";

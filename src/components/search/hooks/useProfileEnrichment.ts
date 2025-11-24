@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { EnrichedProfileData } from "../types";
 
 // Types for search parameters
@@ -64,25 +64,13 @@ export const useProfileEnrichment = () => {
       const toastId = toast.loading("Fetching contact information...");
       
       // Call Supabase Edge Function
-      const response = await supabase.functions.invoke('get-contact-info', {
-        body: {
-          profileUrl
-        }
-      });
-      
-      console.log('Edge function response:', response);
-      
-      const { data, error: supabaseError } = response;
-      
+      const data = await functionBridge.getContactInfo({ profileUrl });
+
+      console.log('Firebase function response:', data);
+
       // Dismiss the specific loading toast
       toast.dismiss(toastId);
-      
-      // Handle Supabase error
-      if (supabaseError) {
-        console.error('Supabase function error:', supabaseError);
-        throw new Error(`Failed to enrich profile: ${supabaseError.message}`);
-      }
-      
+
       // Handle successful response from updated edge function
       console.log('Nymeria API Response:', data);
       
@@ -96,7 +84,7 @@ export const useProfileEnrichment = () => {
       }
       
       // Handle new structured response format
-      if (data?.success !== undefined) {
+      if ((data as EnrichmentResponse)?.success !== undefined) {
         const enrichmentResponse = data as EnrichmentResponse;
         
         if (enrichmentResponse.success && enrichmentResponse.data) {
@@ -118,7 +106,7 @@ export const useProfileEnrichment = () => {
       
       // Fallback for old response format
       if (data) {
-        const profileData = data.data || data;
+        const profileData = (data as any).data || data;
         console.log('Setting enriched data (fallback):', profileData);
         setEnrichedData(profileData);
         toast.success('Contact information retrieved');
@@ -157,25 +145,16 @@ export const useProfileEnrichment = () => {
       toast.loading("Searching for contact information...");
       
       // Call Supabase Edge Function
-      const { data, error: supabaseError } = await supabase.functions.invoke('enrich-profile', {
-        body: {
-          searchParams: params
-        }
-      });
-      
+      const response = await functionBridge.enrichProfile({ searchParams: params });
+
       // Dismiss loading toast
       toast.dismiss();
-      
-      // Handle Supabase error
-      if (supabaseError) {
-        throw new Error(`Failed to search for contacts: ${supabaseError.message}`);
-      }
-      
+
       // Handle successful response
-      if (data?.data && data.data.length > 0) {
-        setSearchResults(data.data);
-        setTotalResults(data.total || data.data.length);
-        return data.data;
+      if (response?.data && response.data.length > 0) {
+        setSearchResults(response.data);
+        setTotalResults(response.total || response.data.length);
+        return response.data;
       } else {
         // No results found
         toast.error("No contacts found matching your search criteria");

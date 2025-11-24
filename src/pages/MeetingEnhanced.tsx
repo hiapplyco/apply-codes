@@ -4,11 +4,13 @@ import { TranscriptionProcessor } from '@/components/video/TranscriptionProcesso
 import { MeetingDataManager } from '@/components/video/MeetingDataManager';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
-import { useAuth } from '@/context/AuthContext';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useScreeningSession } from '@/hooks/useScreeningSession';
 import { useInterviewCoPilot } from '@/hooks/useInterviewCoPilot';
-import { supabase } from '@/integrations/supabase/client';
+import { createDailyRoom } from '@/lib/firebase/functions/createDailyRoom';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -122,7 +124,7 @@ interface Participant {
 
 export default function MeetingEnhanced() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const { selectedProjectId } = useProjectContext();
   const { sessionId } = useScreeningSession();
   
@@ -258,22 +260,17 @@ export default function MeetingEnhanced() {
     setIsLoading(true);
     try {
       // Create Daily room for the meeting
-      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-        body: {
-          projectId: selectedProjectId,
-          meetingType: meetingType,
-          title: meetingTitle,
-          userId: user?.id
-        }
+      const roomResponse = await createDailyRoom({
+        projectId: selectedProjectId,
+        meetingType,
+        title: meetingTitle,
+        userId: user?.uid
       });
 
-      if (roomError) {
-        console.error('Error creating Daily room:', roomError);
-        throw new Error(roomError.message || 'Failed to create meeting room');
-      }
+      const roomUrl = roomResponse?.room?.url || roomResponse?.url;
 
-      if (roomData?.url) {
-        console.log('Daily room created successfully:', roomData.url);
+      if (roomUrl) {
+        console.log('Daily room created successfully:', roomUrl);
         
         // Update interview context with meeting ID if interview type
         if (meetingType === 'interview' && interviewContext) {
@@ -315,7 +312,7 @@ export default function MeetingEnhanced() {
           
           const updatedContext = {
             ...interviewContext,
-            meetingId: roomData.roomId || roomData.url,
+            meetingId: roomResponse?.room?.id || roomUrl,
             sessionId: sessionId || '',
             jobRole: interviewContext.position,
             competencies: finalCompetencies,
@@ -374,11 +371,11 @@ export default function MeetingEnhanced() {
       }
 
       // Update session status if exists
-      if (sessionId) {
-        await supabase
-          .from('chat_sessions')
-          .update({ status: 'completed' })
-          .eq('id', sessionId);
+      if (sessionId && db) {
+        await updateDoc(doc(db, 'chatSessions', sessionId), {
+          status: 'completed',
+          endedAt: new Date().toISOString()
+        });
       }
 
       toast.success('Meeting ended successfully');

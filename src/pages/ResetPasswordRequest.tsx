@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { ArrowLeft, Mail } from "lucide-react";
 
 export default function ResetPasswordRequest() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const { resetPasswordForEmail } = useAuth();
+  const { resetPasswordForEmail } = useNewAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {

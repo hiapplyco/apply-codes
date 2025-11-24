@@ -1,5 +1,16 @@
-import { supabase } from '@/integrations/supabase/client';
+import { auth, db } from '@/lib/firebase';
+import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc
+} from 'firebase/firestore';
 
 interface GoogleAccount {
   id: string;
@@ -28,15 +39,15 @@ interface SessionInfo {
   error?: string;
 }
 
+const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // 5 minutes
+
+const accountsCollection = (userId: string) => collection(db, 'users', userId, 'googleAccounts');
+
 export class GoogleTokenManager {
   private static instance: GoogleTokenManager;
   private refreshPromises: Map<string, Promise<TokenRefreshResult>> = new Map();
-  private refreshTimers: Map<string, NodeJS.Timeout> = new Map();
-  private readonly TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // 5 minutes before expiry
 
-  private constructor() {
-    this.initializeAutoRefresh();
-  }
+  private constructor() {}
 
   public static getInstance(): GoogleTokenManager {
     if (!GoogleTokenManager.instance) {
@@ -45,438 +56,164 @@ export class GoogleTokenManager {
     return GoogleTokenManager.instance;
   }
 
-  /**
-   * Get a valid access token for the user's active Google account
-   */
+  public cleanup(): void {
+    this.refreshPromises.clear();
+  }
+
   public async getValidAccessToken(userId?: string): Promise<string | null> {
-    try {
-      const account = await this.getActiveGoogleAccount(userId);
-      if (!account) {
-        return null;
-      }
+    const account = await this.getActiveGoogleAccount(userId);
+    if (!account) return null;
 
-      // Check if token needs refresh
-      if (this.isTokenExpired(account) || this.isTokenExpiringSoon(account)) {
-        const refreshResult = await this.refreshAccountToken(account.id);
-        if (refreshResult.success && refreshResult.accessToken) {
-          return refreshResult.accessToken;
-        }
-        return null;
+    if (this.isTokenExpired(account) || this.isTokenExpiringSoon(account)) {
+      const result = await this.refreshAccountToken(account.id);
+      if (result.success && result.accessToken) {
+        return result.accessToken;
       }
-
-      // Update last used timestamp
-      await this.updateLastUsed(account.id);
-      return account.accessToken;
-    } catch (error) {
-      console.error('Error getting valid access token:', error);
       return null;
     }
+
+    await this.updateLastUsed(account.id);
+    return account.accessToken;
   }
 
-  /**
-   * Get the active Google account for a user
-   */
   public async getActiveGoogleAccount(userId?: string): Promise<GoogleAccount | null> {
-    try {
-      let targetUserId = userId;
-      
-      if (!targetUserId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        targetUserId = user.id;
-      }
+    const user = await this.resolveUser(userId);
+    if (!user || !db) return null;
 
-      const { data: accounts, error } = await supabase
-        .from('google_accounts')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .eq('status', 'active')
-        .order('last_used', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        throw error;
-      }
-
-      return accounts?.[0] || null;
-    } catch (error) {
-      console.error('Error getting active Google account:', error);
-      return null;
-    }
+    const accountsQuery = query(accountsCollection(user), orderBy('lastUsed', 'desc'));
+    const snapshot = await getDocs(accountsQuery);
+    const [first] = snapshot.docs;
+    return first ? this.mapAccount(first.id, first.data()) : null;
   }
 
-  /**
-   * Refresh an access token using the refresh token
-   */
   public async refreshAccountToken(accountId: string): Promise<TokenRefreshResult> {
-    // Check if refresh is already in progress
-    const existingPromise = this.refreshPromises.get(accountId);
-    if (existingPromise) {
-      return existingPromise;
-    }
+    const existing = this.refreshPromises.get(accountId);
+    if (existing) return existing;
 
-    const refreshPromise = this.performTokenRefresh(accountId);
-    this.refreshPromises.set(accountId, refreshPromise);
-
+    const promise = this.performTokenRefresh(accountId);
+    this.refreshPromises.set(accountId, promise);
     try {
-      const result = await refreshPromise;
-      return result;
+      return await promise;
     } finally {
       this.refreshPromises.delete(accountId);
     }
   }
 
-  /**
-   * Perform the actual token refresh
-   */
   private async performTokenRefresh(accountId: string): Promise<TokenRefreshResult> {
     try {
-      const { data, error } = await supabase.functions.invoke(
-        'refresh-google-token',
-        {
-          body: { accountId }
-        }
-      );
-
-      if (error) {
-        throw error;
+      const account = await this.getAccountById(accountId);
+      if (!account?.refreshToken) {
+        throw new Error('Refresh token unavailable');
       }
 
-      // Schedule next refresh
-      this.scheduleTokenRefresh(accountId, data.token_expiry);
+      const refreshed = await functionBridge.refreshGoogleToken({ refreshToken: account.refreshToken });
+
+      const user = auth?.currentUser;
+      if (!user || !db) {
+        throw new Error('User not authenticated');
+      }
+
+      await updateDoc(doc(accountsCollection(user.uid), accountId), {
+        accessToken: refreshed.access_token,
+        tokenExpiry: refreshed.expires_at,
+        lastUsed: serverTimestamp()
+      });
 
       return {
         success: true,
-        accessToken: data.access_token,
-        expiresAt: data.token_expiry
+        accessToken: refreshed.access_token,
+        expiresAt: refreshed.expires_at
       };
     } catch (error) {
-      console.error('Error refreshing token:', error);
-      
-      // Handle specific error cases
-      if (error.message?.includes('refresh token expired')) {
-        await this.markAccountForReconnection(accountId);
-        return {
-          success: false,
-          error: 'Refresh token expired. Please reconnect your Google account.'
-        };
-      }
-
+      console.error('Error refreshing Google token:', error);
       return {
         success: false,
-        error: error.message || 'Failed to refresh token'
+        error: error instanceof Error ? error.message : 'Failed to refresh token'
       };
     }
   }
 
-  /**
-   * Check if a token is expired
-   */
   public isTokenExpired(account: GoogleAccount): boolean {
-    if (!account.tokenExpiry) {
-      return false;
-    }
+    if (!account.tokenExpiry) return false;
     return new Date(account.tokenExpiry) <= new Date();
   }
 
-  /**
-   * Check if a token is expiring soon
-   */
   public isTokenExpiringSoon(account: GoogleAccount): boolean {
-    if (!account.tokenExpiry) {
-      return false;
-    }
+    if (!account.tokenExpiry) return false;
     const expiryTime = new Date(account.tokenExpiry).getTime();
-    const now = Date.now();
-    return (expiryTime - now) <= this.TOKEN_REFRESH_BUFFER;
+    return expiryTime - Date.now() <= TOKEN_REFRESH_BUFFER;
   }
 
-  /**
-   * Validate a session and return session info
-   */
   public async validateSession(userId?: string): Promise<SessionInfo> {
-    try {
-      const account = await this.getActiveGoogleAccount(userId);
-      
-      if (!account) {
-        return {
-          isValid: false,
-          needsRefresh: false,
-          error: 'No active Google account found'
-        };
-      }
-
-      const isExpired = this.isTokenExpired(account);
-      const needsRefresh = isExpired || this.isTokenExpiringSoon(account);
-
-      if (isExpired) {
-        return {
-          isValid: false,
-          account,
-          needsRefresh: true,
-          error: 'Access token has expired'
-        };
-      }
-
-      return {
-        isValid: true,
-        account,
-        needsRefresh
-      };
-    } catch (error) {
-      console.error('Error validating session:', error);
-      return {
-        isValid: false,
-        needsRefresh: false,
-        error: error.message || 'Failed to validate session'
-      };
-    }
-  }
-
-  /**
-   * Initialize automatic token refresh
-   */
-  private initializeAutoRefresh(): void {
-    // Check for tokens that need refreshing every 10 minutes
-    setInterval(async () => {
-      await this.refreshExpiredTokens();
-    }, 10 * 60 * 1000);
-
-    // Initial check
-    setTimeout(() => {
-      this.refreshExpiredTokens();
-    }, 5000);
-  }
-
-  /**
-   * Refresh all expired or expiring tokens
-   */
-  public async refreshExpiredTokens(): Promise<void> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return;
-      }
-
-      const { data: accounts, error } = await supabase
-        .from('google_accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'active');
-
-      if (error || !accounts) {
-        return;
-      }
-
-      const refreshPromises = accounts
-        .filter(account => 
-          this.isTokenExpired(account) || this.isTokenExpiringSoon(account)
-        )
-        .map(account => this.refreshAccountToken(account.id));
-
-      const results = await Promise.allSettled(refreshPromises);
-      
-      const failedRefreshes = results.filter(result => 
-        result.status === 'rejected' || 
-        (result.status === 'fulfilled' && !result.value.success)
-      );
-
-      if (failedRefreshes.length > 0) {
-        console.warn(`Failed to refresh ${failedRefreshes.length} token(s)`);
-      }
-    } catch (error) {
-      console.error('Error in automatic token refresh:', error);
-    }
-  }
-
-  /**
-   * Schedule token refresh before expiry
-   */
-  private scheduleTokenRefresh(accountId: string, tokenExpiry: string): void {
-    // Clear existing timer
-    const existingTimer = this.refreshTimers.get(accountId);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
+    const account = await this.getActiveGoogleAccount(userId);
+    if (!account) {
+      return { isValid: false, needsRefresh: false };
     }
 
-    const expiryTime = new Date(tokenExpiry).getTime();
-    const refreshTime = expiryTime - this.TOKEN_REFRESH_BUFFER;
-    const now = Date.now();
+    const needsRefresh = this.isTokenExpired(account) || this.isTokenExpiringSoon(account);
 
-    if (refreshTime > now) {
-      const timeout = setTimeout(async () => {
-        await this.refreshAccountToken(accountId);
-        this.refreshTimers.delete(accountId);
-      }, refreshTime - now);
-
-      this.refreshTimers.set(accountId, timeout);
-    }
+    return {
+      isValid: !needsRefresh,
+      needsRefresh,
+      account
+    };
   }
 
-  /**
-   * Mark account as needing reconnection
-   */
-  private async markAccountForReconnection(accountId: string): Promise<void> {
-    try {
-      await supabase
-        .from('google_accounts')
-        .update({
-          status: 'needs_reconnection',
-          access_token: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', accountId);
-    } catch (error) {
-      console.error('Error marking account for reconnection:', error);
-    }
+  public async markAccountForReconnection(accountId: string) {
+    const user = auth?.currentUser;
+    if (!user || !db) return;
+
+    await updateDoc(doc(accountsCollection(user.uid), accountId), {
+      tokenExpiry: null,
+      lastUsed: serverTimestamp()
+    });
+
+    toast.error('Please reconnect your Google account to restore Drive features.');
   }
 
-  /**
-   * Update last used timestamp
-   */
-  private async updateLastUsed(accountId: string): Promise<void> {
-    try {
-      await supabase
-        .from('google_accounts')
-        .update({
-          last_used: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', accountId);
-    } catch (error) {
-      console.error('Error updating last used timestamp:', error);
-    }
+  private async updateLastUsed(accountId: string) {
+    const user = auth?.currentUser;
+    if (!user || !db) return;
+    await updateDoc(doc(accountsCollection(user.uid), accountId), {
+      lastUsed: serverTimestamp()
+    });
   }
 
-  /**
-   * Revoke and cleanup tokens
-   */
-  public async revokeTokens(accountId: string): Promise<boolean> {
-    try {
-      // Clear any scheduled refresh
-      const timer = this.refreshTimers.get(accountId);
-      if (timer) {
-        clearTimeout(timer);
-        this.refreshTimers.delete(accountId);
-      }
+  private async getAccountById(accountId: string): Promise<GoogleAccount | null> {
+    const user = auth?.currentUser;
+    if (!user || !db) return null;
 
-      // Clear any pending refresh promise
-      this.refreshPromises.delete(accountId);
-
-      // Call revoke function
-      const { error } = await supabase.functions.invoke(
-        'revoke-google-token',
-        {
-          body: { accountId }
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error revoking tokens:', error);
-      return false;
-    }
+    const snapshot = await getDoc(doc(accountsCollection(user.uid), accountId));
+    if (!snapshot.exists()) return null;
+    return this.mapAccount(snapshot.id, snapshot.data());
   }
 
-  /**
-   * Check if user has required scopes
-   */
-  public async hasRequiredScopes(scopes: string[], userId?: string): Promise<boolean> {
-    try {
-      const account = await this.getActiveGoogleAccount(userId);
-      if (!account) {
-        return false;
-      }
-
-      return scopes.every(scope => account.scopes.includes(scope));
-    } catch (error) {
-      console.error('Error checking scopes:', error);
-      return false;
-    }
+  private async resolveUser(userId?: string) {
+    if (userId) return userId;
+    const user = auth?.currentUser;
+    if (!user) return null;
+    return user.uid;
   }
 
-  /**
-   * Get session statistics
-   */
-  public async getSessionStats(userId?: string): Promise<{
-    totalAccounts: number;
-    activeAccounts: number;
-    expiredAccounts: number;
-    expiringSoonAccounts: number;
-  }> {
-    try {
-      let targetUserId = userId;
-      
-      if (!targetUserId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        targetUserId = user.id;
-      }
-
-      const { data: accounts, error } = await supabase
-        .from('google_accounts')
-        .select('*')
-        .eq('user_id', targetUserId);
-
-      if (error || !accounts) {
-        return {
-          totalAccounts: 0,
-          activeAccounts: 0,
-          expiredAccounts: 0,
-          expiringSoonAccounts: 0
-        };
-      }
-
-      const activeAccounts = accounts.filter(acc => 
-        acc.status === 'active' && !this.isTokenExpired(acc)
-      );
-
-      const expiredAccounts = accounts.filter(acc => 
-        this.isTokenExpired(acc)
-      );
-
-      const expiringSoonAccounts = accounts.filter(acc => 
-        !this.isTokenExpired(acc) && this.isTokenExpiringSoon(acc)
-      );
-
-      return {
-        totalAccounts: accounts.length,
-        activeAccounts: activeAccounts.length,
-        expiredAccounts: expiredAccounts.length,
-        expiringSoonAccounts: expiringSoonAccounts.length
-      };
-    } catch (error) {
-      console.error('Error getting session stats:', error);
-      return {
-        totalAccounts: 0,
-        activeAccounts: 0,
-        expiredAccounts: 0,
-        expiringSoonAccounts: 0
-      };
-    }
-  }
-
-  /**
-   * Cleanup resources
-   */
-  public cleanup(): void {
-    // Clear all timers
-    this.refreshTimers.forEach(timer => clearTimeout(timer));
-    this.refreshTimers.clear();
-    
-    // Clear all promises
-    this.refreshPromises.clear();
+  private mapAccount(id: string, data: any): GoogleAccount {
+    return {
+      id,
+      email: data.email,
+      name: data.name,
+      picture: data.picture || undefined,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken || undefined,
+      scopes: data.scopes || [],
+      tokenExpiry: data.tokenExpiry ? String(data.tokenExpiry) : undefined,
+      createdAt: toIsoString(data.createdAt),
+      lastUsed: toIsoString(data.lastUsed)
+    };
   }
 }
 
-// Export singleton instance
-export const googleTokenManager = GoogleTokenManager.getInstance();
+function toIsoString(value: any): string {
+  if (!value) return new Date().toISOString();
+  if (typeof value === 'string') return value;
+  if (value.toDate) return value.toDate().toISOString();
+  return new Date().toISOString();
+}

@@ -1,5 +1,14 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db } from "@/lib/firebase";
+import { functionBridge } from "@/lib/function-bridge";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp
+} from "firebase/firestore";
 
 interface ErrorResponse {
   success: false;
@@ -21,28 +30,15 @@ interface CrawlOptions {
 }
 
 export class FirecrawlService {
-  static async crawlWebsite(url: string, options?: CrawlOptions): Promise<{ success: boolean; error?: string; data?: any }> {
+  static async crawlWebsite(url: string, options?: CrawlOptions): Promise<{ success: boolean; error?: string; data?: { text: string; rawContent?: string } }> {
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        console.error('Authentication error:', sessionError);
+      if (!auth?.currentUser) {
+        console.error('Authentication error: user not authenticated');
         return { success: false, error: 'Authentication required' };
       }
 
-      console.log('Making request to firecrawl-url function with URL:', url);
-      console.log('Using session token:', session.access_token ? 'Token present' : 'No token');
-      
-      const { data: response, error: functionError } = await supabase.functions.invoke<CrawlResponse>('firecrawl-url', {
-        body: { url }
-      });
-
-      console.log('Function response:', response);
-      console.log('Function error:', functionError);
-
-      if (functionError) {
-        console.error('Error calling Firecrawl:', functionError);
-        return { success: false, error: `Function error: ${functionError.message}` };
-      }
+      console.log('Making request to Firebase firecrawlUrl function with URL:', url);
+      const response = await functionBridge.firecrawlUrl({ url }) as CrawlResponse;
 
       console.log('Received response from firecrawl-url function:', response);
 
@@ -56,46 +52,52 @@ export class FirecrawlService {
       }
 
       // Store the crawl summary in kickoff_summaries (legacy)
-      const { error: summaryError } = await supabase
-        .from('kickoff_summaries')
-        .insert({
-          content: response.text,
-          source: `url:${url}`,
-          user_id: session.user.id
-        });
-
-      if (summaryError) {
-        console.error('Error storing summary:', summaryError);
+      if (db) {
+        try {
+          await addDoc(collection(db, 'kickoffSummaries'), {
+            content: response.text,
+            source: `url:${url}`,
+            userId: auth.currentUser.uid,
+            createdAt: serverTimestamp()
+          });
+        } catch (summaryError) {
+          console.error('Error storing summary in Firestore:', summaryError);
+        }
+      } else {
+        console.warn('Firestore not initialized; skipping kickoff summary persistence');
       }
 
       // Store in project if options are provided
       if (options?.projectId && options?.saveToProject !== false) {
-        const { error: projectError } = await supabase
-          .from('project_scraped_data')
-          .insert({
-            project_id: options.projectId,
-            user_id: session.user.id,
-            url,
-            summary: response.text,
-            raw_content: response.rawContent,
-            context: options.context || 'general',
-            metadata: {
-              scraped_at: new Date().toISOString(),
-              source: 'firecrawl'
-            }
-          });
-
-        if (projectError) {
-          console.error('Error storing in project:', projectError);
+        if (!db) {
+          console.warn('Firestore not initialized; skipping project scrape persistence');
+        } else {
+          try {
+            await addDoc(collection(db, 'projects', options.projectId, 'scrapedData'), {
+              userId: auth.currentUser.uid,
+              url,
+              summary: response.text,
+              rawContent: response.rawContent,
+              context: options.context || 'general',
+              metadata: {
+                scrapedAt: new Date().toISOString(),
+                source: 'firecrawl'
+              },
+              createdAt: serverTimestamp()
+            });
+          } catch (projectError) {
+            console.error('Error storing project scrape data in Firestore:', projectError);
+          }
         }
       }
 
-      return { 
-        success: true, 
-        data: { 
+      return {
+        success: true,
+        data: {
+          ...response,
           text: response.text,
-          rawContent: response.rawContent 
-        } 
+          rawContent: response.rawContent
+        }
       };
     } catch (error) {
       console.error('Error during crawl:', error);
@@ -109,16 +111,18 @@ export class FirecrawlService {
   // Helper method to get scraped data for a project
   static async getProjectScrapedData(projectId: string) {
     try {
-      const { data, error } = await supabase
-        .from('project_scraped_data')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching project scraped data:', error);
-        return { success: false, error: error.message };
+      if (!db) {
+        return { success: false, error: 'Firestore not initialized' };
       }
+
+      const scrapedDataRef = collection(db, 'projects', projectId, 'scrapedData');
+      const dataQuery = query(scrapedDataRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(dataQuery);
+
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
       return { success: true, data };
     } catch (error) {

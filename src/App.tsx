@@ -2,7 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { HelmetProvider } from "react-helmet-async";
-import { AuthProvider } from "@/context/AuthContext";
+import { NewAuthProvider } from "@/context/NewAuthContext";
 import { ClarvidaAuthProvider } from "@/context/ClarvidaAuthContext";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -36,13 +36,14 @@ import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
 import { DashboardAnalytics } from "@/pages/DashboardAnalytics";
 import { PageTracker } from "@/components/analytics/PageTracker";
+// Firebase test pages removed - migration complete
 
 function App() {
   console.log('App component rendering...');
   // Remove the basename configuration to let React Router handle paths naturally
   return (
     <HelmetProvider>
-      <AuthProvider>
+      <NewAuthProvider>
         <ProjectProvider>
           <ClarvidaAuthProvider>
             <Router>
@@ -57,6 +58,8 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
             <Route path="/reset-password" element={<PasswordReset />} />
+
+            {/* Firebase migration complete - test routes removed */}
             
             {/* Clarvida routes - move these to top level for better visibility */}
             <Route path="/clarvida/login" element={<ClarvidaLogin />} />
@@ -96,7 +99,7 @@ function App() {
         </Router>
       </ClarvidaAuthProvider>
       </ProjectProvider>
-    </AuthProvider>
+    </NewAuthProvider>
     </HelmetProvider>
   );
 }

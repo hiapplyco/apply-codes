@@ -35,7 +35,9 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: any }) => {
       setError(null);
       
       try {
-        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/get-contact-info', {
+        // Use Firebase Cloud Function URL (will be set via environment variable)
+        const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+        const response = await fetch(`${functionUrl}/get-contact-info`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

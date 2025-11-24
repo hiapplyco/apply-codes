@@ -27,7 +27,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 
 interface ContactSearchModalProps {
   isOpen: boolean;
@@ -112,24 +112,18 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
 
       console.log('Searching with params:', searchParams);
 
-      const { data, error } = await supabase.functions.invoke('search-contacts', {
-        body: { searchParams }
-      });
+      const results = await functionBridge.searchContacts({ searchParams });
 
-      if (error) {
-        throw new Error(error.message);
+      console.log('Search results:', results);
+
+      if (results?.error) {
+        throw new Error(results.error);
       }
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      console.log('Search results:', data);
-
-      if (data?.data && data.data.length > 0) {
-        setSearchResults(data.data);
-        setTotalResults(data.total);
-        toast.success(`Found ${data.total} contact${data.total > 1 ? 's' : ''}`);
+      if (results?.data && results.data.length > 0) {
+        setSearchResults(results.data);
+        setTotalResults(results.total);
+        toast.success(`Found ${results.total} contact${results.total > 1 ? 's' : ''}`);
       } else {
         toast.info('No contacts found matching your search criteria');
       }

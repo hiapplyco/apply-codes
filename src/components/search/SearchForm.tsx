@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Copy, Search, Loader2, Edit3, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { UploadRequirementsButton } from "@/components/url-scraper";
 
 export const SearchForm = ({
@@ -62,6 +62,22 @@ export const SearchForm = ({
   });
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Define explainBoolean before it's used in useEffect
+  const explainBoolean = useCallback(async (booleanStr: string) => {
+    setIsExplaining(true);
+    try {
+      const data = await functionBridge.explainBoolean({ booleanString: booleanStr, requirements: searchText });
+
+      if (data?.explanation) {
+        setBooleanExplanation(data.explanation);
+      }
+    } catch (error) {
+      console.error('Error explaining boolean:', error);
+    } finally {
+      setIsExplaining(false);
+    }
+  }, [searchText]);
+
   // Show search string when it's generated or when processing is complete
   useEffect(() => {
     // Show the search string section if a search string exists and processing isn't active
@@ -79,32 +95,14 @@ export const SearchForm = ({
     setShowAnimation(true);
     setAnimationStage('generating');
     setBooleanExplanation(null); // Clear previous explanation
-    
+
     await handleSubmit(event);
-    
+
     // Wait a bit for the animation
     setTimeout(() => {
       setShowAnimation(false);
     }, 500);
   };
-  
-  const explainBoolean = useCallback(async (booleanStr: string) => {
-    setIsExplaining(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('explain-boolean', {
-        body: { booleanString: booleanStr, requirements: searchText }
-      });
-      
-      if (error) throw error;
-      if (data?.explanation) {
-        setBooleanExplanation(data.explanation);
-      }
-    } catch (error) {
-      console.error('Error explaining boolean:', error);
-    } finally {
-      setIsExplaining(false);
-    }
-  }, [searchText]);
   
   const handleComplexityChange = async (complexity: 'simpler' | 'complex') => {
     if (!searchText || !searchString) return;

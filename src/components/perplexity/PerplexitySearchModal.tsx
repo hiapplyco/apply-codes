@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface PerplexitySearchModalProps {
   isOpen: boolean;
@@ -21,15 +21,9 @@ export function PerplexitySearchModal({ isOpen, onClose, onSearchResult, project
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('perplexity-search', {
-        body: { query, projectId },
-      });
+      const data = await functionBridge.perplexitySearch({ query, projectId });
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      const answer = data.choices[0].message.content;
+      const answer = data.choices?.[0]?.message?.content;
       onSearchResult({ text: answer, query, searchId: data.searchId });
       toast.success('Search successful!');
       onClose();

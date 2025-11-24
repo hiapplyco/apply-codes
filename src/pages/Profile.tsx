@@ -1,6 +1,19 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useNewAuth } from "@/context/NewAuthContext";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  addDoc,
+  updateDoc,
+  deleteDoc
+} from "firebase/firestore";
+import { uploadAvatar } from "@/lib/firebase-storage";
 import { 
   User, 
   Mail, 
@@ -93,7 +106,7 @@ interface SearchHistoryItem {
 }
 
 export default function Profile() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateUser } = useNewAuth();
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -129,6 +142,14 @@ export default function Profile() {
     "#EF4444", // Red
   ];
 
+  const normalizeTimestamp = (value: any): string => {
+    if (!value) return new Date().toISOString();
+    if (value instanceof Date) return value.toISOString();
+    if (value && typeof value.toDate === "function") return value.toDate().toISOString();
+    if (typeof value === "string") return value;
+    return new Date().toISOString();
+  };
+
   useEffect(() => {
     fetchProfileData();
     fetchUserStats();
@@ -140,15 +161,28 @@ export default function Profile() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (error) throw error;
-      setProfileData(data);
-      setEditingName(data.full_name || "");
+      if (!db) {
+        console.warn("[Profile] Firestore not initialized");
+        return;
+      }
+
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (!profileSnap.exists()) {
+        setProfileData(null);
+        setEditingName("");
+        return;
+      }
+
+      const data = profileSnap.data() as ProfileData;
+      const normalizedProfile: ProfileData = {
+        ...data,
+        created_at: normalizeTimestamp(data.created_at),
+        updated_at: normalizeTimestamp(data.updated_at)
+      };
+      setProfileData(normalizedProfile);
+      setEditingName(normalizedProfile.full_name || "");
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast.error("Failed to load profile data");
@@ -159,69 +193,55 @@ export default function Profile() {
     if (!user) return;
     
     try {
-      // Fetch search history count
-      const { count: searchCount } = await supabase
-        .from('search_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
-      // Fetch saved candidates count
-      const { count: candidatesCount } = await supabase
-        .from('saved_candidates')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
-      // Fetch projects count
-      const { count: projectsCount } = await supabase
-        .from('projects')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
-      // Fetch favorite searches count
-      const { count: favoritesCount } = await supabase
-        .from('search_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_favorite', true);
-      
-      // Fetch recent searches (this week and month)
+      if (!db) {
+        console.warn("[Profile] Firestore not initialized");
+        return;
+      }
+
+      const [searchSnapshot, candidatesSnapshot, projectsSnapshot] = await Promise.all([
+        getDocs(query(collection(db, 'search_history'), where('user_id', '==', user.uid))),
+        getDocs(query(collection(db, 'saved_candidates'), where('user_id', '==', user.uid))),
+        getDocs(query(collection(db, 'projects'), where('user_id', '==', user.uid)))
+      ]);
+
+      const searchDocs = searchSnapshot.docs.map(doc => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          ...data,
+          created_at: normalizeTimestamp(data.created_at)
+        };
+      });
+
+      const searchCount = searchDocs.length;
+      const favoritesCount = searchDocs.filter(search => search.is_favorite).length;
+
       const weekStart = startOfWeek(new Date());
       const monthStart = startOfMonth(new Date());
-      
-      const { count: weekSearches } = await supabase
-        .from('search_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', weekStart.toISOString());
-      
-      const { count: monthSearches } = await supabase
-        .from('search_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .gte('created_at', monthStart.toISOString());
-      
-      // Fetch recent activity
-      const { data: recentSearches } = await supabase
-        .from('search_history')
-        .select('id, search_query, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      const recentActivity = recentSearches?.map(search => ({
-        id: search.id,
-        type: 'search' as const,
-        description: `Searched for "${search.search_query}"`,
-        timestamp: search.created_at
-      })) || [];
+
+      const weekIso = weekStart.toISOString();
+      const monthIso = monthStart.toISOString();
+
+      const weekSearches = searchDocs.filter(search => search.created_at >= weekIso).length;
+      const monthSearches = searchDocs.filter(search => search.created_at >= monthIso).length;
+
+      const recentActivity = searchDocs
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        .slice(0, 5)
+        .map(search => ({
+          id: search.id,
+          type: 'search' as const,
+          description: `Searched for "${search.search_query}"`,
+          timestamp: search.created_at
+        }));
       
       setUserStats({
-        totalSearches: searchCount || 0,
-        totalCandidatesSaved: candidatesCount || 0,
-        totalProjects: projectsCount || 0,
-        favoriteSearches: favoritesCount || 0,
-        searchesThisWeek: weekSearches || 0,
-        searchesThisMonth: monthSearches || 0,
+        totalSearches: searchCount,
+        totalCandidatesSaved: candidatesSnapshot.size,
+        totalProjects: projectsSnapshot.size,
+        favoriteSearches: favoritesCount,
+        searchesThisWeek: weekSearches,
+        searchesThisMonth: monthSearches,
         recentActivity
       });
     } catch (error) {
@@ -236,17 +256,54 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('search_history')
-        .select(`
-          *,
-          project:projects(*)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      if (!db) {
+        console.warn("[Profile] Firestore not initialized");
+        return;
+      }
 
-      if (error) throw error;
-      setSearchHistory(data || []);
+      const historyQuery = query(
+        collection(db, 'search_history'),
+        where('user_id', '==', user.uid),
+        orderBy('created_at', 'desc')
+      );
+
+      const snapshot = await getDocs(historyQuery);
+      const projectCache = new Map<string, Project>();
+
+      const history = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const data = docSnap.data() as any;
+          let project: Project | undefined;
+
+          if (data.project_id) {
+            if (projectCache.has(data.project_id)) {
+              project = projectCache.get(data.project_id);
+            } else {
+              const projectRef = doc(db, 'projects', data.project_id);
+              const projectSnap = await getDoc(projectRef);
+              if (projectSnap.exists()) {
+                const projectData = projectSnap.data() as Project;
+                project = {
+                  id: projectSnap.id,
+                  ...projectData,
+                  created_at: normalizeTimestamp(projectData.created_at),
+                  updated_at: normalizeTimestamp(projectData.updated_at)
+                };
+                projectCache.set(data.project_id, project);
+              }
+            }
+          }
+
+          return {
+            id: docSnap.id,
+            ...(data as SearchHistoryItem),
+            created_at: normalizeTimestamp(data.created_at),
+            project
+          } as SearchHistoryItem;
+        })
+      );
+
+      setSearchHistory(history);
     } catch (error) {
       console.error('Error fetching search history:', error);
       toast.error("Failed to load search history");
@@ -257,14 +314,29 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      if (!db) {
+        console.warn("[Profile] Firestore not initialized");
+        return;
+      }
 
-      if (error) throw error;
-      setProjects(data || []);
+      const projectsQuery = query(
+        collection(db, 'projects'),
+        where('user_id', '==', user.uid),
+        orderBy('created_at', 'desc')
+      );
+
+      const snapshot = await getDocs(projectsQuery);
+      const loadedProjects = snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as Project;
+        return {
+          id: docSnap.id,
+          ...data,
+          created_at: normalizeTimestamp(data.created_at),
+          updated_at: normalizeTimestamp(data.updated_at)
+        };
+      });
+
+      setProjects(loadedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error("Failed to load projects");
@@ -275,12 +347,15 @@ export default function Profile() {
     if (!user || !profileData) return;
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: editingName })
-        .eq('id', user.id);
-      
-      if (error) throw error;
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
+
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        full_name: editingName,
+        updated_at: new Date().toISOString()
+      });
       
       setProfileData({ ...profileData, full_name: editingName });
       setEditModalOpen(false);
@@ -293,40 +368,64 @@ export default function Profile() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !user) return;
-    
+
     const file = e.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-    const filePath = `${user.id}/${fileName}`;
-    
+
+    // Validate file type and size
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a valid image file (JPEG, PNG, GIF, or WebP)");
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
     setUploadingAvatar(true);
-    
+
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-      
-      if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
-      
-      if (updateError) throw updateError;
-      
-      if (profileData) {
-        setProfileData({ ...profileData, avatar_url: publicUrl });
+      // Upload to Firebase Storage with progress tracking
+      const avatarUrl = await uploadAvatar(user.uid, file, (progress) => {
+        // Optional: You could show upload progress here
+        console.log(`Upload progress: ${progress}%`);
+      });
+
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
-      
+
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString()
+      });
+
+      if (profileData) {
+        setProfileData({ ...profileData, avatar_url: avatarUrl });
+      }
+
       toast.success("Avatar updated successfully");
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      toast.error("Failed to upload avatar");
+
+      // Provide more specific error messages
+      let errorMessage = "Failed to upload avatar";
+      if (error instanceof Error) {
+        if (error.message.includes('not authenticated')) {
+          errorMessage = "Please sign in again to upload an avatar";
+        } else if (error.message.includes('quota exceeded')) {
+          errorMessage = "Storage quota exceeded. Please try again later";
+        } else if (error.message.includes('unauthorized')) {
+          errorMessage = "You don't have permission to upload files";
+        } else if (error.message.includes('invalid format')) {
+          errorMessage = "Invalid image format. Please use JPEG, PNG, GIF, or WebP";
+        }
+      }
+
+      toast.error(errorMessage);
     } finally {
       setUploadingAvatar(false);
     }
@@ -334,12 +433,15 @@ export default function Profile() {
 
   const toggleFavorite = async (searchId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('search_history')
-        .update({ is_favorite: !currentStatus })
-        .eq('id', searchId);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      const searchRef = doc(db, 'search_history', searchId);
+      await updateDoc(searchRef, {
+        is_favorite: !currentStatus,
+        updated_at: new Date().toISOString()
+      });
       
       fetchSearchHistory();
       toast.success(currentStatus ? "Removed from favorites" : "Added to favorites");
@@ -351,12 +453,11 @@ export default function Profile() {
 
   const deleteSearch = async (searchId: string) => {
     try {
-      const { error } = await supabase
-        .from('search_history')
-        .delete()
-        .eq('id', searchId);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      await deleteDoc(doc(db, 'search_history', searchId));
       
       fetchSearchHistory();
       toast.success("Search deleted successfully");
@@ -370,14 +471,17 @@ export default function Profile() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .insert({
-          ...newProject,
-          user_id: user.id
-        });
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      await addDoc(collection(db, 'projects'), {
+        ...newProject,
+        user_id: user.uid,
+        is_archived: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
       
       fetchProjects();
       setShowCreateProject(false);
@@ -393,17 +497,18 @@ export default function Profile() {
     if (!editingProject) return;
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({
-          name: editingProject.name,
-          description: editingProject.description,
-          color: editingProject.color,
-          icon: editingProject.icon
-        })
-        .eq('id', editingProject.id);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      const projectRef = doc(db, 'projects', editingProject.id);
+      await updateDoc(projectRef, {
+        name: editingProject.name,
+        description: editingProject.description,
+        color: editingProject.color,
+        icon: editingProject.icon,
+        updated_at: new Date().toISOString()
+      });
       
       fetchProjects();
       setEditingProject(null);
@@ -416,12 +521,15 @@ export default function Profile() {
 
   const archiveProject = async (projectId: string) => {
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ is_archived: true })
-        .eq('id', projectId);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      const projectRef = doc(db, 'projects', projectId);
+      await updateDoc(projectRef, {
+        is_archived: true,
+        updated_at: new Date().toISOString()
+      });
       
       fetchProjects();
       toast.success("Project archived successfully");

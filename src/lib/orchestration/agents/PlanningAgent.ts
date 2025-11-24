@@ -1,6 +1,6 @@
 import { BaseAgent } from './BaseAgent';
-import { AgentTask, AgentCapability } from '@/types/orchestration';
-import { supabase } from '@/integrations/supabase/client';
+import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
 
 interface PlanningTaskInput {
   objective: string;
@@ -561,7 +561,7 @@ export class PlanningAgent extends BaseAgent {
 
   private async savePlan(plan: RecruitmentPlan): Promise<void> {
     try {
-      await supabase.from('recruitment_plans').insert({
+      const result = await firestoreClient.from('recruitment_plans').insert({
         plan_id: plan.id,
         objective: plan.objective,
         plan_data: plan,
@@ -569,6 +569,10 @@ export class PlanningAgent extends BaseAgent {
         context: this.context,
         created_at: new Date().toISOString()
       });
+
+      if (result?.error) {
+        throw result.error;
+      }
     } catch (error) {
       console.error('Failed to save recruitment plan:', error);
     }

@@ -1,5 +1,15 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
-import { supabase } from '../integrations/supabase/client';
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  Timestamp
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { RecruitmentMetrics, DashboardMetric, ChartDataPoint, TimeSeriesData } from '../types/dashboard';
 import { metricsCache, CACHE_DURATIONS } from '../lib/metricsCache';
 
@@ -21,16 +31,30 @@ const fetchDashboardMetrics = async (jobId: string): Promise<DashboardMetricsRes
   }
 
   // First, try to get dashboard metrics from the database
-  const { data: dashboardMetrics, error: metricsError } = await supabase
-    .from('dashboard_metrics')
-    .select('*')
-    .eq('job_id', jobId)
-    .gt('expires_at', new Date().toISOString())
-    .order('generated_at', { ascending: false });
-
-  if (metricsError) {
-    console.error('Error fetching dashboard metrics:', metricsError);
+  if (!db) {
+    throw new Error('Firestore not initialized');
   }
+
+  const dashboardMetricsRef = collection(db, 'dashboard_metrics');
+  const metricsQuery = query(
+    dashboardMetricsRef,
+    where('job_id', '==', jobId),
+    where('expires_at', '>', Timestamp.fromDate(new Date())),
+    orderBy('expires_at', 'desc'),
+    orderBy('generated_at', 'desc')
+  );
+
+  const dashboardMetricsSnapshot = await getDocs(metricsQuery);
+  const dashboardMetrics = dashboardMetricsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    generated_at: doc.data().generated_at instanceof Timestamp
+      ? doc.data().generated_at.toDate().toISOString()
+      : doc.data().generated_at,
+    expires_at: doc.data().expires_at instanceof Timestamp
+      ? doc.data().expires_at.toDate().toISOString()
+      : doc.data().expires_at
+  }));
 
   // If we have dashboard metrics, use them
   if (dashboardMetrics && dashboardMetrics.length > 0) {
@@ -51,16 +75,27 @@ const fetchDashboardMetrics = async (jobId: string): Promise<DashboardMetricsRes
 
   // Fallback: check if we have agent outputs for this job
   console.log('No dashboard metrics found, checking for agent outputs...');
-  const { data: agentOutputs, error } = await supabase
-    .from('agent_outputs')
-    .select('*')
-    .or(`input_data->>jobId.eq.${jobId},input_data->>job_id.eq.${jobId}`)
-    .eq('status', 'completed')
-    .order('created_at', { ascending: false });
+  const agentOutputsRef = collection(db, 'agent_outputs');
+  const agentOutputsQuery = query(
+    agentOutputsRef,
+    where('status', '==', 'completed'),
+    orderBy('created_at', 'desc')
+  );
 
-  if (error) {
-    throw new Error(`Failed to fetch agent outputs: ${error.message}`);
-  }
+  const agentOutputsSnapshot = await getDocs(agentOutputsQuery);
+  const allAgentOutputs = agentOutputsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    created_at: doc.data().created_at instanceof Timestamp
+      ? doc.data().created_at.toDate().toISOString()
+      : doc.data().created_at
+  }));
+
+  // Filter agent outputs that match the jobId (client-side since Firestore doesn't support OR with different field paths)
+  const agentOutputs = allAgentOutputs.filter(output => {
+    const inputData = output.input_data || {};
+    return inputData.jobId === jobId || inputData.job_id === jobId;
+  });
 
   if (!agentOutputs || agentOutputs.length === 0) {
     throw new Error('No analysis data available. Please generate an analysis report first.');
@@ -70,10 +105,10 @@ const fetchDashboardMetrics = async (jobId: string): Promise<DashboardMetricsRes
 
   // Transform agent outputs into dashboard metrics (fallback)
   const metrics = transformAgentOutputsToMetrics(agentOutputs);
-  
+
   const result = {
     metrics,
-    lastUpdated: new Date(agentOutputs[0].created_at)
+    lastUpdated: agentOutputs.length > 0 ? new Date(agentOutputs[0].created_at) : new Date()
   };
 
   // Cache the fallback result with shorter TTL

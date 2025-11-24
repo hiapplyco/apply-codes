@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
+import { functionBridge } from '@/lib/function-bridge';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessage {
@@ -32,7 +33,7 @@ interface ChatResponse {
   };
 }
 
-export function useChatAssistant(sessionId?: number, projectId?: string) {
+export function useChatAssistant(sessionId?: string, projectId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastToolCalls, setLastToolCalls] = useState<ToolCall[]>([]);
@@ -47,19 +48,18 @@ export function useChatAssistant(sessionId?: number, projectId?: string) {
       setMessages(prev => [...prev, newUserMessage]);
 
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth?.currentUser;
 
-      // Call the chat assistant edge function
-      const { data, error } = await supabase.functions.invoke<ChatResponse>('chat-assistant', {
-        body: {
+      // Call the chat assistant function
+      const data = await functionBridge.chatAssistant({
           message,
           systemPrompt: systemPrompt || 'You are an expert recruitment AI assistant. Help users find candidates, create job descriptions, analyze compensation, and provide recruitment insights.',
           history: messages,
           sessionId,
-          userId: user?.id,
+          userId: user?.uid,
           projectId
-        }
-      });
+        });
+      const error = null;
 
       if (error) {
         throw error;

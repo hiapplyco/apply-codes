@@ -1,6 +1,18 @@
-import { supabase } from '@/integrations/supabase/client';
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { FirecrawlService } from '@/utils/FirecrawlService';
+import { analyzeCandidate } from '@/lib/firebase/functions/analyzeCandidate';
+import { handleInterview } from '@/lib/firebase/functions/handleInterview';
 
 export interface ContextContent {
   type: 'upload' | 'firecrawl' | 'perplexity';
@@ -74,8 +86,8 @@ export class ContextIntegrationService {
     pipecatContext: PipecatContext,
     config: AgentOrchestrationConfig
   ): Promise<any> {
-    const { data, error } = await supabase.functions.invoke('test-orchestration', {
-      body: {
+    try {
+      const data = await analyzeCandidate({
         content: content.text,
         context: {
           ...pipecatContext,
@@ -87,15 +99,13 @@ export class ContextIntegrationService {
           maxConcurrency: config.maxConcurrency,
           enableContextPropagation: config.contextPropagation
         }
-      }
-    });
+      });
 
-    if (error) {
+      return data;
+    } catch (error) {
       console.error('Agent orchestration error:', error);
       throw error;
     }
-
-    return data;
   }
 
   /**
@@ -105,21 +115,21 @@ export class ContextIntegrationService {
     content: ContextContent,
     pipecatContext: PipecatContext
   ): Promise<void> {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = auth?.currentUser;
+    if (!user) {
       throw new Error('Authentication required');
     }
 
     // Save to appropriate table based on content type
     switch (content.type) {
       case 'upload':
-        await this.saveUploadContent(content, pipecatContext, user.id);
+        await this.saveUploadContent(content, pipecatContext, user.uid);
         break;
       case 'firecrawl':
-        await this.saveFirecrawlContent(content, pipecatContext, user.id);
+        await this.saveFirecrawlContent(content, pipecatContext, user.uid);
         break;
       case 'perplexity':
-        await this.savePerplexityContent(content, pipecatContext, user.id);
+        await this.savePerplexityContent(content, pipecatContext, user.uid);
         break;
     }
   }
@@ -132,22 +142,28 @@ export class ContextIntegrationService {
     pipecatContext: PipecatContext,
     userId: string
   ): Promise<void> {
-    const { error } = await supabase.from('project_scraped_data').insert({
-      user_id: userId,
-      project_id: pipecatContext.projectId,
-      summary: content.text,
-      raw_content: content.text,
-      metadata: {
-        ...content.metadata,
-        context: pipecatContext.context,
-        sessionId: pipecatContext.sessionId,
-        meetingId: pipecatContext.meetingId,
-        processingTimestamp: new Date().toISOString()
-      },
-      context: pipecatContext.context
-    });
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
 
-    if (error) {
+    try {
+      const scrapedDataRef = collection(db, 'project_scraped_data');
+      await addDoc(scrapedDataRef, {
+        user_id: userId,
+        project_id: pipecatContext.projectId,
+        summary: content.text,
+        raw_content: content.text,
+        metadata: {
+          ...content.metadata,
+          context: pipecatContext.context,
+          sessionId: pipecatContext.sessionId,
+          meetingId: pipecatContext.meetingId,
+          processingTimestamp: new Date().toISOString()
+        },
+        context: pipecatContext.context,
+        created_at: serverTimestamp()
+      });
+    } catch (error) {
       console.error('Failed to save upload content:', error);
       throw error;
     }
@@ -161,23 +177,29 @@ export class ContextIntegrationService {
     pipecatContext: PipecatContext,
     userId: string
   ): Promise<void> {
-    const { error } = await supabase.from('project_scraped_data').insert({
-      user_id: userId,
-      project_id: pipecatContext.projectId,
-      url: content.metadata?.url,
-      summary: content.text,
-      raw_content: content.text,
-      metadata: {
-        ...content.metadata,
-        context: pipecatContext.context,
-        sessionId: pipecatContext.sessionId,
-        meetingId: pipecatContext.meetingId,
-        processingTimestamp: new Date().toISOString()
-      },
-      context: pipecatContext.context
-    });
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
 
-    if (error) {
+    try {
+      const scrapedDataRef = collection(db, 'project_scraped_data');
+      await addDoc(scrapedDataRef, {
+        user_id: userId,
+        project_id: pipecatContext.projectId,
+        url: content.metadata?.url || null,
+        summary: content.text,
+        raw_content: content.text,
+        metadata: {
+          ...content.metadata,
+          context: pipecatContext.context,
+          sessionId: pipecatContext.sessionId,
+          meetingId: pipecatContext.meetingId,
+          processingTimestamp: new Date().toISOString()
+        },
+        context: pipecatContext.context,
+        created_at: serverTimestamp()
+      });
+    } catch (error) {
       console.error('Failed to save Firecrawl content:', error);
       throw error;
     }
@@ -191,24 +213,30 @@ export class ContextIntegrationService {
     pipecatContext: PipecatContext,
     userId: string
   ): Promise<void> {
-    const { error } = await supabase.from('searches').insert({
-      user_id: userId,
-      project_id: pipecatContext.projectId,
-      query: content.metadata?.query || 'AI Search',
-      platform: 'perplexity',
-      results_count: content.metadata?.sources?.length || 0,
-      filters_applied: {
-        context: pipecatContext.context,
-        sessionId: pipecatContext.sessionId,
-        meetingId: pipecatContext.meetingId
-      },
-      metadata: {
-        ...content.metadata,
-        processingTimestamp: new Date().toISOString()
-      }
-    });
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
 
-    if (error) {
+    try {
+      const searchesRef = collection(db, 'searches');
+      await addDoc(searchesRef, {
+        user_id: userId,
+        project_id: pipecatContext.projectId,
+        query: content.metadata?.query || 'AI Search',
+        platform: 'perplexity',
+        results_count: content.metadata?.sources?.length || 0,
+        filters_applied: {
+          context: pipecatContext.context,
+          sessionId: pipecatContext.sessionId,
+          meetingId: pipecatContext.meetingId
+        },
+        metadata: {
+          ...content.metadata,
+          processingTimestamp: new Date().toISOString()
+        },
+        created_at: serverTimestamp()
+      });
+    } catch (error) {
       console.error('Failed to save Perplexity content:', error);
       throw error;
     }
@@ -226,9 +254,8 @@ export class ContextIntegrationService {
     }
 
     try {
-      const { data: connectionData, error } = await supabase.functions.invoke('initialize-daily-bot', {
-        body: { sessionId }
-      });
+      const connectionData = await handleInterview({ sessionId });
+      const error = null;
 
       if (error || !connectionData?.websocketUrl) {
         throw new Error('Failed to get WebSocket URL');
@@ -324,29 +351,38 @@ export class ContextIntegrationService {
     projectId: string,
     context?: string
   ): Promise<any[]> {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const user = auth?.currentUser;
+    if (!user) {
       throw new Error('Authentication required');
     }
 
-    let query = supabase
-      .from('project_scraped_data')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
-
-    if (context) {
-      query = query.eq('context', context);
+    if (!db) {
+      throw new Error('Firestore not initialized');
     }
 
-    const { data, error } = await query;
-    if (error) {
+    try {
+      const scrapedDataRef = collection(db, 'project_scraped_data');
+      const constraints = [
+        where('user_id', '==', user.uid),
+        where('project_id', '==', projectId),
+        orderBy('created_at', 'desc')
+      ];
+
+      if (context) {
+        constraints.splice(2, 0, where('context', '==', context));
+      }
+
+      const q = query(scrapedDataRef, ...constraints);
+      const querySnapshot = await getDocs(q);
+
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
       console.error('Failed to get project context:', error);
       throw error;
     }
-
-    return data || [];
   }
 
   /**

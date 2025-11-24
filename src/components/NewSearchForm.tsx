@@ -5,12 +5,13 @@ import { useLocation } from "react-router-dom";
 import { useAgentOutputs } from "@/stores/useAgentOutputs";
 import { useClientAgentOutputs } from "@/stores/useClientAgentOutputs";
 import { StructuredSearchResults } from "./search/StructuredSearchResults";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AgentProcessor } from "./search/AgentProcessor";
 import { GenerateAnalysisButton } from "./search/analysis/GenerateAnalysisButton";
 import { AnalysisReport } from "./search/analysis/AnalysisReport";
 import { useSearchForm } from "./search/hooks/useSearchForm";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface NewSearchFormProps {
   userId: string | null;
@@ -119,13 +120,19 @@ const NewSearchForm = ({
         const fetchJobSearchString = async () => {
           console.log("Fetching search string for job:", agentOutput.job_id);
           try {
-            const { data, error } = await supabase
-              .from('jobs')
-              .select('search_string')
-              .eq('id', agentOutput.job_id)
-              .single();
+            if (!db) {
+              throw new Error('Firestore not initialized');
+            }
 
-            if (error) throw error;
+            const jobRef = doc(db, 'jobs', String(agentOutput.job_id));
+            const jobSnap = await getDoc(jobRef);
+
+            if (!jobSnap.exists()) {
+              console.log("No job document found for ID:", agentOutput.job_id);
+              return;
+            }
+
+            const data = jobSnap.data() as { search_string?: string };
 
             if (data?.search_string) {
               setSearchString(data.search_string);

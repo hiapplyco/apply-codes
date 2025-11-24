@@ -1,31 +1,27 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { ResumeMatch } from "../types";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 
 export const useResumeMatches = (jobId: number) => {
   return useQuery({
     queryKey: ["resume-matches", jobId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resume_matches")
-        .select(`
-          id,
-          similarity_score,
-          matching_keywords,
-          matching_entities,
-          created_at,
-          parsed_resume,
-          parsed_job
-        `)
-        .eq("job_id", jobId)
-        .order("created_at", { ascending: false });
+      if (!db) return [];
 
-      if (error) {
-        console.error("Error fetching matches:", error);
-        throw error;
-      }
-      return data as ResumeMatch[];
+      const matchesRef = collection(db, "resume_matches");
+      const q = query(
+        matchesRef,
+        where("job_id", "==", String(jobId)),
+        orderBy("created_at", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ResumeMatch[];
     },
     retry: 1
   });

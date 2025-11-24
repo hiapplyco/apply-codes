@@ -7,7 +7,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 
 interface SearchResultsProps {
   jobId: number | null;
@@ -17,15 +18,20 @@ const SearchResults = ({ jobId }: SearchResultsProps) => {
   const { data: results, isLoading } = useQuery({
     queryKey: ["searchResults", jobId],
     queryFn: async () => {
-      if (!jobId) return [];
-      const { data, error } = await supabase
-        .from("search_results")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("relevance_score", { ascending: false });
+      if (!jobId || !db) return [];
 
-      if (error) throw error;
-      return data;
+      const resultsRef = collection(db, "search_results");
+      const q = query(
+        resultsRef,
+        where("job_id", "==", String(jobId)),
+        orderBy("relevance_score", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
     },
     enabled: !!jobId,
   });

@@ -8,7 +8,8 @@ import {
   AgentMessage,
   AgentMetrics
 } from '@/types/orchestration';
-import { supabase } from '@/integrations/supabase/client';
+import { functionBridge } from '@/lib/function-bridge';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
 import { EventEmitter } from 'events';
 
 export abstract class BaseAgent extends EventEmitter {
@@ -98,19 +99,29 @@ export abstract class BaseAgent extends EventEmitter {
 
   protected async callGeminiAPI(prompt: string, data?: any): Promise<any> {
     try {
-      const { data: response, error } = await supabase.functions.invoke('gemini-api', {
-        body: {
-          prompt,
-          data,
-          context: {
-            agentType: this.type,
-            agentId: this.id,
-            taskId: this.currentTask?.id
-          }
+      const response = await functionBridge.geminiApi({
+        prompt,
+        data,
+        context: {
+          agentType: this.type,
+          agentId: this.id,
+          taskId: this.currentTask?.id
         }
       });
 
-      if (error) throw error;
+      if (response?.data) {
+        return response.data;
+      }
+
+      if (response?.raw) {
+        try {
+          return JSON.parse(response.raw);
+        } catch (parseError) {
+          console.warn('Failed to parse Gemini raw response as JSON, returning text', parseError);
+          return { text: response.raw };
+        }
+      }
+
       return response;
     } catch (error) {
       console.error(`Gemini API call failed for agent ${this.id}:`, error);
@@ -188,7 +199,7 @@ export abstract class BaseAgent extends EventEmitter {
 
   private async logActivity(task: AgentTask, result: AgentResult): Promise<void> {
     try {
-      await supabase.from('agent_activity_logs').insert({
+      const insertResult = await firestoreClient.from('agent_activity_logs').insert({
         agent_id: this.id,
         agent_type: this.type,
         task_id: task.id,
@@ -201,6 +212,10 @@ export abstract class BaseAgent extends EventEmitter {
         context: this.context,
         created_at: new Date().toISOString()
       });
+
+      if (insertResult.error) {
+        throw insertResult.error;
+      }
     } catch (error) {
       console.error('Failed to log agent activity:', error);
     }

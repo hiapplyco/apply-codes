@@ -1,5 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 
+const getAssetUrl = (path: string) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.apply.codes';
+  return `${origin}${path}`;
+};
+
 interface StructuredDataProps {
   type?: 'Organization' | 'SoftwareApplication' | 'FAQPage';
 }
@@ -10,7 +15,7 @@ export const StructuredData = ({ type = 'Organization' }: StructuredDataProps) =
     "@type": "Organization",
     "name": "Apply",
     "url": "https://www.apply.codes",
-    "logo": "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png",
+    "logo": getAssetUrl('/assets/apply-logo.svg'),
     "description": "AI-powered recruitment platform that helps modern hiring teams find better candidates 40% faster through intelligent sourcing, screening, and 20+ integrations.",
     "sameAs": [
       "https://twitter.com/applycodes",
@@ -46,7 +51,7 @@ export const StructuredData = ({ type = 'Organization' }: StructuredDataProps) =
       "bestRating": "5",
       "worstRating": "1"
     },
-    "screenshot": "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/screenshots/apply-dashboard.png",
+    "screenshot": getAssetUrl('/assets/apply-logo.svg'),
     "featureList": [
       "AI-powered boolean search generation",
       "Automated candidate screening",

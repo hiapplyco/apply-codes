@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { auth } from "@/lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +35,8 @@ export const KickoffForm = ({ isProcessing, filePaths, title, onTitleChange }: K
     setIsCrawling(true);
     try {
       const result = await FirecrawlService.crawlWebsite(url);
-      if (result.success && result.data) {
-        setTextInput(prev => prev + (prev ? '\n\n' : '') + result.data);
+      if (result.success && result.data?.text) {
+        setTextInput(prev => prev + (prev ? '\n\n' : '') + result.data.text);
         toast.success("Successfully crawled website content!");
         setUrl('');
       } else {
@@ -66,23 +67,24 @@ export const KickoffForm = ({ isProcessing, filePaths, title, onTitleChange }: K
         id: "processing-kickoff"
       });
       
-      const { data: result, error: processingError } = await supabase.functions.invoke('process-kickoff-call', {
-        body: {
-          text: textInput,
-          title,
-          filePaths,
-          projectId: selectedProjectId,
-        },
+      const result = await functionBridge.processKickoffCall({
+        text: textInput,
+        title,
+        filePaths,
+        projectId: selectedProjectId,
+        userId: auth?.currentUser?.uid || null
       });
-
-      if (processingError) throw processingError;
 
       // Update toast when processing is complete
       toast.success("Successfully processed kickoff call information!", {
         id: "processing-kickoff"
       });
-      
-      navigate(`/chat?callId=${result.id}&mode=kickoff`);
+
+      if (result?.id) {
+        navigate(`/chat?callId=${result.id}&mode=kickoff`);
+      } else {
+        navigate('/chat');
+      }
 
     } catch (error) {
       console.error('Error processing kickoff call:', error);

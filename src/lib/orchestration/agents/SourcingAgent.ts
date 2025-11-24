@@ -1,7 +1,7 @@
 import { BaseAgent } from './BaseAgent';
-import { AgentTask, AgentCapability } from '@/types/orchestration';
-import { supabase } from '@/integrations/supabase/client';
-import { generateBooleanQuery } from '@/utils/booleanQueryGenerator';
+import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
+import { functionBridge } from '@/lib/function-bridge';
 import { parseJobDescription } from '@/utils/jobDescriptionParser';
 import { searchGoogleJobs } from '@/services/googleJobsService';
 
@@ -106,7 +106,7 @@ export class SourcingAgent extends BaseAgent {
       };
 
       // Generate boolean query
-      const booleanQuery = this.generateSearchQuery(searchCriteria);
+      const booleanQuery = await this.generateSearchQuery(searchCriteria);
 
       // Search across platforms
       const platforms = input.searchPlatforms || ['linkedin', 'google_jobs'];
@@ -157,17 +157,28 @@ export class SourcingAgent extends BaseAgent {
     return response.requirements || {};
   }
 
-  private generateSearchQuery(criteria: any): string {
+  private async generateSearchQuery(criteria: any): Promise<string> {
     const requiredTerms = criteria.requiredSkills || [];
     const preferredTerms = criteria.preferredSkills || [];
-    
-    // Use the existing boolean query generator
-    return generateBooleanQuery({
-      requiredSkills: requiredTerms,
-      niceToHaveSkills: preferredTerms,
-      experienceYears: criteria.experienceLevel,
-      jobTitles: criteria.jobTitles || []
-    });
+
+    // Use the function bridge to generate boolean query
+    try {
+      const result = await functionBridge.generateBooleanSearch({
+        jobTitle: criteria.jobTitles?.[0] || '',
+        requiredSkills: requiredTerms,
+        niceToHaveSkills: preferredTerms,
+        experienceYears: criteria.experienceLevel,
+        location: criteria.location || '',
+        companyName: '',
+        companyType: '',
+        excludeTerms: []
+      });
+      return result.searchString || '';
+    } catch (error) {
+      console.error('Failed to generate boolean query:', error);
+      // Fallback to simple query
+      return requiredTerms.join(' OR ');
+    }
   }
 
   private async searchAcrossPlatforms(
@@ -311,7 +322,7 @@ export class SourcingAgent extends BaseAgent {
     resultCount: number
   ): Promise<void> {
     try {
-      await supabase.from('sourcing_activity').insert({
+      const result = await firestoreClient.from('sourcing_activity').insert({
         task_id: taskId,
         agent_id: this.id,
         boolean_query: query,
@@ -320,6 +331,10 @@ export class SourcingAgent extends BaseAgent {
         context: this.context,
         created_at: new Date().toISOString()
       });
+
+      if (result?.error) {
+        throw result.error;
+      }
     } catch (error) {
       console.error('Failed to log sourcing activity:', error);
     }

@@ -1,55 +1,68 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { Project, CreateProjectInput } from '@/types/project';
 import { toast } from 'sonner';
 
 export const useProjects = () => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   // Fetch all projects for the current user
   const fetchProjects = useCallback(async () => {
-    if (!user) {
+    if (!user || !db) {
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      
-      // First check if we have a valid session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session) {
-        setLoading(false);
-        return;
-      }
 
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false });
+      const projectsRef = collection(db, 'projects');
+      const q = query(
+        projectsRef,
+        where('user_id', '==', user.uid),
+        where('is_archived', '==', false),
+        orderBy('created_at', 'desc')
+      );
 
-      if (error) throw error;
-      setProjects(data || []);
+      const querySnapshot = await getDocs(q);
+      const projectsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        created_at: doc.data().created_at instanceof Timestamp
+          ? doc.data().created_at.toDate().toISOString()
+          : doc.data().created_at,
+        updated_at: doc.data().updated_at instanceof Timestamp
+          ? doc.data().updated_at.toDate().toISOString()
+          : doc.data().updated_at
+      })) as Project[];
+
+      setProjects(projectsData);
     } catch (error: any) {
       // Don't log or show errors for unauthenticated users
       if (user) {
         console.error('Error fetching projects:', error);
         // Only show toast for unexpected errors, not authentication/permission issues
-        const isAuthError = error?.message?.toLowerCase().includes('jwt') || 
-                           error?.message?.toLowerCase().includes('auth') ||
-                           error?.message?.toLowerCase().includes('permission') ||
-                           error?.message?.toLowerCase().includes('policy') ||
-                           error?.code === 'PGRST301' || // JWT required
-                           error?.code === '42501' || // Insufficient privilege
-                           error?.code === 'PGRST116' || // Table not found
-                           error?.code === '42P01'; // Undefined table
-        
+        const isAuthError = error?.code === 'permission-denied' ||
+                           error?.code === 'unauthenticated';
+
         if (!isAuthError) {
           toast.error('Failed to load projects. Please try refreshing the page.');
         }
@@ -61,31 +74,35 @@ export const useProjects = () => {
 
   // Create a new project
   const createProject = async (input: CreateProjectInput): Promise<Project | null> => {
-    if (!user) return null;
+    if (!user || !db) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          ...input,
-          user_id: user.id,
-          color: input.color || '#8B5CF6',
-          icon: input.icon || 'folder'
-        })
-        .select()
-        .single();
+      const projectData = {
+        ...input,
+        user_id: user.uid,
+        color: input.color || '#8B5CF6',
+        icon: input.icon || 'folder',
+        is_archived: false,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      };
 
-      if (error) throw error;
-      
-      if (data) {
-        setProjects(prev => [data, ...prev]);
-        toast.success('Project created successfully');
-        return data;
-      }
-      return null;
+      const projectsRef = collection(db, 'projects');
+      const docRef = await addDoc(projectsRef, projectData);
+
+      const newProject: Project = {
+        id: docRef.id,
+        ...projectData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } as Project;
+
+      setProjects(prev => [newProject, ...prev]);
+      toast.success('Project created successfully');
+      return newProject;
     } catch (error: any) {
       console.error('Error creating project:', error);
-      if (error?.code === '23505') {
+      if (error?.code === 'already-exists') {
         toast.error('A project with this name already exists');
       } else {
         toast.error('Failed to create project');
@@ -96,17 +113,23 @@ export const useProjects = () => {
 
   // Update a project
   const updateProject = async (projectId: string, updates: Partial<Project>): Promise<boolean> => {
+    if (!db || !user) return false;
+
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', projectId)
-        .eq('user_id', user?.id);
+      const projectRef = doc(db, 'projects', projectId);
+      const updateData = {
+        ...updates,
+        updated_at: serverTimestamp()
+      };
 
-      if (error) throw error;
+      await updateDoc(projectRef, updateData);
 
-      setProjects(prev => 
-        prev.map(project => project.id === projectId ? { ...project, ...updates } : project)
+      setProjects(prev =>
+        prev.map(project => project.id === projectId ? {
+          ...project,
+          ...updates,
+          updated_at: new Date().toISOString()
+        } : project)
       );
       toast.success('Project updated successfully');
       return true;
@@ -125,17 +148,50 @@ export const useProjects = () => {
   // Get selected project
   const selectedProject = projects.find(project => project.id === selectedProjectId);
 
-  // Load projects when user is authenticated
+  // Load projects when user is authenticated with real-time updates
   useEffect(() => {
-    if (user) {
-      fetchProjects();
-    } else {
-      // Clear projects when user logs out
+    if (!user || !db) {
       setProjects([]);
       setSelectedProjectId(null);
       setLoading(false);
+      return;
     }
-  }, [user, fetchProjects]);
+
+    const projectsRef = collection(db, 'projects');
+    const q = query(
+      projectsRef,
+      where('user_id', '==', user.uid),
+      where('is_archived', '==', false),
+      orderBy('created_at', 'desc')
+    );
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const projectsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at instanceof Timestamp
+            ? doc.data().created_at.toDate().toISOString()
+            : doc.data().created_at,
+          updated_at: doc.data().updated_at instanceof Timestamp
+            ? doc.data().updated_at.toDate().toISOString()
+            : doc.data().updated_at
+        })) as Project[];
+
+        setProjects(projectsData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to projects:', error);
+        toast.error('Failed to load projects');
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Persist selected project in localStorage
   useEffect(() => {

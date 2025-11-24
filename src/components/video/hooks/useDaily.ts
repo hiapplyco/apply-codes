@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { toast } from "sonner";
 
 // Demo room URL to use as a fallback if everything else fails
@@ -34,15 +34,13 @@ export const useDaily = (
       if (cancelled) return;
       try {
         setIsLoading(true);
-        const { data, error } = await supabase.functions.invoke('create-daily-room');
-        
-        if (error) {
-          throw new Error(error.message);
-        }
-        
-        if (data && data.url) {
-          console.log("Successfully created Daily room:", data.url);
-          setRoomUrl(data.url);
+        const response = await functionBridge.createDailyRoom();
+
+        const roomUrl = response?.room?.url || response?.url;
+
+        if (roomUrl) {
+          console.log("Successfully created Daily room:", roomUrl);
+          setRoomUrl(roomUrl);
           setUsingFallback(false);
         } else {
           throw new Error('No room URL returned from API');

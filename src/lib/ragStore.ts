@@ -1,4 +1,20 @@
-import { supabase } from "@/integrations/supabase/client";
+
+
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  writeBatch,
+  serverTimestamp,
+  Timestamp
+} from 'firebase/firestore';
+import { processTextExtraction } from './firebase/functions/processTextExtraction';
+import { db } from './firebase';
 
 export interface DocumentChunk {
   id: string;
@@ -121,32 +137,33 @@ export class RAGStore {
    */
   static async storeChunks(chunks: DocumentChunk[]): Promise<void> {
     if (chunks.length === 0) return;
-    
+
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
+
     try {
-      // Prepare chunks for database insertion
-      const dbChunks = chunks.map(chunk => ({
-        document_id: chunk.documentId,
-        chunk_id: chunk.id,
-        content: chunk.content,
-        metadata: chunk.metadata,
-        embedding: chunk.embedding || null
-      }));
-      
       // Insert in batches to avoid timeouts
       const batchSize = 100;
-      for (let i = 0; i < dbChunks.length; i += batchSize) {
-        const batch = dbChunks.slice(i, i + batchSize);
-        
-        const { error } = await supabase
-          .from('document_chunks')
-          .insert(batch);
-        
-        if (error) {
-          console.error('Error storing chunk batch:', error);
-          throw error;
-        }
+      for (let i = 0; i < chunks.length; i += batchSize) {
+        const batchChunks = chunks.slice(i, i + batchSize);
+        const batch = writeBatch(db);
+
+        batchChunks.forEach(chunk => {
+          const chunkRef = doc(collection(db, 'document_chunks'));
+          batch.set(chunkRef, {
+            document_id: chunk.documentId,
+            chunk_id: chunk.id,
+            content: chunk.content,
+            metadata: chunk.metadata,
+            embedding: chunk.embedding || null,
+            created_at: serverTimestamp()
+          });
+        });
+
+        await batch.commit();
       }
-      
+
       console.log(`Stored ${chunks.length} chunks successfully`);
     } catch (error) {
       console.error('Failed to store chunks:', error);
@@ -159,12 +176,14 @@ export class RAGStore {
    */
   static async generateEmbeddings(chunks: DocumentChunk[]): Promise<DocumentChunk[]> {
     try {
-      // Call edge function to generate embeddings
-      const { data, error } = await supabase.functions.invoke('generate-embeddings', {
-        body: {
+      const data = await processTextExtraction({
+        extractionType: 'embeddings',
+        options: {
           texts: chunks.map(c => c.content)
         }
       });
+
+      const error = null;
       
       if (error) {
         console.error('Embedding generation error:', error);
@@ -196,10 +215,17 @@ export class RAGStore {
     threshold: number = 0.7
   ): Promise<VectorSearchResult[]> {
     try {
-      // Generate embedding for query
-      const { data: embeddingData, error: embeddingError } = await supabase.functions.invoke('generate-embeddings', {
-        body: { texts: [query] }
+      // Generate embedding for query using Firebase Functions
+      const { functionBridge } = await import('./function-bridge');
+
+      const embeddingData = await functionBridge.processTextExtraction({
+        extractionType: 'embeddings',
+        options: {
+          texts: [query]
+        }
       });
+
+      const embeddingError = null;
       
       if (embeddingError || !embeddingData?.embeddings?.[0]) {
         console.error('Failed to generate query embedding:', embeddingError);
@@ -209,12 +235,13 @@ export class RAGStore {
       
       const queryEmbedding = embeddingData.embeddings[0];
       
-      // Perform vector similarity search
-      const { data, error } = await supabase.rpc('search_similar_chunks', {
-        query_embedding: queryEmbedding,
-        match_threshold: threshold,
-        match_count: limit
-      });
+      // Note: Firestore doesn't have native vector search.
+      // This would need to be implemented using a vector database like Pinecone or custom solution
+      console.warn('Vector similarity search requires external vector database in Firestore setup');
+
+      // Fallback to text search for now
+      const result = await this.fallbackTextSearch(query, limit);
+      return result;
       
       if (error) {
         console.error('Vector search error:', error);
@@ -240,30 +267,38 @@ export class RAGStore {
    * Fallback text-based search when vector search fails
    */
   private static async fallbackTextSearch(
-    query: string,
-    limit: number
+    searchQuery: string,
+    limitCount: number
   ): Promise<VectorSearchResult[]> {
     try {
-      const { data, error } = await supabase
-        .from('document_chunks')
-        .select('*')
-        .textSearch('content', query)
-        .limit(limit);
-      
-      if (error) {
-        console.error('Fallback search error:', error);
-        return [];
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
-      
-      return (data || []).map((chunk: any) => ({
-        chunk: {
-          id: chunk.chunk_id,
-          documentId: chunk.document_id,
-          content: chunk.content,
-          metadata: chunk.metadata
-        },
-        similarity: 0.5 // Default similarity for text search
-      }));
+
+      // Get all document chunks and filter client-side
+      const chunksRef = collection(db, 'document_chunks');
+      const chunksSnapshot = await getDocs(chunksRef);
+
+      const filteredChunks = chunksSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(chunk =>
+          chunk.content?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, limitCount)
+        .map((chunk: any) => ({
+          chunk: {
+            id: chunk.chunk_id,
+            documentId: chunk.document_id,
+            content: chunk.content,
+            metadata: chunk.metadata
+          },
+          similarity: 0.5 // Default similarity for text search
+        }));
+
+      return filteredChunks;
     } catch (error) {
       console.error('Fallback search failed:', error);
       return [];
@@ -329,42 +364,42 @@ export class RAGStore {
     originalFile: { name: string; size: number; type: string }
   ): Promise<void> {
     try {
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
+
       // Create searchable content
       const searchableContent = this.createResumeSearchIndex(resumeId, parsedResume);
-      
+
       // Create chunks for RAG
       const chunks = this.createChunks(searchableContent, resumeId);
-      
+
       // Generate embeddings if available
       const chunksWithEmbeddings = await this.generateEmbeddings(chunks);
-      
+
       // Store the parsed resume
-      const { error: resumeError } = await supabase
-        .from('parsed_resumes')
-        .insert({
-          id: resumeId,
-          contact_info: parsedResume.contactInfo,
-          summary: parsedResume.summary,
-          skills: parsedResume.skills,
-          experience: parsedResume.experience,
-          education: parsedResume.education,
-          certifications: parsedResume.certifications,
-          raw_text: parsedResume.rawText,
-          searchable_content: searchableContent,
-          metadata: {
-            ...parsedResume.metadata,
-            originalFile
-          }
-        });
-      
-      if (resumeError) {
-        console.error('Error storing resume:', resumeError);
-        throw resumeError;
-      }
-      
+      const resumeRef = doc(db, 'parsed_resumes', resumeId);
+      await addDoc(collection(db, 'parsed_resumes'), {
+        id: resumeId,
+        contact_info: parsedResume.contactInfo,
+        summary: parsedResume.summary,
+        skills: parsedResume.skills,
+        experience: parsedResume.experience,
+        education: parsedResume.education,
+        certifications: parsedResume.certifications,
+        raw_text: parsedResume.rawText,
+        searchable_content: searchableContent,
+        metadata: {
+          ...parsedResume.metadata,
+          originalFile
+        },
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
+
       // Store chunks for vector search
       await this.storeChunks(chunksWithEmbeddings);
-      
+
     } catch (error) {
       console.error('Failed to store resume:', error);
       throw new Error('Failed to store parsed resume in database');

@@ -1,39 +1,17 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import LinkedInPostForm from "@/components/linkedin/LinkedInPostForm";
-import LinkedInPostResults from "@/components/linkedin/LinkedInPostResults";
+import { generateLinkedinPost } from "@/lib/firebase/functions/generateLinkedinPost";
 
-const LinkedInPostGenerator = () => {
-  const [generatedPost, setGeneratedPost] = useState("");
-  const [analysis, setAnalysis] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("post");
-  const [isScrapingUrl, setIsScrapingUrl] = useState(false);
+// ... (rest of the file)
 
-  const handleSubmit = async (postContent: string, link: string, websiteContent: string) => {
-    setIsLoading(true);
-    setIsScrapingUrl(true);
-
-    try {
-      const finalContent = websiteContent 
-        ? `${postContent}\n\nWebsite Content:\n${websiteContent}`
-        : postContent;
-
-      const { data, error } = await supabase.functions.invoke('generate-linkedin-post', {
-        body: {
-          content: finalContent,
-          link,
-        },
+      const result = await generateLinkedinPost({
+        content: finalContent,
+        link,
       });
-
-      if (error) throw error;
-      
-      setGeneratedPost(data.post);
-      if (data.analysis) {
-        setAnalysis(data.analysis);
+      setGeneratedPost(result.post);
+      if (result.analysis) {
+        setAnalysis(result.analysis);
       }
       toast.success("Post generated successfully!");
     } catch (error) {

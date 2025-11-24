@@ -1,11 +1,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { processJobRequirements } from "@/utils/jobRequirements";
 import { SearchType } from "../types";
 import { generateSummary } from "./utils/generateSummary";
 import { createJob } from "./utils/createJob";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 export const useFormSubmit = (
   userId: string | null,
@@ -55,12 +56,12 @@ export const useFormSubmit = (
 
         // Update job with search string
         try {
-          const { error: updateError } = await supabase
-            .from('jobs')
-            .update({ search_string: result.searchString })
-            .eq('id', jobId);
+          if (!db) {
+            throw new Error('Firestore not initialized');
+          }
 
-          if (updateError) console.error('Error updating job:', updateError);
+          const jobRef = doc(db, 'jobs', String(jobId));
+          await updateDoc(jobRef, { search_string: result.searchString });
         } catch (updateError) {
           console.error('Failed to update job with search string:', updateError);
           // Continue anyway - don't block the user experience for database issues

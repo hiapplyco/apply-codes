@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNewAuth } from '@/context/NewAuthContext';
 
 interface Integration {
   id: string;
@@ -799,6 +800,7 @@ const getStatusColor = (status: string) => {
 
 export default function IntegrationsEnhanced() {
   const navigate = useNavigate();
+  const { user } = useNewAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'Unified' | 'Free' | 'CRM'>('all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<'all' | 'Enterprise' | 'Mid-Market' | 'SMB'>('all');
@@ -857,11 +859,8 @@ export default function IntegrationsEnhanced() {
   }, []);
 
   // Handle Get Started click with fast auth check
-  const handleGetStarted = async () => {
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
       navigate('/dashboard');
     } else {
       navigate('/login');
@@ -1015,9 +1014,9 @@ export default function IntegrationsEnhanced() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-              <img 
-                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
-                alt="Apply - AI-Powered Recruitment Platform" 
+              <img
+                src="/assets/apply-logo.svg"
+                alt="Apply - AI-Powered Recruitment Platform"
                 className="h-10 w-auto"
               />
             </div>

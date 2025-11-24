@@ -18,8 +18,16 @@ import {
 } from '@/components/ui/select';
 import { Mail, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useNewAuth } from '@/context/NewAuthContext';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  where
+} from 'firebase/firestore';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface EmailOutreachFormProps {
   candidateProfileUrl: string;
@@ -42,7 +50,7 @@ export function EmailOutreachForm({
   projectId,
   onEmailSent 
 }: EmailOutreachFormProps) {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [customText, setCustomText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -68,18 +76,39 @@ export function EmailOutreachForm({
   const fetchProjects = async () => {
     setLoadingProjects(true);
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name, color')
-        .eq('user_id', user?.id)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false });
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (error) {
+      if (!user?.uid) {
+        setProjects([]);
+        return;
+      }
+
+      const projectsRef = collection(db, 'projects');
+      const q = query(
+        projectsRef,
+        where('user_id', '==', user.uid),
+        where('is_archived', '==', false),
+        orderBy('created_at', 'desc')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const projectList = querySnapshot.docs.map(doc => {
+        const data = doc.data() as { name?: string; color?: string };
+        return {
+          id: doc.id,
+          name: data.name ?? 'Untitled Project',
+          color: data.color ?? '#8B5CF6'
+        };
+      });
+
+      setProjects(projectList);
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
-      toast.error('Failed to load projects');
+      if (error?.code !== 'permission-denied' && error?.code !== 'unauthenticated') {
+        toast.error('Failed to load projects');
+      }
     } finally {
       setLoadingProjects(false);
     }
@@ -100,22 +129,13 @@ export function EmailOutreachForm({
     setEmailResult(null);
 
     try {
-      const response = await fetch('/functions/v1/send-outreach-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`,
-        },
-        body: JSON.stringify({
-          projectId: selectedProjectId,
-          candidateProfileUrl,
-          userCustomText: customText
-        })
+      const result = await functionBridge.sendOutreachEmail({
+        projectId: selectedProjectId,
+        candidateProfileUrl,
+        userCustomText: customText
       });
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (result?.success) {
         setEmailResult(result);
         toast.success('Email sent successfully!');
         onEmailSent?.();

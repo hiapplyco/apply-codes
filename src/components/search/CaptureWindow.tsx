@@ -3,8 +3,10 @@ import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mic, StopCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
+import { uploadRecording } from "@/lib/firebase-storage";
 
 interface CaptureWindowProps {
   onTextUpdate?: (text: string) => void;
@@ -44,40 +46,48 @@ export const CaptureWindow = ({ onTextUpdate }: CaptureWindowProps = {}) => {
 
       mediaRecorder.onstop = async () => {
         const recordingBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        
+
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const user = auth?.currentUser;
           if (!user) {
             toast.error('User not authenticated');
             return;
           }
 
-          // Upload to Supabase Storage
-          const fileName = `${user.id}/${Date.now()}.webm`;
-          const { error: uploadError } = await supabase.storage
-            .from('recordings')
-            .upload(fileName, recordingBlob);
-
-          if (uploadError) throw uploadError;
-
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('recordings')
-            .getPublicUrl(fileName);
-
-          // Process with OpenAI Whisper
-          const { data, error } = await supabase.functions.invoke('process-recording', {
-            body: { url: publicUrl, type: 'audio' }
+          // Upload to Firebase Storage with progress tracking
+          toast.info('Uploading recording...');
+          const recordingUrl = await uploadRecording(user.uid, recordingBlob, (progress) => {
+            console.log(`Upload progress: ${progress}%`);
           });
 
-          if (error) throw error;
+          // Process with OpenAI Whisper using Firebase Storage URL
+          toast.info('Processing audio...');
+          const data = await functionBridge.processRecording({ url: recordingUrl, type: 'audio' });
 
           if (data?.text && onTextUpdate) {
             onTextUpdate(data.text);
+            toast.success('Recording processed successfully');
+          } else {
+            toast.warning('No text was extracted from the recording');
           }
         } catch (error) {
           console.error('Error processing recording:', error);
-          toast.error('Failed to process recording');
+
+          // Provide more specific error messages
+          let errorMessage = 'Failed to process recording';
+          if (error instanceof Error) {
+            if (error.message.includes('not authenticated')) {
+              errorMessage = 'Please sign in again to upload recordings';
+            } else if (error.message.includes('quota exceeded')) {
+              errorMessage = 'Storage quota exceeded. Please try again later';
+            } else if (error.message.includes('unauthorized')) {
+              errorMessage = "You don't have permission to upload recordings";
+            } else if (error.message.includes('network')) {
+              errorMessage = 'Network error. Please check your connection and try again';
+            }
+          }
+
+          toast.error(errorMessage);
         }
       };
 

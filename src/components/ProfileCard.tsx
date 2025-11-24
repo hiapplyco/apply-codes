@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, MapPin, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { toast } from "sonner";
 import { EnrichedInfoModal } from './enriched-info-modal/EnrichedInfoModal';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface Profile {
   name: string;
@@ -57,35 +58,27 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) 
       setLoading(true);
       setError(null);
       
+      let loadingToast: string | number | undefined;
       try {
-        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/get-contact-info', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            profileUrl: profile.profile_url
-          })
+        loadingToast = toast.loading("Fetching contact information...");
+        const data = await functionBridge.getContactInfo({
+          profileUrl: profile.profile_url
         });
-        
-        if (!response.ok) {
-          throw new Error('Failed to enrich profile');
-        }
-        
-        const data = await response.json();
-        
+
         // Handle the new structured response format
-        if (data.success !== undefined) {
-          if (data.success && data.data) {
+        const payload = (data as any)?.data ?? data;
+
+        if (data?.success !== undefined) {
+          if (data.success && payload) {
             // Profile found and enriched
             const enrichedProfileData: EnrichedProfileData = {
               name: profile.profile_name,
               profile: profile,
-              ...data.data,
+              ...payload,
             };
             setEnrichedData(enrichedProfileData);
             toast.success("Contact information found!");
-          } else if (data.success && !data.data) {
+          } else if (data.success && !payload) {
             // Profile not found in Nymeria (normal case)
             setEnrichedData(null);
             setError("No contact information available in our database for this profile");
@@ -96,7 +89,7 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) 
           const enrichedProfileData: EnrichedProfileData = {
             name: profile.profile_name,
             profile: profile,
-            ...(data.data || {}),
+            ...(payload || {}),
           };
           setEnrichedData(enrichedProfileData);
         }
@@ -106,6 +99,9 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) 
         setError(errorMessage);
         toast.error("Could not retrieve contact information");
       } finally {
+        if (loadingToast !== undefined) {
+          toast.dismiss(loadingToast);
+        }
         setLoading(false);
       }
     }

@@ -1,0 +1,541 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for apply-codes/scripts/generate-sitemap.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">apply-codes/scripts</a> generate-sitemap.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/153</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/153</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import fs from 'fs';</span></span></span>
+<span class="cstat-no" title="statement not covered" >import path from 'path';</span>
+<span class="cstat-no" title="statement not covered" >import { fileURLToPath } from 'url';</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const __filename = fileURLToPath(import.meta.url);</span>
+<span class="cstat-no" title="statement not covered" >const __dirname = path.dirname(__filename);</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Define your site's pages with their update frequency and priority</span>
+<span class="cstat-no" title="statement not covered" >const pages = [</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/', changefreq: 'daily', priority: 1.0 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/agentic-ai-recruitment', changefreq: 'weekly', priority: 1.0 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/first-mcp-recruitment-platform', changefreq: 'weekly', priority: 0.95 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/ai-operations-recruitment', changefreq: 'weekly', priority: 0.95 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/pricing', changefreq: 'weekly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/integrations', changefreq: 'weekly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features', changefreq: 'weekly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/autonomous-agents', changefreq: 'monthly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/mcp-integration', changefreq: 'monthly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/multi-agent-orchestration', changefreq: 'monthly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/boolean-search', changefreq: 'monthly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/interview-guidance', changefreq: 'monthly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/candidate-enrichment', changefreq: 'monthly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/features/ai-chat-assistant', changefreq: 'monthly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/about', changefreq: 'monthly', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog', changefreq: 'daily', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/case-studies', changefreq: 'weekly', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/documentation', changefreq: 'weekly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/documentation/api', changefreq: 'weekly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/documentation/integrations', changefreq: 'weekly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/documentation/getting-started', changefreq: 'monthly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/contact', changefreq: 'yearly', priority: 0.5 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/privacy', changefreq: 'yearly', priority: 0.3 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/terms', changefreq: 'yearly', priority: 0.3 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/security', changefreq: 'monthly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/demo', changefreq: 'monthly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/signup', changefreq: 'yearly', priority: 0.9 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/login', changefreq: 'yearly', priority: 0.4 },</span>
+<span class="cstat-no" title="statement not covered" >];</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Blog posts (these would typically be fetched from a CMS or database)</span>
+<span class="cstat-no" title="statement not covered" >const blogPosts = [</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/first-agentic-ai-recruitment-platform', changefreq: 'yearly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/mcp-model-context-protocol-recruitment', changefreq: 'yearly', priority: 0.8 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/ai-operations-talent-acquisition', changefreq: 'yearly', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/autonomous-recruitment-agents', changefreq: 'yearly', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/multi-agent-orchestration-hiring', changefreq: 'yearly', priority: 0.7 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/ai-recruitment-trends-2025', changefreq: 'yearly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/boolean-search-guide', changefreq: 'yearly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/interview-best-practices', changefreq: 'yearly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/candidate-sourcing-strategies', changefreq: 'yearly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/blog/recruitment-automation-roi', changefreq: 'yearly', priority: 0.6 },</span>
+<span class="cstat-no" title="statement not covered" >];</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Case studies</span>
+<span class="cstat-no" title="statement not covered" >const caseStudies = [</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/case-studies/tech-startup-hiring', changefreq: 'yearly', priority: 0.5 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/case-studies/enterprise-recruitment', changefreq: 'yearly', priority: 0.5 },</span>
+<span class="cstat-no" title="statement not covered" >  { url: '/case-studies/agency-efficiency', changefreq: 'yearly', priority: 0.5 },</span>
+<span class="cstat-no" title="statement not covered" >];</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Combine all pages</span>
+<span class="cstat-no" title="statement not covered" >const allPages = [...pages, ...blogPosts, ...caseStudies];</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Generate sitemap XML</span>
+<span class="cstat-no" title="statement not covered" >const generateSitemap = () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  const currentDate = new Date().toISOString().split('T')[0];</span>
+<span class="cstat-no" title="statement not covered" >  </span>
+<span class="cstat-no" title="statement not covered" >  const sitemap = `&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>
+<span class="cstat-no" title="statement not covered" >&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"</span>
+<span class="cstat-no" title="statement not covered" >        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"</span>
+<span class="cstat-no" title="statement not covered" >        xmlns:xhtml="http://www.w3.org/1999/xhtml"</span>
+<span class="cstat-no" title="statement not covered" >        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0"</span>
+<span class="cstat-no" title="statement not covered" >        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"</span>
+<span class="cstat-no" title="statement not covered" >        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"&gt;</span>
+<span class="cstat-no" title="statement not covered" >${allPages.map(page =&gt; `  &lt;url&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;loc&gt;https://www.apply.codes${page.url}&lt;/loc&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;lastmod&gt;${currentDate}&lt;/lastmod&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;changefreq&gt;${page.changefreq}&lt;/changefreq&gt;</span>
+<span class="cstat-no" title="statement not covered" >    &lt;priority&gt;${page.priority}&lt;/priority&gt;</span>
+<span class="cstat-no" title="statement not covered" >  &lt;/url&gt;`).join('\n')}</span>
+<span class="cstat-no" title="statement not covered" >&lt;/urlset&gt;`;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  // Write sitemap to public directory</span>
+<span class="cstat-no" title="statement not covered" >  const publicPath = path.join(__dirname, '..', 'public', 'sitemap.xml');</span>
+<span class="cstat-no" title="statement not covered" >  fs.writeFileSync(publicPath, sitemap);</span>
+<span class="cstat-no" title="statement not covered" >  console.log('✅ Sitemap generated successfully at public/sitemap.xml');</span>
+<span class="cstat-no" title="statement not covered" >  </span>
+<span class="cstat-no" title="statement not covered" >  // Also generate a human-readable sitemap for AI crawlers</span>
+<span class="cstat-no" title="statement not covered" >  const humanReadableSitemap = `# Apply Codes Sitemap - The First Agentic AI Recruitment Platform</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Main Pages</span>
+<span class="cstat-no" title="statement not covered" >- Homepage: https://www.apply.codes/</span>
+<span class="cstat-no" title="statement not covered" >- Agentic AI Recruitment Platform: https://www.apply.codes/agentic-ai-recruitment</span>
+<span class="cstat-no" title="statement not covered" >- First MCP Recruitment Platform: https://www.apply.codes/first-mcp-recruitment-platform</span>
+<span class="cstat-no" title="statement not covered" >- AI Operations for Recruitment: https://www.apply.codes/ai-operations-recruitment</span>
+<span class="cstat-no" title="statement not covered" >- Pricing: https://www.apply.codes/pricing</span>
+<span class="cstat-no" title="statement not covered" >- Integrations: https://www.apply.codes/integrations</span>
+<span class="cstat-no" title="statement not covered" >- Features: https://www.apply.codes/features</span>
+<span class="cstat-no" title="statement not covered" >- About: https://www.apply.codes/about</span>
+<span class="cstat-no" title="statement not covered" >- Blog: https://www.apply.codes/blog</span>
+<span class="cstat-no" title="statement not covered" >- Case Studies: https://www.apply.codes/case-studies</span>
+<span class="cstat-no" title="statement not covered" >- Documentation: https://www.apply.codes/documentation</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Feature Pages</span>
+<span class="cstat-no" title="statement not covered" >- Autonomous Recruitment Agents: https://www.apply.codes/features/autonomous-agents</span>
+<span class="cstat-no" title="statement not covered" >- MCP Integration: https://www.apply.codes/features/mcp-integration</span>
+<span class="cstat-no" title="statement not covered" >- Multi-Agent Orchestration: https://www.apply.codes/features/multi-agent-orchestration</span>
+<span class="cstat-no" title="statement not covered" >- Boolean Search Generator: https://www.apply.codes/features/boolean-search</span>
+<span class="cstat-no" title="statement not covered" >- Real-Time Interview Guidance: https://www.apply.codes/features/interview-guidance</span>
+<span class="cstat-no" title="statement not covered" >- Candidate Enrichment: https://www.apply.codes/features/candidate-enrichment</span>
+<span class="cstat-no" title="statement not covered" >- AI Chat Assistant: https://www.apply.codes/features/ai-chat-assistant</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Documentation</span>
+<span class="cstat-no" title="statement not covered" >- API Documentation: https://www.apply.codes/documentation/api</span>
+<span class="cstat-no" title="statement not covered" >- Integration Guides: https://www.apply.codes/documentation/integrations</span>
+<span class="cstat-no" title="statement not covered" >- Getting Started: https://www.apply.codes/documentation/getting-started</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Blog Posts</span>
+<span class="cstat-no" title="statement not covered" >- The First Agentic AI Recruitment Platform: https://www.apply.codes/blog/first-agentic-ai-recruitment-platform</span>
+<span class="cstat-no" title="statement not covered" >- MCP (Model Context Protocol) in Recruitment: https://www.apply.codes/blog/mcp-model-context-protocol-recruitment</span>
+<span class="cstat-no" title="statement not covered" >- AI Operations for Talent Acquisition: https://www.apply.codes/blog/ai-operations-talent-acquisition</span>
+<span class="cstat-no" title="statement not covered" >- Autonomous Recruitment Agents Explained: https://www.apply.codes/blog/autonomous-recruitment-agents</span>
+<span class="cstat-no" title="statement not covered" >- Multi-Agent Orchestration in Hiring: https://www.apply.codes/blog/multi-agent-orchestration-hiring</span>
+<span class="cstat-no" title="statement not covered" >- AI Recruitment Trends 2025: https://www.apply.codes/blog/ai-recruitment-trends-2025</span>
+<span class="cstat-no" title="statement not covered" >- Boolean Search Guide: https://www.apply.codes/blog/boolean-search-guide</span>
+<span class="cstat-no" title="statement not covered" >- Interview Best Practices: https://www.apply.codes/blog/interview-best-practices</span>
+<span class="cstat-no" title="statement not covered" >- Candidate Sourcing Strategies: https://www.apply.codes/blog/candidate-sourcing-strategies</span>
+<span class="cstat-no" title="statement not covered" >- Recruitment Automation ROI: https://www.apply.codes/blog/recruitment-automation-roi</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Case Studies</span>
+<span class="cstat-no" title="statement not covered" >- Tech Startup Hiring Success: https://www.apply.codes/case-studies/tech-startup-hiring</span>
+<span class="cstat-no" title="statement not covered" >- Enterprise Recruitment Transformation: https://www.apply.codes/case-studies/enterprise-recruitment</span>
+<span class="cstat-no" title="statement not covered" >- Agency Efficiency Gains: https://www.apply.codes/case-studies/agency-efficiency</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >## Other Pages</span>
+<span class="cstat-no" title="statement not covered" >- Contact: https://www.apply.codes/contact</span>
+<span class="cstat-no" title="statement not covered" >- Privacy Policy: https://www.apply.codes/privacy</span>
+<span class="cstat-no" title="statement not covered" >- Terms of Service: https://www.apply.codes/terms</span>
+<span class="cstat-no" title="statement not covered" >- Security: https://www.apply.codes/security</span>
+<span class="cstat-no" title="statement not covered" >- Demo Request: https://www.apply.codes/demo</span>
+<span class="cstat-no" title="statement not covered" >- Sign Up: https://www.apply.codes/signup</span>
+<span class="cstat-no" title="statement not covered" >- Login: https://www.apply.codes/login</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >Last Updated: ${currentDate}</span>
+<span class="cstat-no" title="statement not covered" >`;</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  const humanSitemapPath = path.join(__dirname, '..', 'public', 'sitemap.txt');</span>
+<span class="cstat-no" title="statement not covered" >  fs.writeFileSync(humanSitemapPath, humanReadableSitemap);</span>
+<span class="cstat-no" title="statement not covered" >  console.log('✅ Human-readable sitemap generated at public/sitemap.txt');</span>
+<span class="cstat-no" title="statement not covered" >};</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// Run the generator</span>
+<span class="cstat-no" title="statement not covered" >generateSitemap();</span></pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-10-12T01:51:41.476Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

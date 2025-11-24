@@ -24,7 +24,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { SearchResult } from '@/types/search';
-import { useAuth } from '@/context/AuthContext';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { toast } from 'sonner';
 
 interface CandidateAnalysisProps {
@@ -53,7 +53,7 @@ export const CandidateAnalysis: React.FC<CandidateAnalysisProps> = ({
   jobDescription,
   onCandidateSelect
 }) => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
   const [comparisonMode, setComparisonMode] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true); // Default to expanded

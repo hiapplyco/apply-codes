@@ -41,9 +41,9 @@ Apply combines the power of AI with intuitive workflows to create a seamless rec
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
-- Supabase account
+- Firebase account (for Cloud Functions and authentication)
 - Google Cloud account (for Gemini API)
 
 ### Installation
@@ -62,25 +62,34 @@ Apply combines the power of AI with intuitive workflows to create a seamless rec
 3. **Set up environment variables**
    ```bash
    cp .env.example .env.local
+   cp .env.firebase.example .env.firebase.local
    ```
-   
+
    Required variables:
    ```
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   # Firebase (Cloud Functions & Authentication)
+   VITE_FIREBASE_API_KEY=your_firebase_api_key
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+
+   # AI & Integrations
    VITE_GOOGLE_API_KEY=your_google_api_key
    VITE_NYMERIA_API_KEY=your_nymeria_api_key
    ```
 
-4. **Run database migrations**
+4. **Set up Firebase Functions**
    ```bash
-   supabase link --project-ref your-project-ref
-   supabase db push
+   cd functions
+   npm install
+   firebase use --add
+   firebase functions:config:set gemini.key="your_key"
    ```
 
 5. **Start the development server**
    ```bash
    npm run dev
+   # Optional: Start Firebase emulators
+   firebase emulators:start
    ```
 
 ## 🏗️ Architecture
@@ -94,20 +103,21 @@ apply-codes/
 │   ├── types/          # TypeScript type definitions
 │   ├── lib/            # Utility functions
 │   └── context/        # React context providers
-├── supabase/
-│   ├── functions/      # Edge functions (35+ AI agents)
-│   └── migrations/     # Database schema migrations
+├── functions/          # Firebase Cloud Functions (46+ AI agents)
+│   ├── src/           # Function source code
+│   └── lib/           # Shared utilities
 └── public/             # Static assets
 ```
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite
-- **Backend**: Supabase (PostgreSQL, Edge Functions, Auth)
+- **Backend**: Firebase Cloud Functions
+- **Authentication**: Firebase Auth
 - **AI**: Google Gemini 2.5 Flash
 - **UI Library**: shadcn/ui with custom brutalist design system
 - **State Management**: React Context + Tanstack Query
-- **Deployment**: Vercel (Frontend), Supabase (Backend)
+- **Deployment**: Vercel (Frontend), Firebase (Functions & Auth)
 
 ## 🔐 Security & Compliance
 

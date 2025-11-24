@@ -1,19 +1,24 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
-export const fetchSearchString = async (currentJobId: number | null) => {
-  if (!currentJobId) return null;
-  
-  const { data, error } = await supabase
-    .from('jobs')
-    .select('search_string')
-    .eq('id', currentJobId)
-    .single();
+export const fetchSearchString = async (currentJobId: number | string | null) => {
+  if (!currentJobId || !db) return null;
 
-  if (error) {
+  const jobId = String(currentJobId);
+
+  try {
+    const jobRef = doc(db, "jobs", jobId);
+    const jobSnap = await getDoc(jobRef);
+
+    if (!jobSnap.exists()) {
+      return null;
+    }
+
+    const data = jobSnap.data() as { search_string?: string };
+    return data?.search_string || null;
+  } catch (error) {
     console.error('Error fetching search string:', error);
     return null;
   }
-
-  return data?.search_string || null;
 };

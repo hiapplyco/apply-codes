@@ -1,11 +1,10 @@
 
-import { lazy, Suspense, memo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/card";
+import { lazy, Suspense, memo } from "react";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { Loader2 } from "lucide-react";
-import { ProjectSelector } from "@/components/project/ProjectSelector";
-import { ContextBar } from "@/components/context/ContextBar";
+import { ContextBar, type ContextBarProps } from "@/components/context/ContextBar";
 import { useContextIntegration } from "@/hooks/useContextIntegration";
+import { useProjectContext } from "@/context/ProjectContext";
 import { toast } from "sonner";
 
 // Minimal stable search form 
@@ -18,11 +17,10 @@ const LoadingState = () => (
 );
 
 const SourcingComponent = () => {
-  const { session, isAuthenticated, isLoading } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [contextContent, setContextContent] = useState<string>('');
+  const { user, isLoading, isAuthenticated } = useNewAuth();
+  const { selectedProjectId } = useProjectContext();
   
-  const { processContent, isProcessing } = useContextIntegration({
+  const { processContent } = useContextIntegration({
     context: 'sourcing'
   });
 
@@ -36,20 +34,19 @@ const SourcingComponent = () => {
     return (
       <div className="container max-w-4xl py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Authentication issue detected. Session: {session ? 'exists' : 'missing'}</p>
+          <p>Authentication issue detected. User: {user ? 'exists' : 'missing'}</p>
           <p>Please try refreshing the page or logging in again.</p>
         </div>
       </div>
     );
   }
 
-  const handleContextContent = async (content: any) => {
+  const handleContextContent: NonNullable<ContextBarProps['onContentProcessed']> = async (content) => {
     try {
       await processContent(content);
-      setContextContent(content.text);
-      toast.success('Context content processed and ready for sourcing');
     } catch (error) {
       console.error('Context processing error:', error);
+      toast.error('Failed to process context content');
     }
   };
 
@@ -90,9 +87,8 @@ const SourcingComponent = () => {
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>
         <MinimalSearchForm 
-          userId={session?.user?.id ?? null}
+          userId={user?.uid ?? null}
           selectedProjectId={selectedProjectId}
-          contextContent={contextContent}
         />
       </Suspense>
     </div>

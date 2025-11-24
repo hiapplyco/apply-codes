@@ -1,13 +1,28 @@
 // Utility functions for working with normalized entities
 // Supports the canonical entity management system from Phase 2.1
 
-import { supabase } from '@/integrations/supabase/client';
-import type { 
-  CompanyEntity, 
-  LocationEntity, 
-  CompanyNormalizationResult, 
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  writeBatch,
+  Timestamp,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db } from './firebase';
+import type {
+  CompanyEntity,
+  LocationEntity,
+  CompanyNormalizationResult,
   LocationNormalizationResult,
-  SeniorityLevel 
+  SeniorityLevel
 } from '@/types/domains/entities';
 
 // =====================================================
@@ -23,48 +38,63 @@ export async function findOrCreateCompany(
     throw new Error('Company name is required');
   }
 
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+
   const normalizedName = companyName.trim();
 
   try {
-    // First, try to find existing company by canonical name or alias
-    const { data: existingCompany, error: searchError } = await supabase
-      .from('companies')
-      .select('id, canonical_name')
-      .or(`canonical_name.eq.${normalizedName},aliases.cs.{${normalizedName}}`)
-      .limit(1)
-      .single();
+    // First, try to find existing company by canonical name
+    const companiesRef = collection(db, 'companies');
+    const nameQuery = query(
+      companiesRef,
+      where('canonical_name', '==', normalizedName),
+      limit(1)
+    );
 
-    if (searchError && searchError.code !== 'PGRST116') { // PGRST116 = no rows found
-      throw searchError;
-    }
+    const nameSnapshot = await getDocs(nameQuery);
 
-    if (existingCompany) {
+    if (!nameSnapshot.empty) {
+      const existingCompany = nameSnapshot.docs[0];
       return {
         company_id: existingCompany.id,
-        canonical_name: existingCompany.canonical_name,
+        canonical_name: existingCompany.data().canonical_name,
         was_created: false
       };
     }
 
-    // Company doesn't exist, create new one
-    const { data: newCompany, error: createError } = await supabase
-      .from('companies')
-      .insert({
-        canonical_name: normalizedName,
-        domain,
-        industry,
-        aliases: []
-      })
-      .select('id, canonical_name')
-      .single();
+    // Also check if the name exists in aliases (client-side check)
+    const allCompaniesQuery = query(companiesRef);
+    const allCompaniesSnapshot = await getDocs(allCompaniesQuery);
 
-    if (createError) {
-      throw createError;
+    for (const companyDoc of allCompaniesSnapshot.docs) {
+      const companyData = companyDoc.data();
+      const aliases = companyData.aliases || [];
+      if (aliases.includes(normalizedName)) {
+        return {
+          company_id: companyDoc.id,
+          canonical_name: companyData.canonical_name,
+          was_created: false
+        };
+      }
     }
 
+    // Company doesn't exist, create new one
+    const newCompanyData = {
+      canonical_name: normalizedName,
+      domain: domain || null,
+      industry: industry || null,
+      aliases: [],
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
+    };
+
+    const docRef = await addDoc(companiesRef, newCompanyData);
+
     return {
-      company_id: newCompany.id,
-      canonical_name: newCompany.canonical_name,
+      company_id: docRef.id,
+      canonical_name: normalizedName,
       was_created: true
     };
   } catch (error) {
@@ -74,30 +104,57 @@ export async function findOrCreateCompany(
 }
 
 export async function addCompanyAlias(companyId: string, alias: string): Promise<void> {
-  const { error } = await supabase
-    .from('companies')
-    .update({
-      aliases: supabase.sql`array_append(aliases, ${alias})`
-    })
-    .eq('id', companyId);
-
-  if (error) {
-    throw error;
+  if (!db) {
+    throw new Error('Firestore not initialized');
   }
+
+  // Get current aliases first
+  const companyRef = doc(db, 'companies', companyId);
+  const companyDoc = await getDoc(companyRef);
+
+  if (!companyDoc.exists()) {
+    throw new Error('Company not found');
+  }
+
+  const currentAliases = companyDoc.data().aliases || [];
+  const updatedAliases = [...currentAliases, alias];
+
+  await updateDoc(companyRef, {
+    aliases: updatedAliases,
+    updated_at: serverTimestamp()
+  });
 }
 
-export async function searchCompanies(query: string, limit = 10): Promise<CompanyEntity[]> {
-  const { data, error } = await supabase
-    .from('companies')
-    .select('*')
-    .or(`canonical_name.ilike.%${query}%,aliases.cs.{${query}}`)
-    .limit(limit);
-
-  if (error) {
-    throw error;
+export async function searchCompanies(searchQuery: string, limitCount = 10): Promise<CompanyEntity[]> {
+  if (!db) {
+    throw new Error('Firestore not initialized');
   }
 
-  return data || [];
+  const companiesRef = collection(db, 'companies');
+  const companiesSnapshot = await getDocs(companiesRef);
+
+  // Client-side filtering for complex search (canonical_name and aliases)
+  const companies = companiesSnapshot.docs
+    .map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      created_at: doc.data().created_at instanceof Timestamp
+        ? doc.data().created_at.toDate().toISOString()
+        : doc.data().created_at,
+      updated_at: doc.data().updated_at instanceof Timestamp
+        ? doc.data().updated_at.toDate().toISOString()
+        : doc.data().updated_at
+    }))
+    .filter(company => {
+      const nameMatch = company.canonical_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const aliasMatch = (company.aliases || []).some((alias: string) =>
+        alias.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return nameMatch || aliasMatch;
+    })
+    .slice(0, limitCount) as CompanyEntity[];
+
+  return companies;
 }
 
 // =====================================================
@@ -111,6 +168,10 @@ export async function findOrCreateLocation(
     throw new Error('Location string is required');
   }
 
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+
   const canonicalName = locationString.trim();
   const locationParts = canonicalName.split(',').map(part => part.trim());
 
@@ -119,52 +180,67 @@ export async function findOrCreateLocation(
   const parsedCountry = locationParts[2] || 'United States';
 
   try {
-    // First, try to find existing location
-    const { data: existingLocation, error: searchError } = await supabase
-      .from('locations')
-      .select('id, canonical_name, city, state, country')
-      .or(`canonical_name.eq.${canonicalName},aliases.cs.{${canonicalName}}`)
-      .limit(1)
-      .single();
+    // First, try to find existing location by canonical name
+    const locationsRef = collection(db, 'locations');
+    const nameQuery = query(
+      locationsRef,
+      where('canonical_name', '==', canonicalName),
+      limit(1)
+    );
 
-    if (searchError && searchError.code !== 'PGRST116') {
-      throw searchError;
-    }
+    const nameSnapshot = await getDocs(nameQuery);
 
-    if (existingLocation) {
+    if (!nameSnapshot.empty) {
+      const existingLocation = nameSnapshot.docs[0];
+      const locationData = existingLocation.data();
       return {
         location_id: existingLocation.id,
-        canonical_name: existingLocation.canonical_name,
-        parsed_city: existingLocation.city,
-        parsed_state: existingLocation.state,
-        parsed_country: existingLocation.country,
+        canonical_name: locationData.canonical_name,
+        parsed_city: locationData.city,
+        parsed_state: locationData.state,
+        parsed_country: locationData.country,
         was_created: false
       };
     }
 
-    // Location doesn't exist, create new one
-    const { data: newLocation, error: createError } = await supabase
-      .from('locations')
-      .insert({
-        canonical_name: canonicalName,
-        city: parsedCity,
-        state: parsedState,
-        country: parsedCountry,
-        aliases: []
-      })
-      .select('id, canonical_name, city, state, country')
-      .single();
+    // Also check if the name exists in aliases (client-side check)
+    const allLocationsQuery = query(locationsRef);
+    const allLocationsSnapshot = await getDocs(allLocationsQuery);
 
-    if (createError) {
-      throw createError;
+    for (const locationDoc of allLocationsSnapshot.docs) {
+      const locationData = locationDoc.data();
+      const aliases = locationData.aliases || [];
+      if (aliases.includes(canonicalName)) {
+        return {
+          location_id: locationDoc.id,
+          canonical_name: locationData.canonical_name,
+          parsed_city: locationData.city,
+          parsed_state: locationData.state,
+          parsed_country: locationData.country,
+          was_created: false
+        };
+      }
     }
 
+    // Location doesn't exist, create new one
+    const newLocationData = {
+      canonical_name: canonicalName,
+      city: parsedCity,
+      state: parsedState || null,
+      country: parsedCountry,
+      aliases: [],
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
+    };
+
+    const docRef = await addDoc(locationsRef, newLocationData);
+
     return {
-      location_id: newLocation.id,
-      canonical_name: newLocation.canonical_name,
-      parsed_city: newLocation.city,
-      parsed_state: newLocation.state,
-      parsed_country: newLocation.country,
+      location_id: docRef.id,
+      canonical_name: canonicalName,
+      parsed_city: parsedCity,
+      parsed_state: parsedState,
+      parsed_country: parsedCountry,
       was_created: true
     };
   } catch (error) {
@@ -174,30 +250,58 @@ export async function findOrCreateLocation(
 }
 
 export async function addLocationAlias(locationId: string, alias: string): Promise<void> {
-  const { error } = await supabase
-    .from('locations')
-    .update({
-      aliases: supabase.sql`array_append(aliases, ${alias})`
-    })
-    .eq('id', locationId);
-
-  if (error) {
-    throw error;
+  if (!db) {
+    throw new Error('Firestore not initialized');
   }
+
+  // Get current aliases first
+  const locationRef = doc(db, 'locations', locationId);
+  const locationDoc = await getDoc(locationRef);
+
+  if (!locationDoc.exists()) {
+    throw new Error('Location not found');
+  }
+
+  const currentAliases = locationDoc.data().aliases || [];
+  const updatedAliases = [...currentAliases, alias];
+
+  await updateDoc(locationRef, {
+    aliases: updatedAliases,
+    updated_at: serverTimestamp()
+  });
 }
 
-export async function searchLocations(query: string, limit = 10): Promise<LocationEntity[]> {
-  const { data, error } = await supabase
-    .from('locations')
-    .select('*')
-    .or(`canonical_name.ilike.%${query}%,city.ilike.%${query}%,aliases.cs.{${query}}`)
-    .limit(limit);
-
-  if (error) {
-    throw error;
+export async function searchLocations(searchQuery: string, limitCount = 10): Promise<LocationEntity[]> {
+  if (!db) {
+    throw new Error('Firestore not initialized');
   }
 
-  return data || [];
+  const locationsRef = collection(db, 'locations');
+  const locationsSnapshot = await getDocs(locationsRef);
+
+  // Client-side filtering for complex search (canonical_name, city, and aliases)
+  const locations = locationsSnapshot.docs
+    .map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      created_at: doc.data().created_at instanceof Timestamp
+        ? doc.data().created_at.toDate().toISOString()
+        : doc.data().created_at,
+      updated_at: doc.data().updated_at instanceof Timestamp
+        ? doc.data().updated_at.toDate().toISOString()
+        : doc.data().updated_at
+    }))
+    .filter(location => {
+      const nameMatch = location.canonical_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const cityMatch = location.city?.toLowerCase().includes(searchQuery.toLowerCase());
+      const aliasMatch = (location.aliases || []).some((alias: string) =>
+        alias.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      return nameMatch || cityMatch || aliasMatch;
+    })
+    .slice(0, limitCount) as LocationEntity[];
+
+  return locations;
 }
 
 // =====================================================
@@ -325,36 +429,41 @@ export async function bulkNormalizeCandidates(
   candidateIds: string[],
   batchSize = 50
 ): Promise<{ processed: number; errors: number }> {
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+
   let processed = 0;
   let errors = 0;
 
   for (let i = 0; i < candidateIds.length; i += batchSize) {
     const batch = candidateIds.slice(i, i + batchSize);
-    
-    try {
-      // Fetch candidate data
-      const { data: candidates, error: fetchError } = await supabase
-        .from('saved_candidates')
-        .select('id, company, location, job_title, profile_summary')
-        .in('id', batch);
 
-      if (fetchError) throw fetchError;
+    try {
+      // Fetch candidate data - Firestore batch get
+      const candidateRefs = batch.map(id => doc(db, 'saved_candidates', id));
+      const candidateDocs = await Promise.all(candidateRefs.map(ref => getDoc(ref)));
+
+      const candidates = candidateDocs
+        .filter(doc => doc.exists())
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
       // Process each candidate in the batch
-      for (const candidate of candidates || []) {
+      for (const candidate of candidates) {
         try {
           const normalized = await normalizeCandidateData(candidate);
-          
-          // Update candidate with normalized data
-          const { error: updateError } = await supabase
-            .from('saved_candidates')
-            .update({
-              ...normalized,
-              enrichment_status: 'enriched'
-            })
-            .eq('id', candidate.id);
 
-          if (updateError) throw updateError;
+          // Update candidate with normalized data
+          const candidateRef = doc(db, 'saved_candidates', candidate.id);
+          await updateDoc(candidateRef, {
+            ...normalized,
+            enrichment_status: 'enriched',
+            updated_at: serverTimestamp()
+          });
+
           processed++;
         } catch (error) {
           console.error(`Error processing candidate ${candidate.id}:`, error);
@@ -376,40 +485,79 @@ export async function bulkNormalizeCandidates(
 
 export async function getEntityUsageStats() {
   try {
-    // Get top companies by candidate count
-    const { data: companyStats, error: companyError } = await supabase
-      .from('saved_candidates')
-      .select(`
-        company_id,
-        companies!inner(canonical_name)
-      `)
-      .not('company_id', 'is', null);
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
 
-    if (companyError) throw companyError;
+    // Get candidates with company data
+    const candidatesRef = collection(db, 'saved_candidates');
+    const candidatesWithCompanyQuery = query(
+      candidatesRef,
+      where('company_id', '!=', null)
+    );
+    const candidatesWithCompanySnapshot = await getDocs(candidatesWithCompanyQuery);
+    const candidatesWithCompany = candidatesWithCompanySnapshot.docs.map(doc => doc.data());
 
-    // Get top locations by candidate count
-    const { data: locationStats, error: locationError } = await supabase
-      .from('saved_candidates')
-      .select(`
-        location_id,
-        locations!inner(canonical_name)
-      `)
-      .not('location_id', 'is', null);
+    // Get companies data
+    const companiesRef = collection(db, 'companies');
+    const companiesSnapshot = await getDocs(companiesRef);
+    const companies = companiesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-    if (locationError) throw locationError;
+    // Client-side join and count for company stats
+    const companyStats = companies.map(company => {
+      const candidateCount = candidatesWithCompany.filter(
+        candidate => candidate.company_id === company.id
+      ).length;
+      return {
+        ...company,
+        candidate_count: candidateCount
+      };
+    }).filter(company => company.candidate_count > 0);
+
+    // Get candidates with location data
+    const candidatesWithLocationQuery = query(
+      candidatesRef,
+      where('location_id', '!=', null)
+    );
+    const candidatesWithLocationSnapshot = await getDocs(candidatesWithLocationQuery);
+    const candidatesWithLocation = candidatesWithLocationSnapshot.docs.map(doc => doc.data());
+
+    // Get locations data
+    const locationsRef = collection(db, 'locations');
+    const locationsSnapshot = await getDocs(locationsRef);
+    const locations = locationsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Client-side join and count for location stats
+    const locationStats = locations.map(location => {
+      const candidateCount = candidatesWithLocation.filter(
+        candidate => candidate.location_id === location.id
+      ).length;
+      return {
+        ...location,
+        candidate_count: candidateCount
+      };
+    }).filter(location => location.candidate_count > 0);
 
     // Get seniority distribution
-    const { data: seniorityStats, error: seniorityError } = await supabase
-      .from('saved_candidates')
-      .select('seniority_level')
-      .not('seniority_level', 'is', null);
-
-    if (seniorityError) throw seniorityError;
+    const seniorityStatsQuery = query(
+      candidatesRef,
+      where('seniority_level', '!=', null)
+    );
+    const seniorityStatsSnapshot = await getDocs(seniorityStatsQuery);
+    const seniorityStats = seniorityStatsSnapshot.docs.map(doc => ({
+      seniority_level: doc.data().seniority_level
+    }));
 
     return {
-      companyStats: companyStats || [],
-      locationStats: locationStats || [],
-      seniorityStats: seniorityStats || []
+      companyStats,
+      locationStats,
+      seniorityStats
     };
   } catch (error) {
     console.error('Error getting entity usage stats:', error);

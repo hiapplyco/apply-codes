@@ -14,8 +14,8 @@ import {
   Move
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useNewAuth } from '@/context/NewAuthContext';
+import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ContextBar } from '@/components/context/ContextBar';
@@ -49,7 +49,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   position = 'bottom-right',
   className
 }) => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -112,16 +112,12 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-assistant', {
-        body: {
-          message: input,
-          context: contextContent,
-          pageContext: context,
-          userId: user?.id
-        }
+      const data = await functionBridge.chatAssistant({
+        message: input,
+        context: contextContent,
+        pageContext: context,
+        userId: user?.id
       });
-
-      if (error) throw error;
 
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,

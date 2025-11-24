@@ -1,152 +1,219 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import {
+  collection,
+  doc,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  where,
+  serverTimestamp,
+  getDoc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { toast } from "sonner";
 
 interface ChatMessage {
+  id?: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   sources?: string[];
+  timestamp?: Date;
+  sessionId?: string;
 }
 
-export const useChat = (callId: number | null, mode: string | null) => {
+export const useChat = (callId: string | null, mode: string | null) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const { user } = useNewAuth();
 
+  // Set up real-time message listener
   useEffect(() => {
-    const fetchSummary = async () => {
-      if (!callId) return;
+    if (!callId || !db || !user) {
+      setIsLoading(false);
+      return;
+    }
 
+    let unsubscribeMessages: (() => void) | undefined;
+
+    const setupMessageListener = async () => {
       try {
-        const { data: kickoffCall, error: kickoffError } = await supabase
-          .from('kickoff_calls')
-          .select('*')
-          .eq('id', callId)
-          .single();
+        // First, try to get or create a session for this call
+        const sessionDocRef = doc(db, 'chat_sessions', callId);
+        const sessionSnapshot = await getDoc(sessionDocRef);
 
-        if (kickoffError) throw kickoffError;
-
-        // If the kickoff call exists but there's no summary yet, generate one
-        if (kickoffCall && mode === 'kickoff') {
-          setIsGenerating(true);
-          const { data: summaryData, error: summaryError } = await supabase.functions.invoke('process-kickoff-call', {
-            body: { 
-              text: kickoffCall.content,
-              title: kickoffCall.title,
-              filePaths: kickoffCall.file_paths || []
-            }
+        if (!sessionSnapshot.exists()) {
+          // Create new session if it doesn't exist
+          await addDoc(collection(db, 'chat_sessions'), {
+            id: callId,
+            callId,
+            userId: user.uid,
+            title: `Chat for call ${callId}`,
+            createdAt: serverTimestamp(),
+            mode
           });
-
-          if (summaryError) throw summaryError;
-
-          if (summaryData) {
-            setMessages([{
-              role: 'system',
-              content: summaryData.summary,
-              sources: summaryData.sources
-            }]);
-          }
-          setIsGenerating(false);
-        } else {
-          // For non-kickoff mode, fetch existing summary
-          const { data: summaryData, error: summaryError } = await supabase
-            .from('kickoff_summaries')
-            .select('*')
-            .eq('call_id', callId)
-            .maybeSingle();
-
-          if (summaryError) throw summaryError;
-
-          if (summaryData) {
-            setMessages([{
-              role: 'system',
-              content: summaryData.content,
-              sources: summaryData.sources
-            }]);
-          }
         }
+
+        setSessionId(callId);
+
+        // Set up real-time listener for messages in this session
+        const messagesQuery = query(
+          collection(db, 'chat_messages'),
+          where('sessionId', '==', callId),
+          orderBy('timestamp', 'asc')
+        );
+
+        unsubscribeMessages = onSnapshot(
+          messagesQuery,
+          (snapshot) => {
+            const chatMessages: ChatMessage[] = [];
+
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              chatMessages.push({
+                id: doc.id,
+                role: data.role,
+                content: data.content,
+                sources: data.sources,
+                timestamp: data.timestamp?.toDate(),
+                sessionId: data.sessionId
+              });
+            });
+
+            setMessages(chatMessages);
+            setIsLoading(false);
+          },
+          (error) => {
+            console.error('Error listening to messages:', error);
+            toast.error('Failed to load messages');
+            setIsLoading(false);
+          }
+        );
+
+        // Generate initial summary if in kickoff mode and no messages exist
+        if (mode === 'kickoff' && messages.length === 0) {
+          await generateInitialSummary();
+        }
+
       } catch (error) {
-        console.error('Error fetching/generating summary:', error);
-        toast.error('Failed to load or generate summary');
-      } finally {
+        console.error('Error setting up message listener:', error);
+        toast.error('Failed to set up chat');
         setIsLoading(false);
       }
     };
 
-    if (callId) {
-      fetchSummary();
-    } else {
-      setIsLoading(false);
+    setupMessageListener();
+
+    return () => {
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
+      }
+    };
+  }, [callId, mode, user]);
+
+  const generateInitialSummary = async () => {
+    if (!callId || !db) return;
+
+    try {
+      setIsGenerating(true);
+
+      // Call Firebase Cloud Function to process kickoff call
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/process-kickoff-call`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          callId,
+          mode
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate summary');
+      }
+
+      const summaryData = await response.json();
+
+      if (summaryData.summary) {
+        // Add system message with summary to Firestore
+        await addDoc(collection(db, 'chat_messages'), {
+          sessionId: callId,
+          role: 'system',
+          content: summaryData.summary,
+          sources: summaryData.sources || [],
+          timestamp: serverTimestamp(),
+          userId: user?.id
+        });
+      }
+
+    } catch (error) {
+      console.error('Error generating initial summary:', error);
+      toast.error('Failed to generate summary');
+    } finally {
+      setIsGenerating(false);
     }
-  }, [callId, mode]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !callId) return;
+    if (!input.trim() || isLoading || !callId || !db || !user) return;
 
     const userMessage = { role: 'user' as const, content: input };
-    
-    setMessages(prev => [...prev, userMessage]);
+    const messageContent = input;
     setInput('');
-    
+
     try {
       setIsLoading(true);
 
-      // Get the current session to get the user ID
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('chat_sessions')
-        .insert([{ 
-          title: input.slice(0, 50), 
-          user_id: userId // Set the user_id from the session
-        }])
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      const { error: messageError } = await supabase
-        .from('chat_messages')
-        .insert([{
-          session_id: sessionData.id,
-          role: userMessage.role,
-          content: userMessage.content
-        }]);
-
-      if (messageError) throw messageError;
-
-      const { data: responseData, error: responseError } = await supabase.functions.invoke('process-chat-message', {
-        body: {
-          callId,
-          sessionId: sessionData.id,
-          message: input,
-          history: messages
-        }
+      // Add user message to Firestore
+      await addDoc(collection(db, 'chat_messages'), {
+        sessionId: callId,
+        role: userMessage.role,
+        content: userMessage.content,
+        timestamp: serverTimestamp(),
+        userId: user.uid
       });
 
-      if (responseError) throw responseError;
+      // Process chat message via Firebase Cloud Function
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/process-chat-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          callId,
+          sessionId: callId,
+          message: messageContent,
+          history: messages.map(m => ({ role: m.role, content: m.content }))
+        }),
+      });
 
-      const assistantMessage = {
-        role: 'assistant' as const,
-        content: responseData.response,
-        sources: responseData.sources
-      };
+      if (!response.ok) {
+        throw new Error('Failed to process message');
+      }
 
-      const { error: assistantError } = await supabase
-        .from('chat_messages')
-        .insert([{
-          session_id: sessionData.id,
-          role: assistantMessage.role,
-          content: assistantMessage.content
-        }]);
+      const responseData = await response.json();
 
-      if (assistantError) throw assistantError;
+      // Add assistant response to Firestore
+      if (responseData.response) {
+        await addDoc(collection(db, 'chat_messages'), {
+          sessionId: callId,
+          role: 'assistant',
+          content: responseData.response,
+          sources: responseData.sources || [],
+          timestamp: serverTimestamp(),
+          userId: user.uid
+        });
+      }
 
-      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error in chat:', error);
       toast.error('Failed to send message');

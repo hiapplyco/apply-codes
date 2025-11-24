@@ -1,44 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNewAuth } from '@/context/NewAuthContext';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { isAuthenticated, isLoading } = useNewAuth();
+  const handledRef = useRef(false);
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // Get the session from the URL hash
-        const { data: { session }, error } = await supabase.auth.getSession();
+    if (handledRef.current || isLoading) {
+      return;
+    }
 
-        if (error) {
-          console.error('Auth callback error:', error);
-          toast.error('Authentication failed. Please try again.');
-          navigate('/login');
-          return;
-        }
+    handledRef.current = true;
 
-        if (session) {
-          // Get the redirect path from the query params
-          const next = searchParams.get('next') || '/dashboard';
-          
-          toast.success('Successfully signed in!');
-          navigate(decodeURIComponent(next));
-        } else {
-          // No session found
-          navigate('/login');
-        }
-      } catch (error) {
-        console.error('Unexpected error in auth callback:', error);
-        toast.error('An unexpected error occurred');
-        navigate('/login');
-      }
-    };
+    const next = decodeURIComponent(searchParams.get('next') || '/dashboard');
 
-    handleCallback();
-  }, [navigate, searchParams]);
+    if (isAuthenticated) {
+      toast.success('Successfully signed in!');
+      navigate(next, { replace: true });
+    } else {
+      toast.error('Authentication failed. Please try signing in again.');
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

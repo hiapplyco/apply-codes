@@ -32,6 +32,8 @@ import { BaseMCPTool } from './utils/base-tool.js';
 import { MCPServerConfig, MCPSession, MCPError, ValidationError } from './types/mcp.js';
 import { secretsManager } from './services/secrets-manager.js';
 import { RECRUITMENT_MCP_SYSTEM_PROMPT, getToolSelectionPrompt } from './prompts/system-prompts.js';
+import { authManager } from './utils/auth-manager.js';
+import { rateLimiter } from './utils/rate-limiter.js';
 
 class ApplyMCPServer {
   private server: Server;
@@ -100,15 +102,21 @@ class ApplyMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
-      const tool = this.tools.get(name);
-      if (!tool) {
-        throw new MCPError(`Unknown tool: ${name}`, 'TOOL_NOT_FOUND');
-      }
-
       try {
+        // 🔒 Authentication check
+        authManager.validateRequest(request);
+
+        const tool = this.tools.get(name);
+        if (!tool) {
+          throw new MCPError(`Unknown tool: ${name}`, 'TOOL_NOT_FOUND');
+        }
+
         // Get or create session
         const sessionId = this.getSessionId(request);
         const session = this.getOrCreateSession(sessionId);
+
+        // 🚦 Rate limiting check
+        rateLimiter.checkLimit(sessionId, name);
 
         // Execute the tool
         const result = await tool.execute({
@@ -122,7 +130,7 @@ class ApplyMCPServer {
         return result;
       } catch (error) {
         console.error(`Tool execution error for ${name}:`, error);
-        
+
         if (error instanceof ValidationError) {
           throw new MCPError(error.message, 'VALIDATION_ERROR', error.details);
         } else if (error instanceof MCPError) {
@@ -206,7 +214,8 @@ class ApplyMCPServer {
     };
 
     process.on('SIGINT', async () => {
-      console.error('\\nShutting down Apply MCP Server...');
+      console.error('\nShutting down Apply MCP Server...');
+      rateLimiter.stop();
       await this.server.close();
       process.exit(0);
     });
@@ -238,11 +247,26 @@ class ApplyMCPServer {
     // Initialize secrets manager
     console.error('Initializing secrets manager...');
     await secretsManager.initialize();
-    
+
+    // Display security status
+    const authStatus = authManager.getStatus();
+    const rateLimitConfig = rateLimiter.getConfig();
+
+    console.error('\n🔒 Security Configuration:');
+    console.error(`  • Authentication: ${authStatus.enabled ? '✅ ENABLED' : '⚠️  DISABLED'}`);
+    if (authStatus.enabled) {
+      console.error(`  • API Keys Configured: ${authStatus.configured ? `✅ ${authStatus.keyCount} key(s)` : '❌ NONE'}`);
+    }
+    console.error(`  • Rate Limiting: ${rateLimitConfig.enabled ? '✅ ENABLED' : '⚠️  DISABLED'}`);
+    if (rateLimitConfig.enabled) {
+      console.error(`  • Global Limit: ${rateLimitConfig.maxRequests} requests/${rateLimitConfig.windowHours}h`);
+      console.error(`  • Per-Tool Limits: ${Object.keys(rateLimitConfig.perToolLimits).length} tools configured`);
+    }
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    
-    console.error('Apply MCP Server started successfully');
+
+    console.error('\n✅ Apply MCP Server started successfully');
     console.error(`Server: ${this.config.name} v${this.config.version}`);
     console.error(`Description: ${this.config.description}`);
     console.error(`Available tools: ${this.tools.size}`);

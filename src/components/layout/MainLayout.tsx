@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { useEffect, memo, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { NavigationProgress } from "./NavigationProgress";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -12,7 +12,7 @@ import { FloatingChatBot } from "@/components/chat/FloatingChatBot";
 
 const MainLayoutComponent = () => {
   const { isNavigating, progress, handleNavigation, currentPath } = useNavigation();
-  const { isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useNewAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);

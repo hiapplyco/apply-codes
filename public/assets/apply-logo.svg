@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" role="img" aria-labelledby="title">
+  <title id="title">Apply Logo</title>
+  <rect width="120" height="32" rx="6" fill="#8B5CF6" />
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="'Inter', sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">
+    APPLY
+  </text>
+</svg>

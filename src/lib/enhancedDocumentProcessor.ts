@@ -197,7 +197,7 @@ export class EnhancedDocumentProcessor {
         // Get full resume data for each result
         const documentIds = [...new Set(results.map(r => r.chunk.documentId))];
         
-        // Fetch full resume data (would need to implement this in supabase)
+        // Fetch full resume data (requires Firestore resume storage implementation)
         // For now, return chunk results
         return results;
       }

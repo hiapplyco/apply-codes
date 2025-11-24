@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Send, X } from "lucide-react";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase";
 
 interface ChatMessage {
   id: string;
@@ -16,7 +17,7 @@ interface ChatMessage {
 interface ScreeningChatProps {
   open: boolean;
   onClose: () => void;
-  sessionId: number | null;
+  sessionId: string | null;
 }
 
 export const ScreeningChat = ({ open, onClose, sessionId }: ScreeningChatProps) => {
@@ -29,9 +30,9 @@ export const ScreeningChat = ({ open, onClose, sessionId }: ScreeningChatProps) 
   useEffect(() => {
     const fetchUserName = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user?.email) {
-          const name = session.user.email.split('@')[0];
+        const user = auth?.currentUser;
+        if (user?.email) {
+          const name = user.email.split('@')[0];
           setSenderName(name);
         }
       } catch (error) {
@@ -159,6 +160,3 @@ export const ScreeningChat = ({ open, onClose, sessionId }: ScreeningChatProps) 
     </Sheet>
   );
 };
-
-// Import added at the end to avoid circular dependency
-import { supabase } from "@/integrations/supabase/client";

@@ -14,7 +14,14 @@ import { BaseAgent } from './agents/BaseAgent';
 import { SourcingAgent } from './agents/SourcingAgent';
 import { EnrichmentAgent } from './agents/EnrichmentAgent';
 import { PlanningAgent } from './agents/PlanningAgent';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  writeBatch,
+  doc
+} from 'firebase/firestore';
+import { db } from '../firebase';
 
 export class AgentOrchestrator extends EventEmitter {
   private agents: Map<string, BaseAgent> = new Map();
@@ -321,9 +328,15 @@ export class AgentOrchestrator extends EventEmitter {
 
   private async saveMetrics(metrics: any): Promise<void> {
     try {
-      await supabase.from('orchestrator_metrics').insert({
+      if (!db) {
+        console.warn('Firestore not initialized, skipping metrics save');
+        return;
+      }
+
+      const metricsRef = collection(db, 'orchestrator_metrics');
+      await addDoc(metricsRef, {
         metrics_data: metrics,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
     } catch (error) {
       console.error('Failed to save metrics:', error);
@@ -332,15 +345,22 @@ export class AgentOrchestrator extends EventEmitter {
 
   private async saveWorkflowInstance(instance: WorkflowInstance): Promise<void> {
     try {
-      await supabase.from('workflow_instances').insert({
+      if (!db) {
+        console.warn('Firestore not initialized, skipping workflow instance save');
+        return;
+      }
+
+      const workflowInstancesRef = collection(db, 'workflow_instances');
+      await addDoc(workflowInstancesRef, {
         workflow_id: instance.workflowId,
         instance_id: instance.id,
         status: instance.status,
         context: instance.context,
         results: instance.results,
-        error: instance.error,
-        started_at: instance.startedAt.toISOString(),
-        completed_at: instance.completedAt?.toISOString()
+        error: instance.error || null,
+        started_at: instance.startedAt,
+        completed_at: instance.completedAt || null,
+        created_at: serverTimestamp()
       });
     } catch (error) {
       console.error('Failed to save workflow instance:', error);

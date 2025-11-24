@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { firebaseSendPasswordReset } from '@/lib/firebase';
 
 interface CustomPasswordResetProps {
   onBack?: () => void;
@@ -24,21 +24,12 @@ export function CustomPasswordReset({ onBack }: CustomPasswordResetProps) {
     setLoading(true);
 
     try {
-      // Use Supabase's built-in password reset
-      // This generates the reset token and sends the email
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      if (error) throw error;
+      await firebaseSendPasswordReset(email, `${window.location.origin}/reset-password`);
 
       toast.success('Password reset email sent! Check your inbox (and spam folder).');
 
-      // NOTE: To use custom SendGrid emails, you need to:
-      // 1. Disable Supabase's default emails in the dashboard
-      // 2. Set up Supabase Auth Hooks to capture the reset token
-      // 3. Send the custom email with the actual reset token link
-      // See: https://supabase.com/docs/guides/auth/auth-hooks
+      // NOTE: To send fully custom reset emails, configure Firebase Action Codes
+      // and send dynamic links through your preferred email provider.
 
     } catch (error: unknown) {
       console.error('Password reset error:', error);

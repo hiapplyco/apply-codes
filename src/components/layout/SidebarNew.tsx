@@ -15,10 +15,10 @@ import {
   X,
   Plug
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useNewAuth } from "@/context/NewAuthContext";
 
 export type MenuItem = {
   title: string;
@@ -45,26 +45,26 @@ interface SidebarNewProps {
   isMobile: boolean;
 }
 
-export const SidebarNew = memo(({ 
-  isOpen, 
-  onToggle, 
-  pathname, 
+export const SidebarNew = memo(({
+  isOpen,
+  onToggle,
+  pathname,
   handleNavigation,
   isMobile
 }: SidebarNewProps) => {
   const navigate = useNavigate();
-  
+  const { user, signOut } = useNewAuth();
+
   const handleSignOut = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await signOut();
       toast.success('Successfully signed out!');
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Failed to sign out');
     }
-  }, [navigate]);
+  }, [navigate, signOut]);
 
   const handleItemClick = (path: string, disabled?: boolean) => {
     if (disabled) return;
@@ -79,9 +79,9 @@ export const SidebarNew = memo(({
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <img 
-            src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/Apply2025logo.png" 
-            alt="Apply" 
+          <img
+            src="/assets/apply-logo.svg"
+            alt="Apply"
             className={cn(
               "transition-all duration-300",
               isOpen ? "h-10 w-auto" : "h-8 w-8 object-contain"

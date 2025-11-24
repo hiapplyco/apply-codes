@@ -27,6 +27,7 @@ import { useEffect, useState } from "react";
 import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
 import { MetaTags } from "@/components/landing/MetaTags";
 import { StructuredData } from "@/components/landing/StructuredData";
+import { useNewAuth } from "@/context/NewAuthContext";
 
 // SEO-friendly testimonials data
 const testimonials = [
@@ -162,6 +163,7 @@ const pricingTiers = [
 const LandingPageEnhanced = () => {
   const navigate = useNavigate();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const { isAuthenticated } = useNewAuth();
 
   // Rotate testimonials
   useEffect(() => {
@@ -172,16 +174,12 @@ const LandingPageEnhanced = () => {
   }, []);
 
   // Handle Get Started click with fast auth check
-  const handleGetStarted = async () => {
-    // Quick check if user has an existing session
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session) {
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
       navigate('/dashboard');
-    } else {
-      navigate('/login');
+      return;
     }
+    navigate('/login');
   };
 
   return (
@@ -200,9 +198,9 @@ const LandingPageEnhanced = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <img 
-                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
-                alt="Apply - AI-Powered Recruitment Platform" 
+              <img
+                src="/assets/apply-logo.svg"
+                alt="Apply - AI-Powered Recruitment Platform"
                 className="h-10 w-auto"
               />
             </div>
@@ -471,9 +469,9 @@ const LandingPageEnhanced = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-4 mb-4 md:mb-0">
-              <img 
-                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
-                alt="Apply" 
+              <img
+                src="/assets/apply-logo.svg"
+                alt="Apply"
                 className="h-6 w-auto brightness-0 invert"
               />
               <span className="text-xs text-gray-400">© 2025 Apply. All rights reserved.</span>

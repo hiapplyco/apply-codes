@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { ExtractedTerms } from "@/types/agent";
 import { useClientAgentOutputs } from "./useClientAgentOutputs";
+import { firestoreClient } from "@/lib/firebase-database-bridge";
 
 function isTerms(value: unknown): value is ExtractedTerms {
   if (typeof value !== 'object' || value === null) return false;
@@ -34,7 +34,7 @@ export const useAgentOutputs = (jobId: number | null) => {
       
       try {
         // First verify the job exists
-        const { data: jobData, error: jobError } = await supabase
+        const { data: jobData, error: jobError } = await firestoreClient
           .from("jobs")
           .select("id")
           .eq("id", jobId)
@@ -49,7 +49,7 @@ export const useAgentOutputs = (jobId: number | null) => {
         }
 
         // Then get the agent outputs
-        const { data, error } = await supabase
+        const { data, error } = await firestoreClient
           .from("agent_outputs")
           .select("*")
           .eq("job_id", jobId)

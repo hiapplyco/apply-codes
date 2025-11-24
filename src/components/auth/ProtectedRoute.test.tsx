@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test/utils';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { Route, Routes } from 'react-router-dom';
+
+// Mock environment variables to disable dev bypass
+vi.stubEnv('VITE_BYPASS_AUTH', 'false');
 
 // Mock the AuthContext
 vi.mock('@/context/AuthContext', () => ({
@@ -58,7 +61,7 @@ describe('ProtectedRoute', () => {
 
       renderWithRoute();
 
-      expect(screen.getByTestId('navigate')).toHaveTextContent('Navigating to /');
+      expect(screen.getByTestId('navigate')).toHaveTextContent('Navigating to /login');
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
     });
   });

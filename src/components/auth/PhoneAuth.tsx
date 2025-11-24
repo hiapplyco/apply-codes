@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,8 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
   const [isLoading, setIsLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [countryCode, setCountryCode] = useState('+1'); // Default to US
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   // Format phone number for display
   const formatPhoneNumber = (value: string) => {
@@ -46,35 +49,56 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Remove formatting from phone number
     const cleanPhone = phone.replace(/\D/g, '');
-    
+
     if (!cleanPhone) {
       toast.error('Please enter a phone number');
       return;
     }
 
+    if (!auth) {
+      toast.error('Firebase Auth not configured');
+      return;
+    }
+
     setIsLoading(true);
-    
+
     try {
       const fullPhoneNumber = `${countryCode}${cleanPhone}`;
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: fullPhoneNumber,
+
+      // Set up reCAPTCHA verifier
+      const recaptcha = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {
+          console.log('reCAPTCHA solved');
+        },
+        'expired-callback': () => {
+          console.log('reCAPTCHA expired');
+          toast.error('reCAPTCHA expired. Please try again.');
+        }
       });
 
-      if (error) {
-        toast.error(error.message || 'Failed to send verification code');
-        trackEvent('Phone OTP Send', { success: 0 });
-      } else {
-        toast.success('Verification code sent!');
-        setShowOtpInput(true);
-        trackEvent('Phone OTP Send', { success: 1 });
-      }
-    } catch (error) {
-      toast.error('An unexpected error occurred');
+      setRecaptchaVerifier(recaptcha);
+
+      // Send SMS
+      const confirmation = await signInWithPhoneNumber(auth, fullPhoneNumber, recaptcha);
+      setConfirmationResult(confirmation);
+
+      toast.success('Verification code sent!');
+      setShowOtpInput(true);
+      trackEvent('Phone OTP Send', { success: 1 });
+    } catch (error: any) {
       console.error('Phone auth error:', error);
+      toast.error(error.message || 'Failed to send verification code');
+      trackEvent('Phone OTP Send', { success: 0 });
+
+      // Clean up reCAPTCHA on error
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        setRecaptchaVerifier(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -82,32 +106,28 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!otp || otp.length !== 6) {
       toast.error('Please enter a 6-digit verification code');
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const fullPhoneNumber = `${countryCode}${cleanPhone}`;
-      
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: fullPhoneNumber,
-        token: otp,
-        type: 'sms',
-      });
+    if (!confirmationResult) {
+      toast.error('No confirmation result available. Please try sending the code again.');
+      return;
+    }
 
-      if (error) {
-        toast.error(error.message || 'Invalid verification code');
-        trackFormSubmit('Phone Auth', false);
-      } else if (data.user) {
+    setIsLoading(true);
+
+    try {
+      // Verify the SMS code
+      const result = await confirmationResult.confirm(otp);
+
+      if (result.user) {
         toast.success('Successfully signed in!');
-        
+
         // Track successful phone sign-in
-        const isNewUser = data.user.created_at === data.user.updated_at;
+        const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime;
         if (isNewUser) {
           trackRecruiterSignup(true);
           trackEvent('Sign Up', { method: 'phone' });
@@ -115,16 +135,17 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
           trackEvent('Sign In', { method: 'phone' });
         }
         trackFormSubmit('Phone Auth', true);
-        
+
         if (onSuccess) {
           onSuccess();
         } else {
           navigate(redirectTo);
         }
       }
-    } catch (error) {
-      toast.error('An unexpected error occurred');
+    } catch (error: any) {
       console.error('OTP verification error:', error);
+      toast.error(error.message || 'Invalid verification code');
+      trackFormSubmit('Phone Auth', false);
     } finally {
       setIsLoading(false);
     }
@@ -132,6 +153,9 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
 
   return (
     <div className="w-full space-y-4">
+      {/* reCAPTCHA container (invisible) */}
+      <div id="recaptcha-container"></div>
+
       {!showOtpInput ? (
         // Phone number input
         <form onSubmit={handleSendOtp} className="space-y-4">

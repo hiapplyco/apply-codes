@@ -64,12 +64,12 @@ export function UserPresence({ users, isConnected, className = '' }: UserPresenc
           <TooltipProvider>
             <div className="flex items-center -space-x-2">
               {users.slice(0, 5).map((user) => (
-                <Tooltip key={user.id}>
+                <Tooltip key={user.uid}>
                   <TooltipTrigger asChild>
                     <div className="relative">
                       <Avatar className="h-8 w-8 border-2 border-white">
                         <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback className={`${getUserColor(user.id)} text-white text-xs`}>
+                        <AvatarFallback className={`${getUserColor(user.uid)} text-white text-xs`}>
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>

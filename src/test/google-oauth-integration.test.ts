@@ -1,55 +1,32 @@
-/**
- * Comprehensive test suite for Google OAuth 2.0 integration
- * 
- * Tests the complete OAuth flow including:
- * - Account connection and management
- * - Token refresh and expiry handling
- * - Security measures and validation
- * - Error handling and recovery
- */
-
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GoogleTokenManager } from '@/lib/google-token-manager';
-import { supabase } from '@/integrations/supabase/client';
 import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
 
-// Mock Supabase
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    auth: {
-      getUser: vi.fn(),
-    },
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            order: vi.fn(() => ({
-              limit: vi.fn(() => ({
-                single: vi.fn(),
-              })),
-            })),
-          })),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      })),
-      upsert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-      })),
-    })),
-    functions: {
-      invoke: vi.fn(),
-    },
+const mockCollection = vi.fn();
+const mockDoc = vi.fn();
+const mockQuery = vi.fn();
+const mockOrderBy = vi.fn();
+const mockGetDocs = vi.fn();
+const mockGetDoc = vi.fn();
+const mockUpdateDoc = vi.fn();
+
+vi.mock('firebase/firestore', () => ({
+  collection: (...args: any[]) => mockCollection(...args),
+  doc: (...args: any[]) => mockDoc(...args),
+  query: (...args: any[]) => mockQuery(...args),
+  orderBy: (...args: any[]) => mockOrderBy(...args),
+  getDocs: (...args: any[]) => mockGetDocs(...args),
+  getDoc: (...args: any[]) => mockGetDoc(...args),
+  updateDoc: (...args: any[]) => mockUpdateDoc(...args),
+  serverTimestamp: () => 'timestamp'
+}));
+
+vi.mock('@/lib/function-bridge', () => ({
+  functionBridge: {
+    refreshGoogleToken: vi.fn(),
   },
 }));
 
-// Mock toast notifications
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -58,21 +35,67 @@ vi.mock('sonner', () => ({
   },
 }));
 
-describe('Google OAuth Integration', () => {
+vi.mock('@/lib/firebase', () => ({
+  auth: { currentUser: { uid: 'test-user-id', email: 'test@example.com' } },
+  db: {}
+}));
+
+// Import the mocked module to get access to the mock functions
+const { functionBridge } = await import('@/lib/function-bridge');
+
+describe('GoogleTokenManager', () => {
   let tokenManager: GoogleTokenManager;
-  let mockUser = {
-    id: 'test-user-id',
-    email: 'test@example.com',
+  const mockAccount = {
+    id: 'account-1',
+    email: 'user@gmail.com',
+    name: 'Test User',
+    accessToken: 'valid-token',
+    refreshToken: 'refresh-token',
+    scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
+    tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
+    createdAt: new Date().toISOString(),
   };
 
   beforeEach(() => {
     tokenManager = GoogleTokenManager.getInstance();
     vi.clearAllMocks();
-    
-    // Mock authenticated user
-    (supabase.auth.getUser as Mock).mockResolvedValue({
-      data: { user: mockUser },
-      error: null,
+
+    mockCollection.mockReturnValue('collection-path');
+    mockOrderBy.mockReturnValue('order-by');
+    mockQuery.mockReturnValue('query-ref');
+    mockGetDocs.mockResolvedValue({
+      docs: [
+        {
+          id: mockAccount.id,
+          data: () => ({
+            email: mockAccount.email,
+            name: mockAccount.name,
+            accessToken: mockAccount.accessToken,
+            refreshToken: mockAccount.refreshToken,
+            scopes: mockAccount.scopes,
+            tokenExpiry: mockAccount.tokenExpiry,
+            createdAt: mockAccount.createdAt,
+            lastUsed: mockAccount.createdAt,
+          })
+        }
+      ]
+    });
+    mockDoc.mockImplementation((...segments: any[]) => segments.join('/'));
+    mockGetDoc.mockResolvedValue({ exists: () => true, data: () => ({
+      email: mockAccount.email,
+      name: mockAccount.name,
+      accessToken: mockAccount.accessToken,
+      refreshToken: mockAccount.refreshToken,
+      scopes: mockAccount.scopes,
+      tokenExpiry: mockAccount.tokenExpiry,
+      createdAt: mockAccount.createdAt,
+      lastUsed: mockAccount.createdAt,
+    }) });
+    mockUpdateDoc.mockResolvedValue(undefined);
+    // Use the actual mock from the mocked module
+    (functionBridge.refreshGoogleToken as any).mockResolvedValue({
+      access_token: 'refreshed-token',
+      expires_at: new Date(Date.now() + 3600000).toISOString()
     });
   });
 
@@ -80,493 +103,91 @@ describe('Google OAuth Integration', () => {
     tokenManager.cleanup();
   });
 
-  describe('Token Management', () => {
-    it('should get valid access token for active account', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'valid-token',
-        refreshToken: 'refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-        createdAt: new Date().toISOString(),
-      };
-
-      // Mock database response
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        }),
-      });
-
-      const token = await tokenManager.getValidAccessToken();
-      expect(token).toBe('valid-token');
-    });
-
-    it('should refresh token when expiring soon', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'old-token',
-        refreshToken: 'refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
-        tokenExpiry: new Date(Date.now() + 120000).toISOString(), // 2 minutes from now
-        createdAt: new Date().toISOString(),
-      };
-
-      // Mock database response
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      // Mock token refresh
-      (supabase.functions.invoke as Mock).mockResolvedValue({
-        data: {
-          access_token: 'new-token',
-          token_expiry: new Date(Date.now() + 3600000).toISOString(),
-        },
-        error: null,
-      });
-
-      const token = await tokenManager.getValidAccessToken();
-      expect(supabase.functions.invoke).toHaveBeenCalledWith('refresh-google-token', {
-        body: { accountId: 'account-1' },
-      });
-    });
-
-    it('should handle expired refresh token', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'expired-token',
-        refreshToken: 'expired-refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
-        tokenExpiry: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        createdAt: new Date().toISOString(),
-      };
-
-      // Mock database response
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        }),
-      });
-
-      // Mock failed token refresh
-      (supabase.functions.invoke as Mock).mockResolvedValue({
-        data: null,
-        error: { message: 'refresh token expired' },
-      });
-
-      const result = await tokenManager.refreshAccountToken('account-1');
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('refresh token expired');
-    });
+  it('returns existing access token when valid', async () => {
+    const token = await tokenManager.getValidAccessToken();
+    expect(token).toBe('valid-token');
+    expect(functionBridge.refreshGoogleToken).not.toHaveBeenCalled();
   });
 
-  describe('Session Validation', () => {
-    it('should validate active session', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'valid-token',
-        refreshToken: 'refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+  it('refreshes token when expiring soon', async () => {
+    const expiringAccount = {
+      ...mockAccount,
+      accessToken: 'old-token',
+      tokenExpiry: new Date(Date.now() + 60000).toISOString(),
+    };
 
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const session = await tokenManager.validateSession();
-      expect(session.isValid).toBe(true);
-      expect(session.account).toEqual(mockAccount);
-      expect(session.needsRefresh).toBe(false);
-    });
-
-    it('should detect expired session', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'expired-token',
-        refreshToken: 'refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS],
-        tokenExpiry: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        createdAt: new Date().toISOString(),
-      };
-
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const session = await tokenManager.validateSession();
-      expect(session.isValid).toBe(false);
-      expect(session.needsRefresh).toBe(true);
-      expect(session.error).toContain('expired');
-    });
-
-    it('should handle no connected accounts', async () => {
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const session = await tokenManager.validateSession();
-      expect(session.isValid).toBe(false);
-      expect(session.needsRefresh).toBe(false);
-      expect(session.error).toContain('No active Google account');
-    });
-  });
-
-  describe('Scope Management', () => {
-    it('should check required scopes', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'valid-token',
-        refreshToken: 'refresh-token',
-        scopes: [
-          GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS,
-          GOOGLE_API_SCOPES.DOCS.FULL_ACCESS,
-        ],
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const hasDriveAccess = await tokenManager.hasRequiredScopes([
-        GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS,
-      ]);
-
-      const hasDocsAccess = await tokenManager.hasRequiredScopes([
-        GOOGLE_API_SCOPES.DOCS.FULL_ACCESS,
-      ]);
-
-      const hasBothAccess = await tokenManager.hasRequiredScopes([
-        GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS,
-        GOOGLE_API_SCOPES.DOCS.FULL_ACCESS,
-      ]);
-
-      expect(hasDriveAccess).toBe(true);
-      expect(hasDocsAccess).toBe(true);
-      expect(hasBothAccess).toBe(true);
-    });
-
-    it('should detect missing scopes', async () => {
-      const mockAccount = {
-        id: 'account-1',
-        email: 'user@gmail.com',
-        name: 'Test User',
-        accessToken: 'valid-token',
-        refreshToken: 'refresh-token',
-        scopes: [GOOGLE_API_SCOPES.DRIVE.READ_ONLY], // Only read-only access
-        tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        createdAt: new Date().toISOString(),
-      };
-
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue({
-                    data: [mockAccount],
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const hasFullAccess = await tokenManager.hasRequiredScopes([
-        GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS,
-      ]);
-
-      expect(hasFullAccess).toBe(false);
-    });
-  });
-
-  describe('Security Measures', () => {
-    it('should validate nonce in OAuth flow', () => {
-      // This would be tested in the component level
-      // Here we ensure the nonce generation and validation logic exists
-      const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-      expect(nonce).toMatch(/^[A-Za-z0-9+/]+=*$/);
-      expect(nonce.length).toBeGreaterThan(32);
-    });
-
-    it('should handle CSRF protection', async () => {
-      // Test that state parameter is validated
-      const validState = 'valid-state-token';
-      const invalidState = 'invalid-state-token';
-      
-      // This would normally be tested in the OAuth callback handler
-      expect(validState).not.toBe(invalidState);
-    });
-
-    it('should encrypt sensitive token data', () => {
-      // Token storage should be encrypted
-      // This is handled at the database level with RLS policies
-      expect(true).toBe(true); // Placeholder for actual encryption tests
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle network errors gracefully', async () => {
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                order: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockRejectedValue(new Error('Network error')),
-                }),
-              }),
-            }),
-          }),
-        }),
-      });
-
-      const token = await tokenManager.getValidAccessToken();
-      expect(token).toBeNull();
-    });
-
-    it('should handle API quota exceeded', async () => {
-      (supabase.functions.invoke as Mock).mockResolvedValue({
-        data: null,
-        error: { message: 'Quota exceeded', code: 429 },
-      });
-
-      const result = await tokenManager.refreshAccountToken('account-1');
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Quota exceeded');
-    });
-
-    it('should handle revoked permissions', async () => {
-      (supabase.functions.invoke as Mock).mockResolvedValue({
-        data: null,
-        error: { message: 'Invalid grant', code: 400 },
-      });
-
-      const result = await tokenManager.refreshAccountToken('account-1');
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('Statistics and Monitoring', () => {
-    it('should provide session statistics', async () => {
-      const mockAccounts = [
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
         {
-          id: 'account-1',
-          status: 'active',
-          tokenExpiry: new Date(Date.now() + 3600000).toISOString(),
-        },
+          id: expiringAccount.id,
+          data: () => ({
+            email: expiringAccount.email,
+            name: expiringAccount.name,
+            accessToken: expiringAccount.accessToken,
+            refreshToken: expiringAccount.refreshToken,
+            scopes: expiringAccount.scopes,
+            tokenExpiry: expiringAccount.tokenExpiry,
+            createdAt: expiringAccount.createdAt,
+            lastUsed: expiringAccount.createdAt,
+          })
+        }
+      ]
+    });
+
+    mockGetDoc.mockResolvedValueOnce({ exists: () => true, data: () => ({
+      email: expiringAccount.email,
+      name: expiringAccount.name,
+      accessToken: expiringAccount.accessToken,
+      refreshToken: expiringAccount.refreshToken,
+      scopes: expiringAccount.scopes,
+      tokenExpiry: expiringAccount.tokenExpiry,
+      createdAt: expiringAccount.createdAt,
+      lastUsed: expiringAccount.createdAt,
+    }) });
+
+    const token = await tokenManager.getValidAccessToken();
+    expect(token).toBe('refreshed-token');
+    expect(functionBridge.refreshGoogleToken).toHaveBeenCalledWith({ refreshToken: expiringAccount.refreshToken });
+  });
+
+  it('handles missing refresh token gracefully', async () => {
+    const accountWithoutRefresh = {
+      ...mockAccount,
+      refreshToken: undefined,
+      // Set token to be expiring soon (within 5 minutes) to trigger refresh attempt
+      tokenExpiry: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
+    };
+
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
         {
-          id: 'account-2',
-          status: 'active',
-          tokenExpiry: new Date(Date.now() - 3600000).toISOString(), // Expired
-        },
-        {
-          id: 'account-3',
-          status: 'active',
-          tokenExpiry: new Date(Date.now() + 120000).toISOString(), // Expiring soon
-        },
-      ];
-
-      (supabase.from as Mock).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({
-            data: mockAccounts,
-            error: null,
-          }),
-        }),
-      });
-
-      const stats = await tokenManager.getSessionStats();
-      expect(stats.totalAccounts).toBe(3);
-      expect(stats.activeAccounts).toBe(1);
-      expect(stats.expiredAccounts).toBe(1);
-      expect(stats.expiringSoonAccounts).toBe(1);
-    });
-  });
-});
-
-describe('OAuth Flow Security Tests', () => {
-  it('should generate secure nonce values', () => {
-    const nonces = new Set();
-    
-    // Generate 100 nonces and ensure they're all unique
-    for (let i = 0; i < 100; i++) {
-      const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-      expect(nonces.has(nonce)).toBe(false);
-      nonces.add(nonce);
-    }
-  });
-
-  it('should validate state parameter format', () => {
-    const validStates = [
-      'abc123def456',
-      'ZYX987wvu321',
-      'MIX3d_Ch4r5',
-    ];
-
-    const invalidStates = [
-      '', // Empty
-      'short', // Too short
-      'has spaces', // Contains spaces
-      'has@special!chars', // Special characters
-    ];
-
-    validStates.forEach(state => {
-      expect(state.length).toBeGreaterThan(8);
-      expect(state).toMatch(/^[A-Za-z0-9_-]+$/);
+          id: accountWithoutRefresh.id,
+          data: () => ({
+            email: accountWithoutRefresh.email,
+            name: accountWithoutRefresh.name,
+            accessToken: accountWithoutRefresh.accessToken,
+            refreshToken: accountWithoutRefresh.refreshToken,
+            scopes: accountWithoutRefresh.scopes,
+            tokenExpiry: accountWithoutRefresh.tokenExpiry,
+            createdAt: accountWithoutRefresh.createdAt,
+            lastUsed: accountWithoutRefresh.createdAt,
+          })
+        }
+      ]
     });
 
-    invalidStates.forEach(state => {
-      expect(
-        state === '' || 
-        state.length < 8 || 
-        !state.match(/^[A-Za-z0-9_-]+$/)
-      ).toBe(true);
-    });
-  });
+    mockGetDoc.mockResolvedValueOnce({ exists: () => true, data: () => ({
+      email: accountWithoutRefresh.email,
+      name: accountWithoutRefresh.name,
+      accessToken: accountWithoutRefresh.accessToken,
+      refreshToken: accountWithoutRefresh.refreshToken,
+      scopes: accountWithoutRefresh.scopes,
+      tokenExpiry: accountWithoutRefresh.tokenExpiry,
+      createdAt: accountWithoutRefresh.createdAt,
+      lastUsed: accountWithoutRefresh.createdAt,
+    }) });
 
-  it('should validate redirect URI format', () => {
-    const validUris = [
-      'https://app.apply.codes/oauth/google/callback',
-      'https://localhost:3000/oauth/google/callback',
-      'https://staging.apply.codes/oauth/google/callback',
-    ];
-
-    const invalidUris = [
-      'http://app.apply.codes/oauth/google/callback', // HTTP instead of HTTPS
-      'https://malicious-site.com/oauth/google/callback', // Wrong domain
-      'javascript:alert("xss")', // XSS attempt
-      'ftp://app.apply.codes/oauth/google/callback', // Wrong protocol
-    ];
-
-    validUris.forEach(uri => {
-      expect(uri.startsWith('https://')).toBe(true);
-      expect(uri.includes('apply.codes') || uri.includes('localhost')).toBe(true);
-    });
-
-    invalidUris.forEach(uri => {
-      expect(
-        !uri.startsWith('https://') ||
-        (!uri.includes('apply.codes') && !uri.includes('localhost'))
-      ).toBe(true);
-    });
+    const token = await tokenManager.getValidAccessToken();
+    expect(token).toBeNull();
   });
 });

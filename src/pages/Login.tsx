@@ -1,19 +1,19 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { UnifiedAuthForm } from "@/components/auth/UnifiedAuthForm";
+import { useNewAuth } from "@/context/NewAuthContext";
+import { AuthForm } from "@/components/auth/AuthForm";
 import { ArrowLeft } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { isAuthenticated, isLoading } = useNewAuth();
 
   useEffect(() => {
     // Redirect to dashboard if user is already authenticated
-    if (session) {
+    if (isAuthenticated) {
       navigate('/dashboard');
     }
-  }, [session, navigate]);
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFFBF4] to-[#F5F0ED] relative">
@@ -40,7 +40,7 @@ const Login = () => {
 
         {/* Auth Form */}
         <div className="bg-white p-8 rounded-lg border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <UnifiedAuthForm redirectTo="/dashboard" />
+          <AuthForm redirectTo="/dashboard" />
         </div>
       </div>
     </div>

@@ -1,5 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 
+const getAssetUrl = (path: string) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.apply.codes';
+  return `${origin}${path}`;
+};
+
 interface MetaTagsProps {
   title?: string;
   description?: string;
@@ -15,7 +20,7 @@ export const MetaTags = ({
   description = "Transform your recruiting with Apply's AI-powered sourcing, automated screening, and 20+ integrations. Join 10,000+ recruiters finding better candidates faster. Start free trial.",
   keywords = "AI recruitment, recruitment platform, ATS integration, boolean search, candidate sourcing, talent acquisition, hiring software, HR tech, recruitment automation, Greenhouse integration, Lever integration",
   canonical = "https://www.apply.codes",
-  ogImage = "https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/og/apply-og-image.png",
+  ogImage = getAssetUrl('/assets/apply-logo.svg'),
   ogType = "website",
   twitterCard = "summary_large_image"
 }: MetaTagsProps) => {
@@ -69,7 +74,6 @@ export const MetaTags = ({
       {/* Preconnect to external domains for performance */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://kxghaajojntkqrmvsngn.supabase.co" />
       
       {/* DNS Prefetch for performance */}
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />

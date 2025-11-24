@@ -1,21 +1,22 @@
 
 import { memo, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar/context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LogOut } from "lucide-react";
+import { useNewAuth } from "@/context/NewAuthContext";
 
 export const SignOutButton = memo(function SignOutButton() {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { signOut } = useNewAuth();
   
   const handleSignOut = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await signOut();
       if (error) throw error;
       toast.success('Successfully signed out!');
       navigate('/', { replace: true });
@@ -23,7 +24,7 @@ export const SignOutButton = memo(function SignOutButton() {
       console.error('Error signing out:', error);
       toast.error('Failed to sign out');
     }
-  }, [navigate]);
+  }, [navigate, signOut]);
   
   const buttonContent = (
     <>

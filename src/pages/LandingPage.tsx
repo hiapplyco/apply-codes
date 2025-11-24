@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Search, FileScan, Video, Workflow, ArrowRight } from "lucide-react";
 import { useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { PlatformCarousel } from "@/components/landing/PlatformCarousel";
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { isAuthenticated } = useNewAuth();
 
   useEffect(() => {
     // Redirect to dashboard if user is already authenticated
@@ -24,9 +24,9 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <img 
-                src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
-                alt="Apply" 
+              <img
+                src="/assets/apply-logo.svg"
+                alt="Apply"
                 className="h-10 w-auto"
               />
             </div>
@@ -45,9 +45,9 @@ const LandingPage = () => {
       <div className="container mx-auto px-4 pt-20 pb-4 flex flex-col items-center justify-center">
         {/* Hero Section */}
         <div className="text-center mb-4 sm:mb-6">
-          <img 
-            src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/APPLYFullwordlogo2025.png" 
-            alt="Apply" 
+          <img
+            src="/assets/apply-logo.svg"
+            alt="Apply"
             className="h-24 sm:h-32 w-auto mx-auto mb-2 sm:mb-4"
           />
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-[#8B6E5B] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">

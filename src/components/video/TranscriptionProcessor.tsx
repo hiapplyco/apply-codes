@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { toast } from "sonner";
 
 interface TranscriptionProcessorProps {
@@ -11,18 +11,7 @@ export const TranscriptionProcessor = () => {
       console.log('Starting video processing for recording:', recordingId);
       
       // Start the video processing pipeline
-      const { data: processingData, error: processingError } = await supabase.functions.invoke(
-        'process-video-recording',
-        {
-          body: { recordingId }
-        }
-      );
-
-      if (processingError) {
-        console.error('Processing error:', processingError);
-        toast.error('Error processing recording');
-        return '';
-      }
+      const processingData = await functionBridge.processRecording({ recordingId });
 
       if (processingData?.analysis) {
         toast.success('Recording processed successfully');

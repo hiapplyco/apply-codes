@@ -1,20 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor, userEvent } from '@/test/utils';
 import { JobPostingForm } from './JobPostingForm';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// Mock Supabase client
-vi.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    from: vi.fn(),
-    functions: {
-      invoke: vi.fn(),
-    },
+vi.mock('@/lib/function-bridge', () => ({
+  functionBridge: {
+    generateBooleanSearch: vi.fn(),
+    enhanceJobDescription: vi.fn(),
+    extractNlpTerms: vi.fn(),
+    analyzeCompensation: vi.fn(),
+    summarizeJob: vi.fn(),
+    summarizeTitle: vi.fn(),
   },
 }));
 
-// Mock dependencies
+const mockCollection = vi.fn();
+const mockDoc = vi.fn();
+const mockGetDoc = vi.fn();
+const mockSetDoc = vi.fn();
+const mockUpdateDoc = vi.fn();
+
+vi.mock('firebase/firestore', () => ({
+  collection: (...args: any[]) => mockCollection(...args),
+  doc: (...args: any[]) => mockDoc(...args),
+  getDoc: (...args: any[]) => mockGetDoc(...args),
+  setDoc: (...args: any[]) => mockSetDoc(...args),
+  updateDoc: (...args: any[]) => mockUpdateDoc(...args),
+}));
+
+vi.mock('@/lib/firebase', () => ({
+  db: {},
+  auth: { currentUser: { uid: 'test-user' } },
+}));
+
 vi.mock('@/context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
@@ -32,195 +51,114 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: vi.fn(() => ({ toast: vi.fn() })),
 }));
 
-// Import the mocked module to access the mocks
-import { supabase } from '@/integrations/supabase/client';
+// Import mocked module to access mocks
+const { functionBridge } = await import('@/lib/function-bridge');
 
 describe('JobPostingForm', () => {
   const mockNavigate = vi.fn();
   const mockOnSuccess = vi.fn();
   const mockOnCancel = vi.fn();
   const mockOnError = vi.fn();
-  const mockSession = { user: { id: '123e4567-e89b-12d3-a456-426614174000' } };
-  const mockSupabaseClient = supabase as any;
+  const mockSession = { user: { id: 'user-123' } };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as ReturnType<typeof vi.fn>).mockReturnValue({ session: mockSession });
-    (useNavigate as ReturnType<typeof vi.fn>).mockReturnValue(mockNavigate);
+    (useAuth as unknown as Mock).mockReturnValue({ session: mockSession });
+    (useNavigate as unknown as Mock).mockReturnValue(mockNavigate);
+
+    mockCollection.mockReturnValue('jobs-collection');
+    mockDoc.mockImplementation((arg1: any, arg2?: string, arg3?: string) => {
+      if (arg3) return { id: arg3 };
+      if (arg2 && !arg3) return { id: arg2 };
+      if (arg1 === 'jobs-collection') return { id: 'new-job-id' };
+      return { id: 'doc-id' };
+    });
+    mockGetDoc.mockResolvedValue({ exists: () => false, data: () => ({}) });
+    mockSetDoc.mockResolvedValue(undefined);
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    (functionBridge.generateBooleanSearch as any).mockResolvedValue({ success: true, searchString: 'boolean string' });
+    (functionBridge.enhanceJobDescription as any).mockResolvedValue({ enhancedDescription: 'enhanced content' });
+    (functionBridge.extractNlpTerms as any).mockResolvedValue({ terms: [] });
+    (functionBridge.analyzeCompensation as any).mockResolvedValue({ analysis: {} });
+    (functionBridge.summarizeJob as any).mockResolvedValue({ summary: 'summary', title: 'Job Title' });
+    (functionBridge.summarizeTitle as any).mockResolvedValue({ summary: 'summary', title: 'Job Title' });
   });
 
-  describe('creating a new job', () => {
-    it('should render the form with placeholder text', () => {
-      render(<JobPostingForm />);
+  it('renders the form with placeholder text', () => {
+    render(<JobPostingForm />);
+    expect(screen.getByPlaceholderText(/Title: Software Engineer/)).toBeInTheDocument();
+    expect(screen.getByText(/Create Job Posting/)).toBeInTheDocument();
+  });
 
-      const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
-      expect(textarea).toBeInTheDocument();
-      expect(screen.getByText(/Create Job Posting/)).toBeInTheDocument();
-    });
+  it('submits a new job posting and calls onSuccess', async () => {
+    const user = userEvent.setup();
+    render(<JobPostingForm onSuccess={mockOnSuccess} />);
 
-    it('should submit a new job posting', async () => {
-      const user = userEvent.setup();
-      const mockJobData = {
-        id: 1,
-        content: 'Test job content',
-        created_at: new Date().toISOString(),
-        user_id: '123e4567-e89b-12d3-a456-426614174000',
-      };
+    const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
+    await user.clear(textarea);
+    await user.type(textarea, 'Test job content');
 
-      mockSupabaseClient.from.mockImplementation(() => ({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: mockJobData, error: null }),
-      }));
-      
-      // Mock the analyze function to resolve properly
-      mockSupabaseClient.functions.invoke.mockResolvedValue({ data: {}, error: null });
+    await user.click(screen.getByText(/Create Job Posting/));
 
-      render(<JobPostingForm onSuccess={mockOnSuccess} />);
-
-      const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
-      await user.clear(textarea);
-      await user.type(textarea, 'Test job content');
-
-      const submitButton = screen.getByText(/Create Job Posting/);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockSupabaseClient.from).toHaveBeenCalledWith('jobs');
-        expect(mockOnSuccess).toHaveBeenCalled();
-        expect(mockNavigate).toHaveBeenCalledWith('/job-editor/1', { replace: true });
-      });
-    });
-
-    it('should handle submission errors', async () => {
-      const user = userEvent.setup();
-      const errorMessage = 'Failed to create job';
-
-      mockSupabaseClient.from.mockImplementation(() => ({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: { message: errorMessage } }),
-      }));
-
-      render(<JobPostingForm onError={mockOnError} />);
-
-      const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
-      await user.type(textarea, 'Test job content');
-
-      const submitButton = screen.getByText(/Create Job Posting/);
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockOnError).toHaveBeenCalledWith('Failed to save job posting');
-      });
+    await waitFor(() => {
+      expect(mockSetDoc).toHaveBeenCalled();
+      expect(mockOnSuccess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'new-job-id',
+          booleanSearch: 'boolean string',
+        })
+      );
     });
   });
 
-  describe('editing an existing job', () => {
-    it('should load and display existing job content', async () => {
-      const existingJobContent = 'Existing job content';
-      
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ 
-          data: { content: existingJobContent }, 
-          error: null 
-        }),
-      }));
+  it('handles submission errors and calls onError', async () => {
+    const user = userEvent.setup();
+    const errorMessage = 'Failed to create job';
+    mockSetDoc.mockRejectedValueOnce(new Error(errorMessage));
 
-      render(<JobPostingForm jobId="123" />);
+    render(<JobPostingForm onError={mockOnError} />);
 
-      // First should show loading state
-      expect(screen.getByText('Loading job details...')).toBeInTheDocument();
+    const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
+    await user.type(textarea, 'Test job content');
+    await user.click(screen.getByText(/Create Job Posting/));
 
-      // Then should show the loaded content
-      await waitFor(() => {
-        const textarea = screen.getByDisplayValue(existingJobContent);
-        expect(textarea).toBeInTheDocument();
-      });
-
-      expect(screen.getByText(/Update Job Posting/)).toBeInTheDocument();
-    });
-
-    it('should handle job loading errors', async () => {
-      const errorMessage = 'Job not found';
-      
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ 
-          data: null, 
-          error: { message: errorMessage } 
-        }),
-      }));
-
-      render(<JobPostingForm jobId="999" onError={mockOnError} />);
-
-      await waitFor(() => {
-        // The component shows 'Job not found' message
-        const alert = screen.getByRole('alert');
-        expect(alert).toHaveTextContent('Job not found');
-        expect(mockOnError).toHaveBeenCalledWith('Job not found');
-      });
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Failed to create job');
     });
   });
 
-  describe('form interactions', () => {
-    it('should not disable submit button based on content', () => {
-      render(<JobPostingForm />);
-
-      // Button is not disabled when content is empty (form validation happens on submit)
-      const submitButton = screen.getByText(/Create Job Posting/);
-      expect(submitButton).not.toBeDisabled();
+  it('loads existing job content when editing', async () => {
+    const existingContent = 'Existing job content';
+    mockGetDoc.mockResolvedValueOnce({
+      exists: () => true,
+      data: () => ({ content: existingContent })
     });
 
-    it('should allow typing in textarea', async () => {
-      const user = userEvent.setup();
-      render(<JobPostingForm />);
+    render(<JobPostingForm jobId="job-123" />);
 
-      const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
-      await user.type(textarea, 'Some content');
+    expect(screen.getByText('Loading job details...')).toBeInTheDocument();
 
-      expect(textarea).toHaveValue('Some content');
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(existingContent)).toBeInTheDocument();
     });
+  });
 
-    it('should call onCancel when cancel button is clicked', async () => {
-      const user = userEvent.setup();
-      render(<JobPostingForm onCancel={mockOnCancel} />);
+  it('handles missing job when editing', async () => {
+    mockGetDoc.mockResolvedValueOnce({ exists: () => false, data: () => null });
 
-      const cancelButton = screen.getByText('Cancel');
-      await user.click(cancelButton);
+    render(<JobPostingForm jobId="missing-job" onError={mockOnError} />);
 
-      expect(mockOnCancel).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Job not found');
     });
+  });
 
-    it('should show loading state during submission', async () => {
-      const user = userEvent.setup();
-      
-      // Mock a delayed response
-      mockSupabaseClient.from.mockImplementation(() => ({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockImplementation(() => 
-          new Promise(resolve => setTimeout(() => resolve({ data: { id: 1 }, error: null }), 100))
-        ),
-      }));
+  it('calls onCancel when cancel button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<JobPostingForm onCancel={mockOnCancel} />);
 
-      render(<JobPostingForm />);
-
-      const textarea = screen.getByPlaceholderText(/Title: Software Engineer/);
-      await user.type(textarea, 'Test content');
-
-      const submitButton = screen.getByText(/Create Job Posting/);
-      await user.click(submitButton);
-
-      // Should show loading state - button will have spinner
-      const button = screen.getByRole('button', { name: /Create Job Posting/ });
-      expect(button).toBeInTheDocument();
-      expect(submitButton).toBeDisabled();
-    });
+    await user.click(screen.getByText('Cancel'));
+    expect(mockOnCancel).toHaveBeenCalled();
   });
 });

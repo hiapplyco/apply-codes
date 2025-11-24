@@ -32,16 +32,19 @@ const LocationModal: React.FC<LocationModalProps> = ({
   onLocationSelect
 }) => {
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [inputValue, setInputValue] = useState<string>('');
+  const inputRef = React.useRef<any>(null);
 
   const handleLocationInputSelect = (location: LocationData) => {
     console.log('🗺️ LocationModal.handleLocationInputSelect called with:', location);
     setSelectedLocation(location);
-    
+
     // Immediately save the location and close modal
     console.log('🚀 Immediately calling onLocationSelect and closing modal');
     onLocationSelect(location);
     onClose();
     setSelectedLocation(null);
+    setInputValue('');
   };
 
   const handleConfirm = () => {
@@ -49,11 +52,29 @@ const LocationModal: React.FC<LocationModalProps> = ({
       onLocationSelect(selectedLocation);
       onClose();
       setSelectedLocation(null);
+      setInputValue('');
+    } else if (inputValue.trim().length >= 3) {
+      // Manual fallback when button is clicked with text but no autocomplete selection
+      console.log('🔄 Manual geocoding from button click:', inputValue);
+      const isZipCode = /^\d{5}(-\d{4})?$/.test(inputValue.trim());
+
+      if (isZipCode || inputValue.includes(',') || inputValue.trim().length >= 3) {
+        const locationData: LocationData = {
+          formatted_address: inputValue.trim(),
+          place_id: '',
+          geometry: { location: { lat: 0, lng: 0 } },
+          address_components: []
+        };
+        onLocationSelect(locationData);
+        onClose();
+        setInputValue('');
+      }
     }
   };
 
   const handleCancel = () => {
     setSelectedLocation(null);
+    setInputValue('');
     onClose();
   };
 
@@ -98,9 +119,12 @@ const LocationModal: React.FC<LocationModalProps> = ({
               Search Location
             </label>
             <LocationInput
+              ref={inputRef}
               onLocationSelect={handleLocationInputSelect}
+              onInputChange={setInputValue}
               selectedLocation={selectedLocation}
               placeholder="Enter city, state, zip, or country..."
+              hidePreview={true}
             />
           </div>
 
@@ -133,8 +157,8 @@ const LocationModal: React.FC<LocationModalProps> = ({
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={!selectedLocation}
-              className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              disabled={!selectedLocation && inputValue.trim().length < 3}
+              className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-purple-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Check className="w-4 h-4 mr-2" />
               Set Location

@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { doc, getDoc } from 'firebase/firestore';
 
 export function useJobEditor(jobId: string) {
   const [job, setJob] = useState<any>(null);
@@ -15,33 +16,39 @@ export function useJobEditor(jobId: string) {
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        const jobIdNumber = Number(jobId);
-        if (isNaN(jobIdNumber)) {
+        if (!jobId) {
           throw new Error('Invalid job ID');
         }
 
-        const { data: jobData, error: jobError } = await supabase
-          .from('jobs')
-          .select('*')
-          .eq('id', jobIdNumber)
-          .single();
+        if (!db) {
+          throw new Error('Firestore is not initialized');
+        }
 
-        if (jobError) throw jobError;
+        const jobRef = doc(db, 'jobs', jobId);
+        const jobSnap = await getDoc(jobRef);
 
-        // Also fetch enhanced content from agent_outputs
-        const { data: agentData } = await supabase
-          .from('agent_outputs')
-          .select('enhanced_description')
-          .eq('job_id', jobIdNumber)
-          .single();
+        if (!jobSnap.exists()) {
+          throw new Error('Job not found');
+        }
 
-        // Merge the data
-        const mergedData = {
+        const jobData = jobSnap.data();
+
+        let enhancedContent: string | null = null;
+        try {
+          const agentRef = doc(db, 'agent_outputs', jobId);
+          const agentSnap = await getDoc(agentRef);
+          if (agentSnap.exists()) {
+            enhancedContent = agentSnap.data()?.enhanced_description || null;
+          }
+        } catch (agentError) {
+          console.warn('Failed to load enhanced content:', agentError);
+        }
+
+        setJob({
           ...jobData,
-          enhanced_content: agentData?.enhanced_description || null
-        };
-
-        setJob(mergedData);
+          id: jobId,
+          enhanced_content: enhancedContent
+        });
       } catch (err) {
         console.error('Error fetching job:', err);
         setError(err);
@@ -56,9 +63,7 @@ export function useJobEditor(jobId: string) {
   }, [jobId]);
 
   const handleSourceCandidates = async (analysisContent: string) => {
-    // Convert jobId to number before passing it to the navigation state
-    const jobIdNumber = Number(jobId);
-    if (isNaN(jobIdNumber)) {
+    if (!jobId) {
       console.error('Invalid job ID:', jobId);
       toast({
         title: 'Error',
@@ -70,7 +75,7 @@ export function useJobEditor(jobId: string) {
     
     navigate('/sourcing', { 
       state: { 
-        jobId: jobIdNumber,
+        jobId,
         autoRun: true
       } 
     });
@@ -79,9 +84,7 @@ export function useJobEditor(jobId: string) {
   const handleCreateLinkedInPost = async (analysisContent: string) => {
     setIsPostLoading(true);
     try {
-      // Convert jobId to number before passing it to the navigation state
-      const jobIdNumber = Number(jobId);
-      if (isNaN(jobIdNumber)) {
+      if (!jobId) {
         throw new Error('Invalid job ID');
       }
       
@@ -89,7 +92,7 @@ export function useJobEditor(jobId: string) {
       navigate('/linkedin-post', { 
         state: { 
           content: analysisContent,
-          jobId: jobIdNumber,
+          jobId,
           autoRun: true
         } 
       });

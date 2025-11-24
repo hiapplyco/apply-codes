@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { toast } from "sonner";
 import { SearchResult } from "../../types";
 import { extractLocationFromSnippet, prepareSearchString, validateLinkedInUrl } from "./utils";
@@ -38,24 +38,17 @@ export const fetchSearchResults = async (
     console.log(`🔍 [DEBUG] Fetching search results for: "${searchString}" (page ${page})`);
     console.log(`🔍 [DEBUG] Search type: ${searchType}, resultsPerPage: ${resultsPerPage}, startIndex: ${startIndex}`);
     
-    // Get the CSE API key from Supabase Edge Function
-    console.log("🔍 [DEBUG] Retrieving Google CSE API key from Supabase Edge Function");
-    const { data: keyData, error: keyError } = await supabase.functions.invoke('get-google-cse-key');
+    // Get the CSE API key from Firebase Function
+    console.log("🔍 [DEBUG] Retrieving Google CSE API key from Firebase Function");
+    const keyData = await functionBridge.getGoogleCseKey();
     
-    if (keyError) {
-      console.error("❌ [ERROR] Error fetching CSE key:", keyError);
-      console.error("❌ [ERROR] Error details:", JSON.stringify(keyError));
-      toast.error(`Failed to get Google CSE API key: ${keyError.message}`);
-      throw keyError;
-    }
-    
-    if (!keyData || !keyData.key) {
+    if (!keyData || !keyData.secret) {
       console.error("❌ [ERROR] No CSE key returned from function:", keyData);
       toast.error("Failed to get Google CSE API key");
       throw new Error("Failed to get Google CSE API key");
     }
     
-    console.log("✅ [SUCCESS] CSE key received:", keyData.key ? "Key exists (length: " + keyData.key.length + ")" : "No key");
+    console.log("✅ [SUCCESS] CSE key received:", keyData.secret ? "Key exists (length: " + keyData.secret.length + ")" : "No key");
     console.log("✅ [SUCCESS] CSE key debug info:", keyData.debug);
     
     // Ensure the search string includes site:linkedin.com/in/ for candidate searches
@@ -63,11 +56,11 @@ export const fetchSearchResults = async (
     console.log("🔍 [CRITICAL] Final search string with site restriction:", finalSearchString);
     
     // Use the correct CSE ID for Google Custom Search Engine
-    const cseId = keyData.debug?.cseId || 'b28705633bcb44cf0'; // Use the CSE ID from the server if available
+    const cseId = keyData.engineId || keyData.debug?.cseId || 'b28705633bcb44cf0'; // Use the CSE ID from the server if available
     console.log("🔍 [CRITICAL] Using CSE ID:", cseId);
     
     // Make request to Google CSE API with the properly formatted search string
-    const cseUrl = `https://www.googleapis.com/customsearch/v1?key=${keyData.key}&cx=${cseId}&q=${encodeURIComponent(
+    const cseUrl = `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(
       finalSearchString
     )}&start=${startIndex}&num=${resultsPerPage}`;
     

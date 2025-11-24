@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 
 export const generateSummary = async (content: string) => {
   if (!content?.trim()) {
@@ -8,14 +8,7 @@ export const generateSummary = async (content: string) => {
 
   try {
     console.log('Generating summary for content...');
-    const { data, error } = await supabase.functions.invoke('summarize-title', {
-      body: { content }
-    });
-
-    if (error) {
-      console.error('Error from summarize-title function:', error);
-      throw error;
-    }
+    const data = await functionBridge.summarizeTitle({ content });
 
     console.log('Summary generated successfully:', data);
     return {

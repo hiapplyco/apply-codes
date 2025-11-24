@@ -14,7 +14,6 @@ import {
   Settings
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +31,6 @@ const Dashboard = () => {
       icon: FileSearch,
       path: "/sourcing",
       gradient: "from-blue-500 to-cyan-500",
-      badge: "Most Popular",
       isPrimary: true
     },
     {
@@ -40,8 +38,7 @@ const Dashboard = () => {
       description: "View saved candidates and projects",
       icon: Clock,
       path: "/search-history",
-      gradient: "from-indigo-500 to-purple-600",
-      badge: "Database"
+      gradient: "from-indigo-500 to-purple-600"
     },
     {
       title: "Meeting Room",
@@ -55,8 +52,7 @@ const Dashboard = () => {
       description: "Your AI recruitment copilot",
       icon: MessageSquare,
       path: "/chat",
-      gradient: "from-pink-500 to-rose-500",
-      badge: "AI"
+      gradient: "from-pink-500 to-rose-500"
     },
     {
       title: "Post a Job",
@@ -84,8 +80,7 @@ const Dashboard = () => {
       description: "Enable Claude Desktop integration",
       icon: Terminal,
       action: () => setShowMCPModal(true),
-      gradient: "from-gray-600 to-gray-800",
-      badge: "New"
+      gradient: "from-gray-600 to-gray-800"
     }
   ];
 
@@ -95,8 +90,8 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto">
           {/* Compact Hero Section */}
           <div className="mb-6 text-center">
-            <img 
-              src="https://kxghaajojntkqrmvsngn.supabase.co/storage/v1/object/public/logos/Apply2025logo.png"
+            <img
+              src="/assets/apply-logo.svg"
               alt="Apply Logo"
               className="h-12 object-contain mx-auto mb-3"
             />
@@ -125,22 +120,6 @@ const Dashboard = () => {
                       }
                     }}
                   >
-                    {/* Badge */}
-                    {tool.badge && (
-                      <div className="absolute -top-1 left-2 z-10">
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-[10px] px-2 py-0.5 ${
-                            tool.badge === 'New' ? 'bg-green-600 text-white' : 
-                            tool.isPrimary ? 'bg-purple-600 text-white' : 
-                            'bg-gray-700 text-white'
-                          }`}
-                        >
-                          {tool.badge}
-                        </Badge>
-                      </div>
-                    )}
-                    
                     {/* Icon */}
                     <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <tool.icon className="h-4 w-4 text-gray-600" />

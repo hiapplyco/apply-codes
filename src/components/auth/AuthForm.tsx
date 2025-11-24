@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/integrations/supabase/client";
 import { SocialAuthButtons } from "./SocialAuthButtons";
 import { PhoneAuth } from "./PhoneAuth";
 import { Mail, Phone, UserPlus, LogIn } from "lucide-react";
+import { FirebaseEmailAuthForm } from "./FirebaseEmailAuthForm";
 
 interface AuthFormProps {
   redirectTo?: string;
@@ -14,7 +12,6 @@ interface AuthFormProps {
 export function AuthForm({ redirectTo, onSuccess }: AuthFormProps) {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [view, setView] = useState<'sign_in' | 'sign_up'>('sign_in');
-
   return (
     <div className="space-y-6">
       {/* Sign In / Sign Up Tabs */}
@@ -71,80 +68,11 @@ export function AuthForm({ redirectTo, onSuccess }: AuthFormProps) {
       
       {/* Auth Forms */}
       {authMethod === 'email' ? (
-        /* Supabase Auth UI for Email/Password */
-        <Auth
-          supabaseClient={supabase}
+        /* Firebase Email/Password Auth Form */
+        <FirebaseEmailAuthForm
           view={view}
-          appearance={{
-            theme: ThemeSupa,
-            style: {
-              button: {
-                background: '#8B5CF6',
-                border: '2px solid black',
-                boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
-                borderRadius: '4px',
-                color: 'white',
-                fontWeight: 'bold',
-                padding: '10px 20px',
-              },
-              input: {
-                border: '2px solid black',
-                boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
-                borderRadius: '4px',
-                padding: '10px',
-              },
-              label: {
-                color: '#44332A',
-                fontWeight: 'medium',
-              },
-              loader: {
-                color: '#8B5CF6',
-              },
-              message: {
-                color: '#ef4444',
-                fontSize: '14px',
-                marginTop: '4px',
-              },
-            },
-            variables: {
-              default: {
-                colors: {
-                  brand: '#8B5CF6',
-                  brandAccent: '#7c4ef3',
-                },
-              },
-            },
-          }}
-          theme="light"
-          providers={[]} // We're handling social providers ourselves
-          redirectTo={redirectTo || `${window.location.origin}/reset-password`}
-          onlyThirdPartyProviders={false}
-          socialLayout="vertical"
-          localization={{
-            variables: {
-              sign_in: {
-                email_label: 'Email address',
-                password_label: 'Password',
-                button_label: 'Sign in to your account',
-                loading_button_label: 'Signing in...',
-                social_provider_text: 'Sign in with {{provider}}',
-                link_text: "",
-              },
-              sign_up: {
-                email_label: 'Email address',
-                password_label: 'Create a secure password',
-                button_label: 'Create your account',
-                loading_button_label: 'Creating account...',
-                social_provider_text: 'Sign up with {{provider}}',
-                link_text: '',
-              },
-              forgotten_password: {
-                link_text: 'Forgot your password?',
-                button_label: 'Send reset instructions',
-                loading_button_label: 'Sending instructions...',
-              },
-            },
-          }}
+          onSuccess={onSuccess}
+          redirectTo={redirectTo}
         />
       ) : (
         /* Phone Authentication */

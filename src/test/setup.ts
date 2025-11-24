@@ -1,6 +1,25 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeAll, afterAll, vi } from 'vitest';
+
+// Disable auth bypass in test environment
+vi.stubEnv('VITE_BYPASS_AUTH', 'false');
+
+// Mock ProjectContext globally
+vi.mock('@/context/ProjectContext', () => ({
+  useProjectContext: () => ({
+    projects: [],
+    loading: false,
+    selectedProjectId: null,
+    selectedProject: undefined,
+    setSelectedProjectId: vi.fn(),
+    createProject: vi.fn().mockResolvedValue(null),
+    updateProject: vi.fn().mockResolvedValue(true),
+    archiveProject: vi.fn().mockResolvedValue(true),
+    refetch: vi.fn().mockResolvedValue(undefined),
+  }),
+  ProjectProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Clean up after each test
 afterEach(() => {

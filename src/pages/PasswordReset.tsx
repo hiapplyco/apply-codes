@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { Lock, AlertCircle } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 
 const PasswordReset = () => {
   const [password, setPassword] = useState("");
@@ -14,49 +14,29 @@ const PasswordReset = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const { updateUser } = useAuth();
+  const [actionCode, setActionCode] = useState<string | null>(null);
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Handle the password reset token from the URL
     const handlePasswordReset = async () => {
       try {
-        // First, check if we have hash params (Supabase sends tokens as hash params)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const access_token = hashParams.get('access_token');
-        const refresh_token = hashParams.get('refresh_token');
-        const type = hashParams.get('type');
-        
-        if (type === 'recovery' && access_token) {
-          // We have a recovery token, set the session
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token: refresh_token || '',
-          });
+        if (!auth) {
+          throw new Error("Firebase authentication not configured");
+        }
 
-          if (error) {
-            console.error("Error setting session from recovery token:", error);
-            setIsValidSession(false);
-          } else if (data.session) {
-            console.log("Recovery session established");
-            setIsValidSession(true);
-            // Clean up the URL
-            window.history.replaceState(null, '', window.location.pathname);
-          }
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode');
+        const oobCode = params.get('oobCode');
+
+        if (mode === 'resetPassword' && oobCode) {
+          const email = await verifyPasswordResetCode(auth, oobCode);
+          setResetEmail(email);
+          setActionCode(oobCode);
+          setIsValidSession(true);
         } else {
-          // No recovery token in URL, check for existing session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error("Session check error:", error);
-            setIsValidSession(false);
-          } else if (session) {
-            // Always show reset form if we have any session on this page
-            // The user clicked the reset link, so they want to reset their password
-            setIsValidSession(true);
-          } else {
-            setIsValidSession(false);
-          }
+          setIsValidSession(false);
         }
       } catch (error) {
         console.error("Error in password reset flow:", error);
@@ -91,19 +71,21 @@ const PasswordReset = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await updateUser({ password });
-
-      if (error) {
-        toast.error(error.message || "Failed to update password");
-      } else {
-        toast.success("Password updated successfully!");
-        // Sign out to ensure clean state
-        await supabase.auth.signOut();
-        navigate("/");
+      if (!auth) {
+        throw new Error("Firebase authentication not configured");
       }
+      if (!actionCode) {
+        throw new Error("Invalid or missing password reset code.");
+      }
+
+      await confirmPasswordReset(auth, actionCode, password);
+
+      toast.success("Password updated successfully! Please sign in with your new password.");
+      navigate("/login");
     } catch (error) {
-      toast.error("An unexpected error occurred");
       console.error("Password update error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to update password";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +148,9 @@ const PasswordReset = () => {
           </div>
           <CardTitle className="text-center">Set New Password</CardTitle>
           <CardDescription className="text-center">
-            Enter your new password below
+            {resetEmail
+              ? `Resetting password for ${resetEmail}`
+              : "Enter your new password below"}
           </CardDescription>
         </CardHeader>
         <CardContent>

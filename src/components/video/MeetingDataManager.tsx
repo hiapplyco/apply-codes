@@ -1,18 +1,22 @@
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db } from "@/lib/firebase";
+import { functionBridge } from "@/lib/function-bridge";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 interface MeetingData {
   startTime: Date;
   endTime: Date;
   participants: any[];
   transcription: string;
+  meetingType?: string;
+  title?: string;
 }
 
 export const MeetingDataManager = (projectId?: string | null) => {
   const generateMeetingSummary = async (transcriptText: string) => {
     try {
-      const { data: { secret: geminiApiKey } } = await supabase.functions.invoke('get-gemini-key');
+      const { secret: geminiApiKey } = await functionBridge.getGeminiKey();
       if (!geminiApiKey) {
         throw new Error('GEMINI_API_KEY not found');
       }
@@ -36,9 +40,9 @@ export const MeetingDataManager = (projectId?: string | null) => {
     }
   };
 
-  const saveMeetingData = async ({ startTime, endTime, participants, transcription }: MeetingData) => {
+  const saveMeetingData = async ({ startTime, endTime, participants, transcription, meetingType, title }: MeetingData) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth?.currentUser;
       if (!user) {
         console.error("User not authenticated");
         return;
@@ -46,25 +50,26 @@ export const MeetingDataManager = (projectId?: string | null) => {
 
       const summary = await generateMeetingSummary(transcription);
 
-      const { data, error } = await supabase
-        .from('meetings')
-        .insert({
-          user_id: user.id,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          participants: participants,
-          transcription: transcription,
-          summary: summary,
-          meeting_date: new Date().toISOString().split('T')[0],
-          project_id: projectId
-        })
-        .select()
-        .single();
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
-      
+      const docRef = await addDoc(collection(db, "meetings"), {
+        userId: user.uid,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        participants,
+        transcription,
+        summary,
+        meetingDate: new Date().toISOString().split('T')[0],
+        projectId: projectId || null,
+        meetingType: meetingType || null,
+        title: title || null,
+        createdAt: serverTimestamp()
+      });
+
       toast.success("Meeting data saved successfully");
-      return data;
+      return { id: docRef.id, summary };
     } catch (error) {
       console.error('Error saving meeting data:', error);
       toast.error("Failed to save meeting data");

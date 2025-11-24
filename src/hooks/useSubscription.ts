@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import {
+  doc,
+  onSnapshot,
+  setDoc,
+  serverTimestamp,
+  getDoc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useNewAuth } from '@/context/NewAuthContext';
 
 export interface SubscriptionDetails {
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
@@ -32,83 +39,109 @@ export interface SubscriptionDetails {
 }
 
 export const useSubscription = () => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !db) {
       setSubscription(null);
       setLoading(false);
       return;
     }
 
-    fetchSubscription();
+    let unsubscribeSubscription: (() => void) | undefined;
 
-    // Subscribe to subscription changes
-    const subscription = supabase
-      .channel('subscription_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_subscription_details',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          fetchSubscription();
-        }
-      )
-      .subscribe();
+    const setupSubscriptionListener = async () => {
+      try {
+        const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+
+        // Set up real-time listener for subscription changes
+        unsubscribeSubscription = onSnapshot(
+          subscriptionDocRef,
+          (doc) => {
+            if (doc.exists()) {
+              const data = doc.data();
+              processSubscriptionData(data);
+            } else {
+              // No subscription record found, create default trial subscription
+              createDefaultSubscription();
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error('Error listening to subscription:', error);
+            setError(error.message);
+            setLoading(false);
+          }
+        );
+
+      } catch (error) {
+        console.error('Error setting up subscription listener:', error);
+        setError(error instanceof Error ? error.message : 'Failed to set up subscription listener');
+        setLoading(false);
+      }
+    };
+
+    setupSubscriptionListener();
 
     return () => {
-      subscription.unsubscribe();
+      if (unsubscribeSubscription) {
+        unsubscribeSubscription();
+      }
     };
   }, [user]);
 
+  const processSubscriptionData = (data: any) => {
+    try {
+      // Calculate time remaining
+      const endDate = data.status === 'trialing' ? data.trialEndDate : data.currentPeriodEnd;
+      const timeRemaining = calculateTimeRemaining(endDate);
+
+      setSubscription({
+        status: data.status,
+        tier: data.tier,
+        trialStartDate: data.trialStartDate,
+        trialEndDate: data.trialEndDate,
+        currentPeriodEnd: data.currentPeriodEnd,
+        canceledAt: data.canceledAt,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        timeRemaining,
+        limits: {
+          searches: data.searchesLimit,
+          candidatesEnriched: data.candidatesEnrichedLimit,
+          aiCalls: data.aiCallsLimit,
+          videoInterviews: data.videoInterviewsLimit,
+          projects: data.projectsLimit,
+          teamMembers: data.teamMembersLimit,
+        },
+        usage: {
+          searches: data.searchesCount || 0,
+          candidatesEnriched: data.candidatesEnrichedCount || 0,
+          aiCalls: data.aiCallsCount || 0,
+          videoInterviews: data.videoInterviewsCount || 0,
+        },
+      });
+
+      setError(null);
+    } catch (err) {
+      console.error('Error processing subscription data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process subscription data');
+    }
+  };
+
   const fetchSubscription = async () => {
+    if (!user || !db) return;
+
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('user_subscription_details')
-        .select('*')
-        .eq('user_id', user!.id)
-        .maybeSingle();
 
-      if (error) throw error;
+      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+      const docSnapshot = await getDoc(subscriptionDocRef);
 
-      if (data) {
-        // Calculate time remaining
-        const endDate = data.status === 'trialing' ? data.trial_end_date : data.current_period_end;
-        const timeRemaining = calculateTimeRemaining(endDate);
-
-        setSubscription({
-          status: data.status,
-          tier: data.tier,
-          trialStartDate: data.trial_start_date,
-          trialEndDate: data.trial_end_date,
-          currentPeriodEnd: data.current_period_end,
-          canceledAt: data.canceled_at,
-          cancelAtPeriodEnd: data.cancel_at_period_end,
-          timeRemaining,
-          limits: {
-            searches: data.searches_limit,
-            candidatesEnriched: data.candidates_enriched_limit,
-            aiCalls: data.ai_calls_limit,
-            videoInterviews: data.video_interviews_limit,
-            projects: data.projects_limit,
-            teamMembers: data.team_members_limit,
-          },
-          usage: {
-            searches: data.searches_count || 0,
-            candidatesEnriched: data.candidates_enriched_count || 0,
-            aiCalls: data.ai_calls_count || 0,
-            videoInterviews: data.video_interviews_count || 0,
-          },
-        });
+      if (docSnapshot.exists()) {
+        processSubscriptionData(docSnapshot.data());
       } else {
         // No subscription record found, create default trial subscription
         await createDefaultSubscription();
@@ -122,30 +155,38 @@ export const useSubscription = () => {
   };
 
   const createDefaultSubscription = async () => {
+    if (!user || !db) return;
+
     try {
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 days from now
 
-      const { error } = await supabase
-        .from('user_subscription_details')
-        .insert({
-          user_id: user!.id,
-          status: 'trialing',
-          tier: 'free_trial',
-          trial_start_date: new Date().toISOString(),
-          trial_end_date: trialEndDate.toISOString(),
-          searches_limit: 10,
-          candidates_enriched_limit: 50,
-          ai_calls_limit: 100,
-          video_interviews_limit: 5,
-          projects_limit: 3,
-          team_members_limit: 1,
-        });
+      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
 
-      if (error) throw error;
+      await setDoc(subscriptionDocRef, {
+        userId: user.uid,
+        status: 'trialing',
+        tier: 'free_trial',
+        trialStartDate: new Date().toISOString(),
+        trialEndDate: trialEndDate.toISOString(),
+        currentPeriodEnd: null,
+        canceledAt: null,
+        cancelAtPeriodEnd: false,
+        searchesLimit: 10,
+        candidatesEnrichedLimit: 50,
+        aiCallsLimit: 100,
+        videoInterviewsLimit: 5,
+        projectsLimit: 3,
+        teamMembersLimit: 1,
+        searchesCount: 0,
+        candidatesEnrichedCount: 0,
+        aiCallsCount: 0,
+        videoInterviewsCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
 
-      // Fetch the newly created subscription
-      await fetchSubscription();
+      // The real-time listener will automatically update the subscription state
     } catch (err) {
       console.error('Error creating default subscription:', err);
       throw err;
@@ -170,17 +211,25 @@ export const useSubscription = () => {
 
   const createCheckoutSession = async (priceId: string) => {
     try {
-      const response = await supabase.functions.invoke('create-checkout-session', {
-        body: {
+      // Use Firebase Cloud Function instead of Supabase function
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           priceId,
           successUrl: `${window.location.origin}/dashboard?success=true`,
           cancelUrl: `${window.location.origin}/pricing?canceled=true`,
-        },
+        }),
       });
 
-      if (response.error) throw response.error;
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
 
-      return response.data;
+      return await response.json();
     } catch (err) {
       console.error('Error creating checkout session:', err);
       throw err;
@@ -189,15 +238,23 @@ export const useSubscription = () => {
 
   const createPortalSession = async () => {
     try {
-      const response = await supabase.functions.invoke('create-portal-session', {
-        body: {
-          returnUrl: `${window.location.origin}/account`,
+      // Use Firebase Cloud Function instead of Supabase function
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/create-portal-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          returnUrl: `${window.location.origin}/account`,
+        }),
       });
 
-      if (response.error) throw response.error;
+      if (!response.ok) {
+        throw new Error('Failed to create portal session');
+      }
 
-      return response.data;
+      return await response.json();
     } catch (err) {
       console.error('Error creating portal session:', err);
       throw err;
@@ -206,13 +263,24 @@ export const useSubscription = () => {
 
   const checkUsageLimit = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
     try {
-      const { data, error } = await supabase.rpc('check_usage_limit', {
-        user_uuid: user!.id,
-        usage_type: usageType,
+      // Use Firebase Cloud Function instead of Supabase RPC
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/check-usage-limit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_uuid: user!.id,
+          usage_type: usageType,
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to check usage limit');
+      }
 
+      const data = await response.json();
       return data as boolean;
     } catch (err) {
       console.error('Error checking usage limit:', err);
@@ -222,12 +290,22 @@ export const useSubscription = () => {
 
   const incrementUsage = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
     try {
-      const { error } = await supabase.rpc('increment_usage', {
-        user_uuid: user!.id,
-        usage_type: usageType,
+      // Use Firebase Cloud Function instead of Supabase RPC
+      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
+      const response = await fetch(`${functionUrl}/increment-usage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_uuid: user!.id,
+          usage_type: usageType,
+        }),
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error('Failed to increment usage');
+      }
 
       // Refresh subscription data
       await fetchSubscription();

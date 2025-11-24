@@ -1,7 +1,7 @@
 # Session Memory Storage
 
 ## Purpose
-This directory stores session-based memory data, conversation history, and contextual information for development sessions using the Claude-Flow orchestration system.
+This directory stores session-based memory data, conversation history, and contextual information for development sessions.
 
 ## Structure
 Sessions are organized by date and session ID for easy retrieval:
@@ -13,8 +13,7 @@ memory/sessions/
 │   │   ├── metadata.json        # Session metadata and configuration
 │   │   ├── conversation.md      # Full conversation history
 │   │   ├── decisions.md         # Key decisions and rationale
-│   │   ├── artifacts/           # Generated files and outputs
-│   │   └── coordination_state/  # Coordination system snapshots
+│   │   └── artifacts/           # Generated files and outputs
 │   └── ...
 └── shared/
     ├── patterns.md              # Common session patterns
@@ -26,7 +25,7 @@ memory/sessions/
 2. **Metadata Completeness**: Always fill out session metadata
 3. **Conversation Logging**: Document all significant interactions
 4. **Artifact Organization**: Structure generated files clearly
-5. **State Preservation**: Snapshot coordination state regularly
+5. **State Preservation**: Save important context regularly
 
 ## Last Updated
-2025-07-19T17:49:47.849Z
+2025-09-30

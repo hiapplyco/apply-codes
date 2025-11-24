@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { db } from "@/lib/firebase";
+import { useNewAuth } from "@/context/NewAuthContext";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  deleteDoc,
+  updateDoc
+} from "firebase/firestore";
 import { 
   ArrowLeft,
   Users,
@@ -35,9 +46,10 @@ interface Project {
   description: string;
   color: string;
   icon: string;
-  candidates_count: number;
+  candidates_count?: number;
   created_at: string;
   updated_at: string;
+  user_id?: string;
 }
 
 interface SavedCandidate {
@@ -53,17 +65,18 @@ interface SavedCandidate {
   profile_summary: string | null;
   profile_completeness: number | null;
   created_at: string;
-  project_candidates: {
-    added_at: string;
-    notes: string | null;
-    tags: string[] | null;
-  }[];
+  projectCandidateId?: string;
+  projectMetadata?: {
+    added_at?: string | null;
+    notes?: string | null;
+    tags?: string[] | null;
+  };
 }
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [project, setProject] = useState<Project | null>(null);
   const [candidates, setCandidates] = useState<SavedCandidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +86,22 @@ const ProjectDetail = () => {
   
   // Use profile enrichment hook
   const { enrichProfile, isLoading: isEnriching } = useProfileEnrichment();
+
+  const normalizeTimestamp = (value: any): string => {
+    if (!value) {
+      return new Date().toISOString();
+    }
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    if (value && typeof value.toDate === "function") {
+      return value.toDate().toISOString();
+    }
+    if (typeof value === "string") {
+      return value;
+    }
+    return new Date().toISOString();
+  };
 
   useEffect(() => {
     if (user && projectId) {
@@ -101,81 +130,120 @@ const ProjectDetail = () => {
     try {
       setLoading(true);
 
-      // Wait for user to be available
+      if (!projectId) {
+        throw new Error("Project ID missing");
+      }
+
       if (!user?.id) {
-        console.warn('User not authenticated, skipping data fetch');
+        console.warn("User not authenticated, skipping data fetch");
         return;
       }
 
-      // Fetch project details
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (projectError) {
-        console.error('Project fetch error:', projectError);
-        throw new Error(`Failed to fetch project: ${projectError.message}`);
+      if (!db) {
+        throw new Error("Firestore not initialized");
       }
-      
-      if (!projectData) {
-        throw new Error('Project not found or access denied');
-      }
-      
-      setProject(projectData);
 
-      // Fetch candidates in the project (using LEFT JOIN to handle empty projects)
-      const { data: candidatesData, error: candidatesError } = await supabase
-        .from("saved_candidates")
-        .select(`
-          *,
-          project_candidates(
-            added_at,
-            notes,
-            tags
-          )
-        `)
-        .eq("project_candidates.project_id", projectId)
-        .order("project_candidates.added_at", { ascending: false });
+      const projectRef = doc(db, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
 
-      if (candidatesError) {
-        console.error('Candidates fetch error:', candidatesError);
-        // Don't fail the whole page if candidates can't load
-        toast.error('Failed to load candidates, but project loaded successfully');
-        setCandidates([]);
-      } else {
-        setCandidates(candidatesData || []);
+      if (!projectSnap.exists()) {
+        throw new Error("Project not found or access denied");
       }
+
+      const projectData = projectSnap.data() as Project;
+
+      if (projectData.user_id && projectData.user_id !== user.uid) {
+        throw new Error("Access denied for this project");
+      }
+
+      const projectCandidatesQuery = query(
+        collection(db, "project_candidates"),
+        where("project_id", "==", projectId),
+        orderBy("created_at", "desc")
+      );
+
+      const projectCandidatesSnapshot = await getDocs(projectCandidatesQuery);
+
+      const candidateEntries = await Promise.all(
+        projectCandidatesSnapshot.docs.map(async (projectCandidateDoc) => {
+          const projectCandidateData = projectCandidateDoc.data() as any;
+          const candidateRef = doc(db, "saved_candidates", projectCandidateData.candidate_id);
+          const candidateSnap = await getDoc(candidateRef);
+
+          if (!candidateSnap.exists()) {
+            return null;
+          }
+
+          const candidateData = candidateSnap.data() as any;
+
+          const candidate: SavedCandidate = {
+            id: candidateSnap.id,
+            name: candidateData.name,
+            linkedin_url: candidateData.linkedin_url,
+            job_title: candidateData.job_title,
+            company: candidateData.company,
+            location: candidateData.location,
+            work_email: candidateData.work_email ?? null,
+            personal_emails: candidateData.personal_emails ?? null,
+            mobile_phone: candidateData.mobile_phone ?? null,
+            profile_summary: candidateData.profile_summary ?? null,
+            profile_completeness: candidateData.profile_completeness ?? null,
+            created_at: normalizeTimestamp(candidateData.created_at),
+            projectCandidateId: projectCandidateDoc.id,
+            projectMetadata: {
+              added_at: normalizeTimestamp(projectCandidateData.added_at || projectCandidateData.created_at),
+              notes: projectCandidateData.notes || null,
+              tags: projectCandidateData.tags || []
+            }
+          };
+
+          return candidate;
+        })
+      );
+
+      const filteredCandidates = candidateEntries.filter(
+        (candidate): candidate is SavedCandidate => candidate !== null
+      );
+
+      setProject({
+        id: projectSnap.id,
+        ...projectData,
+        candidates_count: filteredCandidates.length,
+        created_at: normalizeTimestamp(projectData.created_at),
+        updated_at: normalizeTimestamp(projectData.updated_at)
+      });
+
+      setCandidates(filteredCandidates);
     } catch (error) {
       console.error("Error fetching project data:", error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to load project data: ${errorMessage}`);
-      // Update navigation to reflect new route structure
       navigate("/profile");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRemoveCandidate = async (candidateId: string) => {
+  const handleRemoveCandidate = async (candidateId: string, projectCandidateId?: string) => {
     if (!confirm("Are you sure you want to remove this candidate from the project?")) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from("project_candidates")
-        .delete()
-        .eq("project_id", projectId)
-        .eq("candidate_id", candidateId);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
+      if (!projectCandidateId) {
+        throw new Error("Unable to locate project candidate record");
+      }
+
+      await deleteDoc(doc(db, "project_candidates", projectCandidateId));
 
       toast.success("Candidate removed from project");
       fetchProjectData();
     } catch (error) {
+      console.error(error);
       toast.error("Failed to remove candidate");
     }
   };
@@ -206,7 +274,8 @@ const ProjectDetail = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${project?.name.replace(/\s+/g, "-")}-candidates.csv`;
+    const projectName = project?.name || "project";
+    a.download = `${projectName.replace(/\s+/g, "-")}-candidates.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -227,32 +296,27 @@ const ProjectDetail = () => {
       const enrichedData = await enrichProfile(candidate.linkedin_url);
       
       if (enrichedData) {
-        // Update the candidate in the database with the enriched data
-        const { error } = await supabase
-          .from('saved_candidates')
-          .update({
-            work_email: enrichedData.work_email || candidate.work_email,
-            personal_emails: enrichedData.personal_emails || candidate.personal_emails,
-            mobile_phone: enrichedData.mobile_phone || candidate.mobile_phone,
-            profile_summary: enrichedData.bio || enrichedData.summary || candidate.profile_summary,
-            // Update other fields if they exist in enrichedData
-            ...(enrichedData.job_title && { job_title: enrichedData.job_title }),
-            ...(enrichedData.job_company_name && { company: enrichedData.job_company_name }),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', candidate.id);
-
-        if (error) {
-          console.error('Error updating candidate:', error);
-          toast.error('Failed to save enriched data');
-        } else {
-          // Refresh the candidates list to show updated data
-          fetchProjectData();
-          toast.success('Contact information updated successfully');
+        if (!db) {
+          throw new Error("Firestore not initialized");
         }
+
+        const candidateRef = doc(db, "saved_candidates", candidate.id);
+        await updateDoc(candidateRef, {
+          work_email: enrichedData.work_email || candidate.work_email,
+          personal_emails: enrichedData.personal_emails || candidate.personal_emails,
+          mobile_phone: enrichedData.mobile_phone || candidate.mobile_phone,
+          profile_summary: enrichedData.bio || enrichedData.summary || candidate.profile_summary,
+          ...(enrichedData.job_title && { job_title: enrichedData.job_title }),
+          ...(enrichedData.job_company_name && { company: enrichedData.job_company_name }),
+          updated_at: new Date().toISOString()
+        });
+
+        fetchProjectData();
+        toast.success('Contact information updated successfully');
       }
     } catch (error) {
       console.error('Error enriching candidate:', error);
+      toast.error('Failed to enrich candidate');
     } finally {
       setEnrichingCandidate(null);
     }
@@ -268,6 +332,9 @@ const ProjectDetail = () => {
       candidate.work_email?.toLowerCase().includes(searchLower)
     );
   });
+
+  const totalCandidates = candidates.length;
+  const projectCreatedDate = project?.created_at ? new Date(project.created_at) : null;
 
   if (loading) {
     return (
@@ -321,12 +388,12 @@ const ProjectDetail = () => {
               <div className="flex gap-4 mt-3 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  Created {format(new Date(project.created_at), "MMM d, yyyy")}
+                  Created {projectCreatedDate ? format(projectCreatedDate, "MMM d, yyyy") : "N/A"}
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
-                  {project.candidates_count} candidates
+                  {(project.candidates_count ?? totalCandidates)} candidates
                 </span>
               </div>
             </div>
@@ -516,7 +583,7 @@ const ProjectDetail = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleRemoveCandidate(candidate.id)}
+                          onClick={() => handleRemoveCandidate(candidate.id, candidate.projectCandidateId)}
                         className="text-red-600 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />

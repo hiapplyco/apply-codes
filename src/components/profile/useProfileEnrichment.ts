@@ -1,6 +1,6 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { functionBridge } from '@/lib/function-bridge';
 
 export interface EnrichedProfileData {
   work_email?: string;
@@ -36,34 +36,20 @@ export const useProfileEnrichment = () => {
       setLoading(true);
       setError(null);
       
+      let loadingToast: string | number | undefined;
       try {
-        toast.loading("Fetching contact information...");
-        const response = await fetch('https://kxghaajojntkqrmvsngn.supabase.co/functions/v1/enrich-profile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            profileUrl
-          })
-        });
+        loadingToast = toast.loading("Fetching contact information...");
+        const data = await functionBridge.enrichProfile({ profileUrl });
+        const profileData = data?.data ?? data;
+        setEnrichedData(profileData || null);
         
-        if (!response.ok) {
-          throw new Error('Failed to enrich profile');
-        }
-        
-        const data = await response.json();
-        
-        toast.dismiss();
-        setEnrichedData(data.data || null);
-        
-        if (data.data) {
+        if (profileData) {
           toast.success("Contact information found!");
-          if (data.data.work_email) {
-            toast.success(`Email: ${data.data.work_email}`);
+          if (profileData.work_email) {
+            toast.success(`Email: ${profileData.work_email}`);
           }
-          if (data.data.mobile_phone) {
-            toast.success(`Phone: ${data.data.mobile_phone}`);
+          if (profileData.mobile_phone) {
+            toast.success(`Phone: ${profileData.mobile_phone}`);
           }
         } else {
           toast.error("No contact information found");
@@ -75,6 +61,9 @@ export const useProfileEnrichment = () => {
           : 'Error retrieving contact information');
         toast.error("Could not retrieve contact information");
       } finally {
+        if (loadingToast !== undefined) {
+          toast.dismiss(loadingToast);
+        }
         setLoading(false);
       }
     }

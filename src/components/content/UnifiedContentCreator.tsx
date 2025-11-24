@@ -8,14 +8,14 @@ import { Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Loader2, FileText, Info } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextBar } from "@/components/context/ContextBar";
 import { ContentGenerationDialog } from "@/components/content/ContentGenerationDialog";
 import { useProjectContext } from "@/context/ProjectContext";
 import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
-import contentTypes from "../../../contentcreationbots.json";
+import contentTypes from "../../../data/contentcreationbots.json";
 
 interface GeneratedContent {
   content: string;
@@ -71,38 +71,31 @@ export const UnifiedContentCreator = () => {
         systemPrompt: selectedOption.system_prompt.substring(0, 100) + '...' // Log first 100 chars
       });
 
-      const { data, error } = await supabase.functions.invoke('generate-content', {
-        body: {
-          contentType: selectedContentType,
-          userInput: userInput,
-          systemPrompt: selectedOption.system_prompt,
-          contextContent: contextContent,
-          projectContext: selectedProject ? `Project: ${selectedProject.name}\nDescription: ${selectedProject.description || 'No description'}` : '',
-          projectId: selectedProject?.id,
-        },
+      const response = await functionBridge.generateContent({
+        contentType: selectedContentType,
+        userInput,
+        systemPrompt: selectedOption.system_prompt,
+        contextContent,
+        projectContext: selectedProject ? `Project: ${selectedProject.name}\nDescription: ${selectedProject.description || 'No description'}` : '',
+        projectId: selectedProject?.id
       });
 
-      console.log('Response from generate-content:', { data, error });
+      console.log('Response from generate-content:', response);
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
-
-      if (data && data.content) {
-        console.log('Content received, length:', data.content.length);
-        const htmlContent = advancedMarkdownToHtml(data.content);
+      if (response && response.content) {
+        console.log('Content received, length:', response.content.length);
+        const htmlContent = advancedMarkdownToHtml(response.content);
         console.log('HTML content generated, length:', htmlContent.length);
         
         setGeneratedContent({
           content: htmlContent,
-          markdown: data.markdown || data.content,
+          markdown: response.markdown || response.content,
         });
         setRawContent(htmlContent);
         toast.success("Content generated successfully!");
       } else {
-        console.error('No content in response:', data);
-        throw new Error(`No content generated. Response: ${JSON.stringify(data)}`);
+        console.error('No content in response:', response);
+        throw new Error(`No content generated. Response: ${JSON.stringify(response)}`);
       }
     } catch (error) {
       console.error("Error generating content:", error);

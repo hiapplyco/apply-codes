@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isProjectMember(projectId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/projects/$(projectId)) &&
+        (get(/databases/$(database)/documents/projects/$(projectId)).data.user_id == request.auth.uid ||
+         request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.members);
+    }
+
+    // User profiles - users can only access their own profile
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Saved candidates subcollection
+      match /savedCandidates/{candidateId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Search history subcollection
+      match /searchHistory/{searchId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Google accounts subcollection
+      match /googleAccounts/{accountId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Projects - users can access projects they own or are members of
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.user_id == request.auth.uid ||
+         request.auth.uid in resource.data.members);
+      allow create: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+
+      // Project candidates subcollection
+      match /candidates/{candidateId} {
+        allow read, write: if isProjectMember(projectId);
+      }
+
+      // Project scraped data subcollection
+      match /scrapedData/{dataId} {
+        allow read, write: if isProjectMember(projectId);
+      }
+    }
+
+    // Jobs - users can only access their own jobs
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Subscriptions - users can only access their own subscription
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid;
+      allow delete: if false; // Subscriptions should not be deleted by users
+    }
+
+    // Billing history - users can only read their own billing history
+    match /billingHistory/{billId} {
+      allow read: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+      allow write: if false; // Only system can write billing history
+    }
+
+    // Usage tracking - users can read their own usage
+    match /usageTracking/{usageId} {
+      allow read: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+      allow write: if false; // Only system can write usage tracking
+    }
+
+    // Chat messages - users can access their own messages
+    match /chatMessages/{messageId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Context items - users can access their own items
+    match /context_items/{itemId} {
+      allow read: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Agent outputs - users can access their own outputs
+    match /agentOutputs/{outputId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Search history - top level collection for backward compatibility
+    match /searchHistory/{searchId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Saved candidates - top level collection for backward compatibility
+    match /savedCandidates/{candidateId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // User subscription details - users can only access their own subscription info
+    match /user_subscription_details/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false; // Subscription details should not be deleted by users
+    }
+
+    // Searches - users can access their own search results
+    match /searches/{searchId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Kickoff summaries - users can access their own summaries
+    match /kickoffSummaries/{summaryId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+  }
+}

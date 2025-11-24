@@ -1,6 +1,6 @@
 import { BaseAgent } from './BaseAgent';
-import { AgentTask, AgentCapability } from '@/types/orchestration';
-import { supabase } from '@/integrations/supabase/client';
+import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
 import NymeriaService from '@/services/nymeriaService';
 
 interface EnrichmentTaskInput {
@@ -343,7 +343,10 @@ export class EnrichmentAgent extends BaseAgent {
         created_at: new Date().toISOString()
       }));
 
-      await supabase.from('candidate_enrichment').insert(enrichmentRecords);
+      const result = await firestoreClient.from('candidate_enrichment').insert(enrichmentRecords);
+      if (result?.error) {
+        throw result.error;
+      }
     } catch (error) {
       console.error('Failed to save enrichment data:', error);
     }

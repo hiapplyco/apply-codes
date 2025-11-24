@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface GoogleDocsModalProps {
   content: string;
@@ -96,15 +96,13 @@ export function GoogleDocsModal({
     
     setLoadingFolders(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-drive-folders', {
-        body: { accountId: currentAccount.id }
+      const response = await functionBridge.getDriveFolders({
+        accountId: currentAccount.id
       });
 
-      if (error) throw error;
-      
       setAvailableFolders([
         { id: 'root', name: 'My Drive' },
-        ...(data.folders || [])
+        ...(response.folders || [])
       ]);
     } catch (error) {
       console.error('Error loading folders:', error);
@@ -118,30 +116,26 @@ export function GoogleDocsModal({
     try {
       setExportProgress(25);
       
-      const { data, error } = await supabase.functions.invoke('export-to-google-docs', {
-        body: {
-          content,
-          title: exportSettings.title,
-          format: exportSettings.format,
-          sharing: exportSettings.sharing,
-          folderId: exportSettings.folder,
-          description: exportSettings.description,
-          accountId: currentAccount?.id
-        }
+      const exportResult = await functionBridge.exportToGoogleDocs({
+        content,
+        title: exportSettings.title,
+        format: exportSettings.format,
+        sharing: exportSettings.sharing,
+        folderId: exportSettings.folder,
+        description: exportSettings.description,
+        accountId: currentAccount?.id
       });
 
       setExportProgress(75);
 
-      if (error) throw error;
-
-      setShareUrl(data.documentUrl);
+      setShareUrl(exportResult.documentUrl);
       setExportProgress(100);
       
       toast.success('Content exported to Google Docs successfully!');
       
       // Auto-copy link if sharing is enabled
       if (exportSettings.sharing !== 'private') {
-        navigator.clipboard.writeText(data.documentUrl);
+        navigator.clipboard.writeText(exportResult.documentUrl);
         toast.success('Document link copied to clipboard!');
       }
     } catch (error) {
@@ -166,18 +160,14 @@ export function GoogleDocsModal({
     try {
       const emails = shareEmails.split(',').map(email => email.trim()).filter(email => email);
       
-      const { error } = await supabase.functions.invoke('share-google-doc', {
-        body: {
-          documentUrl: shareUrl,
-          emails,
-          permission: shareSettings.permission,
-          notify: shareSettings.notifyCollaborators,
-          message: shareSettings.message,
-          accountId: currentAccount?.id
-        }
+      await functionBridge.shareGoogleDoc({
+        documentUrl: shareUrl,
+        emails,
+        permission: shareSettings.permission,
+        notify: shareSettings.notifyCollaborators,
+        message: shareSettings.message,
+        accountId: currentAccount?.id
       });
-
-      if (error) throw error;
 
       toast.success(`Document shared with ${emails.length} recipient(s)`);
       setShareEmails('');

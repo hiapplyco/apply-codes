@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { X, Link2, Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import { FirecrawlService } from '../../utils/FirecrawlService';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProjectContext } from '../../context/ProjectContext';
+import { auth, db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 interface URLScrapeModalProps {
   isOpen: boolean;
@@ -65,29 +66,25 @@ export function URLScrapeModal({
     if (!activeProjectId) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth?.currentUser;
       if (!user) return;
-
-      // Save scraped data to project metadata
-      const { error } = await supabase
-        .from('project_scraped_data')
-        .insert({
-          project_id: activeProjectId,
-          user_id: user.id,
-          url,
-          summary: text,
-          raw_content: rawContent,
-          context,
-          metadata: {
-            scraped_at: new Date().toISOString(),
-            source: 'url_scraper'
-          }
-        });
-
-      if (error) {
-        console.error('Error saving to project:', error);
-        // Don't throw - we still want to use the scraped content
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
+
+      await addDoc(collection(db, 'project_scraped_data'), {
+        project_id: activeProjectId,
+        user_id: user.uid,
+        url,
+        summary: text,
+        raw_content: rawContent,
+        context,
+        metadata: {
+          scraped_at: new Date().toISOString(),
+          source: 'url_scraper'
+        },
+        created_at: serverTimestamp()
+      });
     } catch (error) {
       console.error('Error in saveToProject:', error);
     }

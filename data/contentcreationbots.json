@@ -1,0 +1,22 @@
+{
+  "contentTypes": [
+    {
+      "id": "linkedin-post",
+      "name": "LinkedIn Post",
+      "description": "Professional networking content",
+      "template": "Share insights and engage with your professional network"
+    },
+    {
+      "id": "blog-post",
+      "name": "Blog Post",
+      "description": "Long-form article content",
+      "template": "Create detailed articles for your blog"
+    },
+    {
+      "id": "email-campaign",
+      "name": "Email Campaign",
+      "description": "Email marketing content",
+      "template": "Craft engaging email campaigns"
+    }
+  ]
+}

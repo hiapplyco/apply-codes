@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
+import { auth, db } from '@/lib/firebase';
+import { functionBridge } from '@/lib/function-bridge';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
 
 interface GoogleAccount {
   id: string;
@@ -47,6 +59,8 @@ export const useGoogleAuth = () => {
   return context;
 };
 
+const accountsCollection = (userId: string) => collection(db, 'users', userId, 'googleAccounts');
+
 export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<GoogleAuthState>({
     accounts: [],
@@ -56,60 +70,70 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     currentAccount: null,
   });
 
-  // Load connected accounts
+  const mapSnapshotToAccount = useCallback((snapshot: any): GoogleAccount => {
+    const data = snapshot.data();
+    return {
+      id: snapshot.id,
+      email: data.email,
+      name: data.name,
+      picture: data.picture || undefined,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken || undefined,
+      scopes: data.scopes || [],
+      tokenExpiry: data.tokenExpiry ? String(data.tokenExpiry) : undefined,
+      createdAt: toIsoString(data.createdAt),
+      lastUsed: toIsoString(data.lastUsed)
+    };
+  }, []);
+
   const loadAccounts = useCallback(async () => {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setState(prev => ({ ...prev, accounts: [], isLoading: false, currentAccount: null }));
+
+      const user = auth?.currentUser;
+      if (!user || !db) {
+        setState(prev => ({ ...prev, accounts: [], currentAccount: null, isLoading: false }));
         return;
       }
 
-      const { data: accounts, error } = await supabase
-        .from('google_accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const accountsQuery = query(accountsCollection(user.uid), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(accountsQuery);
+      const accounts = snapshot.docs.map(mapSnapshotToAccount);
 
-      if (error) {
-        throw error;
-      }
-
-      const currentAccount = accounts?.[0] || null;
-      setState(prev => ({ 
-        ...prev, 
-        accounts: accounts || [], 
-        currentAccount,
-        isLoading: false 
+      setState(prev => ({
+        ...prev,
+        accounts,
+        currentAccount: accounts[0] || null,
+        isLoading: false
       }));
-    } catch (err) {
-      console.error('Error loading Google accounts:', err);
-      setState(prev => ({ 
-        ...prev, 
-        error: err instanceof Error ? err.message : 'Failed to load accounts',
-        isLoading: false 
+    } catch (error) {
+      console.error('Error loading Google accounts:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to load accounts',
+        isLoading: false
       }));
     }
-  }, []);
+  }, [mapSnapshotToAccount]);
 
-  // Connect new account
-  const connectAccount = useCallback(async (scopes: string[] = [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS, GOOGLE_API_SCOPES.DOCS.FULL_ACCESS]) => {
+  const connectAccount = useCallback(async (
+    scopes: string[] = [GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS, GOOGLE_API_SCOPES.DOCS.FULL_ACCESS]
+  ) => {
     if (state.isConnecting) return;
 
     try {
       setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
-      // Generate nonce for security
+      const user = auth?.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const nonceValue = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
       const encoder = new TextEncoder();
-      const encodedNonce = encoder.encode(nonceValue);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', encodedNonce);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashedNonce = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+      const hashedNonce = await crypto.subtle.digest('SHA-256', encoder.encode(nonceValue))
+        .then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
 
-      // Create authorization URL
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.set('client_id', import.meta.env.VITE_GOOGLE_CLIENT_ID);
       authUrl.searchParams.set('redirect_uri', window.location.origin);
@@ -120,127 +144,68 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       authUrl.searchParams.set('state', hashedNonce);
       authUrl.searchParams.set('include_granted_scopes', 'true');
 
-      // Handle OAuth callback
-      const handleAuthCallback = async (code: string, state: string) => {
-        try {
-          if (state !== hashedNonce) {
-            throw new Error('Invalid state parameter - possible CSRF attack');
-          }
-
-          const { data: tokenData, error: tokenError } = await supabase.functions.invoke(
-            'exchange-google-token',
-            {
-              body: { code, redirectUri: window.location.origin }
-            }
-          );
-
-          if (tokenError) {
-            throw tokenError;
-          }
-
-          // Get user info
-          const userInfoResponse = await fetch(
-            'https://www.googleapis.com/oauth2/v2/userinfo',
-            {
-              headers: {
-                Authorization: `Bearer ${tokenData.access_token}`
-              }
-            }
-          );
-
-          if (!userInfoResponse.ok) {
-            throw new Error('Failed to get user info');
-          }
-
-          const userInfo = await userInfoResponse.json();
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (!user) {
-            throw new Error('User not authenticated');
-          }
-
-          // Save account
-          const googleAccount = {
-            user_id: user.id,
-            google_id: userInfo.id,
-            email: userInfo.email,
-            name: userInfo.name,
-            picture: userInfo.picture,
-            access_token: tokenData.access_token,
-            refresh_token: tokenData.refresh_token,
-            scopes: tokenData.scope ? tokenData.scope.split(' ') : scopes,
-            token_expiry: tokenData.expires_at,
-            created_at: new Date().toISOString(),
-            last_used: new Date().toISOString()
-          };
-
-          const { data: savedAccount, error: saveError } = await supabase
-            .from('google_accounts')
-            .upsert(googleAccount, {
-              onConflict: 'user_id,google_id',
-              ignoreDuplicates: false
-            })
-            .select()
-            .single();
-
-          if (saveError) {
-            throw saveError;
-          }
-
-          // Update state
-          setState(prev => {
-            const existingIndex = prev.accounts.findIndex(acc => acc.id === savedAccount.id);
-            let newAccounts: GoogleAccount[];
-            
-            if (existingIndex >= 0) {
-              newAccounts = prev.accounts.map(acc => 
-                acc.id === savedAccount.id ? savedAccount : acc
-              );
-            } else {
-              newAccounts = [savedAccount, ...prev.accounts];
-            }
-
-            return {
-              ...prev,
-              accounts: newAccounts,
-              currentAccount: savedAccount,
-              isConnecting: false
-            };
-          });
-
-          toast.success(`Successfully connected Google account: ${userInfo.email}`);
-        } catch (err) {
-          console.error('Error in auth callback:', err);
-          setState(prev => ({ 
-            ...prev, 
-            error: err instanceof Error ? err.message : 'Authentication failed',
-            isConnecting: false 
-          }));
-          toast.error('Failed to connect Google account');
-        }
-      };
-
-      // Open auth popup
       const popup = window.open(
         authUrl.toString(),
         'google-auth',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
 
-      // Listen for popup messages
+      const handleAuthCallback = async (code: string, callbackState: string) => {
+        try {
+          if (callbackState !== hashedNonce) {
+            throw new Error('Invalid state parameter');
+          }
+
+          const tokenData = await functionBridge.exchangeGoogleToken({
+            code,
+            redirectUri: window.location.origin
+          });
+
+          const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+          });
+
+          if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch Google user info');
+          }
+
+          const userInfo = await userInfoResponse.json();
+
+          await setDoc(doc(accountsCollection(user.uid), userInfo.id), {
+            email: userInfo.email,
+            name: userInfo.name,
+            picture: userInfo.picture || null,
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token || null,
+            scopes: tokenData.scope ? tokenData.scope.split(' ') : scopes,
+            tokenExpiry: tokenData.expires_at,
+            createdAt: serverTimestamp(),
+            lastUsed: serverTimestamp()
+          }, { merge: true });
+
+          await loadAccounts();
+          toast.success(`Connected Google account: ${userInfo.email}`);
+        } catch (error) {
+          console.error('Error completing Google OAuth:', error);
+          toast.error('Failed to connect Google account');
+          setState(prev => ({
+            ...prev,
+            error: error instanceof Error ? error.message : 'Authentication failed'
+          }));
+        } finally {
+          setState(prev => ({ ...prev, isConnecting: false }));
+        }
+      };
+
       const messageHandler = (event: MessageEvent) => {
         if (event.origin !== window.location.origin) return;
-        
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
           handleAuthCallback(event.data.code, event.data.state);
           popup?.close();
           window.removeEventListener('message', messageHandler);
         } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-          setState(prev => ({ 
-            ...prev, 
-            error: event.data.error,
-            isConnecting: false 
-          }));
+          toast.error(event.data.error || 'OAuth failed');
+          setState(prev => ({ ...prev, isConnecting: false }));
           popup?.close();
           window.removeEventListener('message', messageHandler);
         }
@@ -248,103 +213,82 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       window.addEventListener('message', messageHandler);
 
-      // Check if popup was closed
-      const checkClosed = setInterval(() => {
+      const monitor = setInterval(() => {
         if (popup?.closed) {
-          clearInterval(checkClosed);
+          clearInterval(monitor);
           window.removeEventListener('message', messageHandler);
           setState(prev => ({ ...prev, isConnecting: false }));
         }
       }, 1000);
-
-    } catch (err) {
-      console.error('Error connecting account:', err);
-      setState(prev => ({ 
-        ...prev, 
-        error: err instanceof Error ? err.message : 'Failed to connect account',
-        isConnecting: false 
-      }));
-    }
-  }, [state.isConnecting]);
-
-  // Disconnect account
-  const disconnectAccount = useCallback(async (accountId: string) => {
-    try {
-      setState(prev => ({ ...prev, error: null }));
-
-      const { error } = await supabase.functions.invoke(
-        'revoke-google-token',
-        {
-          body: { accountId }
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      setState(prev => {
-        const newAccounts = prev.accounts.filter(acc => acc.id !== accountId);
-        const newCurrentAccount = prev.currentAccount?.id === accountId 
-          ? (newAccounts[0] || null) 
-          : prev.currentAccount;
-
-        return {
-          ...prev,
-          accounts: newAccounts,
-          currentAccount: newCurrentAccount
-        };
-      });
-
-      toast.success('Google account disconnected successfully');
-    } catch (err) {
-      console.error('Error disconnecting account:', err);
-      setState(prev => ({ 
-        ...prev, 
-        error: err instanceof Error ? err.message : 'Failed to disconnect account'
-      }));
-    }
-  }, []);
-
-  // Refresh token
-  const refreshToken = useCallback(async (accountId: string) => {
-    try {
-      setState(prev => ({ ...prev, error: null }));
-
-      const { data: refreshData, error } = await supabase.functions.invoke(
-        'refresh-google-token',
-        {
-          body: { accountId }
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
+    } catch (error) {
+      console.error('Error initiating Google OAuth:', error);
       setState(prev => ({
         ...prev,
-        accounts: prev.accounts.map(acc => 
-          acc.id === accountId 
-            ? { ...acc, ...refreshData, lastUsed: new Date().toISOString() }
-            : acc
-        ),
-        currentAccount: prev.currentAccount?.id === accountId 
-          ? { ...prev.currentAccount, ...refreshData, lastUsed: new Date().toISOString() }
-          : prev.currentAccount
-      }));
-
-      toast.success('Token refreshed successfully');
-    } catch (err) {
-      console.error('Error refreshing token:', err);
-      setState(prev => ({ 
-        ...prev, 
-        error: err instanceof Error ? err.message : 'Failed to refresh token'
+        error: error instanceof Error ? error.message : 'Failed to connect account',
+        isConnecting: false
       }));
     }
-  }, []);
+  }, [state.isConnecting, loadAccounts]);
 
-  // Select account
+  const disconnectAccount = useCallback(async (accountId: string) => {
+    try {
+      const user = auth?.currentUser;
+      if (!user || !db) {
+        throw new Error('User not authenticated');
+      }
+
+      const account = state.accounts.find(acc => acc.id === accountId);
+      if (account?.accessToken) {
+        try {
+          await functionBridge.revokeGoogleToken({ accessToken: account.accessToken });
+        } catch (error) {
+          console.warn('Failed to revoke Google token:', error);
+        }
+      }
+
+      await deleteDoc(doc(accountsCollection(user.uid), accountId));
+      await loadAccounts();
+      toast.success('Google account disconnected');
+    } catch (error) {
+      console.error('Error disconnecting Google account:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to disconnect account'
+      }));
+    }
+  }, [state.accounts, loadAccounts]);
+
+  const refreshToken = useCallback(async (accountId: string) => {
+    try {
+      const user = auth?.currentUser;
+      if (!user || !db) {
+        throw new Error('User not authenticated');
+      }
+
+      const account = state.accounts.find(acc => acc.id === accountId);
+      if (!account?.refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const refreshed = await functionBridge.refreshGoogleToken({ refreshToken: account.refreshToken });
+
+      await updateDoc(doc(accountsCollection(user.uid), accountId), {
+        accessToken: refreshed.access_token,
+        tokenExpiry: refreshed.expires_at,
+        lastUsed: serverTimestamp()
+      });
+
+      await loadAccounts();
+      toast.success('Google token refreshed');
+    } catch (error) {
+      console.error('Error refreshing Google token:', error);
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to refresh token'
+      }));
+    }
+  }, [state.accounts, loadAccounts]);
+
   const selectAccount = useCallback((accountId: string) => {
     setState(prev => ({
       ...prev,
@@ -352,49 +296,40 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   }, []);
 
-  // Check token validity
   const checkTokenValidity = useCallback((accountId: string): boolean => {
     const account = state.accounts.find(acc => acc.id === accountId);
-    if (!account || !account.tokenExpiry) return false;
-    
+    if (!account?.tokenExpiry) return false;
     return new Date(account.tokenExpiry) > new Date();
   }, [state.accounts]);
 
-  // Check required scopes
   const hasRequiredScopes = useCallback((accountId: string, requiredScopes: string[]): boolean => {
     const account = state.accounts.find(acc => acc.id === accountId);
     if (!account) return false;
-    
     return requiredScopes.every(scope => account.scopes.includes(scope));
   }, [state.accounts]);
 
-  // Refresh all tokens
   const refreshAllTokens = useCallback(async () => {
-    const promises = state.accounts.map(account => {
-      if (!checkTokenValidity(account.id)) {
-        return refreshToken(account.id);
+    for (const account of state.accounts) {
+      if (!account.refreshToken) continue;
+      const isValid = checkTokenValidity(account.id);
+      if (!isValid) {
+        await refreshToken(account.id);
       }
-      return Promise.resolve();
-    });
-
-    await Promise.allSettled(promises);
+    }
   }, [state.accounts, checkTokenValidity, refreshToken]);
 
-  // Clear error
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
-  // Load accounts on mount
   useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
 
-  // Auto-refresh tokens
   useEffect(() => {
     const interval = setInterval(() => {
       refreshAllTokens();
-    }, 5 * 60 * 1000); // Check every 5 minutes
+    }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [refreshAllTokens]);
@@ -408,7 +343,7 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     checkTokenValidity,
     hasRequiredScopes,
     refreshAllTokens,
-    clearError,
+    clearError
   };
 
   return (
@@ -418,51 +353,59 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   );
 };
 
-// Standalone hook for components not using the provider
 export const useGoogleAuthStandalone = () => {
   const [accounts, setAccounts] = useState<GoogleAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAccounts = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const user = auth?.currentUser;
+      if (!user || !db) {
         setAccounts([]);
         setIsLoading(false);
         return;
       }
 
-      const { data: googleAccounts, error: fetchError } = await supabase
-        .from('google_accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const snapshot = await getDocs(query(accountsCollection(user.uid), orderBy('createdAt', 'desc')));
+      const mapped = snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          email: data.email,
+          name: data.name,
+          picture: data.picture || undefined,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken || undefined,
+          scopes: data.scopes || [],
+          tokenExpiry: data.tokenExpiry ? String(data.tokenExpiry) : undefined,
+          createdAt: toIsoString(data.createdAt),
+          lastUsed: toIsoString(data.lastUsed)
+        } as GoogleAccount;
+      });
 
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      setAccounts(googleAccounts || []);
-    } catch (err) {
-      console.error('Error loading Google accounts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load accounts');
+      setAccounts(mapped);
+    } catch (error) {
+      console.error('Error loading Google accounts:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load accounts');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadAccounts();
-  }, [loadAccounts]);
+    load();
+  }, [load]);
 
-  return {
-    accounts,
-    isLoading,
-    error,
-    reload: loadAccounts,
-  };
+  return { accounts, isLoading, error, reload: load };
 };
+
+function toIsoString(value: any): string {
+  if (!value) return new Date().toISOString();
+  if (typeof value === 'string') return value;
+  if (value.toDate) return value.toDate().toISOString();
+  return new Date().toISOString();
+}

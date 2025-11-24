@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { firestoreClient } from "@/lib/firebase-database-bridge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -37,23 +38,20 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
   };
 
   const processStep = async (
-    index: number, 
-    functionName: string, 
+    index: number,
+    stepLabel: string,
+    invoke: () => Promise<any>,
     responseKey: string
   ): Promise<any> => {
     try {
       updateStepStatus(index, 'processing', 25);
       
-      const response = await supabase.functions.invoke(functionName, { 
-        body: { content } 
-      });
-      
-      if (response.error) throw response.error;
+      const response = await invoke();
       updateStepStatus(index, 'complete', 100);
       
-      return response.data[responseKey];
+      return response?.[responseKey];
     } catch (error) {
-      console.error(`Error in ${functionName}:`, error);
+      console.error(`Error in ${stepLabel}:`, error);
       updateStepStatus(index, 'error', 0);
       throw error;
     }
@@ -61,7 +59,7 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
 
   const persistToDatabase = useMutation({
     mutationFn: async (agentOutput: any) => {
-      const { error } = await supabase
+      const insertResult = await firestoreClient
         .from('agent_outputs')
         .insert({
           job_id: jobId,
@@ -71,7 +69,7 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
           job_summary: agentOutput.summaryData
         });
 
-      if (error) throw error;
+      if (insertResult.error) throw insertResult.error;
     },
     onError: (error) => {
       console.error('Error persisting to database:', error);
@@ -88,19 +86,39 @@ export const ProcessAgent = ({ content, jobId, onComplete }: ProcessAgentProps) 
     const processContent = async () => {
       try {
         // Process terms
-        const terms = await processStep(0, 'extract-nlp-terms', 'terms');
+        const terms = await processStep(
+          0,
+          'extract-nlp-terms',
+          () => functionBridge.extractNlpTerms({ content }),
+          'terms'
+        );
         if (!isMounted) return;
         
         // Process compensation
-        const compensationData = await processStep(1, 'analyze-compensation', 'analysis');
+        const compensationData = await processStep(
+          1,
+          'analyze-compensation',
+          () => functionBridge.analyzeCompensation({ content }),
+          'analysis'
+        );
         if (!isMounted) return;
         
         // Process description
-        const enhancerData = await processStep(2, 'enhance-job-description', 'enhancedDescription');
+        const enhancerData = await processStep(
+          2,
+          'enhance-job-description',
+          () => functionBridge.enhanceJobDescription({ content }),
+          'enhancedDescription'
+        );
         if (!isMounted) return;
         
         // Process summary
-        const summaryData = await processStep(3, 'summarize-job', 'summary');
+        const summaryData = await processStep(
+          3,
+          'summarize-job',
+          () => functionBridge.summarizeJob({ content }),
+          'summary'
+        );
         if (!isMounted) return;
 
         // Create agent output object

@@ -1,6 +1,5 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Pen, Trash2 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { collection, deleteDoc, doc, getDocs, orderBy, query } from "firebase/firestore";
 
 export type Client = {
   id: string;
@@ -35,24 +36,26 @@ export function ClientList({ onEdit }: ClientListProps) {
   const { data: clients, isLoading, error } = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("*")
-        .order("created_at", { ascending: false });
+      if (!db) return [];
 
-      if (error) throw error;
-      return data as Client[];
+      const clientsRef = collection(db, "clients");
+      const q = query(clientsRef, orderBy("created_at", "desc"));
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as Client[];
     },
   });
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("clients")
-        .delete()
-        .eq("id", id);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
+      await deleteDoc(doc(db, "clients", id));
 
       toast({
         title: "Success",

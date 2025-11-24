@@ -8,7 +8,7 @@ import { FirecrawlService } from '@/utils/FirecrawlService';
 import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchModal';
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
 import LocationModal from '@/components/LocationModal';
-import { supabase } from '@/integrations/supabase/client';
+import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
 
 export interface ContextButtonsProps {
@@ -87,20 +87,13 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     metadata?: Record<string, any>;
   }) => {
     try {
-      const { data, error } = await supabase.functions.invoke('save-context-item', {
-        body: {
-          ...item,
-          project_id: selectedProject?.id || null, // Always store, project optional
-          tags: [context] // Add context as a tag
-        }
+      const data = await functionBridge.saveContextItem({
+        ...item,
+        project_id: selectedProject?.id || null, // Always store, project optional
+        tags: [context] // Add context as a tag
       });
 
-      if (error) {
-        console.error('Failed to save context item:', error);
-        // Don't throw - we want the main functionality to still work
-      } else {
-        console.log('Context item saved successfully:', data);
-      }
+      console.log('Context item saved successfully:', data);
     } catch (error) {
       console.error('Error saving context item:', error);
       // Don't throw - graceful degradation

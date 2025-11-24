@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { functionBridge } from '@/lib/function-bridge';
 import { useInterviewStore } from '@/stores/interviewStore';
 import { InterviewContextManager } from '@/lib/interviewContextManager';
 import type { InterviewContext, TranscriptSegment, InterviewTip } from '@/types/interview';
@@ -39,10 +39,12 @@ export const useInterviewGuidance = ({
       setConnectionStatus('connecting');
 
       // Get WebSocket URL from edge function
-      const { data, error } = await supabase.functions.invoke('interview-guidance-ws');
-      if (error) throw error;
+      const response = await functionBridge.initializeInterviewGuidance();
+      if (!response?.websocket_url) {
+        throw new Error('Interview guidance endpoint not configured');
+      }
 
-      const ws = new WebSocket(data.websocket_url);
+      const ws = new WebSocket(response.websocket_url);
       wsRef.current = ws;
 
       ws.onopen = () => {

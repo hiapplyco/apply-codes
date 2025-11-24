@@ -34,8 +34,18 @@ import {
 } from 'lucide-react';
 import { SearchResult } from '../types';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { NoContactInfoDialog } from './NoContactInfoDialog';
 import { EmailOutreachForm } from '@/components/email/EmailOutreachForm';
 import { extractYearsOfExperience } from '../hooks/google-search/utils';
@@ -76,16 +86,24 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   onOmit,
   isOmitted = false
 }) => {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [localContactInfo, setLocalContactInfo] = useState<ContactInfo | null>(contactInfo || null);
   const [isEnriching, setIsEnriching] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [projects, setProjects] = useState<Array<{ id: string; name: string; color: string; icon: string }>>([]);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string; color: string; icon: string; created_at?: string }>>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectId);
   const [showNoContactDialog, setShowNoContactDialog] = useState(false);
+
+  const encodeForId = (value: string) => {
+    try {
+      return btoa(unescape(encodeURIComponent(value))).replace(/=+$/, '');
+    } catch {
+      return value.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+  };
 
   // Update local contact info when prop changes
   React.useEffect(() => {
@@ -102,18 +120,30 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   }, [user]);
 
   const fetchProjects = async () => {
-    if (!user) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name, color, icon')
-        .eq('user_id', user.id)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false });
+    if (!user || !db) return;
 
-      if (error) throw error;
-      setProjects(data || []);
+    try {
+      const projectsQuery = query(
+        collection(db, 'projects'),
+        where('user_id', '==', user.uid),
+        where('is_archived', '==', false)
+      );
+
+      const snapshot = await getDocs(projectsQuery);
+      const loadedProjects = snapshot.docs
+        .map(docSnap => {
+          const data = docSnap.data() as { name: string; color?: string; icon?: string; created_at?: string };
+          return {
+            id: docSnap.id,
+            name: data.name,
+            color: data.color || '#8B5CF6',
+            icon: data.icon || 'folder',
+            created_at: data.created_at || ''
+          };
+        })
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+      setProjects(loadedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
     }
@@ -264,6 +294,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       return;
     }
 
+    if (!result.link) {
+      toast.error('No profile URL available to save this candidate');
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Extract all necessary data
@@ -271,7 +306,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       
       // Prepare the candidate data
       const candidateData = {
-        user_id: user.id,
+        user_id: user.uid,
         job_id: jobId || null,
         name: profileData.name,
         linkedin_url: result.link,
@@ -288,47 +323,47 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         source: 'linkedin'
       };
 
-      const { data: savedCandidate, error } = await supabase
-        .from('saved_candidates')
-        .upsert(candidateData, {
-          onConflict: 'user_id,linkedin_url',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) throw error;
+      const candidateDocId = `candidate_${encodeForId(user.uid)}_${encodeForId(result.link ?? '')}`;
+      const candidateRef = doc(db, 'saved_candidates', candidateDocId);
 
-      // If projectId is provided, also add to the project
+      const candidateSnap = await getDoc(candidateRef);
+
+      if (candidateSnap.exists()) {
+        await updateDoc(candidateRef, {
+          ...candidateData,
+          updated_at: new Date().toISOString()
+        });
+        setIsSaved(true);
+      } else {
+        await setDoc(candidateRef, {
+          ...candidateData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+
       const finalProjectId = projectIdToUse || selectedProjectId;
-      if (finalProjectId && savedCandidate) {
-        const { error: projectError } = await supabase
-          .from('project_candidates')
-          .upsert({
-            project_id: finalProjectId,
-            candidate_id: savedCandidate.id,
-            added_by: user.id
-          }, {
-            onConflict: 'project_id,candidate_id'
-          });
-
-        if (projectError && projectError.code !== '23505') {
-          console.error('Error adding candidate to project:', projectError);
-          toast.warning('Candidate saved but could not add to project');
-        }
+      if (finalProjectId) {
+        const projectCandidateId = `proj_${encodeForId(finalProjectId)}_${encodeForId(candidateDocId)}`;
+        const projectCandidateRef = doc(db, 'project_candidates', projectCandidateId);
+        await setDoc(projectCandidateRef, {
+          project_id: finalProjectId,
+          candidate_id: candidateDocId,
+          added_by: user.uid,
+          created_at: new Date().toISOString()
+        }, { merge: true });
+        setSelectedProjectId(finalProjectId);
       }
 
       setIsSaved(true);
       toast.success(finalProjectId ? 'Candidate saved to project' : 'Candidate saved successfully');
     } catch (error) {
       console.error('Error saving candidate:', error);
-      if (error?.code === '23505') {
-        // Unique constraint violation
-        setIsSaved(true);
-        toast.info('Candidate already saved');
-      } else {
-        toast.error('Failed to save candidate');
-      }
+      toast.error('Failed to save candidate');
     } finally {
       setIsSaving(false);
     }

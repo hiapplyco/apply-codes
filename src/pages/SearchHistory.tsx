@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { 
   Search, 
   Clock, 
@@ -42,6 +41,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
+import { db } from "@/lib/firebase";
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where
+} from "firebase/firestore";
 
 interface Project {
   id: string;
@@ -49,9 +62,8 @@ interface Project {
   description: string;
   color: string;
   icon: string;
-  candidates_count: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   is_archived: boolean;
 }
 
@@ -63,14 +75,13 @@ interface SearchHistoryItem {
   results_count: number;
   created_at: string;
   is_favorite: boolean;
-  tags: string[];
+  tags?: string[];
   project_id: string | null;
-  project?: Project;
 }
 
 const SearchHistory = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [activeTab, setActiveTab] = useState("searches");
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -105,33 +116,68 @@ const SearchHistory = () => {
     }
   }, [user]);
 
+  const projectMap = useMemo(() => {
+    const map = new Map<string, Project>();
+    projects.forEach(project => map.set(project.id, project));
+    return map;
+  }, [projects]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       
       // Fetch search history
-      const { data: searches, error: searchError } = await supabase
-        .from("search_history")
-        .select(`
-          *,
-          project:projects(*)
-        `)
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
+      if (!db || !user?.uid) {
+        setSearchHistory([]);
+        setProjects([]);
+        return;
+      }
 
-      if (searchError) throw searchError;
-      setSearchHistory(searches || []);
+      // Fetch search history
+      const searchRef = collection(db, "search_history");
+      const searchQuery = query(
+        searchRef,
+        where("user_id", "==", user.uid),
+        orderBy("created_at", "desc")
+      );
+      const searchSnapshot = await getDocs(searchQuery);
+      const searches = searchSnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          created_at: data.created_at instanceof Timestamp
+            ? data.created_at.toDate().toISOString()
+            : data.created_at || new Date().toISOString(),
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          project_id: data.project_id || null
+        } as SearchHistoryItem;
+      });
+      setSearchHistory(searches);
 
       // Fetch projects
-      const { data: projectData, error: projectError } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("user_id", user?.id)
-        .eq("is_archived", false)
-        .order("created_at", { ascending: false });
-
-      if (projectError) throw projectError;
-      setProjects(projectData || []);
+      const projectRef = collection(db, "projects");
+      const projectQuery = query(
+        projectRef,
+        where("user_id", "==", user.uid),
+        where("is_archived", "==", false),
+        orderBy("created_at", "desc")
+      );
+      const projectSnapshot = await getDocs(projectQuery);
+      const projectData = projectSnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          ...data,
+          created_at: data.created_at instanceof Timestamp
+            ? data.created_at.toDate().toISOString()
+            : data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at instanceof Timestamp
+            ? data.updated_at.toDate().toISOString()
+            : data.updated_at
+        } as Project;
+      });
+      setProjects(projectData);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load data");
@@ -147,14 +193,17 @@ const SearchHistory = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("projects")
-        .insert({
-          ...newProject,
-          user_id: user?.id
-        });
+      if (!db || !user?.uid) {
+        throw new Error("Firestore not initialized or user missing");
+      }
 
-      if (error) throw error;
+      await addDoc(collection(db, "projects"), {
+        ...newProject,
+        user_id: user.uid,
+        is_archived: false,
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
 
       toast.success("Project created successfully");
       setShowCreateProject(false);
@@ -176,17 +225,18 @@ const SearchHistory = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("projects")
-        .update({
-          name: editingProject.name,
-          description: editingProject.description,
-          color: editingProject.color,
-          icon: editingProject.icon
-        })
-        .eq("id", editingProject.id);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
+      const projectRef = doc(db, "projects", editingProject.id);
+      await updateDoc(projectRef, {
+        name: editingProject.name,
+        description: editingProject.description,
+        color: editingProject.color,
+        icon: editingProject.icon,
+        updated_at: serverTimestamp()
+      });
 
       toast.success("Project updated successfully");
       setEditingProject(null);
@@ -202,12 +252,11 @@ const SearchHistory = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", projectId);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
+      await deleteDoc(doc(db, "projects", projectId));
 
       toast.success("Project deleted successfully");
       fetchData();
@@ -218,12 +267,15 @@ const SearchHistory = () => {
 
   const handleToggleFavorite = async (searchId: string, currentState: boolean) => {
     try {
-      const { error } = await supabase
-        .from("search_history")
-        .update({ is_favorite: !currentState })
-        .eq("id", searchId);
+      if (!db) {
+        throw new Error("Firestore not initialized");
+      }
 
-      if (error) throw error;
+      const searchRef = doc(db, "search_history", searchId);
+      await updateDoc(searchRef, {
+        is_favorite: !currentState,
+        updated_at: serverTimestamp()
+      });
 
       setSearchHistory(prev =>
         prev.map(item =>
@@ -307,12 +359,10 @@ const SearchHistory = () => {
           </Card>
           <Card className="bg-white/80 backdrop-blur-sm border-gray-200 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify_between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Candidates</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {projects.reduce((acc, p) => acc + (p.candidates_count || 0), 0)}
-                  </p>
+                  <p className="text-sm text-gray-600">Active Projects</p>
+                  <p className="text-2xl font-bold text-gray-900">{projects.length}</p>
                 </div>
                 <Users className="w-8 h-8 text-blue-500" />
               </div>
@@ -351,7 +401,9 @@ const SearchHistory = () => {
           </div>
 
           <div className="grid gap-4">
-            {searchHistory.map((item) => (
+            {searchHistory.map((item) => {
+              const projectDetails = item.project_id ? projectMap.get(item.project_id) : null;
+              return (
               <Card key={item.id} className="bg-white/90 backdrop-blur-sm border-gray-200 hover:shadow-xl transition-all hover:scale-[1.01] hover:bg-white">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -379,12 +431,12 @@ const SearchHistory = () => {
                         <Badge variant="outline">
                           {item.results_count} results
                         </Badge>
-                        {item.project && (
+                        {projectDetails && (
                           <Badge
-                            style={{ backgroundColor: `${item.project.color}20`, color: item.project.color }}
+                            style={{ backgroundColor: `${projectDetails.color}20`, color: projectDetails.color }}
                           >
                             <Folder className="w-3 h-3 mr-1" />
-                            {item.project.name}
+                            {projectDetails.name}
                           </Badge>
                         )}
                       </div>
@@ -413,7 +465,7 @@ const SearchHistory = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )})}
           </div>
         </TabsContent>
 
@@ -436,6 +488,9 @@ const SearchHistory = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => {
               const IconComponent = getIconComponent(project.icon);
+              const createdAtLabel = project.created_at
+                ? format(new Date(project.created_at), 'MMM d, yyyy')
+                : 'Recently created';
               return (
                 <Card 
                   key={project.id} 
@@ -457,7 +512,7 @@ const SearchHistory = () => {
                         <div>
                           <CardTitle className="text-lg">{project.name}</CardTitle>
                           <p className="text-sm text-gray-500 mt-1">
-                            {project.candidates_count} candidates
+                            Created {createdAtLabel}
                           </p>
                         </div>
                       </div>

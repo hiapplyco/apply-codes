@@ -1,4 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { SearchType } from "@/components/search/types";
 
 export const processJobRequirements = async (
@@ -15,35 +17,31 @@ export const processJobRequirements = async (
     // If source is clarvida, use the clarvida-specific edge function
     if (source === 'clarvida') {
       console.log('Calling generate-clarvida-report function with content length:', content.length);
-      const { data, error } = await supabase.functions.invoke('generate-clarvida-report', {
-        body: { content }
-      });
-
-      if (error) {
-        console.error('Error from generate-clarvida-report:', error);
-        throw error;
+      const report = await functionBridge.generateClarvidaReport({ content });
+      
+      if (report?.error) {
+        console.error('Error from generate-clarvida-report:', report.error);
+        throw new Error(report.error);
       }
       
-      console.log('Received data from generate-clarvida-report function:', data);
-      return data;
+      console.log('Received data from generate-clarvida-report function:', report);
+      return report;
     }
     
     // Otherwise use the regular process-job-requirements function for search string generation
     // This ensures we're using the Gemini 2.5 Flash model from the Supabase edge function
     console.log('Calling process-job-requirements function with searchType:', searchType);
-    const { data, error } = await supabase.functions.invoke('process-job-requirements', {
-      body: { 
-        content, 
-        searchType, 
-        companyName, 
-        userId, 
-        source 
-      }
+    const data = await functionBridge.processJobRequirements({
+      content,
+      searchType,
+      companyName,
+      userId,
+      source
     });
 
-    if (error) {
-      console.error('Error from process-job-requirements:', error);
-      throw error;
+    if (data?.error) {
+      console.error('Error from process-job-requirements:', data.error);
+      throw new Error(data.error);
     }
     
     console.log('Received data from process-job-requirements function:', data);
@@ -55,24 +53,21 @@ export const processJobRequirements = async (
     // Save search history when we have a successful boolean search string
     if (userId && data.searchString && source !== 'clarvida') {
       try {
-        const { error: historyError } = await supabase
-          .from('search_history')
-          .insert({
-            user_id: userId,
-            search_query: content,
-            boolean_query: data.searchString,
+        if (!db) {
+          console.warn('Firestore not initialized; skipping search history persistence');
+        } else {
+          await addDoc(collection(db, 'users', userId, 'searchHistory'), {
+            searchQuery: content,
+            booleanQuery: data.searchString,
             platform: 'linkedin',
-            project_id: projectId,
-            search_params: {
+            projectId: projectId || null,
+            searchParams: {
               searchType,
               companyName,
               source
-            }
+            },
+            createdAt: serverTimestamp()
           });
-        
-        if (historyError) {
-          console.error('Error saving search history:', historyError);
-        } else {
           console.log('Search history saved successfully');
         }
       } catch (historyError) {

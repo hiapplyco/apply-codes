@@ -1,12 +1,21 @@
 
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { Outlet } from "react-router-dom";
 import { memo } from "react";
 
+// Development bypass - set to false in production
+const DEV_BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
+
 const ProtectedRouteComponent = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useNewAuth();
   const location = useLocation();
+
+  // Development bypass
+  if (DEV_BYPASS_AUTH) {
+    console.log('🔓 Auth bypassed for development');
+    return <Outlet />;
+  }
 
   if (isLoading) {
     return (

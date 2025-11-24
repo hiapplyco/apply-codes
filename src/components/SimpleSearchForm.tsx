@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom';
 import { useAgentOutputs } from '@/stores/useAgentOutputs';
 import { useClientAgentOutputs } from '@/stores/useClientAgentOutputs';
 import { StructuredSearchResults } from './search/StructuredSearchResults';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AgentProcessor } from './search/AgentProcessor';
 import { GenerateAnalysisButton } from './search/analysis/GenerateAnalysisButton';
@@ -13,6 +12,8 @@ import { useSearchForm } from './search/hooks/useSearchForm';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface SimpleSearchFormProps {
   userId: string | null;
@@ -120,13 +121,19 @@ const SimpleSearchForm = ({
         const fetchJobSearchString = async () => {
           console.log('Fetching search string for job:', agentOutput.job_id);
           try {
-            const { data, error } = await supabase
-              .from('jobs')
-              .select('search_string')
-              .eq('id', agentOutput.job_id)
-              .single();
+            if (!db) {
+              throw new Error('Firestore not initialized');
+            }
 
-            if (error) throw error;
+            const jobRef = doc(db, 'jobs', String(agentOutput.job_id));
+            const jobSnap = await getDoc(jobRef);
+
+            if (!jobSnap.exists()) {
+              console.log('Job record not found in Firestore.');
+              return;
+            }
+
+            const data = jobSnap.data() as { search_string?: string };
 
             if (data?.search_string) {
               setSearchString(data.search_string);

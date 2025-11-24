@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "firecrawl":    { "command": "npx", "args": ["firecrawl-mcp-server@latest"],  "transport": "stdio" },
+    "perplexity":   { "command": "npx", "args": ["perplexity-mcp@latest"],        "transport": "stdio" },
+    "github":       { "command": "npx", "args": ["github-mcp-server@0.0.5"],     "transport": "stdio" },
+    "firebase":     { "command": "npx", "args": ["firebase-mcp@latest"],          "transport": "stdio" },
+    "google-workspace": { "command": "npx", "args": ["@google-workspace/mcp-server@latest"], "transport": "stdio" },
+    "playwright":   { "command": "npx", "args": ["@playwright/mcp@latest"],       "transport": "stdio" },
+    "hunter":       { "command": "npx", "args": ["hunter-io-mcp-server@latest"],  "transport": "stdio" },
+    "twilio":       { "command": "npx", "args": ["@twilio-alpha/mcp"],            "transport": "stdio" },
+    "vision":       { "command": "npx", "args": ["vision-mcp@latest"],            "transport": "stdio" }
+  }
+}

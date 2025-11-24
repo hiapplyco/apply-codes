@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import { VideoCallFrame } from "@/components/video/VideoCallFrame";
 import { TranscriptionProcessor } from "@/components/video/TranscriptionProcessor";
 import { MeetingDataManager } from "@/components/video/MeetingDataManager";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ScreeningHeader } from "@/components/screening/ScreeningHeader";
@@ -17,6 +16,9 @@ import { ProjectSelector } from "@/components/project/ProjectSelector";
 import { ContextBar } from "@/components/context/ContextBar";
 import { useContextIntegration } from "@/hooks/useContextIntegration";
 import { useProjectContext } from "@/context/ProjectContext";
+import { useNewAuth } from "@/context/NewAuthContext";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 interface Participant {
   id: string;
@@ -33,15 +35,14 @@ const ScreeningRoom = () => {
   const transcriptionProcessor = TranscriptionProcessor();
   const meetingDataManager = MeetingDataManager(selectedProjectId);
   const [callFrame, setCallFrame] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [hasJoinedMeeting, setHasJoinedMeeting] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
   
   const { sessionId } = useScreeningSession();
   useWebSocket(sessionId);
+  const { user, isLoading, isAuthenticated } = useNewAuth();
 
   // Context integration for file uploads, web scraping, and AI search
   const {
@@ -56,32 +57,22 @@ const ScreeningRoom = () => {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) {
-        toast.error('Please sign in to access the screening room');
-        navigate('/');
-        return;
-      }
-      setIsAuthenticated(true);
-      setIsLoading(false);
-    };
-    
-    checkAuth();
-    
+    if (!isLoading && !isAuthenticated) {
+      toast.error('Please sign in to access the screening room');
+      navigate('/');
+    }
+
     // Set document title
     document.title = "Screening Room | Pipecat";
     
     return () => {
       document.title = "Pipecat"; // Reset title on unmount
     };
-  }, [navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
   const handleJoinMeeting = () => {
     console.log('Joined meeting');
     toast.success('Welcome to the screening room! Your camera and microphone should start automatically.');
-    setIsLoading(false);
     setHasJoinedMeeting(true);
   };
 
@@ -105,10 +96,11 @@ const ScreeningRoom = () => {
       });
 
       if (sessionId) {
-        await supabase
-          .from('chat_sessions')
-          .update({ status: 'completed' })
-          .eq('id', sessionId);
+        if (!db) {
+          throw new Error('Firestore not initialized');
+        }
+        const sessionRef = doc(db, 'chat_sessions', sessionId);
+        await updateDoc(sessionRef, { status: 'completed' });
       }
 
       toast.success('Meeting data saved successfully');
@@ -156,7 +148,7 @@ const ScreeningRoom = () => {
   };
 
   // If still checking auth, show an auth loading screen
-  if (isLoading && !isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex flex-col h-screen">
         <ScreeningHeader />

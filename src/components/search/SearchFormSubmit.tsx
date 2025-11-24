@@ -1,9 +1,11 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { processJobRequirements } from "@/utils/jobRequirements";
 import { SearchType } from "./types";
+import { createJob } from "./hooks/utils/createJob";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 interface SearchFormSubmitProps {
   userId: string;
@@ -29,28 +31,21 @@ export const useSearchFormSubmit = ({
     onProcessingChange(true);
 
     try {
-      const { data: jobData, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          content: searchText,
-          user_id: userId
-        })
-        .select()
-        .single();
+      const jobId = await createJob(searchText, userId, "Boolean Search", "", "default");
+      if (!jobId) {
+        throw new Error("Failed to create job record");
+      }
 
-      if (jobError) throw jobError;
-      
-      const jobId = jobData.id;
       onJobCreated(jobId, searchText);
 
       const result = await processJobRequirements(searchText, searchType, companyName, userId);
 
-      const { error: updateError } = await supabase
-        .from('jobs')
-        .update({ search_string: result.searchString })
-        .eq('id', jobId);
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (updateError) throw updateError;
+      const jobRef = doc(db, 'jobs', String(jobId));
+      await updateDoc(jobRef, { search_string: result.searchString });
 
       toast({
         title: "Search generated",

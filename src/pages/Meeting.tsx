@@ -4,20 +4,23 @@ import { TranscriptionProcessor } from '@/components/video/TranscriptionProcesso
 import { MeetingDataManager } from '@/components/video/MeetingDataManager';
 import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
-import { useAuth } from '@/context/AuthContext';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useScreeningSession } from '@/hooks/useScreeningSession';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
-import { supabase } from '@/integrations/supabase/client';
+import { processKickoffCall } from '@/lib/firebase/functions/processKickoffCall';
+import { createDailyRoom } from '@/lib/firebase/functions/createDailyRoom';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Video, 
-  Users, 
-  FileText, 
-  Globe, 
-  MessageSquare, 
+import {
+  Video,
+  Users,
+  FileText,
+  Globe,
+  MessageSquare,
   Settings,
   Loader2,
   Upload,
@@ -114,7 +117,7 @@ interface Participant {
 
 export default function Meeting() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const { selectedProjectId } = useProjectContext();
   const { sessionId } = useScreeningSession();
   const firecrawlService = new FirecrawlService();
@@ -182,7 +185,7 @@ export default function Meeting() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const content = e.target?.result as string;
-        setUploadedFiles(prev => [...prev, {
+        setUploadedFiles(prev => [...prev, { 
           name: file.name,
           content,
           type: file.type,
@@ -218,13 +221,13 @@ export default function Meeting() {
     
     setCrawlingUrl(url);
     try {
-      const content = await firecrawlService.crawlWebsite(url);
-      if (content) {
-        setUploadedFiles(prev => [...prev, {
+      const result = await firecrawlService.crawlWebsite(url);
+      if (result.success && result.data?.text) {
+        setUploadedFiles(prev => [...prev, { 
           name: new URL(url).hostname,
-          content,
+          content: result.data.text,
           type: 'text/html',
-          size: content.length,
+          size: result.data.text.length,
         }]);
         toast.success('URL content extracted successfully');
       }
@@ -251,35 +254,29 @@ export default function Meeting() {
     try {
       // Process kickoff data if applicable
       if (meetingType === 'kickoff' && uploadedFiles.length > 0) {
-        const { data, error } = await supabase.functions.invoke('process-kickoff-call', {
-          body: {
-            title: meetingTitle,
-            files: uploadedFiles.map(f => ({ name: f.name, content: f.content })),
-            projectId: selectedProjectId,
-          },
+        const result = await processKickoffCall({
+          title: meetingTitle,
+          files: uploadedFiles.map(f => ({ name: f.name, content: f.content })),
+          projectId: selectedProjectId,
         });
 
-        if (error) throw error;
+        if (result?.error) {
+          throw new Error(result.error);
+        }
         toast.success('Kickoff materials processed successfully');
       }
 
       // Create Daily room for the meeting
-      const { data: roomData, error: roomError } = await supabase.functions.invoke('create-daily-room', {
-        body: {
-          projectId: selectedProjectId,
-          meetingType: meetingType,
-          title: meetingTitle,
-          userId: user?.id
-        }
+      const roomResponse = await createDailyRoom({
+        projectId: selectedProjectId,
+        meetingType,
+        title: meetingTitle,
+        userId: user?.uid
       });
+      const roomUrl = roomResponse?.room?.url || roomResponse?.url;
 
-      if (roomError) {
-        console.error('Error creating Daily room:', roomError);
-        throw new Error(roomError.message || 'Failed to create meeting room');
-      }
-
-      if (roomData?.url) {
-        console.log('Daily room created successfully:', roomData.url);
+      if (roomUrl) {
+        console.log('Daily room created successfully:', roomUrl);
         setIsInMeeting(true);
         setActiveTab('meeting');
         startTimeRef.current = new Date();
@@ -310,11 +307,11 @@ export default function Meeting() {
       });
 
       // Update session status if exists
-      if (sessionId) {
-        await supabase
-          .from('chat_sessions')
-          .update({ status: 'completed' })
-          .eq('id', sessionId);
+      if (sessionId && db) {
+        await updateDoc(doc(db, 'chatSessions', sessionId), {
+          status: 'completed',
+          endedAt: new Date().toISOString()
+        });
       }
 
       toast.success('Meeting ended and data saved successfully');

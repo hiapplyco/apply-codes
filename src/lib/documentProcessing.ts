@@ -1,5 +1,17 @@
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { functionBridge } from "@/lib/function-bridge";
+import { db, auth } from "@/lib/firebase";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+  where
+} from "firebase/firestore";
+import { uploadDocument as uploadDocumentToStorage, storageManager } from "@/lib/firebase-storage";
 
 // Client-side document processing utilities
 class ClientDocumentProcessor {
@@ -294,10 +306,14 @@ Tip: For best results, save Word documents as .docx format.`);
 export interface DocumentProcessingStatus {
   id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   extracted_content?: string;
   error_message?: string;
-  created_at: string;
-  updated_at: string;
+  storage_path?: string;
+  storage_url?: string;
+  extraction_metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DocumentUploadOptions {
@@ -394,175 +410,138 @@ export class DocumentProcessor {
   /**
    * Uploads a document and returns the processing status immediately
    */
-  static async uploadDocument(file: File, userId: string): Promise<{ storagePath: string; uploadSuccess: boolean }> {
+  private static formatDocumentId(storagePath: string): string {
+    return storagePath.replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
+
+  private static getDocumentRef(storagePath: string) {
+    if (!db) {
+      console.warn('[DocumentProcessor] Firestore not initialized; document tracking disabled.');
+      return null;
+    }
+
+    return doc(db, 'processed_documents', this.formatDocumentId(storagePath));
+  }
+
+  private static async updateDocumentStatus(
+    storagePath: string,
+    updates: Record<string, unknown>
+  ): Promise<void> {
+    const docRef = this.getDocumentRef(storagePath);
+    if (!docRef) {
+      return;
+    }
+
+    try {
+      await updateDoc(docRef, {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.warn('[DocumentProcessor] Failed to update document status:', error);
+    }
+  }
+
+  private static normalizeStatusRecord(
+    storagePath: string,
+    data: Record<string, any> | undefined | null
+  ): DocumentProcessingStatus {
+    const statusValue = (data?.status || data?.processing_status || 'pending') as DocumentProcessingStatus['status'];
+
+    return {
+      id: data?.id || this.formatDocumentId(storagePath),
+      status: statusValue,
+      processing_status: data?.processing_status ?? statusValue,
+      extracted_content: data?.extracted_content,
+      error_message: data?.error_message,
+      storage_path: data?.storage_path || storagePath,
+      storage_url: data?.storage_url,
+      extraction_metadata: data?.extraction_metadata,
+      created_at: data?.created_at,
+      updated_at: data?.updated_at
+    };
+  }
+
+  static async uploadDocument(file: File, userId: string): Promise<{
+    storagePath: string;
+    uploadSuccess: boolean;
+    documentId?: string;
+    storageUrl?: string;
+  }> {
     const validation = this.validateFile(file);
     if (!validation.valid) {
       throw new Error(validation.error);
     }
 
-    // Generate unique file path: userId/timestamp-filename
-    const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const storagePath = `${userId}/${timestamp}-${sanitizedFileName}`;
+    console.log('Uploading document with hybrid storage manager:', {
+      fileName: file.name,
+      userId: userId,
+      backend: storageManager.getCurrentBackend()
+    });
 
-    console.log('Uploading to storage path:', storagePath);
-
-    // Upload directly to Supabase Storage
-    // Use a generic MIME type for better compatibility with bucket restrictions
-    let uploadMimeType = file.type;
-    
-    // If the exact MIME type might not be allowed, use a generic one
-    if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-        file.type === 'application/msword' ||
-        file.type === 'application/zip') {
-      uploadMimeType = 'application/octet-stream'; // Generic binary type
-    }
-    
-    console.log('Upload MIME type mapping:', { original: file.type, upload: uploadMimeType });
-    
-    const { error: uploadError } = await supabase.storage
-      .from('docs')
-      .upload(storagePath, file, {
-        contentType: uploadMimeType,
-        upsert: false
+    try {
+      // Use Firebase Storage with backward compatibility fallback
+      const { url: documentUrl, storagePath } = await uploadDocumentToStorage(userId, file, (progress) => {
+        console.log(`Document upload progress: ${progress}%`);
       });
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      
-      // Provide more specific error messages
-      let errorMessage = uploadError.message || 'Unknown upload error';
-      if (errorMessage.includes('not-null constraint') || errorMessage.includes('processed_documents')) {
-        errorMessage = 'Database setup incomplete. Please run the document processing setup SQL.';
-      } else if (errorMessage.includes('mime type') && errorMessage.includes('not supported')) {
-        errorMessage = 'File type not allowed by storage bucket. Please run the bucket MIME type fix.';
-      } else if (errorMessage.includes('size') || errorMessage.includes('limit')) {
-        errorMessage = 'File exceeds storage bucket size limit.';
-      }
-      
-      throw new Error(`Upload failed: ${errorMessage}`);
-    }
+      console.log('Document uploaded successfully:', { documentUrl, storagePath });
 
-    // Try to create database record with graceful handling
-    let dbRecordCreated = false;
-    try {
-      const { error: dbError } = await supabase
-        .from('processed_documents' as any)
-        .insert({
-          user_id: userId,
-          storage_path: storagePath,
-          original_filename: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          processing_status: 'pending'
-        });
-        
-      if (dbError) {
-        console.warn('Database record creation failed:', dbError);
-        // Continue without database record - we can still process
-      } else {
-        console.log('Database record created successfully');
-        dbRecordCreated = true;
-      }
-    } catch (dbError) {
-      console.warn('Database record creation error:', dbError);
-      // Continue without database record
-    }
-
-    // Try multiple processing approaches in order of preference
-    let processingTriggered = false;
-    
-    // Approach 1: New async processing function
-    if (dbRecordCreated) {
-      try {
-        console.log('Trying new async processing function...');
-        const { error: functionError } = await supabase.functions.invoke('process-document-async', {
-          body: {
-            storage_path: storagePath,
-            user_id: userId,
-            bucket_id: 'docs'
-          }
-        });
-        
-        if (!functionError) {
-          console.log('Async processing triggered successfully');
-          processingTriggered = true;
-        } else {
-          console.warn('Async processing trigger failed:', functionError);
-        }
-      } catch (functionError) {
-        console.warn('Async processing trigger error:', functionError);
-      }
-    }
-
-    // Approach 2: Client-side processing bypass (when edge functions fail)
-    if (!processingTriggered) {
-      try {
-        console.log('Edge functions failed, trying client-side processing...');
-        
-        // Use client-side processing as reliable fallback
-        const extractedText = await ClientDocumentProcessor.extractText(file);
-        
-        if (extractedText && extractedText.trim().length > 0) {
-          // Update database record with client-side result
-          if (dbRecordCreated) {
-            try {
-              await (supabase as any).rpc('update_document_status', {
-                p_storage_path: storagePath,
-                p_status: 'completed',
-                p_content: extractedText
-              });
-              console.log('Client-side processing successful with database update');
-            } catch (updateError) {
-              console.warn('Database update failed but client-side processing succeeded:', updateError);
-            }
-          }
-          processingTriggered = true;
-          console.log('Client-side processing completed successfully');
-        } else {
-          throw new Error('Client-side processing returned empty content');
-        }
-      } catch (clientError) {
-        console.warn('Client-side processing failed, trying edge function fallback...', clientError);
-        
-        // If client-side fails, try the edge function as last resort
+      // Try to create database record with graceful handling
+      let documentId: string | undefined;
+      const docRef = this.getDocumentRef(storagePath);
+      if (docRef) {
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('userId', userId);
-          
-          const { data: parseResult, error: parseError } = await supabase.functions.invoke('parse-document', {
-            body: formData
+          const timestamp = new Date().toISOString();
+          await setDoc(docRef, {
+            id: docRef.id,
+            user_id: userId,
+            storage_path: storagePath,
+            original_filename: file.name,
+            file_size: file.size,
+            mime_type: file.type,
+            status: 'pending',
+            processing_status: 'pending',
+            storage_url: documentUrl,
+            storage_backend: storageManager.getCurrentBackend(),
+            created_at: timestamp,
+            updated_at: timestamp
           });
-          
-          if (!parseError && parseResult?.text) {
-            if (dbRecordCreated) {
-              try {
-                await (supabase as any).rpc('update_document_status', {
-                  p_storage_path: storagePath,
-                  p_status: 'completed',
-                  p_content: parseResult.text
-                });
-              } catch (updateError) {
-                console.warn('Database update failed:', updateError);
-              }
-            }
-            processingTriggered = true;
-          }
-        } catch (edgeFunctionError) {
-          console.warn('Both client-side and edge function processing failed:', {
-            clientError: clientError instanceof Error ? clientError.message : String(clientError),
-            edgeError: edgeFunctionError instanceof Error ? edgeFunctionError.message : String(edgeFunctionError)
-          });
+          documentId = docRef.id;
+          console.log('Document metadata stored in Firestore:', { documentId });
+        } catch (firestoreError) {
+          console.warn('Failed to store document metadata in Firestore:', firestoreError);
         }
       }
-    }
 
-    if (!processingTriggered) {
-      console.warn('All processing approaches failed - will rely on polling');
-    }
+      return {
+        storagePath,
+        storageUrl: documentUrl,
+        documentId,
+        uploadSuccess: true
+      };
 
-    return { storagePath, uploadSuccess: true };
+    } catch (error) {
+      console.error('Document upload failed:', error);
+
+      // Provide specific error messages based on storage backend
+      let errorMessage = 'Document upload failed';
+      if (error instanceof Error) {
+        if (error.message.includes('not authenticated')) {
+          errorMessage = 'Please sign in again to upload documents';
+        } else if (error.message.includes('quota exceeded')) {
+          errorMessage = 'Storage quota exceeded. Please try again later';
+        } else if (error.message.includes('unauthorized')) {
+          errorMessage = "You don't have permission to upload documents";
+        } else if (error.message.includes('invalid format')) {
+          errorMessage = 'File format not supported. Please use PDF, DOCX, TXT, JPG, or PNG files';
+        } else if (error.message.includes('size') || error.message.includes('limit')) {
+          errorMessage = 'File size exceeds limit. Please use a smaller file';
+        }
+      }
+
+      throw new Error(errorMessage);
+    }
   }
 
   /**
@@ -576,117 +555,63 @@ export class DocumentProcessor {
       onProgress?: (status: DocumentProcessingStatus) => void;
     } = {}
   ): Promise<DocumentProcessingStatus> {
-    const { maxRetries = 12, pollInterval = 4000, onProgress } = options; // Reduced retries, increased interval
+    const { maxRetries = 12, pollInterval = 4000, onProgress } = options;
+
+    const docRef = this.getDocumentRef(storagePath);
+    if (!docRef) {
+      throw new Error('Firestore not initialized; cannot poll document status.');
+    }
+
     let retries = 0;
-    let noDataRetries = 0;
-    const maxNoDataRetries = 3; // Reduced from 5 to fail faster
     let lastError: Error | null = null;
 
-    console.log(`Starting to poll for status: ${storagePath}, maxRetries: ${maxRetries}`);
+    console.log(`Polling processed document status from Firestore: ${storagePath}`);
 
     while (retries < maxRetries) {
       try {
         console.log(`Polling attempt ${retries + 1}/${maxRetries}`);
-        
-        // Try to get status via RPC function
-        const { data, error } = await (supabase as any).rpc('get_document_status', {
-          p_storage_path: storagePath
-        });
 
-        if (error) {
-          console.warn('RPC get_document_status failed:', error);
-          // Try direct table query as fallback
-          const { data: directData, error: directError } = await supabase
-            .from('processed_documents' as any)
-            .select('*')
-            .eq('storage_path', storagePath)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-            
-          if (directError) {
-            console.warn('Direct table query also failed:', directError);
-            lastError = new Error(`Database query failed: ${error.message}`);
-            // Don't throw immediately - keep trying
-          } else {
-            console.log('Direct table query successful');
-            const status = directData as any;
-            const normalizedStatus: DocumentProcessingStatus = {
-              id: status.id,
-              status: status.processing_status || 'pending',
-              extracted_content: status.extracted_content,
-              error_message: status.error_message,
-              created_at: status.created_at,
-              updated_at: status.updated_at
-            };
-            
-            if (onProgress) onProgress(normalizedStatus);
-            
-            if (status.processing_status === 'completed') {
-              return normalizedStatus;
-            }
-            if (status.processing_status === 'failed') {
-              throw new Error(status.error_message || 'Document processing failed');
-            }
-            noDataRetries = 0;
-          }
-        } else if (data && (data as any).length > 0) {
-          const status = (data as any)[0] as DocumentProcessingStatus;
-          console.log('Got status:', status.status);
-          
-          if (onProgress) {
-            onProgress(status);
-          }
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data() || {};
+          const status = this.normalizeStatusRecord(storagePath, data);
 
-          // Check if processing is complete
+          onProgress?.(status);
+
           if (status.status === 'completed') {
             console.log('Processing completed successfully');
             return status;
           }
 
           if (status.status === 'failed') {
-            console.log('Processing failed:', status.error_message);
             throw new Error(status.error_message || 'Document processing failed');
           }
-          
-          // Reset no-data counter since we got data
-          noDataRetries = 0;
         } else {
-          console.log('No status data found');
-          noDataRetries++;
-          
-          // If we keep getting no data, the processing might have failed
-          if (noDataRetries >= maxNoDataRetries) {
-            const errorMsg = lastError ? lastError.message : 'No status updates received. The Edge Function may have failed.';
-            throw new Error(`Processing failed: ${errorMsg}`);
-          }
+          console.log('Document status not found in Firestore yet.');
         }
 
-        // Exponential backoff with jitter to avoid thundering herd
-        const jitter = Math.random() * 1000; // 0-1 second jitter
-        const backoffMultiplier = Math.min(1.5, 1 + (retries * 0.1)); // Gradual increase
+        const jitter = Math.random() * 1000;
+        const backoffMultiplier = Math.min(1.5, 1 + retries * 0.1);
         const waitTime = Math.round(pollInterval * backoffMultiplier + jitter);
-        
-        console.log(`Waiting ${waitTime}ms before next poll (attempt ${retries + 1}/${maxRetries})...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         retries++;
       } catch (error) {
-        console.error('Error during status polling:', error);
         lastError = error instanceof Error ? error : new Error(String(error));
+        console.error('Error while polling document status:', lastError);
         retries++;
-        
+
         if (retries >= maxRetries) {
-          console.error('Max retries reached, giving up');
-          throw lastError;
+          break;
         }
-        
-        // Wait before retry with backoff
-        const waitTime = Math.min(pollInterval * 2, 10000); // Cap at 10 seconds
+
+        const waitTime = Math.min(pollInterval * 2, 10000);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
 
-    const timeoutMsg = `Processing timeout: Document took too long to process (${maxRetries} attempts over ${Math.round(maxRetries * pollInterval / 1000)} seconds)`;
+    const timeoutMsg = `Processing timeout: Document took too long to process (${maxRetries} attempts over ${Math.round(
+      (maxRetries * pollInterval) / 1000
+    )} seconds)`;
     throw new Error(lastError ? `${timeoutMsg}. Last error: ${lastError.message}` : timeoutMsg);
   }
 
@@ -694,7 +619,7 @@ export class DocumentProcessor {
    * Complete document processing workflow with client-side fallback
    */
   static async processDocument(options: DocumentUploadOptions): Promise<string> {
-    const { file, userId, onProgress, onComplete, onError, maxRetries = 6, pollInterval = 3000 } = options;
+    const { file, userId, onProgress, onComplete, onError } = options;
 
     try {
       // Update progress
@@ -724,19 +649,16 @@ export class DocumentProcessor {
           console.log('Client-side processing successful, uploading result...');
           
           // Upload file to storage for record keeping
-          onProgress?.('Saving processed document...');
-          const { storagePath } = await this.uploadDocument(file, userId);
-          
-          // Store the result in database
-          try {
-            await (supabase as any).rpc('update_document_status', {
-              p_storage_path: storagePath,
-              p_status: 'completed',
-              p_content: extractedText
-            });
-          } catch (dbError) {
-            console.warn('Database update failed but processing succeeded:', dbError);
-          }
+          onProgress?.(`Saving processed document to ${storageManager.getCurrentBackend()} storage...`);
+          const { storagePath, storageUrl } = await this.uploadDocument(file, userId);
+
+          await this.updateDocumentStatus(storagePath, {
+            status: 'completed',
+            processing_status: 'completed',
+            extracted_content: extractedText,
+            error_message: null,
+            storage_url: storageUrl
+          });
           
           onProgress?.('Processing complete!');
           onComplete?.(extractedText);
@@ -751,31 +673,37 @@ export class DocumentProcessor {
 
       // Fallback to server-side processing
       onProgress?.('Uploading file...');
-      const { storagePath } = await this.uploadDocument(file, userId);
-      
-      onProgress?.('Processing with server...');
+      const { storagePath, storageUrl } = await this.uploadDocument(file, userId);
 
-      // Poll for results with reduced timeout
-      const result = await this.pollProcessingStatus(storagePath, {
-        maxRetries,
-        pollInterval,
-        onProgress: (status) => {
-          const statusMap = {
-            'pending': 'Queued for processing...',
-            'processing': 'Server is analyzing document...',
-            'completed': 'Processing complete!',
-            'failed': 'Processing failed'
-          };
-          
-          const progressMessage = statusMap[status.status as keyof typeof statusMap] || 'Processing...';
-          onProgress?.(progressMessage);
-        }
+      onProgress?.(`Processing with Firebase Functions...`);
+
+      const response = await functionBridge.processTextExtraction({
+        file,
+        userId,
+        storagePath,
+        storageUrl,
+        preserveFormatting: true,
+        extractTables: true,
+        ocrEnabled: true
       });
 
-      const extractedText = result.extracted_content;
+      const extractedText =
+        response?.data?.text ??
+        response?.text ??
+        (typeof response === 'string' ? response : null);
+
       if (!extractedText || extractedText.trim().length === 0) {
         throw new Error('No content extracted from document. The file may be empty or corrupted.');
       }
+
+      await this.updateDocumentStatus(storagePath, {
+        status: 'completed',
+        processing_status: 'completed',
+        extracted_content: extractedText,
+        error_message: null,
+        extraction_metadata: response?.data?.metadata,
+        storage_url: storageUrl
+      });
 
       onComplete?.(extractedText);
       return extractedText;
@@ -807,32 +735,53 @@ export class DocumentProcessor {
    * Get processing status for a specific storage path
    */
   static async getProcessingStatus(storagePath: string): Promise<DocumentProcessingStatus | null> {
-    const { data, error } = await (supabase as any).rpc('get_document_status', {
-      p_storage_path: storagePath
-    });
-
-    if (error) {
-      console.error('Error getting document status:', error);
+    const docRef = this.getDocumentRef(storagePath);
+    if (!docRef) {
       return null;
     }
 
-    return data && (data as any).length > 0 ? (data as any)[0] : null;
+    try {
+      const snapshot = await getDoc(docRef);
+      if (!snapshot.exists()) {
+        return null;
+      }
+
+      return this.normalizeStatusRecord(storagePath, snapshot.data());
+    } catch (error) {
+      console.error('Error getting document status from Firestore:', error);
+      return null;
+    }
   }
 
   /**
    * Get all processed documents for the current user
    */
   static async getUserDocuments(): Promise<DocumentProcessingStatus[]> {
-    const { data, error } = await supabase
-      .from('user_documents' as any)
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error getting user documents:', error);
+    if (!db) {
+      console.warn('[DocumentProcessor] Firestore not initialized; cannot load documents.');
       return [];
     }
 
-    return (data as any) || [];
+    const currentUser = auth?.currentUser;
+    if (!currentUser) {
+      console.warn('[DocumentProcessor] No authenticated user; returning empty document list.');
+      return [];
+    }
+
+    try {
+      const documentsQuery = query(
+        collection(db, 'processed_documents'),
+        where('user_id', '==', currentUser.uid),
+        orderBy('created_at', 'desc')
+      );
+
+      const snapshot = await getDocs(documentsQuery);
+      return snapshot.docs.map((docSnap) =>
+        this.normalizeStatusRecord(docSnap.data().storage_path || docSnap.id, docSnap.data())
+      );
+    } catch (error) {
+      console.error('Error fetching processed documents from Firestore:', error);
+      return [];
+    }
   }
 }

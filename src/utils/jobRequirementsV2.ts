@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
 import { SearchType } from "@/components/search/types";
 
 interface ProcessJobResponse {
@@ -22,40 +22,31 @@ export const processJobRequirementsV2 = async (
     
     // First try the new V2 endpoint
     try {
-      const { data, error } = await supabase.functions.invoke('process-job-requirements-v2', {
-        body: { 
-          content, 
-          searchType, 
-          companyName, 
-          userId, 
-          source 
-        }
+      const data = await functionBridge.processJobRequirementsV2({
+        content,
+        searchType,
+        companyName,
+        userId,
+        source
       });
 
-      if (!error && data?.usingNewSystem) {
+      if (data?.usingNewSystem) {
         console.log('Successfully used new orchestration system');
-        return data;
+        return data as ProcessJobResponse;
       }
     } catch (v2Error) {
       console.log('V2 endpoint not available, falling back to V1');
     }
     
     // Fallback to original endpoint
-    const { data, error } = await supabase.functions.invoke('process-job-requirements', {
-      body: { 
-        content, 
-        searchType, 
-        companyName, 
-        userId, 
-        source 
-      }
+    const data = await functionBridge.processJobRequirements({
+      content,
+      searchType,
+      companyName,
+      userId,
+      source
     });
 
-    if (error) {
-      console.error('Error from process-job-requirements:', error);
-      throw error;
-    }
-    
     // Transform old response to match new format
     return {
       success: true,
@@ -77,9 +68,7 @@ export const processJobRequirementsV2 = async (
 // Helper to check if new system is available
 export const checkOrchestrationStatus = async (): Promise<boolean> => {
   try {
-    const { data } = await supabase.functions.invoke('test-orchestration', {
-      body: { test_type: 'health_check' }
-    });
+    const data = await functionBridge.testOrchestration({ test_type: 'health_check' });
     return data?.orchestrationEnabled === true;
   } catch {
     return false;

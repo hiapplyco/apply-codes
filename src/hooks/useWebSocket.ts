@@ -2,7 +2,7 @@
 import { useRef, useEffect } from 'react';
 import { setupWebSocketEventHandlers, initializeWebSocketConnection } from '@/utils/websocketUtils';
 
-export const useWebSocket = (sessionId: number | null) => {
+export const useWebSocket = (sessionId: string | null) => {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Linkedin } from 'lucide-react';
 
@@ -13,28 +12,24 @@ export function LinkedInSignIn({ onSuccess, redirectTo = '/dashboard' }: LinkedI
 
   const handleLinkedInSignIn = async () => {
     setIsLoading(true);
-    
+
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'linkedin_oidc',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-          scopes: 'openid profile email',
-        },
-      });
+      // Firebase doesn't have built-in LinkedIn OAuth like Supabase
+      // We would need to implement LinkedIn OAuth manually or use a custom solution
+      // For now, show a message that LinkedIn auth is not yet supported with Firebase
+      toast.error('LinkedIn authentication is not yet configured for Firebase. Please use email/password or Google authentication.');
 
-      if (error) {
-        console.error('LinkedIn sign-in error:', error);
-        toast.error(error.message || 'Failed to sign in with LinkedIn');
-        setIsLoading(false);
-        return;
-      }
+      // TODO: Implement LinkedIn OAuth with Firebase
+      // This would require:
+      // 1. Setting up LinkedIn OAuth app
+      // 2. Implementing custom OAuth flow
+      // 3. Using Firebase custom token generation
 
-      // The OAuth flow will redirect the user, so no need to handle success here
-      // The auth callback will handle the redirect and onSuccess callback
+      console.log('LinkedIn OAuth with Firebase not implemented yet');
     } catch (error) {
       console.error('Unexpected error during LinkedIn sign-in:', error);
       toast.error('An unexpected error occurred');
+    } finally {
       setIsLoading(false);
     }
   };

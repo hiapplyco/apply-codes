@@ -19,8 +19,10 @@ interface LocationData {
 
 interface LocationInputProps {
   onLocationSelect: (location: LocationData) => void;
+  onInputChange?: (value: string) => void;
   selectedLocation?: LocationData | null;
   placeholder?: string;
+  hidePreview?: boolean;  // Hide the green preview box (for use in modals)
 }
 
 declare global {
@@ -57,11 +59,13 @@ declare global {
   }
 }
 
-const LocationInput: React.FC<LocationInputProps> = memo(({
+const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps>(({
   onLocationSelect,
+  onInputChange,
   selectedLocation,
-  placeholder = "Enter city, state, zip, or country..."
-}) => {
+  placeholder = "Enter city, state, zip, or country...",
+  hidePreview = false
+}, ref) => {
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -171,22 +175,55 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       console.log('✅ Autocomplete instance created:', autocompleteRef.current);
       console.log('📍 Input element:', inputRef.current);
       
-      // Force the autocomplete dropdown to append to body for proper z-index handling
-      // Use MutationObserver to detect when pac-container is added
+      // Function to position the dropdown correctly
+      const positionDropdown = () => {
+        const pacContainer = document.querySelector('.pac-container') as HTMLElement;
+        if (pacContainer && inputRef.current) {
+          const inputRect = inputRef.current.getBoundingClientRect();
+          pacContainer.style.position = 'fixed';
+          pacContainer.style.top = `${inputRect.bottom + 4}px`;
+          pacContainer.style.left = `${inputRect.left}px`;
+          pacContainer.style.width = `${inputRect.width}px`;
+        }
+      };
+
+      // Force the autocomplete dropdown to append to body and position it correctly
       const observer = new MutationObserver((mutations) => {
         mutations.forEach(() => {
-          const pacContainer = document.querySelector('.pac-container');
-          if (pacContainer && pacContainer.parentElement !== document.body) {
-            console.log('🔧 Moving pac-container to body for proper z-index');
-            document.body.appendChild(pacContainer);
+          const pacContainer = document.querySelector('.pac-container') as HTMLElement;
+          if (pacContainer && inputRef.current) {
+            // Move to body if needed
+            if (pacContainer.parentElement !== document.body) {
+              console.log('🔧 Moving pac-container to body for proper z-index');
+              document.body.appendChild(pacContainer);
+            }
+
+            // Position it below the input field
+            positionDropdown();
+            console.log('📍 Positioned pac-container at input location');
           }
         });
       });
-      
+
       observer.observe(document.body, { childList: true, subtree: true });
-      
-      // Store observer for cleanup
+
+      // Reposition on scroll and resize
+      const handleReposition = () => positionDropdown();
+      window.addEventListener('scroll', handleReposition, true);
+      window.addEventListener('resize', handleReposition);
+
+      // Watch for input position changes (during modal animations)
+      const resizeObserver = new ResizeObserver(() => {
+        positionDropdown();
+      });
+      if (inputRef.current) {
+        resizeObserver.observe(inputRef.current);
+      }
+
+      // Store observer and handlers for cleanup
       (window as any).__pacObserver = observer;
+      (window as any).__pacResizeObserver = resizeObserver;
+      (window as any).__pacRepositionHandlers = { handleReposition };
 
       // Add place changed listener
       autocompleteRef.current.addListener('place_changed', () => {
@@ -323,16 +360,13 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       style.id = 'google-places-styles';
       style.textContent = `
         .pac-container {
-          z-index: 9999999 !important;
+          z-index: 10000 !important;
           border-radius: 8px;
           border: 2px solid #000;
           box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
-          margin-top: 4px;
           background: white !important;
           font-family: inherit;
           position: fixed !important;
-          top: auto !important;
-          left: auto !important;
         }
         .pac-item {
           cursor: pointer !important;
@@ -401,6 +435,18 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
         delete (window as any).__pacObserver;
         delete (window as any).placesObserver;
       }
+      // Cleanup resize observer
+      if ((window as any).__pacResizeObserver) {
+        (window as any).__pacResizeObserver.disconnect();
+        delete (window as any).__pacResizeObserver;
+      }
+      // Cleanup reposition handlers
+      if ((window as any).__pacRepositionHandlers) {
+        const { handleReposition } = (window as any).__pacRepositionHandlers;
+        window.removeEventListener('scroll', handleReposition, true);
+        window.removeEventListener('resize', handleReposition);
+        delete (window as any).__pacRepositionHandlers;
+      }
     };
   }, [isGoogleMapsLoaded, initializeAutocomplete]);
 
@@ -423,23 +469,29 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
     if (e.key === 'Enter') {
       e.preventDefault();
       const inputValue = inputRef.current?.value?.trim();
-      
-      if (inputValue && inputValue.length > 3) {
+
+      if (inputValue && inputValue.length >= 3) {
         // Check if autocomplete has a place
         const place = autocompleteRef.current?.getPlace();
-        
+
         if (place && place.place_id) {
           processPlaceResult(place);
-        } else if (inputValue.includes(',') && inputValue.length > 8) {
-          // Manual fallback for complete addresses
-          console.log('🔄 Manual input fallback:', inputValue);
-          const locationData: LocationData = {
-            formatted_address: inputValue,
-            place_id: '',
-            geometry: { location: { lat: 0, lng: 0 } },
-            address_components: []
-          };
-          onLocationSelect(locationData);
+        } else {
+          // Manual fallback for any location input (zip codes, cities, etc.)
+          // Check if it's a US zip code (5 digits or 5+4 format)
+          const isZipCode = /^\d{5}(-\d{4})?$/.test(inputValue);
+
+          // Accept zip codes, or inputs with comma (city, state), or single word locations > 3 chars
+          if (isZipCode || inputValue.includes(',') || inputValue.length >= 3) {
+            console.log('🔄 Manual input fallback for:', inputValue);
+            const locationData: LocationData = {
+              formatted_address: inputValue,
+              place_id: '',
+              geometry: { location: { lat: 0, lng: 0 } },
+              address_components: []
+            };
+            onLocationSelect(locationData);
+          }
         }
       }
     } else if (e.key === 'Escape') {
@@ -457,8 +509,9 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       inputRef.current.focus();
     }
     lastProcessedLocation.current = '';
+    onInputChange?.('');
     onLocationSelect(null as any);
-  }, [onLocationSelect]);
+  }, [onLocationSelect, onInputChange]);
 
   // Render error state
   if (error) {
@@ -486,6 +539,7 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
             disabled={!isApiLoaded || isProcessing}
             className="block w-full pl-10 pr-10 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm disabled:bg-gray-50 disabled:text-gray-500"
             onKeyDown={handleKeyDown}
+            onChange={(e) => onInputChange?.(e.target.value)}
             autoComplete="off"
           />
           {selectedLocation && (
@@ -506,7 +560,7 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
         </div>
       </div>
       
-      {selectedLocation && (
+      {!hidePreview && selectedLocation && (
         <div className="mt-2 p-2 bg-green-50 border-2 border-green-200 rounded-lg">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
@@ -518,7 +572,7 @@ const LocationInput: React.FC<LocationInputProps> = memo(({
       )}
     </div>
   );
-});
+}));
 
 LocationInput.displayName = 'LocationInput';
 

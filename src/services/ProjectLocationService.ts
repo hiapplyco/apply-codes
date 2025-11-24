@@ -1,10 +1,48 @@
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  ProjectLocation, 
-  Location, 
+import { db } from '@/lib/firebase';
+import {
+  ProjectLocation,
+  Location,
   AddLocationToProjectInput,
-  GooglePlacesLocation 
+  GooglePlacesLocation
 } from '@/types/project';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch
+} from 'firebase/firestore';
+
+type FirestoreProjectLocation = {
+  projectId: string;
+  formattedAddress: string;
+  placeId: string | null;
+  geometry?: GooglePlacesLocation['geometry'];
+  addressComponents?: GooglePlacesLocation['address_components'];
+  notes?: string | null;
+  isPrimary: boolean;
+  addedBy?: string | null;
+  createdAt?: any;
+  updatedAt?: any;
+};
+
+type FirestoreLocation = {
+  canonical_name: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  aliases?: string[];
+  coordinates?: { lat: number; lng: number };
+  created_at?: string;
+  updated_at?: string;
+};
 
 export class ProjectLocationService {
   /**
@@ -12,28 +50,36 @@ export class ProjectLocationService {
    */
   static async addLocationToProject(input: AddLocationToProjectInput): Promise<ProjectLocation> {
     try {
-      const { data, error } = await supabase.rpc('add_location_to_project', {
-        p_project_id: input.project_id,
-        p_formatted_address: input.formatted_address,
-        p_place_id: input.place_id,
-        p_geometry: input.geometry ? JSON.stringify(input.geometry) : null,
-        p_address_components: input.address_components ? JSON.stringify(input.address_components) : null,
-        p_notes: input.notes,
-        p_is_primary: input.is_primary || false
-      });
-
-      if (error) {
-        console.error('Error adding location to project:', error);
-        throw new Error(`Failed to add location to project: ${error.message}`);
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
 
-      // Fetch the created project location with location details
-      const projectLocation = await this.getProjectLocationById(data);
-      if (!projectLocation) {
+      const projectLocationsRef = collection(db, 'projectLocations');
+
+      if (input.is_primary) {
+        await this.clearPrimaryLocation(input.project_id);
+      }
+
+      const payload: FirestoreProjectLocation = {
+        projectId: input.project_id,
+        formattedAddress: input.formatted_address,
+        placeId: input.place_id || null,
+        geometry: input.geometry,
+        addressComponents: input.address_components,
+        notes: input.notes || null,
+        isPrimary: input.is_primary || false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(projectLocationsRef, payload);
+      const created = await this.getProjectLocationById(docRef.id);
+
+      if (!created) {
         throw new Error('Failed to retrieve created project location');
       }
 
-      return projectLocation;
+      return created;
     } catch (error) {
       console.error('ProjectLocationService.addLocationToProject error:', error);
       throw error;
@@ -45,38 +91,20 @@ export class ProjectLocationService {
    */
   static async getProjectLocations(projectId: string): Promise<ProjectLocation[]> {
     try {
-      const { data, error } = await supabase.rpc('get_project_locations', {
-        p_project_id: projectId
-      });
-
-      if (error) {
-        console.error('Error fetching project locations:', error);
-        throw new Error(`Failed to fetch project locations: ${error.message}`);
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
 
-      return data?.map((row: any) => ({
-        id: row.project_location_id,
-        project_id: projectId,
-        location_id: row.location_id,
-        added_by: '', // Will be filled by separate query if needed
-        added_at: row.added_at,
-        notes: row.notes,
-        is_primary: row.is_primary,
-        location: {
-          id: row.location_id,
-          canonical_name: row.canonical_name,
-          city: row.city,
-          state: row.state,
-          country: row.country,
-          aliases: [],
-          coordinates: row.coordinates ? {
-            lat: row.coordinates.y,
-            lng: row.coordinates.x
-          } : undefined,
-          created_at: '',
-          updated_at: ''
-        }
-      })) || [];
+      const projectLocationsRef = collection(db, 'projectLocations');
+      const locationsQuery = query(
+        projectLocationsRef,
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc')
+      );
+
+      const snapshot = await getDocs(locationsQuery);
+
+      return snapshot.docs.map((docSnap) => this.mapDocumentToProjectLocation(docSnap.id, docSnap.data()));
     } catch (error) {
       console.error('ProjectLocationService.getProjectLocations error:', error);
       throw error;
@@ -88,43 +116,18 @@ export class ProjectLocationService {
    */
   static async getProjectLocationById(id: string): Promise<ProjectLocation | null> {
     try {
-      const { data, error } = await supabase
-        .from('project_locations')
-        .select(`
-          *,
-          location:locations(*)
-        `)
-        .eq('id', id)
-        .single();
+      if (!db) {
+        throw new Error('Firestore not initialized');
+      }
 
-      if (error) {
-        console.error('Error fetching project location:', error);
+      const docRef = doc(db, 'projectLocations', id);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
         return null;
       }
 
-      return {
-        id: data.id,
-        project_id: data.project_id,
-        location_id: data.location_id,
-        added_by: data.added_by,
-        added_at: data.added_at,
-        notes: data.notes,
-        is_primary: data.is_primary,
-        location: data.location ? {
-          id: data.location.id,
-          canonical_name: data.location.canonical_name,
-          city: data.location.city,
-          state: data.location.state,
-          country: data.location.country,
-          aliases: data.location.aliases || [],
-          coordinates: data.location.coordinates ? {
-            lat: data.location.coordinates.y,
-            lng: data.location.coordinates.x
-          } : undefined,
-          created_at: data.location.created_at,
-          updated_at: data.location.updated_at
-        } : undefined
-      };
+      return this.mapDocumentToProjectLocation(docSnap.id, docSnap.data());
     } catch (error) {
       console.error('ProjectLocationService.getProjectLocationById error:', error);
       return null;
@@ -134,19 +137,14 @@ export class ProjectLocationService {
   /**
    * Remove a location from a project
    */
-  static async removeLocationFromProject(projectId: string, locationId: string): Promise<boolean> {
+  static async removeLocationFromProject(_projectId: string, locationId: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase.rpc('remove_location_from_project', {
-        p_project_id: projectId,
-        p_location_id: locationId
-      });
-
-      if (error) {
-        console.error('Error removing location from project:', error);
-        throw new Error(`Failed to remove location from project: ${error.message}`);
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
 
-      return data === true;
+      await deleteDoc(doc(db, 'projectLocations', locationId));
+      return true;
     } catch (error) {
       console.error('ProjectLocationService.removeLocationFromProject error:', error);
       throw error;
@@ -158,25 +156,16 @@ export class ProjectLocationService {
    */
   static async setPrimaryLocation(projectId: string, locationId: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('project_locations')
-        .update({ is_primary: false })
-        .eq('project_id', projectId);
-
-      if (error) {
-        throw error;
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
 
-      const { error: primaryError } = await supabase
-        .from('project_locations')
-        .update({ is_primary: true })
-        .eq('project_id', projectId)
-        .eq('location_id', locationId);
+      await this.clearPrimaryLocation(projectId);
 
-      if (primaryError) {
-        console.error('Error setting primary location:', primaryError);
-        throw new Error(`Failed to set primary location: ${primaryError.message}`);
-      }
+      await updateDoc(doc(db, 'projectLocations', locationId), {
+        isPrimary: true,
+        updatedAt: serverTimestamp()
+      });
 
       return true;
     } catch (error) {
@@ -188,33 +177,51 @@ export class ProjectLocationService {
   /**
    * Get location suggestions for autocomplete
    */
-  static async searchLocations(query: string, limit: number = 10): Promise<Location[]> {
+  static async searchLocations(queryText: string, limitCount: number = 10): Promise<Location[]> {
     try {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .or(`canonical_name.ilike.%${query}%,city.ilike.%${query}%,state.ilike.%${query}%`)
-        .limit(limit);
-
-      if (error) {
-        console.error('Error searching locations:', error);
-        return [];
+      if (!db) {
+        throw new Error('Firestore not initialized');
       }
 
-      return data?.map(location => ({
-        id: location.id,
-        canonical_name: location.canonical_name,
-        city: location.city,
-        state: location.state,
-        country: location.country,
-        aliases: location.aliases || [],
-        coordinates: location.coordinates ? {
-          lat: location.coordinates.y,
-          lng: location.coordinates.x
-        } : undefined,
-        created_at: location.created_at,
-        updated_at: location.updated_at
-      })) || [];
+      const locationsRef = collection(db, 'locations');
+      const snapshot = await getDocs(locationsRef);
+      const normalizedQuery = queryText.toLowerCase();
+      const results: Location[] = [];
+
+      snapshot.forEach((docSnap) => {
+        if (results.length >= limitCount) {
+          return;
+        }
+
+        const data = docSnap.data() as FirestoreLocation;
+        const haystack = [
+          data.canonical_name,
+          data.city,
+          data.state,
+          data.country,
+          ...(data.aliases || [])
+        ]
+          .filter(Boolean)
+          .map((value) => value!.toLowerCase());
+
+        const match = haystack.some((value) => value.includes(normalizedQuery));
+
+        if (match) {
+          results.push({
+            id: docSnap.id,
+            canonical_name: data.canonical_name,
+            city: data.city || '',
+            state: data.state || '',
+            country: data.country || '',
+            aliases: data.aliases || [],
+            coordinates: data.coordinates,
+            created_at: data.created_at || '',
+            updated_at: data.updated_at || ''
+          });
+        }
+      });
+
+      return results;
     } catch (error) {
       console.error('ProjectLocationService.searchLocations error:', error);
       return [];
@@ -234,6 +241,72 @@ export class ProjectLocationService {
       notes: `Added from Google Places on ${new Date().toLocaleDateString()}`
     };
   }
-}
 
-export default ProjectLocationService;
+  private static mapDocumentToProjectLocation(id: string, data: FirestoreProjectLocation): ProjectLocation {
+    const createdAt = data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString();
+    const updatedAt = data.updatedAt?.toDate?.()?.toISOString?.() || createdAt;
+
+    const locationDetails: Location = {
+      id: data.placeId || id,
+      canonical_name: data.formattedAddress,
+      city: this.findAddressComponent(data.addressComponents, 'locality'),
+      state: this.findAddressComponent(data.addressComponents, 'administrative_area_level_1'),
+      country: this.findAddressComponent(data.addressComponents, 'country'),
+      aliases: [],
+      coordinates: data.geometry?.location
+        ? {
+            lat: data.geometry.location.lat,
+            lng: data.geometry.location.lng
+          }
+        : undefined,
+      created_at: createdAt,
+      updated_at: updatedAt
+    };
+
+    return {
+      id,
+      project_id: data.projectId,
+      location_id: data.placeId || id,
+      added_by: data.addedBy || '',
+      added_at: createdAt,
+      notes: data.notes || null,
+      is_primary: !!data.isPrimary,
+      location: locationDetails
+    };
+  }
+
+  private static findAddressComponent(
+    components: GooglePlacesLocation['address_components'] | undefined,
+    type: string
+  ): string | undefined {
+    return components
+      ?.find((component) => component.types?.includes(type))
+      ?.long_name;
+  }
+
+  private static async clearPrimaryLocation(projectId: string) {
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
+
+    const projectLocationsRef = collection(db, 'projectLocations');
+    const primariesQuery = query(
+      projectLocationsRef,
+      where('projectId', '==', projectId),
+      where('isPrimary', '==', true)
+    );
+
+    const snapshot = await getDocs(primariesQuery);
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const batch = writeBatch(db);
+    snapshot.forEach((docSnap) => {
+      batch.update(docSnap.ref, { isPrimary: false, updatedAt: serverTimestamp() });
+    });
+
+    await batch.commit();
+  }
+}

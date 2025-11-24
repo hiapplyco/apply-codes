@@ -8,7 +8,15 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['node_modules'],
+    exclude: [
+      'node_modules/**',
+      '**/node_modules/**',
+      'functions/node_modules/**',
+      'mcp-server/**',
+      'dist/**',
+      'build/**',
+      '.next/**'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { firestoreClient } from "@/lib/firebase-database-bridge";
 import { useClientAgentOutputs } from "@/stores/useClientAgentOutputs";
 
 export const createJob = async (
@@ -12,24 +12,24 @@ export const createJob = async (
   try {
     console.log(`Creating job with source: ${source} and userId: ${userId}`);
     
-    const { data: jobData, error: jobError } = await supabase
+    const { data, error } = await firestoreClient
       .from('jobs')
       .insert({
         content: searchText,
         user_id: userId,
         title,
         summary,
-        source: source || 'default'
-      })
-      .select()
-      .single();
+        source: source || 'default',
+        created_at: new Date().toISOString()
+      });
 
-    if (jobError) {
-      console.error('Error creating job:', jobError);
-      throw jobError;
+    if (error) {
+      console.error('Error creating job:', error);
+      throw error;
     }
     
-    const jobId = jobData.id;
+    const insertedJob = Array.isArray(data) ? data[0] : data;
+    const jobId = insertedJob?.id;
     console.log(`Created job with ID: ${jobId}`);
     
     // Clear previous search results when creating a new job
@@ -43,7 +43,7 @@ export const createJob = async (
     console.error('Error in createJob:', error);
     // Return a temporary ID for testing when job creation fails
     // This allows the flow to continue for demo/testing purposes
-    const tempId = Date.now();
+    const tempId = Date.now().toString();
     console.log(`Using temporary job ID: ${tempId} due to error`);
     return tempId;
   }

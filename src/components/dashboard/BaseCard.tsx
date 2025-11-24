@@ -15,16 +15,18 @@ const sizeClasses = {
 export function BaseCard({ title, children, size, onExpand, onPin, className }: BaseCardProps) {
   // Generate a random small rotation for the post-it effect
   const randomRotation = (Math.random() * 2 - 1).toFixed(1);
-  
+
   return (
     <Card className={cn(
-      "transition-all duration-300 transform hover:-translate-y-1",
+      "transition-all duration-300 transform hover:-translate-y-1 hover:rotate-0",
       "shadow-[5px_5px_10px_rgba(0,0,0,0.15)]",
-      `rotate-[${randomRotation}deg] hover:rotate-0`,
       sizeClasses[size],
       className
     )}
-    style={{ transformOrigin: 'center center' }}>
+    style={{
+      transformOrigin: 'center center',
+      transform: `rotate(${randomRotation}deg)`
+    }}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-semibold">{title}</CardTitle>
         <div className="flex items-center space-x-2">

@@ -1,8 +1,9 @@
-import { supabase } from "@/integrations/supabase/client";
 import { DailyCall } from "@daily-co/daily-js";
 import { toast } from "sonner";
+import { db } from "@/lib/firebase";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
-export const useTranscriptionHandler = (currentMeetingId: number | null) => {
+export const useTranscriptionHandler = (currentMeetingId: string | null) => {
   const startTranscription = async (callFrame: DailyCall) => {
     try {
       await callFrame.startTranscription();
@@ -18,12 +19,17 @@ export const useTranscriptionHandler = (currentMeetingId: number | null) => {
     console.log("Transcription message:", event);
     if (currentMeetingId) {
       try {
-        await supabase.from('daily_transcriptions').insert({
+        if (!db) {
+          throw new Error("Firestore not initialized");
+        }
+
+        await addDoc(collection(db, 'daily_transcriptions'), {
           participant_id: event.participantId,
           text: event.text,
           timestamp: event.timestamp,
           meeting_id: currentMeetingId,
-          user_id: userId
+          user_id: userId,
+          created_at: serverTimestamp()
         });
       } catch (error) {
         console.error("Error saving transcription:", error);

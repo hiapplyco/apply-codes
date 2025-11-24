@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { functionBridge } from "@/lib/function-bridge";
+import { firestoreClient } from "@/lib/firebase-database-bridge";
 import { useToast } from "@/hooks/use-toast";
 import { useClientAgentOutputs } from "@/stores/useClientAgentOutputs";
 import { useMutation } from "@tanstack/react-query";
@@ -26,27 +27,25 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
   const currentStep = PROCESSING_STEPS[currentStepIndex];
 
   const processStep = async (
-    functionName: string, 
+    stepLabel: string,
+    invoke: () => Promise<any>,
     responseKey: string,
   ): Promise<unknown> => {
     try {
-      console.log(`Starting ${functionName} processing...`);
+      console.log(`Starting ${stepLabel} processing...`);
       
       // Update progress before API call
       setCurrentStepIndex(prev => Math.min(prev + 1, PROCESSING_STEPS.length - 1));
       
-      const response = await supabase.functions.invoke(functionName, { 
-        body: { content } 
-      });
+      const response = await invoke();
       
-      if (response.error) throw response.error;
-      console.log(`${functionName} response:`, response.data);
+      console.log(`${stepLabel} response:`, response);
       
       // Update progress after successful API call
       setCurrentStepIndex(prev => Math.min(prev + 2, PROCESSING_STEPS.length - 1));
-      return response.data[responseKey];
+      return response?.[responseKey];
     } catch (error) {
-      console.error(`Error in ${functionName}:`, error);
+      console.error(`Error in ${stepLabel}:`, error);
       toast({
         title: "Error",
         description: ERROR_MESSAGES[Math.floor(Math.random() * ERROR_MESSAGES.length)],
@@ -60,7 +59,7 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
     mutationFn: async (agentOutput: Partial<AgentOutput>) => {
       console.log('Persisting agent output to database:', agentOutput);
       
-      const { error } = await supabase
+      const insertResult = await firestoreClient
         .from('agent_outputs')
         .insert({
           job_id: jobId,
@@ -70,7 +69,7 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
           job_summary: agentOutput.summaryData
         });
 
-      if (error) throw error;
+      if (insertResult.error) throw insertResult.error;
       
       // Set progress to 100% and trigger completion
       setCurrentStepIndex(PROCESSING_STEPS.length - 1);
@@ -102,19 +101,35 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
     const processContent = async () => {
       try {
         // Extract terms
-        const terms = await processStep('extract-nlp-terms', 'terms');
+        const terms = await processStep(
+          'extract-nlp-terms',
+          () => functionBridge.extractNlpTerms({ content }),
+          'terms'
+        );
         if (!isMounted) return;
         
         // Analyze compensation
-        const compensationData = await processStep('analyze-compensation', 'analysis');
+        const compensationData = await processStep(
+          'analyze-compensation',
+          () => functionBridge.analyzeCompensation({ content }),
+          'analysis'
+        );
         if (!isMounted) return;
         
         // Enhance description
-        const enhancerData = await processStep('enhance-job-description', 'enhancedDescription');
+        const enhancerData = await processStep(
+          'enhance-job-description',
+          () => functionBridge.enhanceJobDescription({ content }),
+          'enhancedDescription'
+        );
         if (!isMounted) return;
         
         // Generate summary
-        const summaryData = await processStep('summarize-job', 'summary');
+        const summaryData = await processStep(
+          'summarize-job',
+          () => functionBridge.summarizeJob({ content }),
+          'summary'
+        );
         if (!isMounted) return;
 
         const agentOutput = {
@@ -141,19 +156,12 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
         // Generate dashboard metrics as 5th step
         try {
           console.log('Starting dashboard metrics generation...');
-          const metricsResponse = await supabase.functions.invoke('generate-dashboard-metrics', {
-            body: { 
-              jobId: jobId.toString(),
-              forceRefresh: true 
-            }
+          const metricsResponse = await functionBridge.generateDashboardMetrics({
+            jobId: jobId.toString(),
+            forceRefresh: true 
           });
 
-          if (metricsResponse.error) {
-            console.error('Dashboard metrics generation failed:', metricsResponse.error);
-            // Don't fail the entire process if dashboard metrics fail
-          } else {
-            console.log('Dashboard metrics generated successfully:', metricsResponse.data);
-          }
+          console.log('Dashboard metrics generated successfully:', metricsResponse);
         } catch (error) {
           console.error('Error generating dashboard metrics:', error);
           // Continue without failing - dashboard metrics are supplementary

@@ -1,14 +1,16 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { generateBooleanSearch as generateBooleanSearchFunction } from "@/lib/firebase/functions/generateBooleanSearch";
+import { db } from "@/lib/firebase";
+import { collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { useProjectContext } from "@/context/ProjectContext";
 
 interface UseJobPostingFormProps {
   jobId?: string;
-  onSuccess?: (jobData?: { id: number; booleanSearch?: string; title?: string }) => void;
+  onSuccess?: (jobData?: { id: string; booleanSearch?: string; title?: string }) => void;
   onError?: (errorMessage: string) => void;
 }
 
@@ -23,7 +25,7 @@ interface JobData {
   content: string;
   created_at: string;
   user_id: string;
-  id?: number;
+  id?: string;
 }
 
 export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFormProps) {
@@ -52,7 +54,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     error: null
   });
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { user } = useNewAuth();
   const { selectedProjectId } = useProjectContext();
 
   // Fetch existing job data if editing
@@ -65,37 +67,15 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
       
       try {
         console.log("Fetching job with ID:", jobId);
-        const { data, error } = await supabase
-          .from("jobs")
-          .select("content")
-          .eq("id", Number(jobId))
-          .single();
 
-        if (error) {
-          console.error("Error fetching job:", error);
-          setFormState(prev => ({ 
-            ...prev, 
-            isLoading: false,
-            error: error.message 
-          }));
-          if (onError) onError(error.message);
-          toast({
-            title: "Error",
-            description: `Failed to load job: ${error.message}`,
-            variant: "destructive",
-          });
-          return;
+        if (!db) {
+          throw new Error("Firestore not initialized");
         }
 
-        if (data) {
-          console.log("Job data fetched successfully:", data);
-          setFormState(prev => ({ 
-            ...prev, 
-            content: data.content || "",
-            isLoading: false 
-          }));
-        } else {
-          console.error("No job data found");
+        const jobRef = doc(db, "jobs", jobId);
+        const jobSnap = await getDoc(jobRef);
+
+        if (!jobSnap.exists()) {
           const errorMessage = "Job not found";
           setFormState(prev => ({ 
             ...prev, 
@@ -108,7 +88,17 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
             description: errorMessage,
             variant: "destructive",
           });
+          return;
         }
+
+        const data = jobSnap.data() as JobData;
+
+        console.log("Job data fetched successfully:", data);
+        setFormState(prev => ({ 
+          ...prev, 
+          content: data.content || "",
+          isLoading: false 
+        }));
       } catch (err) {
         console.error("Unexpected error fetching job:", err);
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
@@ -134,7 +124,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
   };
 
   const validateSubmission = () => {
-    if (!session?.user) {
+    if (!user) {
       const errorMessage = "You must be logged in to create a job posting";
       toast({
         title: "Error",
@@ -159,47 +149,39 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     return true;
   };
 
-  const generateBooleanSearch = async (newJobId: number, jobTitle?: string) => {
+  const generateBooleanSearch = async (newJobId: string, jobTitle?: string) => {
     console.log("Generating boolean search...");
     try {
-      const { data: booleanData, error: booleanError } = await supabase.functions
-        .invoke('generate-boolean-search', {
-          body: { 
-            description: formState.content,
-            jobTitle: jobTitle,
-            userId: session?.user?.id
-          }
-        });
+      const response = await generateBooleanSearchFunction({
+        description: formState.content,
+        jobTitle,
+        userId: user?.uid
+      });
 
-      if (booleanError) {
-        console.error("Boolean generation error:", booleanError);
-        throw booleanError;
+      if (!response?.success) {
+        const errorMessage = response?.error || "Failed to generate boolean search";
+        console.error("Boolean generation error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
-      console.log("Boolean search generated:", booleanData);
+      console.log("Boolean search generated:", response.searchString);
       
-      if (booleanData?.searchString) {
-        // Update the job record with the boolean search
-        const updateData: any = { 
-          search_string: booleanData.searchString,
+      if (response.searchString) {
+        if (!db) {
+          throw new Error("Firestore not initialized");
+        }
+
+        const jobRef = doc(db, "jobs", newJobId);
+        await updateDoc(jobRef, {
+          search_string: response.searchString,
           metadata: {
             boolean_generated: true,
             boolean_generated_at: new Date().toISOString()
           }
-        };
-        
-        const { error: updateError } = await supabase
-          .from("jobs")
-          .update(updateData)
-          .eq("id", newJobId);
-
-        if (updateError) {
-          console.error("Error updating search string:", updateError);
-          // Don't throw - we still have the boolean search to return
-        }
+        });
       }
 
-      return booleanData?.searchString || null;
+      return response.searchString || null;
     } catch (error) {
       console.error("Error generating boolean search:", error);
       // Return null instead of throwing to prevent job save failure
@@ -207,78 +189,73 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     }
   };
 
-  const enhanceJobPosting = async (newJobId: number) => {
+  const enhanceJobPosting = async (newJobId: string) => {
     console.log("Enhancing job posting...");
     try {
-      const { data: enhancedData, error: enhanceError } = await supabase.functions
-        .invoke('enhance-job-posting', {
-          body: { 
-            content: formState.content,
-            jobId: newJobId
-          }
-        });
+      const enhancedResult = await functionBridge.enhanceJobDescription({
+        content: formState.content,
+        jobId: newJobId
+      });
 
-      if (enhanceError) {
-        console.error("Enhancement error:", enhanceError);
-        throw enhanceError;
-      }
+      console.log("Enhancement completed:", enhancedResult);
 
-      console.log("Enhancement completed:", enhancedData);
-      
-      if (enhancedData?.content) {
-        // Store the enhanced content in agent_outputs table
-        const { error: insertError } = await supabase
-          .from("agent_outputs")
-          .upsert({ 
-            job_id: newJobId,
-            enhanced_description: enhancedData.content,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'job_id'
-          });
+      const enhancedContent =
+        enhancedResult?.enhancedDescription ||
+        enhancedResult?.content ||
+        enhancedResult?.result ||
+        null;
 
-        if (insertError) {
-          console.error("Error storing enhanced content:", insertError);
+      if (enhancedContent && db) {
+        try {
+          const agentOutputRef = doc(db, "agent_outputs", newJobId);
+          const timestamp = new Date().toISOString();
+          await setDoc(
+            agentOutputRef,
+            {
+              job_id: newJobId,
+              enhanced_description: enhancedContent,
+              updated_at: timestamp,
+              created_at: timestamp
+            },
+            { merge: true }
+          );
+        } catch (firestoreError) {
+          console.error("Error storing enhanced content:", firestoreError);
         }
       }
 
-      return enhancedData;
+      return enhancedContent ? { content: enhancedContent } : null;
     } catch (error) {
       console.error("Error during enhancement:", error);
       return null;
     }
   };
 
-  const analyzeJobPosting = async (newJobId: number) => {
+  const analyzeJobPosting = async (newJobId: string) => {
     console.log("Analyzing job posting...");
     try {
-      const { data: analysisData, error: analysisError } = await supabase.functions
-        .invoke('analyze-schema', {
-          body: { schema: formState.content }
-        });
+      const [termsResult, compensationResult, summaryResult] = await Promise.all([
+        functionBridge.extractNlpTerms({ content: formState.content }),
+        functionBridge.analyzeCompensation({ content: formState.content }),
+        functionBridge.summarizeJob({ content: formState.content })
+      ]);
 
-      if (analysisError) {
-        console.error("Analysis error:", analysisError);
-        throw analysisError;
+      const analysisData = {
+        generatedAt: new Date().toISOString(),
+        terms: termsResult?.terms || termsResult,
+        compensation: compensationResult?.analysis || compensationResult,
+        summary: summaryResult?.summary || summaryResult
+      };
+
+      if (!db) {
+        throw new Error("Firestore not initialized");
       }
 
-      console.log("Analysis completed:", analysisData);
-      
-      if (!analysisData) {
-        console.warn("No analysis data returned");
-        return null;
-      }
-      
-      const { error: updateError } = await supabase
-        .from("jobs")
-        .update({ analysis: analysisData })
-        .eq("id", newJobId);
-
-      if (updateError) {
-        console.error("Error updating analysis:", updateError);
-        throw updateError;
-      }
+      const jobRef = doc(db, "jobs", newJobId);
+      await updateDoc(jobRef, {
+        analysis: analysisData,
+        updated_at: new Date().toISOString()
+      });
 
       return analysisData;
     } catch (error) {
@@ -296,34 +273,42 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     setFormState(prev => ({ ...prev, isSubmitting: true, error: null }));
 
     try {
-      if (!session?.user?.id) {
+      if (!user?.uid) {
         throw new Error("User ID not found");
       }
 
-      const jobData = {
-        content: formState.content,
-        created_at: new Date().toISOString(),
-        user_id: session.user.id,
-        project_id: selectedProjectId,
-      };
-
-      // Create or update the job record
-      console.log("Attempting to save job with data:", jobData);
-      const { data: jobResult, error: jobError } = await (jobId ? 
-        supabase.from("jobs").update(jobData).eq("id", Number(jobId)).select('id').single() : 
-        supabase.from("jobs").insert(jobData).select('id').single());
-
-      if (jobError) {
-        console.error("Supabase error saving job:", jobError);
-        // Check if it's a table not found error
-        if (jobError.message?.includes('relation "public.jobs" does not exist')) {
-          throw new Error("Database table 'jobs' not found. Please contact support.");
-        }
-        throw jobError;
+      if (!db) {
+        throw new Error("Firestore not initialized");
       }
-      if (!jobResult) throw new Error("No data returned from job creation/update");
+
+      const timestamp = new Date().toISOString();
+
+      let newJobId: string;
+
+      if (jobId) {
+        console.log("Updating job with ID:", jobId);
+        const jobRef = doc(db, "jobs", jobId);
+        await updateDoc(jobRef, {
+          content: formState.content,
+          project_id: selectedProjectId || null,
+          updated_at: timestamp
+        });
+        newJobId = jobId;
+      } else {
+        console.log("Creating new job");
+        const jobsCollection = collection(db, "jobs");
+        const newJobRef = doc(jobsCollection);
+        await setDoc(newJobRef, {
+          id: newJobRef.id,
+          content: formState.content,
+          project_id: selectedProjectId || null,
+          user_id: user.uid,
+          created_at: timestamp,
+          updated_at: timestamp
+        });
+        newJobId = newJobRef.id;
+      }
       
-      const newJobId = jobResult.id;
       console.log("Job created/updated with ID:", newJobId);
 
       // Generate boolean search and analyze in parallel
