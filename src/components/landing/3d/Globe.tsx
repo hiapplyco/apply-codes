@@ -1,6 +1,5 @@
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Points, PointMaterial, Line } from "@react-three/drei";
 import * as THREE from "three";
 
 export const Globe = () => {
@@ -39,6 +38,10 @@ export const Globe = () => {
         return { nodes: nodesArray, connections: connectionsArray };
     }, []);
 
+    const agentsPositions = useMemo(() => new Float32Array(nodes.slice(0, 25).flatMap(v => [v.x, v.y, v.z])), [nodes]);
+    const humansPositions = useMemo(() => new Float32Array(nodes.slice(25).flatMap(v => [v.x, v.y, v.z])), [nodes]);
+    const lineGeometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(connections), [connections]);
+
     useFrame((state) => {
         if (groupRef.current) {
             groupRef.current.rotation.y += 0.001;
@@ -49,35 +52,48 @@ export const Globe = () => {
     return (
         <group ref={groupRef}>
             {/* Agents (Purple Nodes) */}
-            <Points positions={new Float32Array(nodes.slice(0, 25).flatMap(v => [v.x, v.y, v.z]))} stride={3}>
-                <PointMaterial
+            <points>
+                <bufferGeometry>
+                    <bufferAttribute
+                        attach="attributes-position"
+                        args={[agentsPositions, 3]}
+                    />
+                </bufferGeometry>
+                <pointsMaterial
                     transparent
                     color="#8B5CF6"
                     size={0.15}
                     sizeAttenuation={true}
                     depthWrite={false}
                 />
-            </Points>
+            </points>
 
             {/* Humans (Cyan Nodes) */}
-            <Points positions={new Float32Array(nodes.slice(25).flatMap(v => [v.x, v.y, v.z]))} stride={3}>
-                <PointMaterial
+            <points>
+                <bufferGeometry>
+                    <bufferAttribute
+                        attach="attributes-position"
+                        args={[humansPositions, 3]}
+                    />
+                </bufferGeometry>
+                <pointsMaterial
                     transparent
                     color="#06B6D4"
                     size={0.15}
                     sizeAttenuation={true}
                     depthWrite={false}
                 />
-            </Points>
+            </points>
 
             {/* Connections */}
-            <Line
-                points={connections}
-                color="white"
-                opacity={0.1}
-                transparent
-                lineWidth={1}
-            />
+            <lineSegments geometry={lineGeometry}>
+                <lineBasicMaterial
+                    color="white"
+                    opacity={0.1}
+                    transparent
+                    linewidth={1}
+                />
+            </lineSegments>
 
             {/* Inner Sphere for depth */}
             <mesh scale={2.4}>

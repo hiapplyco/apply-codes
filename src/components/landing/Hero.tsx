@@ -57,9 +57,9 @@ export const Hero = () => {
                             variant="outline"
                             size="lg"
                             className="border-2 group w-full sm:w-auto"
-                            onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
+                            onClick={() => window.location.href = '/login'}
                         >
-                            Explore Solutions
+                            Login to Platform
                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                         </Button>
                     </motion.div>

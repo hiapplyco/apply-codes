@@ -2,6 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { HelmetProvider } from "react-helmet-async";
+import { UnifiedAuthProvider } from "@/context/UnifiedAuthContext";
 import { NewAuthProvider } from "@/context/NewAuthContext";
 import { ClarvidaAuthProvider } from "@/context/ClarvidaAuthContext";
 import { ProjectProvider } from "@/context/ProjectContext";
@@ -43,63 +44,65 @@ function App() {
   // Remove the basename configuration to let React Router handle paths naturally
   return (
     <HelmetProvider>
-      <NewAuthProvider>
-        <ProjectProvider>
-          <ClarvidaAuthProvider>
-            <Router>
-              <PageTracker />
-              <Toaster position="top-center" />
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/integrations" element={<MarketingIntegrations />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
-                <Route path="/reset-password" element={<PasswordReset />} />
+      <UnifiedAuthProvider>
+        <NewAuthProvider>
+          <ProjectProvider>
+            <ClarvidaAuthProvider>
+              <Router>
+                <PageTracker />
+                <Toaster position="top-center" />
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/integrations" element={<MarketingIntegrations />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/reset-password-request" element={<ResetPasswordRequest />} />
+                  <Route path="/reset-password" element={<PasswordReset />} />
 
-                {/* Firebase migration complete - test routes removed */}
+                  {/* Firebase migration complete - test routes removed */}
 
-                {/* Clarvida routes - move these to top level for better visibility */}
-                <Route path="/clarvida/login" element={<ClarvidaLogin />} />
-                <Route path="/clarvida" element={
-                  <ClarvidaProtectedRoute>
-                    <Clarvida />
-                  </ClarvidaProtectedRoute>
-                } />
+                  {/* Clarvida routes - move these to top level for better visibility */}
+                  <Route path="/clarvida/login" element={<ClarvidaLogin />} />
+                  <Route path="/clarvida" element={
+                    <ClarvidaProtectedRoute>
+                      <Clarvida />
+                    </ClarvidaProtectedRoute>
+                  } />
 
-                {/* Protected routes wrapped in MainLayout */}
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<MainLayout />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/job-post" element={<JobPostingPage />} />
-                    <Route path="/job-editor/:id" element={<JobEditorPage />} />
+                  {/* Protected routes wrapped in MainLayout */}
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<MainLayout />}>
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/job-post" element={<JobPostingPage />} />
+                      <Route path="/job-editor/:id" element={<JobEditorPage />} />
 
-                    {/* Redirect old routes */}
-                    <Route path="/linkedin-post" element={<Navigate to="/content-creation" replace />} />
-                    <Route path="/screening-room" element={<Navigate to="/meeting" replace />} />
-                    <Route path="/search-history" element={<Navigate to="/profile" replace />} />
+                      {/* Redirect old routes */}
+                      <Route path="/linkedin-post" element={<Navigate to="/content-creation" replace />} />
+                      <Route path="/screening-room" element={<Navigate to="/meeting" replace />} />
+                      <Route path="/search-history" element={<Navigate to="/profile" replace />} />
 
-                    <Route path="/content-creation" element={<ContentCreationPage />} />
-                    <Route path="/sourcing" element={<Sourcing />} />
-                    <Route path="/meeting" element={<Meeting />} />
-                    <Route path="/chat" element={<Chat />} />
-                    <Route path="/report/:jobId" element={<Report />} />
-                    <Route path="/analytics/:jobId" element={<DashboardAnalytics />} />
-                    <Route path="/projects/:projectId" element={<ProjectDetail />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/platform/integrations" element={<PlatformIntegrations />} />
+                      <Route path="/content-creation" element={<ContentCreationPage />} />
+                      <Route path="/sourcing" element={<Sourcing />} />
+                      <Route path="/meeting" element={<Meeting />} />
+                      <Route path="/chat" element={<Chat />} />
+                      <Route path="/report/:jobId" element={<Report />} />
+                      <Route path="/analytics/:jobId" element={<DashboardAnalytics />} />
+                      <Route path="/projects/:projectId" element={<ProjectDetail />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/platform/integrations" element={<PlatformIntegrations />} />
+                    </Route>
                   </Route>
-                </Route>
 
-                {/* Catch all route - ensure SPA routing works correctly on refresh */}
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </Router>
-          </ClarvidaAuthProvider>
-        </ProjectProvider>
-      </NewAuthProvider>
+                  {/* Catch all route - ensure SPA routing works correctly on refresh */}
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </Router>
+            </ClarvidaAuthProvider>
+          </ProjectProvider>
+        </NewAuthProvider>
+      </UnifiedAuthProvider>
     </HelmetProvider>
   );
 }

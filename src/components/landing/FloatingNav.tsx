@@ -100,6 +100,15 @@ export const FloatingNav = () => {
                         <div className="h-6 w-px bg-border mx-1" />
 
                         <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-full px-4 mr-1 hover:bg-accent"
+                            onClick={() => window.location.href = '/login'}
+                        >
+                            Login
+                        </Button>
+
+                        <Button
                             variant="neubrutalist"
                             size="sm"
                             className="rounded-full px-4"

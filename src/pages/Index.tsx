@@ -6,21 +6,27 @@ import { DualServices } from '@/components/landing/DualServices';
 import { CaseStudies } from '@/components/landing/CaseStudies';
 import { PricingTeaser } from '@/components/landing/PricingTeaser';
 
+import { ChatProvider } from '@/context/ChatContext';
+import { ChatWidget } from '@/components/chat/ChatWidget';
+
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans antialiased dark">
-      <FloatingNav />
+    <ChatProvider>
+      <div className="min-h-screen bg-background text-foreground font-sans antialiased dark">
+        <FloatingNav />
 
-      <main>
-        <Hero />
-        <TechStack />
-        <DualServices />
-        <CaseStudies />
-        <PricingTeaser />
-      </main>
+        <main>
+          <Hero />
+          <TechStack />
+          <DualServices />
+          <CaseStudies />
+          <PricingTeaser />
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+        <ChatWidget />
+      </div>
+    </ChatProvider>
   );
 };
 
