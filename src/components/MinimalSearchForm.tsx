@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
 import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
@@ -83,11 +83,11 @@ const extractLocationFromSnippet = (snippet: string): string | undefined => {
       const excludePatterns = [
         /\b(experience|years|developer|engineer|manager|director|senior|junior|lead|head|chief|president|ceo|cto|cfo|vp|vice|consulting|solutions|services|technologies|technology|systems|software|data|analytics|marketing|sales|operations|product|design|strategy|business|corporate|global|international|remote|freelance|consultant|contractor|full.time|part.time|seeking|looking|available|linkedin|member|profile|summary|about|skills|education|university|college|degree|bachelor|master|phd|doctorate|certified|certification|award|achievement|honor|volunteer|charity|nonprofit|organization|company|corporation|inc|llc|ltd|co|group|team|department|division|unit|branch|office|headquarters|hq|location|based|working|work|job|career|professional|expert|specialist|analyst|coordinator|associate|assistant|intern|trainee|student|graduate|alumni|member|board|committee|council|advisory|founder|owner|partner|shareholder|investor|client|customer|contact|connect|network|follow|endorse|recommend|reference|testimonial|feedback|review|rating|score|rank|top|best|leading|premier|award.winning|recognized|featured|published|speaker|author|writer|blogger|contributor|editor|journalist|reporter|anchor|host|presenter|moderator|panelist|judge|mentor|coach|trainer|instructor|teacher|professor|lecturer|researcher|scientist|engineer|developer|programmer|coder|architect|designer|artist|creative|innovator|entrepreneur|startup|venture|capital|funding|investment|acquisition|merger|partnership|collaboration|alliance|joint|venture|project|initiative|program|campaign|launch|release|announcement|news|update|press|media|social|digital|online|web|mobile|app|platform|solution|product|service|tool|technology|software|hardware|system|network|cloud|data|analytics|intelligence|machine|learning|artificial|ai|automation|robotics|iot|blockchain|cryptocurrency|fintech|healthtech|biotech|cleantech|greentech|sustainability|environment|climate|energy|renewable|solar|wind|electric|battery|automotive|transportation|logistics|supply|chain|manufacturing|production|construction|real|estate|property|retail|ecommerce|marketplace|platform|saas|paas|iaas|b2b|b2c|b2g|enterprise|small|medium|large|fortune|public|private|government|federal|state|local|municipal|county|city|town|village|rural|urban|suburban|metro|region|area|zone|district|sector|industry|vertical|horizontal|niche|market|segment|demographic|audience|user|customer|client|consumer|buyer|seller|vendor|supplier|partner|distributor|reseller|retailer|wholesaler|manufacturer|producer|creator|maker|builder|developer|designer|consultant|advisor|expert|specialist|analyst|manager|director|executive|leader|founder|owner|operator|administrator|coordinator|supervisor|overseer|controller|auditor|inspector|evaluator|assessor|reviewer|approver|decision|maker|stakeholder|influencer|advocate|champion|evangelist|ambassador|representative|spokesperson|liaison|contact|point|person|individual|team|group|department|division|unit|branch|office|facility|site|location|address|phone|email|website|url|link|social|media|linkedin|twitter|facebook|instagram|youtube|github|portfolio|resume|cv|bio|profile|summary|about|description|overview|introduction|background|history|story|journey|path|career|experience|expertise|skills|knowledge|competency|capability|ability|talent|strength|qualification|credential|certification|license|degree|education|training|course|workshop|seminar|conference|event|meetup|networking|community|association|organization|society|club|group|forum|discussion|conversation|dialogue|exchange|interaction|engagement|participation|involvement|contribution|collaboration|cooperation|partnership|alliance|relationship|connection|network|contact|reference|recommendation|endorsement|testimonial|review|feedback|rating|score|evaluation|assessment|appraisal|performance|achievement|accomplishment|success|milestone|goal|objective|target|metric|kpi|roi|revenue|profit|growth|expansion|scale|size|volume|quantity|quality|standard|benchmark|best|practice|methodology|approach|strategy|tactic|technique|method|process|procedure|workflow|system|framework|model|structure|architecture|design|pattern|template|blueprint|plan|roadmap|timeline|schedule|deadline|milestone|phase|stage|step|task|activity|action|item|element|component|part|piece|section|chapter|module|unit|lesson|topic|subject|theme|category|type|kind|sort|variety|option|choice|alternative|solution|answer|response|reply|result|outcome|output|deliverable|artifact|document|report|analysis|study|research|investigation|survey|poll|questionnaire|interview|focus|group|usability|testing|quality|assurance|qa|qc|control|management|governance|compliance|regulation|policy|procedure|standard|guideline|rule|law|requirement|specification|criteria|condition|constraint|limitation|restriction|assumption|dependency|risk|issue|problem|challenge|obstacle|barrier|blocker|bottleneck|pain|point|gap|opportunity|potential|possibility|chance|probability|likelihood|certainty|uncertainty|ambiguity|clarity|transparency|visibility|accountability|responsibility|ownership|authority|power|influence|impact|effect|consequence|implication|significance|importance|priority|urgency|criticality|severity|magnitude|scale|scope|range|extent|depth|breadth|width|height|length|size|dimension|measurement|quantity|amount|number|count|total|sum|average|mean|median|mode|minimum|maximum|range|variance|deviation|distribution|frequency|rate|ratio|percentage|proportion|share|portion|fraction|segment|slice|part|piece|component|element|factor|variable|parameter|attribute|property|characteristic|feature|aspect|dimension|facet|angle|perspective|viewpoint|opinion|belief|attitude|sentiment|feeling|emotion|mood|tone|style|approach|manner|way|method|technique|strategy|tactic|plan|scheme|program|project|initiative|campaign|effort|endeavor|undertaking|venture|enterprise|business|operation|activity|function|role|responsibility|duty|task|job|assignment|mission|purpose|goal|objective|target|aim|intention|plan|strategy|vision|mission|values|culture|philosophy|principles|beliefs|ethics|morals|standards|guidelines|rules|policies|procedures|processes|systems|structures|frameworks|models|patterns|templates|blueprints|designs|architectures|solutions|products|services|offerings|portfolio|catalog|inventory|stock|supply|demand|market|competition|competitor|rival|alternative|substitute|replacement|upgrade|improvement|enhancement|optimization|refinement|innovation|creativity|originality|uniqueness|differentiation|advantage|benefit|value|utility|usefulness|relevance|applicability|suitability|appropriateness|fitness|match|alignment|compatibility|integration|interoperability|connectivity|communication|interaction|interface|api|protocol|standard|format|specification|documentation|manual|guide|tutorial|help|support|assistance|service|maintenance|repair|fix|solution|troubleshooting|debugging|testing|validation|verification|confirmation|assurance|guarantee|warranty|insurance|protection|security|safety|risk|management|mitigation|prevention|avoidance|reduction|minimization|elimination|control|monitoring|tracking|measurement|analysis|evaluation|assessment|audit|review|inspection|examination|investigation|research|study|survey|poll|questionnaire|interview|discussion|conversation|dialogue|meeting|conference|call|session|workshop|seminar|training|course|class|lesson|lecture|presentation|demonstration|show|exhibition|display|showcase|feature|highlight|emphasis|focus|attention|interest|curiosity|engagement|participation|involvement|contribution|input|feedback|comment|suggestion|recommendation|advice|guidance|direction|instruction|command|order|request|demand|requirement|need|want|desire|wish|hope|expectation|anticipation|prediction|forecast|projection|estimate|calculation|computation|analysis|evaluation|assessment|judgment|decision|choice|selection|option|alternative|solution|answer|response|reply|result|outcome|output|product|deliverable|artifact|document|file|record|data|information|knowledge|intelligence|insight|understanding|comprehension|awareness|recognition|realization|discovery|finding|conclusion|summary|synopsis|abstract|overview|introduction|background|context|setting|environment|situation|circumstance|condition|state|status|position|location|place|site|venue|facility|building|structure|construction|architecture|design|layout|plan|blueprint|diagram|chart|graph|table|list|menu|catalog|directory|index|reference|guide|manual|handbook|documentation|specification|standard|protocol|format|template|pattern|model|framework|system|platform|solution|tool|utility|application|software|program|code|script|function|method|procedure|process|workflow|pipeline|chain|sequence|series|set|collection|group|cluster|bundle|package|suite|kit|toolkit|library|repository|database|storage|archive|backup|copy|duplicate|version|revision|update|upgrade|improvement|enhancement|modification|change|alteration|adjustment|customization|configuration|setup|installation|deployment|implementation|execution|operation|function|performance|behavior|action|activity|process|task|job|work|effort|labor|service|duty|responsibility|obligation|commitment|promise|agreement|contract|deal|arrangement|partnership|collaboration|cooperation|alliance|relationship|connection|association|affiliation|membership|participation|involvement|engagement|interaction|communication|correspondence|exchange|dialogue|conversation|discussion|meeting|conference|call|session|event|occasion|gathering|assembly|convention|symposium|summit|forum|panel|debate|presentation|speech|talk|lecture|seminar|workshop|training|course|class|lesson|tutorial|demonstration|exhibition|show|display|performance|concert|festival|celebration|party|reception|dinner|lunch|breakfast|meal|food|drink|beverage|entertainment|recreation|leisure|hobby|interest|passion|enthusiasm|excitement|joy|happiness|satisfaction|pleasure|enjoyment|fun|amusement|humor|comedy|laughter|smile|cheer|celebration|success|achievement|accomplishment|victory|win|triumph|conquest|mastery|expertise|skill|talent|ability|capability|competence|proficiency|knowledge|understanding|wisdom|intelligence|insight|intuition|instinct|judgment|decision|choice|selection|preference|option|alternative|possibility|opportunity|chance|probability|likelihood|potential|capacity|power|strength|force|energy|vigor|vitality|health|wellness|fitness|condition|state|status|situation|circumstance|environment|context|setting|background|history|past|present|future|time|period|duration|length|span|interval|gap|break|pause|rest|stop|end|finish|completion|conclusion|result|outcome|consequence|effect|impact|influence|significance|importance|meaning|purpose|reason|cause|source|origin|beginning|start|initiation|launch|introduction|creation|development|growth|expansion|progress|advancement|improvement|enhancement|optimization|refinement|evolution|transformation|change|modification|alteration|adjustment|adaptation|customization|personalization|individualization|specialization|differentiation|distinction|uniqueness|originality|creativity|innovation|invention|discovery|breakthrough|achievement|success|victory|triumph|accomplishment|milestone|goal|objective|target|aim|purpose|mission|vision|dream|aspiration|ambition|desire|wish|hope|expectation|anticipation|prediction|forecast|projection|plan|strategy|approach|method|technique|procedure|process|system|framework|model|pattern|structure|organization|arrangement|configuration|setup|design|architecture|blueprint|template|format|standard|specification|protocol|rule|guideline|principle|policy|procedure|practice|habit|routine|custom|tradition|convention|norm|standard|benchmark|measure|metric|indicator|signal|sign|symptom|evidence|proof|demonstration|example|instance|case|scenario|situation|circumstance|condition|state|status|position|location|place|site|venue|destination|target|goal|objective|endpoint|finish|completion|conclusion|result|outcome|output|product|deliverable|artifact|creation|work|piece|item|object|thing|entity|element|component|part|section|segment|portion|share|fraction|percentage|proportion|ratio|rate|frequency|occurrence|instance|event|incident|episode|situation|circumstance|condition|state|status|phase|stage|step|level|degree|extent|amount|quantity|number|count|total|sum|aggregate|collection|group|set|series|sequence|chain|line|row|column|list|array|table|matrix|grid|network|web|structure|system|organization|entity|body|unit|division|department|section|branch|office|facility|site|location|address|contact|information|details|particulars|specifics|data|facts|figures|statistics|numbers|measurements|dimensions|size|scale|scope|range|extent|breadth|width|depth|height|length|distance|space|area|volume|capacity|limit|boundary|border|edge|margin|perimeter|circumference|diameter|radius|center|middle|core|heart|essence|substance|material|matter|content|subject|topic|theme|issue|problem|question|query|inquiry|investigation|research|study|analysis|examination|review|evaluation|assessment|appraisal|judgment|opinion|view|perspective|angle|approach|stance|position|attitude|sentiment|feeling|emotion|mood|tone|atmosphere|ambiance|environment|setting|context|background|situation|circumstance|condition|state|status|phase|stage|period|time|moment|instant|second|minute|hour|day|week|month|year|decade|century|millennium|era|age|epoch|generation|lifetime|lifespan|duration|length|span|interval|gap|break|pause|rest|stop|halt|interruption|suspension|delay|postponement|deferment|extension|prolongation|continuation|persistence|endurance|stamina|strength|power|force|energy|vigor|vitality|health|wellness|fitness|condition|shape|form|appearance|look|aspect|feature|characteristic|quality|property|attribute|trait|mark|sign|symbol|indicator|signal|clue|hint|suggestion|implication|meaning|significance|importance|relevance|value|worth|merit|benefit|advantage|profit|gain|return|reward|compensation|payment|salary|wage|income|earnings|revenue|profit|surplus|excess|abundance|plenty|wealth|richness|prosperity|success|achievement|accomplishment|victory|triumph|conquest|mastery|dominance|superiority|excellence|perfection|quality|standard|level|grade|rank|position|status|standing|reputation|image|brand|identity|character|personality|nature|essence|spirit|soul|heart|mind|brain|intelligence|wisdom|knowledge|understanding|comprehension|awareness|consciousness|realization|recognition|acknowledgment|acceptance|approval|agreement|consent|permission|authorization|license|permit|certificate|credential|qualification|degree|diploma|award|honor|prize|trophy|medal|recognition|appreciation|gratitude|thanks|acknowledgment|credit|praise|compliment|flattery|admiration|respect|esteem|regard|consideration|attention|interest|curiosity|fascination|attraction|appeal|charm|beauty|elegance|grace|style|fashion|trend|mode|manner|way|method|approach|technique|strategy|tactic|plan|scheme|program|project|initiative|campaign|effort|endeavor|undertaking|venture|enterprise|business|operation|activity|function|role|responsibility|duty|task|job|assignment|mission|purpose|goal|objective|target|aim|intention|plan|strategy|vision|mission|values|culture|philosophy|principles|beliefs|ethics|morals|standards|guidelines|rules|policies|procedures|processes|systems|structures|frameworks|models|patterns|templates|blueprints|designs|architectures|solutions|products|services|offerings|portfolio)/i
       ];
-      
+
       if (excludePatterns.some(pattern => pattern.test(location))) {
         continue;
       }
-      
+
       // Clean up the location string
       return location
         .replace(/\s+/g, ' ')
@@ -95,14 +95,14 @@ const extractLocationFromSnippet = (snippet: string): string | undefined => {
         .trim();
     }
   }
-  
+
   return undefined;
 };
 
 export default function MinimalSearchForm({ userId, selectedProjectId }: MinimalSearchFormProps) {
   // Debug version to help with cache issues
   console.log('MinimalSearchForm v3.1 loaded', { userId, selectedProjectId });
-  
+
   // Get project context
   const { selectedProject } = useProjectContext();
   const [jobDescription, setJobDescription] = useState('');
@@ -119,17 +119,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [isSearching, setIsSearching] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
   const [expandedProfiles, setExpandedProfiles] = useState<Set<number>>(new Set());
-  const [analysisResults, setAnalysisResults] = useState<{[key: number]: any}>({});
+  const [analysisResults, setAnalysisResults] = useState<{ [key: number]: any }>({});
   const [loadingAnalysis, setLoadingAnalysis] = useState<Set<number>>(new Set());
-  const [contactInfo, setContactInfo] = useState<{[key: number]: ContactInfo}>({});
+  const [contactInfo, setContactInfo] = useState<{ [key: number]: ContactInfo }>({});
   const [loadingContact, setLoadingContact] = useState<Set<number>>(new Set());
   const [savedCandidates, setSavedCandidates] = useState<Set<number>>(new Set());
   const [savingCandidates, setSavingCandidates] = useState<Set<number>>(new Set());
-  
+
   // Context management states
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [loadingContext, setLoadingContext] = useState(false);
-  
+
   // Input method states
   const [urlInput, setUrlInput] = useState('');
   const [isScrapingUrl, setIsScrapingUrl] = useState(false);
@@ -144,11 +144,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
   const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Collapse states for progressive focus
   const [requirementsCollapsed, setRequirementsCollapsed] = useState(false);
   const [booleanCollapsed, setBooleanCollapsed] = useState(false);
-  
+
   // Boolean explanation states
   const [showExplanation, setShowExplanation] = useState(false);
   const [booleanExplanation, setBooleanExplanation] = useState<BooleanExplanation | null>(null);
@@ -170,20 +170,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     // Check if URL is a LinkedIn URL
     const isLinkedInUrl = urlInput.toLowerCase().includes('linkedin.com');
-    
+
     if (isLinkedInUrl) {
       // Show sad emoji first
       toast.error('😢 LinkedIn URLs are tricky to scrape...', {
         description: 'LinkedIn has strong anti-scraping measures'
       });
-      
+
       // Wait a moment, then show happy emoji with clever message
       setTimeout(() => {
         toast.success('😊 But that\'s exactly why we built this tool!', {
           description: 'Use the search below to find and analyze LinkedIn profiles instead 👇'
         });
       }, 2000);
-      
+
       return;
     }
 
@@ -226,7 +226,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             timestamp: new Date().toISOString()
           }
         });
-        
+
         setUrlInput('');
         setShowUrlDialog(false);
         toast.success('Website content added successfully!');
@@ -235,7 +235,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
     } catch (error) {
       console.error('URL scraping failed:', error);
-      
+
       // Provide more specific error messages
       let errorMessage = 'Failed to scrape website';
       if (error instanceof Error) {
@@ -249,7 +249,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           errorMessage = 'Network error. Check your connection and try again.';
         }
       }
-      
+
       toast.error(errorMessage, {
         description: 'Try copying and pasting the content manually if scraping fails.'
       });
@@ -260,9 +260,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   // Context management functions
   const saveContextItem = useCallback(async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
-    console.log('💾 saveContextItem called with:', { 
-      item, 
-      userId, 
+    console.log('💾 saveContextItem called with:', {
+      item,
+      userId,
       selectedProjectId: selectedProject?.id || selectedProjectId,
       selectedProject: selectedProject?.name,
       timestamp: new Date().toISOString()
@@ -312,25 +312,25 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     console.log('🎯 MinimalSearchForm.handleLocationSelect called with:', location);
     console.log('📋 Selected project:', selectedProject);
     console.log('🗂️ Context items count:', contextItems.length);
-    
+
     // Prevent duplicate processing of the same location
     // Prevent rapid duplicate selections
     const currentTime = Date.now();
     const lastSelectionKey = `location_${location.formatted_address}`;
     const lastSelectionTime = sessionStorage.getItem(lastSelectionKey);
-    
+
     if (lastSelectionTime && currentTime - parseInt(lastSelectionTime) < 2000) {
       console.log('🚫 Preventing duplicate location selection:', location.formatted_address);
       return;
     }
-    
+
     sessionStorage.setItem(lastSelectionKey, currentTime.toString());
-    
+
     // Clean up old entries after 5 seconds
     setTimeout(() => {
       sessionStorage.removeItem(lastSelectionKey);
     }, 5000);
-    
+
     try {
       // Show loading state
       toast.loading('Adding location...', { id: 'location-add' });
@@ -341,11 +341,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
 
       // Check if this location already exists as a context item
-      const existingLocation = contextItems.find(item => 
-        item.type === 'manual_input' && 
+      const existingLocation = contextItems.find(item =>
+        item.type === 'manual_input' &&
         item.title.includes(location.formatted_address)
       );
-      
+
       if (existingLocation) {
         console.log('🔄 Location already exists as context item:', existingLocation);
         toast.success('Location already added to context', { id: 'location-add' });
@@ -376,7 +376,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           isLocationContext: true // Mark this as location context for easier filtering
         }
       });
-      
+
       console.log('🗺️ Location context item created:', {
         id: contextItem?.id,
         type: contextItem?.type,
@@ -404,12 +404,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       // });
 
       setShowLocationDialog(false);
-      
+
       // Success notification with project context
       if (selectedProject) {
         toast.success(
           `Location "${location.formatted_address}" added to project "${selectedProject.name}"`,
-          { 
+          {
             id: 'location-add',
             description: 'This location will be used for targeted boolean search generation'
           }
@@ -417,7 +417,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       } else {
         toast.success(
           `Location "${location.formatted_address}" added as general context`,
-          { 
+          {
             id: 'location-add',
             description: 'Select a project to associate this location with a specific search'
           }
@@ -464,7 +464,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     console.log('File upload triggered:', { file: file?.name, userId });
-    
+
     if (!file || !userId) {
       console.error('Missing file or userId:', { hasFile: !!file, userId });
       toast.error('Please select a file');
@@ -480,9 +480,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     setIsUploadingFile(true);
     try {
-      console.log('Processing file with DocumentProcessor:', { 
-        fileName: file.name, 
-        fileType: file.type, 
+      console.log('Processing file with DocumentProcessor:', {
+        fileName: file.name,
+        fileType: file.type,
         fileSize: file.size,
         userId: userId
       });
@@ -533,7 +533,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
               processing_method: 'client_side_with_server_fallback'
             }
           });
-          
+
           // Enhanced success message based on file type
           if (file.name.toLowerCase().endsWith('.docx')) {
             toast.success('🎯 DOCX content extracted with enhanced formatting preservation!');
@@ -549,7 +549,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       });
     } catch (error) {
       console.error('File upload failed:', error);
-      
+
       // Provide more specific error messages for file uploads
       let errorMessage = 'Failed to process file';
       if (error instanceof Error) {
@@ -576,9 +576,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           errorMessage = error.message;
         }
       }
-      
+
       toast.error(errorMessage, {
-        description: file && file.name.toLowerCase().endsWith('.docx') 
+        description: file && file.name.toLowerCase().endsWith('.docx')
           ? 'Try converting to PDF or use a different format for best results'
           : 'Supported formats: PDF, TXT, JPG, PNG work best'
       });
@@ -600,12 +600,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     setIsSearchingPerplexity(true);
     try {
       console.log('Sending Perplexity query:', perplexityQuery);
-      
+
       const data = await functionBridge.perplexitySearch({ query: perplexityQuery });
       const error = null;
 
       console.log('Perplexity response:', { data, error });
-      
+
       if (error) {
         console.error('Supabase function error:', error);
         throw error;
@@ -632,7 +632,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             response_data: data
           }
         });
-        
+
         setPerplexityQuery('');
         setShowPerplexityDialog(false);
         toast.success('Search results added successfully!');
@@ -641,7 +641,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
     } catch (error) {
       console.error('Perplexity search failed:', error);
-      
+
       // Try to get the actual error message from the response
       let errorMessage = 'Failed to search';
       if (error && typeof error === 'object') {
@@ -651,7 +651,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         // Log the full error for debugging
         console.log('Full error object:', JSON.stringify(error, null, 2));
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsSearchingPerplexity(false);
@@ -680,10 +680,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }));
 
       // Enhanced location data logging
-      const locationItems = contextItems.filter(item => 
+      const locationItems = contextItems.filter(item =>
         item.type === 'manual_input' && item.title?.includes('Location:')
       );
-      
+
       console.log('🎯 LOCATION DATA FLOW TRACE:');
       console.log('1. Total context items:', contextItems.length);
       console.log('2. Location items found:', locationItems.length);
@@ -762,10 +762,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       if (result.searchString) {
         setBooleanString(result.searchString);
-        
+
         // Collapse Requirements container to focus on Boolean section
         setRequirementsCollapsed(true);
-        
+
         // Enhanced success message based on what was used
         if (jobDescription.trim() && contextItems.length > 0) {
           toast.success(`Boolean search generated from custom instructions + ${contextItems.length} context item(s)!`);
@@ -774,7 +774,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         } else {
           toast.success('Boolean search generated from custom instructions!');
         }
-        
+
         // Track successful boolean generation
         trackBooleanGeneration(jobDescription, true);
       } else {
@@ -799,9 +799,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     setIsExplaining(true);
     try {
       const data = await functionBridge.explainBoolean({
-          booleanString: booleanString,
-          requirements: jobDescription.trim() || 'Boolean search explanation'
-        });
+        booleanString: booleanString,
+        requirements: jobDescription.trim() || 'Boolean search explanation'
+      });
       const error = null;
 
       if (error) throw error;
@@ -844,11 +844,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       const response = await fetch(
         `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}`
       );
-      
+
       if (!response.ok) throw new Error('Search failed');
-      
+
       const data = await response.json();
-      
+
       if (data.items) {
         // Map Google search results to SearchResult objects with location extraction
         const mappedResults: SearchResult[] = data.items.map((item: any) => ({
@@ -858,14 +858,14 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           displayLink: item.displayLink,
           location: extractLocationFromSnippet(item.snippet) // Add location extraction logic here
         }));
-        
+
         setSearchResults(mappedResults);
-        
+
         // Collapse Boolean container to focus on Search Results
         setBooleanCollapsed(true);
-        
+
         toast.success(`Found ${data.items.length} results`);
-        
+
         // Track successful search
         trackCandidateSearch('google_cse', data.items.length, {
           hasLocation: selectedLocation ? 'yes' : 'no',
@@ -929,13 +929,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     setLoadingAnalysis(prev => new Set([...prev, index]));
     try {
       const data = await functionBridge.analyzeCandidate({
-          candidate: {
-            name: candidate.title,
-            profile: candidate.snippet,
-            linkedin_url: candidate.link
-          },
-          requirements: jobDescription
-        });
+        candidate: {
+          name: candidate.title,
+          profile: candidate.snippet,
+          linkedin_url: candidate.link
+        },
+        requirements: jobDescription
+      });
       const error = null;
 
       if (error) throw error;
@@ -963,7 +963,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
         toast.success('Contact information retrieved!');
         // Track successful enrichment
         trackProfileEnrichment(candidate.link, true);
-        trackEvent('Profile Enrichment', { 
+        trackEvent('Profile Enrichment', {
           source: 'search_results',
           hasEmail: contactData.email ? 1 : 0,
           hasPhone: contactData.phone ? 1 : 0
@@ -987,7 +987,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   const saveCandidate = async (candidate: SearchResult, index: number) => {
     console.log('Saving candidate:', { candidate, selectedProjectId, index });
-    
+
     if (!selectedProjectId) {
       console.error('No project selected for saving candidate');
       toast.error('Please select a project first');
@@ -1034,11 +1034,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       // Add candidate to project if project is selected
       if (savedCandidate && selectedProjectId) {
-        console.log('Adding candidate to project:', { 
-          candidateId: savedCandidate.id, 
-          projectId: selectedProjectId 
+        console.log('Adding candidate to project:', {
+          candidateId: savedCandidate.id,
+          projectId: selectedProjectId
         });
-        
+
         const projectAssociation = await firestoreClient
           .from('project_candidates')
           .insert({
@@ -1076,7 +1076,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
       setSavedCandidates(prev => new Set([...prev, index]));
       toast.success('Candidate saved successfully!');
-      
+
       // Store search in history with project context
       if (booleanString) {
         await firestoreClient
@@ -1104,8 +1104,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   };
 
   const toggleContextExpansion = (id: string) => {
-    setContextItems(prev => 
-      prev.map(item => 
+    setContextItems(prev =>
+      prev.map(item =>
         item.id === id ? { ...item, isExpanded: !item.isExpanded } : item
       )
     );
@@ -1161,7 +1161,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   const loadContextItems = useCallback(async () => {
     if (!userId) return;
-    
+
     setLoadingContext(true);
     try {
       let query = firestoreClient
@@ -1230,7 +1230,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   const generateEmailTemplates = async () => {
     const selectedResults = searchResults.filter((_, index) => selectedProfiles.has(index));
-    
+
     if (selectedResults.length === 0) {
       toast.error('Please select some profiles first');
       return;
@@ -1329,23 +1329,23 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                 <div className="flex flex-wrap gap-3 mb-6">
                   {/* URL Scraper Button */}
                   <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
-                      >
-                        <Link className="w-4 h-4" />
-                        <span className="text-sm font-medium">Scrape</span>
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Scrape any website URL with Firecrawl AI</p>
-                    <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
-                  </TooltipContent>
-                </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                          >
+                            <Link className="w-4 h-4" />
+                            <span className="text-sm font-medium">Scrape</span>
+                          </Button>
+                        </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Scrape any website URL with Firecrawl AI</p>
+                        <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Scrape Website Content</DialogTitle>
@@ -1370,7 +1370,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                             disabled={!urlInput.trim() || isScrapingUrl}
                             className="flex-1"
                           >
-                            <ButtonLoading 
+                            <ButtonLoading
                               isLoading={isScrapingUrl}
                               loadingText="Scraping..."
                             >
@@ -1384,59 +1384,59 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                         </div>
                       </div>
                     </DialogContent>
-              </Dialog>
+                  </Dialog>
 
-              {/* File Upload Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingFile}
-                  >
-                    <ButtonLoading isLoading={isUploadingFile}>
-                      <Upload className="w-4 h-4" />
-                      <span className="text-sm font-medium">Upload</span>
-                    </ButtonLoading>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Upload and extract content with Gemini AI</p>
-                  <p className="text-xs text-gray-500 mt-1">Best with PDFs and text files. DOCX processing temporarily limited.</p>
-                </TooltipContent>
-              </Tooltip>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                onChange={handleFileUpload}
-              />
-
-              {/* Perplexity Search Button */}
-              <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                  {/* File Upload Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
                         className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploadingFile}
                       >
-                        <img 
-                          src="/assets/perplexity.svg" 
-                          alt="Perplexity" 
-                          className="w-4 h-4" 
-                        />
-                        <span className="text-sm font-medium">Search</span>
+                        <ButtonLoading isLoading={isUploadingFile}>
+                          <Upload className="w-4 h-4" />
+                          <span className="text-sm font-medium">Upload</span>
+                        </ButtonLoading>
                       </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Search the web with Perplexity AI</p>
-                    <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
-                  </TooltipContent>
-                </Tooltip>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Upload and extract content with Gemini AI</p>
+                      <p className="text-xs text-gray-500 mt-1">Best with PDFs and text files. DOCX processing temporarily limited.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    onChange={handleFileUpload}
+                  />
+
+                  {/* Perplexity Search Button */}
+                  <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                          >
+                            <img
+                              src="/assets/perplexity.svg"
+                              alt="Perplexity"
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium">Search</span>
+                          </Button>
+                        </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Search the web with Perplexity AI</p>
+                        <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Perplexity Web Search</DialogTitle>
@@ -1461,7 +1461,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                             disabled={!perplexityQuery.trim() || isSearchingPerplexity}
                             className="flex-1"
                           >
-                            <ButtonLoading 
+                            <ButtonLoading
                               isLoading={isSearchingPerplexity}
                               loadingText="Searching..."
                             >
@@ -1475,53 +1475,53 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                         </div>
                       </div>
                     </DialogContent>
-              </Dialog>
+                  </Dialog>
 
-              {/* Location Button */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
-                    onClick={() => setShowLocationDialog(true)}
-                  >
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-medium">Location</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add location context with Google Places</p>
-                  <p className="text-xs text-gray-500 mt-1">Set geographic preferences for targeted boolean search generation</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+                  {/* Location Button */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        onClick={() => setShowLocationDialog(true)}
+                      >
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm font-medium">Location</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Add location context with Google Places</p>
+                      <p className="text-xs text-gray-500 mt-1">Set geographic preferences for targeted boolean search generation</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
-          {/* Job Title Input */}
-          <div className="space-y-2">
-            <label htmlFor="job-title" className="block text-sm font-medium text-gray-700">
-              Job Title <span className="text-gray-400 text-xs">(optional but recommended)</span>
-            </label>
-            <input
-              id="job-title"
-              type="text"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              placeholder="e.g., Senior Software Engineer, Product Manager, Data Scientist..."
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-            />
-            <p className="text-xs text-gray-500">
-              Providing a job title helps generate more accurate boolean search strings
-            </p>
-          </div>
+                {/* Job Title Input */}
+                <div className="space-y-2">
+                  <label htmlFor="job-title" className="block text-sm font-medium text-gray-700">
+                    Job Title <span className="text-gray-400 text-xs">(optional but recommended)</span>
+                  </label>
+                  <input
+                    id="job-title"
+                    type="text"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="e.g., Senior Software Engineer, Product Manager, Data Scientist..."
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Providing a job title helps generate more accurate boolean search strings
+                  </p>
+                </div>
 
-          <Textarea
-            value={jobDescription}
-            onChange={(event) => setJobDescription(event.target.value)}
-            placeholder="Enter custom instructions or requirements (optional)...
+                <Textarea
+                  value={jobDescription}
+                  onChange={(event) => setJobDescription(event.target.value)}
+                  placeholder="Enter custom instructions or requirements (optional)...
 
 This area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
-            className="min-h-[120px] mb-4"
-          />
+                  className="min-h-[120px] mb-4"
+                />
 
                 {/* Context Items */}
                 {contextItems.length > 0 && (
@@ -1541,146 +1541,144 @@ This area is for your specific search instructions, filtering criteria, or addit
                         Clear All
                       </Button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {contextItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`border rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 group ${
-                          (item.type === 'perplexity' || item.type === 'perplexity_search')
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                      {contextItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`border rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200 group ${(item.type === 'perplexity' || item.type === 'perplexity_search')
                             ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-white'
                             : 'border-gray-200'
-                        }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {item.type === 'url_scrape' && <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />}
-                        {item.type === 'file_upload' && <FileText className="w-4 h-4 text-green-500 flex-shrink-0" />}
-                        {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
-                          <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                        )}
-                        {item.type === 'manual_input' && (
-                          item.title?.includes('Location:') ?
-                            <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0" /> :
-                            <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        )}
-                        <span className={`text-xs font-medium truncate ${
-                          (item.type === 'perplexity' || item.type === 'perplexity_search')
-                            ? 'text-purple-900'
-                            : 'text-gray-800'
-                        }`}>
-                          {item.title}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <button
-                          onClick={() => toggleContextExpansion(item.id)}
-                          className="text-gray-400 hover:text-gray-600 p-1"
+                            }`}
                         >
-                          {item.isExpanded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        </button>
-                        <button
-                          onClick={() => removeContextItem(item.id)}
-                          className="text-gray-400 hover:text-red-500 p-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Preview text */}
-                    <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                      {(() => {
-                        const previewText = item.summary || item.content;
-                        // Strip markdown for Perplexity items
-                        if (item.type === 'perplexity' || item.type === 'perplexity_search') {
-                          const stripped = previewText
-                            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
-                            .replace(/[#*_`~]/g, '') // Remove markdown formatting
-                            .replace(/\n+/g, ' ') // Replace newlines with spaces
-                            .trim();
-                          return stripped.substring(0, 150) + (stripped.length > 150 ? '...' : '');
-                        }
-                        return previewText.substring(0, 100) + (previewText.length > 100 ? '...' : '');
-                      })()}
-                    </p>
-                    
-                    {/* Source info */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>
-                        {item.type === 'url_scrape' && item.source_url && (() => {
-                          try {
-                            const url = item.source_url.startsWith('http') ? item.source_url : `https://${item.source_url}`;
-                            return <span title={item.source_url}>{new URL(url).hostname}</span>;
-                          } catch (e) {
-                            // Fallback: extract hostname manually
-                            const hostname = item.source_url.replace(/^https?:\/\//, '').split('/')[0];
-                            return <span title={item.source_url}>{hostname}</span>;
-                          }
-                        })()}
-                        {item.type === 'file_upload' && item.file_name && (
-                          <span>{item.file_name}</span>
-                        )}
-                        {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
-                          <span>Web search</span>
-                        )}
-                      </span>
-                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
-                    </div>
-                    
-                    {/* Expanded content */}
-                    {item.isExpanded && (
-                      <div className="mt-3 pt-2 border-t border-gray-200">
-                        {(item.type === 'perplexity' || item.type === 'perplexity_search') ? (
-                          <div className="max-h-96 overflow-y-auto">
-                            <PerplexityResult
-                              content={item.content}
-                              citations={item.metadata?.citations}
-                              query={item.metadata?.query || item.title}
-                              compact={false}
-                              className="text-xs"
-                            />
-                          </div>
-                        ) : item.type === 'url_scrape' ? (
-                          <div className="max-h-96 overflow-y-auto">
-                            <FirecrawlResult
-                              content={item.content}
-                              sourceUrl={item.source_url}
-                              compact={false}
-                              className="text-xs"
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-2 rounded border">
-                              {item.content}
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {item.type === 'url_scrape' && <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />}
+                              {item.type === 'file_upload' && <FileText className="w-4 h-4 text-green-500 flex-shrink-0" />}
+                              {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
+                                <Sparkles className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                              )}
+                              {item.type === 'manual_input' && (
+                                item.title?.includes('Location:') ?
+                                  <MapPin className="w-4 h-4 text-purple-500 flex-shrink-0" /> :
+                                  <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              )}
+                              <span className={`text-xs font-medium truncate ${(item.type === 'perplexity' || item.type === 'perplexity_search')
+                                ? 'text-purple-900'
+                                : 'text-gray-800'
+                                }`}>
+                                {item.title}
+                              </span>
                             </div>
-                            {item.source_url && (
-                              <a
-                                href={item.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-500 hover:underline mt-1 inline-block"
+                            <div className="flex gap-1 ml-2">
+                              <button
+                                onClick={() => toggleContextExpansion(item.id)}
+                                className="text-gray-400 hover:text-gray-600 p-1"
                               >
-                                View original source ↗
-                              </a>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
+                                {item.isExpanded ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                              <button
+                                onClick={() => removeContextItem(item.id)}
+                                className="text-gray-400 hover:text-red-500 p-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Preview text */}
+                          <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                            {(() => {
+                              const previewText = item.summary || item.content;
+                              // Strip markdown for Perplexity items
+                              if (item.type === 'perplexity' || item.type === 'perplexity_search') {
+                                const stripped = previewText
+                                  .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
+                                  .replace(/[#*_`~]/g, '') // Remove markdown formatting
+                                  .replace(/\n+/g, ' ') // Replace newlines with spaces
+                                  .trim();
+                                return stripped.substring(0, 150) + (stripped.length > 150 ? '...' : '');
+                              }
+                              return previewText.substring(0, 100) + (previewText.length > 100 ? '...' : '');
+                            })()}
+                          </p>
+
+                          {/* Source info */}
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>
+                              {item.type === 'url_scrape' && item.source_url && (() => {
+                                try {
+                                  const url = item.source_url.startsWith('http') ? item.source_url : `https://${item.source_url}`;
+                                  return <span title={item.source_url}>{new URL(url).hostname}</span>;
+                                } catch (e) {
+                                  // Fallback: extract hostname manually
+                                  const hostname = item.source_url.replace(/^https?:\/\//, '').split('/')[0];
+                                  return <span title={item.source_url}>{hostname}</span>;
+                                }
+                              })()}
+                              {item.type === 'file_upload' && item.file_name && (
+                                <span>{item.file_name}</span>
+                              )}
+                              {(item.type === 'perplexity' || item.type === 'perplexity_search') && (
+                                <span>Web search</span>
+                              )}
+                            </span>
+                            <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                          </div>
+
+                          {/* Expanded content */}
+                          {item.isExpanded && (
+                            <div className="mt-3 pt-2 border-t border-gray-200">
+                              {(item.type === 'perplexity' || item.type === 'perplexity_search') ? (
+                                <div className="max-h-96 overflow-y-auto">
+                                  <PerplexityResult
+                                    content={item.content}
+                                    citations={item.metadata?.citations}
+                                    query={item.metadata?.query || item.title}
+                                    compact={false}
+                                    className="text-xs"
+                                  />
+                                </div>
+                              ) : item.type === 'url_scrape' ? (
+                                <div className="max-h-96 overflow-y-auto">
+                                  <FirecrawlResult
+                                    content={item.content}
+                                    sourceUrl={item.source_url}
+                                    compact={false}
+                                    className="text-xs"
+                                  />
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-2 rounded border">
+                                    {item.content}
+                                  </div>
+                                  {item.source_url && (
+                                    <a
+                                      href={item.source_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-500 hover:underline mt-1 inline-block"
+                                    >
+                                      View original source ↗
+                                    </a>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
                 )}
-                
+
                 <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
                   <Button
                     onClick={generateBooleanSearch}
                     disabled={(!jobDescription.trim() && contextItems.length === 0) || isGenerating}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2.5"
                   >
-                    <ButtonLoading 
+                    <ButtonLoading
                       isLoading={isGenerating && !showBooleanAnimation}
                       loadingText="Generating..."
                     >
@@ -1694,789 +1692,733 @@ This area is for your specific search instructions, filtering criteria, or addit
           </Card>
         </Collapsible>
 
-      {/* Step 2: Boolean Search String */}
-      {booleanString && (
-        <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
-          <Card className="border-2 border-purple-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-purple-50 to-blue-50">
-            <CollapsibleTrigger asChild>
-              <div className="p-6 cursor-pointer group">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full font-bold text-lg shadow-md">
-                      2
+        {/* Step 2: Boolean Search String */}
+        {booleanString && (
+          <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
+            <Card className="border-2 border-purple-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-purple-50 to-blue-50">
+              <CollapsibleTrigger asChild>
+                <div className="p-6 cursor-pointer group">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full font-bold text-lg shadow-md">
+                        2
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                          Boolean Search String
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">Edit and refine your generated search query</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
+                      {booleanCollapsed ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 pb-6 pt-2 border-t border-purple-100">
+                  <div className="space-y-4">
+                    <Textarea
+                      value={booleanString}
+                      onChange={(event) => setBooleanString(event.target.value)}
+                      className="font-mono min-h-[120px] resize-y"
+                      placeholder="Generated Boolean search string will appear here..."
+                    />
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={() => copyToClipboard(booleanString)}
+                          variant="outline"
+                          className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy
+                        </Button>
+                        <Button
+                          onClick={handleExplainBoolean}
+                          variant="outline"
+                          disabled={isExplaining || !booleanString.trim()}
+                          className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        >
+                          <ButtonLoading
+                            isLoading={isExplaining}
+                            loadingText="Analyzing..."
+                          >
+                            <Lightbulb className="w-4 h-4 mr-2" />
+                            <span className="hidden sm:inline">Explain This Search</span>
+                            <span className="sm:hidden">Explain</span>
+                          </ButtonLoading>
+                        </Button>
+                      </div>
+                      <Button
+                        onClick={searchGoogle}
+                        disabled={isSearching}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 sm:ml-auto"
+                      >
+                        <ButtonLoading
+                          isLoading={isSearching}
+                          loadingText="Searching..."
+                        >
+                          <Search className="w-4 h-4 mr-2" />
+                          <span className="hidden sm:inline">Search LinkedIn Profiles</span>
+                          <span className="sm:hidden">Search LinkedIn</span>
+                        </ButtonLoading>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
+
+        {/* Boolean Explanation */}
+        {booleanExplanation && (
+          <Collapsible open={!explanationCollapsed} onOpenChange={(open) => setExplanationCollapsed(!open)}>
+            <Card className="border-2 border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+              <CollapsibleTrigger asChild>
+                <div className="p-6 cursor-pointer group">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <Lightbulb className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
-                        Boolean Search String
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">Edit and refine your generated search query</p>
+                      <h2 className="text-xl font-semibold text-indigo-900">Boolean Search Explanation</h2>
+                      <p className="text-sm text-indigo-600">Understanding your search strategy</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
-                    {booleanCollapsed ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowExplanation(true);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
+                      title="View in full screen"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setBooleanExplanation(null);
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
+                      title="Remove explanation"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                    <div className="transition-transform duration-200">
+                      {explanationCollapsed ? (
+                        <Eye className="w-4 h-4 text-indigo-500" />
+                      ) : (
+                        <EyeOff className="w-4 h-4 text-indigo-500" />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-6 pb-6 pt-2 border-t border-purple-100">
-                <div className="space-y-4">
-                  <Textarea
-                    value={booleanString}
-              onChange={(event) => setBooleanString(event.target.value)}
-              className="font-mono min-h-[120px] resize-y"
-              placeholder="Generated Boolean search string will appear here..."
-            />
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex gap-3">
+              </CollapsibleTrigger>
+              <CollapsibleContent className="transition-all duration-500 ease-in-out">
+                <div className="mt-2">
+                  <BooleanExplainer explanation={booleanExplanation} />
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
+
+        {/* Search Results */}
+        {(searchResults.length > 0 || isSearching) && (
+          <ContainedLoading
+            isLoading={isSearching}
+            loadingText="Searching LinkedIn profiles..."
+            className="mb-6"
+          >
+            <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
+                      3
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Search Results ({searchResults.length})
+                      </h2>
+                      <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {/* AI Analysis Button - Moved to top */}
+                    {!showAIAnalysis && (
                       <Button
-                        onClick={() => copyToClipboard(booleanString)}
-                        variant="outline"
-                        className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        onClick={() => setShowAIAnalysis(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        size="sm"
                       >
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analyze with AI ({searchResults.length})
+                      </Button>
+                    )}
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center border rounded-lg p-1">
+                      <Button
+                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('grid')}
+                        className="h-7 px-2"
+                      >
+                        <Grid3X3 className="w-4 h-4" />
                       </Button>
                       <Button
-                        onClick={handleExplainBoolean}
-                        variant="outline"
-                        disabled={isExplaining || !booleanString.trim()}
-                        className="hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                        className="h-7 px-2"
                       >
-                        <ButtonLoading 
-                    isLoading={isExplaining}
-                    loadingText="Analyzing..."
-                  >
-                    <Lightbulb className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Explain This Search</span>
-                    <span className="sm:hidden">Explain</span>
-                  </ButtonLoading>
-                </Button>
+                        <List className="w-4 h-4" />
+                      </Button>
                     </div>
+
+                    <Badge variant="outline">{selectedProfiles.size} selected</Badge>
                     <Button
-                      onClick={searchGoogle}
-                      disabled={isSearching}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 sm:ml-auto"
+                      onClick={openEmailDialog}
+                      disabled={selectedProfiles.size === 0}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
                     >
-                      <ButtonLoading 
-                        isLoading={isSearching}
-                        loadingText="Searching..."
+                      Generate Email Templates
+                    </Button>
+                  </div>
+                </div>
+
+                <div
+                  ref={resultsContainerRef}
+                  className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'}
+                  style={{ maxHeight: viewMode === 'grid' ? '800px' : 'none', overflowY: viewMode === 'grid' ? 'auto' : 'visible' }}
+                >
+                  {searchResults.slice(0, displayedResults).map((result, index) => {
+                    const isExpanded = expandedProfiles.has(index);
+                    const analysis = analysisResults[index];
+                    const contact = contactInfo[index];
+                    const isSelected = selectedProfiles.has(index);
+
+                    return (
+                      <div
+                        key={index}
+                        className={`
+                          group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl
+                          ${isSelected ? 'border-purple-500 ring-1 ring-purple-500 bg-purple-50/30' : 'border-gray-200 hover:border-purple-200'}
+                          ${viewMode === 'list' ? 'flex flex-col md:flex-row gap-6 p-6' : 'flex flex-col p-5 h-full'}
+                        `}
                       >
-                        <Search className="w-4 h-4 mr-2" />
-                        <span className="hidden sm:inline">Search LinkedIn Profiles</span>
-                        <span className="sm:hidden">Search LinkedIn</span>
-                      </ButtonLoading>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Boolean Explanation */}
-      {booleanExplanation && (
-        <Collapsible open={!explanationCollapsed} onOpenChange={(open) => setExplanationCollapsed(!open)}>
-          <Card className="border-2 border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-            <CollapsibleTrigger asChild>
-              <div className="p-6 cursor-pointer group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-100 rounded-lg">
-                    <Lightbulb className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-indigo-900">Boolean Search Explanation</h2>
-                    <p className="text-sm text-indigo-600">Understanding your search strategy</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowExplanation(true);
-                    }}
-                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
-                    title="View in full screen"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBooleanExplanation(null);
-                    }}
-                    className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
-                    title="Remove explanation"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                  <div className="transition-transform duration-200">
-                    {explanationCollapsed ? (
-                      <Eye className="w-4 h-4 text-indigo-500" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-indigo-500" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="transition-all duration-500 ease-in-out">
-              <div className="mt-2">
-                <BooleanExplainer explanation={booleanExplanation} />
-              </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Search Results */}
-      {(searchResults.length > 0 || isSearching) && (
-        <ContainedLoading
-          isLoading={isSearching}
-          loadingText="Searching LinkedIn profiles..."
-          className="mb-6"
-        >
-          <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
-                    3
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Search Results ({searchResults.length})
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {/* AI Analysis Button - Moved to top */}
-                  {!showAIAnalysis && (
-                    <Button
-                      onClick={() => setShowAIAnalysis(true)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                      size="sm"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Analyze with AI ({searchResults.length})
-                    </Button>
-                  )}
-                  
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center border rounded-lg p-1">
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className="h-7 px-2"
-                    >
-                      <Grid3X3 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="h-7 px-2"
-                    >
-                      <List className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  <Badge variant="outline">{selectedProfiles.size} selected</Badge>
-                  <Button
-                    onClick={openEmailDialog}
-                    disabled={selectedProfiles.size === 0}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Generate Email Templates
-                  </Button>
-                </div>
-              </div>
-          
-          <div 
-            ref={resultsContainerRef}
-            className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}
-            style={{ maxHeight: viewMode === 'grid' ? '800px' : '600px', overflowY: 'auto' }}
-            onScroll={(e) => {
-              const element = e.currentTarget;
-              const { scrollTop, scrollHeight, clientHeight } = element;
-              const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-              
-              // Load more when scrolled to 90% and not already loading
-              if (scrollPercentage > 0.9 && displayedResults < searchResults.length && !isLoadingMore) {
-                setIsLoadingMore(true);
-                setTimeout(() => {
-                  setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
-                  setIsLoadingMore(false);
-                }, 500);
-              }
-            }}
-          >
-            {searchResults.slice(0, displayedResults).map((result, index) => {
-              const isExpanded = expandedProfiles.has(index);
-              const analysis = analysisResults[index];
-              const contact = contactInfo[index];
-              
-              return (
-                <div key={index} className={`border rounded-lg overflow-hidden ${
-                  viewMode === 'grid' ? 'h-full flex flex-col' : ''
-                }`}>
-                  {/* Main Card */}
-                  <div
-                    className={`${viewMode === 'grid' ? 'p-3 flex-1 flex flex-col' : 'p-4'} cursor-pointer transition-colors ${
-                      selectedProfiles.has(index)
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    onClick={() => toggleProfileExpansion(index)}
-                  >
-                    {viewMode === 'grid' ? (
-                      // Grid View - Compact Card
-                      <div className="flex flex-col h-full">
-                        <div className="flex items-start justify-between mb-2">
+                        {/* Selection Checkbox - Absolute positioning for grid */}
+                        <div className="absolute top-4 right-4 z-10">
                           <input
                             type="checkbox"
-                            checked={selectedProfiles.has(index)}
+                            checked={isSelected}
                             onChange={(e) => {
                               e.stopPropagation();
                               toggleProfileSelection(index);
                             }}
-                            className="w-4 h-4 mt-0.5"
+                            className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer transition-all"
                           />
-                          <a
-                            href={result.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
                         </div>
-                        <div className="mb-2">
-                          <h3 className="font-bold text-base text-gray-900 line-clamp-2 mb-1">
-                            {result.title.split(' | ')[0] || result.title.split(' - ')[0] || result.title}
-                          </h3>
-                          {(result.title.includes(' | ') || result.title.includes(' - ')) && (
-                            <p className="text-sm font-medium text-purple-600">
-                              {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
-                            </p>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-700 line-clamp-4 flex-1 leading-relaxed">{result.snippet}</p>
-                        
-                        {/* Skills extraction */}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, 3).map((skill, skillIndex) => (
-                            <Badge key={skillIndex} variant="secondary" className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                        {result.location && (
-                          <p className="text-xs text-purple-600 mt-2 font-medium">
-                            📍 {result.location}
-                          </p>
-                        )}
-                        <div className="mt-2 flex items-center justify-between">
-                          <p className="text-xs text-gray-500 truncate">{result.displayLink}</p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleProfileExpansion(index);
-                            }}
-                            className="h-6 px-2 text-xs"
-                          >
-                            {isExpanded ? 'Less' : 'More'}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // List View - Original Layout
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedProfiles.has(index)}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                toggleProfileSelection(index);
-                              }}
-                              className="w-4 h-4"
-                            />
-                            <div>
-                              <h3 className="font-bold text-xl text-gray-900">
+
+                        {/* Main Content Area */}
+                        <div className={`flex-1 ${viewMode === 'list' ? 'min-w-0' : 'flex flex-col'}`}>
+                          {/* Header: Title & Role */}
+                          <div className="mb-3 pr-8">
+                            <h3 className="font-bold text-lg text-gray-900 leading-tight group-hover:text-purple-700 transition-colors">
+                              <a
+                                href={result.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline decoration-2 decoration-purple-200"
+                              >
                                 {result.title.split(' | ')[0] || result.title.split(' - ')[0] || result.title}
-                              </h3>
-                              {(result.title.includes(' | ') || result.title.includes(' - ')) && (
-                                <p className="text-lg font-medium text-purple-600 mt-1">
-                                  {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
-                                </p>
-                              )}
-                            </div>
+                              </a>
+                            </h3>
+                            {(result.title.includes(' | ') || result.title.includes(' - ')) && (
+                              <p className="text-sm font-medium text-purple-600 mt-1">
+                                {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-base text-gray-700 mt-3 leading-relaxed">{result.snippet}</p>
-                          
-                          {/* Skills tags for list view */}
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, 6).map((skill, skillIndex) => (
-                              <Badge key={skillIndex} variant="secondary" className="px-2 py-1 bg-purple-100 text-purple-700">
+
+                          {/* Location & Source */}
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
+                            {result.location && (
+                              <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
+                                <MapPin className="w-3 h-3" />
+                                {result.location}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              {new URL(result.link).hostname.replace('www.', '')}
+                            </span>
+                          </div>
+
+                          {/* Snippet */}
+                          <p className={`text-sm text-gray-600 leading-relaxed mb-4 ${viewMode === 'grid' ? 'line-clamp-4 flex-1' : ''}`}>
+                            {result.snippet}
+                          </p>
+
+                          {/* Skills Tags */}
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, viewMode === 'grid' ? 4 : 8).map((skill, skillIndex) => (
+                              <Badge
+                                key={skillIndex}
+                                variant="secondary"
+                                className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 font-medium"
+                              >
                                 {skill}
                               </Badge>
                             ))}
                           </div>
-                          {result.location && (
-                            <p className="text-xs text-purple-600 mt-1 font-medium">
-                              📍 {result.location}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-2">{result.displayLink}</p>
-                        </div>
-                        <div className="flex gap-2 ml-4">
-                          <a
-                            href={result.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleProfileExpansion(index);
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-                            {isExpanded ? '-' : '+'}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="border-t bg-gray-50 p-4 space-y-4">
-                      {/* Detailed Profile Information */}
-                      <div className="bg-white p-4 rounded-lg border">
-                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                          <ExternalLink className="w-4 h-4 text-blue-600" />
-                          Profile Details
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="font-medium text-gray-700">Full Name:</span>
-                            <p className="text-gray-900 mt-1">{result.title.split(' - ')[0] || result.title}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Current Role:</span>
-                            <p className="text-gray-900 mt-1">{result.title.includes(' - ') ? result.title.split(' - ').slice(1).join(' - ') : 'Not specified'}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Profile Summary:</span>
-                            <p className="text-gray-600 mt-1 leading-relaxed">{result.snippet}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">LinkedIn URL:</span>
-                            <a 
-                              href={result.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline mt-1 block break-all"
-                              onClick={(e) => e.stopPropagation()}
+                          {/* Action Bar */}
+                          <div className={`
+                            flex flex-wrap gap-2 pt-4 border-t border-gray-100 mt-auto
+                            ${viewMode === 'list' ? 'justify-start' : 'justify-between'}
+                          `}>
+                            {/* Analyze Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => analyzeCandidate(result, index)}
+                              disabled={loadingAnalysis.has(index)}
+                              className="h-8 text-xs font-medium text-gray-600 hover:text-purple-700 hover:bg-purple-50"
                             >
-                              {result.link}
-                            </a>
+                              {loadingAnalysis.has(index) ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              Analyze
+                            </Button>
+
+                            {/* Email Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                // Select this profile specifically for email generation
+                                if (!selectedProfiles.has(index)) {
+                                  toggleProfileSelection(index);
+                                }
+                                setTimeout(() => openEmailDialog(), 0);
+                              }}
+                              className="h-8 text-xs font-medium text-gray-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Mail className="w-3.5 h-3.5 mr-1.5" />
+                              Email
+                            </Button>
+
+                            {/* Add to Global Project Button */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => saveCandidate(result, index)}
+                              disabled={savingCandidates.has(index) || savedCandidates.has(index)}
+                              className={`h-8 text-xs font-medium ${savedCandidates.has(index)
+                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                              {savingCandidates.has(index) ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : savedCandidates.has(index) ? (
+                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                              ) : (
+                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              {savedCandidates.has(index) ? 'Saved' : 'Add to Project'}
+                            </Button>
                           </div>
-                          {result.location && (
-                            <div>
-                              <span className="font-medium text-gray-700">Location:</span>
-                              <p className="text-gray-900 mt-1 flex items-center gap-1">
-                                <span>📍</span>
-                                {result.location}
-                              </p>
+                        </div>
+
+                        {/* Analysis Results Overlay/Section */}
+                        {analysis && (
+                          <div className={`
+                            bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-xl p-4
+                            ${viewMode === 'list' ? 'w-80 flex-shrink-0' : 'mt-4'}
+                          `}>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-sm text-purple-900 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-purple-600" />
+                                AI Analysis
+                              </h4>
+                              {analysis.match_score && (
+                                <Badge className={`
+                                  ${analysis.match_score >= 80 ? 'bg-green-100 text-green-700 border-green-200' :
+                                    analysis.match_score >= 60 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                      'bg-red-100 text-red-700 border-red-200'}
+                                `}>
+                                  {analysis.match_score}% Match
+                                </Badge>
+                              )}
                             </div>
-                          )}
-                          <div>
-                            <span className="font-medium text-gray-700">Source:</span>
-                            <p className="text-gray-600 mt-1">{result.displayLink}</p>
+
+                            <div className="space-y-3">
+                              {analysis.strengths && analysis.strengths.length > 0 && (
+                                <div>
+                                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Strengths</span>
+                                  <ul className="mt-1 space-y-1">
+                                    {analysis.strengths.slice(0, 2).map((strength: string, i: number) => (
+                                      <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                        <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                        <span className="line-clamp-2">{strength}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {analysis.concerns && analysis.concerns.length > 0 && (
+                                <div>
+                                  <span className="text-xs font-semibold text-red-700 uppercase tracking-wider">Concerns</span>
+                                  <ul className="mt-1 space-y-1">
+                                    {analysis.concerns.slice(0, 1).map((concern: string, i: number) => (
+                                      <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                        <AlertCircle className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                                        <span className="line-clamp-2">{concern}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
+                    );
+                  })}
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 flex-wrap">
-                        <Button
-                          size="sm"
-                          onClick={() => analyzeCandidate(result, index)}
-                          disabled={loadingAnalysis.has(index)}
-                          className="bg-purple-600 hover:bg-purple-700"
-                        >
-                          <ButtonLoading 
-                            isLoading={loadingAnalysis.has(index)}
-                            loadingText="Analyzing..."
-                          >
-                            <Sparkles className="w-4 h-4 mr-1" />
-                            Analyze vs Requirements
-                          </ButtonLoading>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => getContactInfo(result, index)}
-                          disabled={loadingContact.has(index)}
-                        >
-                          <ButtonLoading 
-                            isLoading={loadingContact.has(index)}
-                            loadingText="Getting..."
-                          >
-                            <Search className="w-4 h-4 mr-1" />
-                            Get Contact Info
-                          </ButtonLoading>
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => saveCandidate(result, index)}
-                          disabled={savingCandidates.has(index) || savedCandidates.has(index) || (!selectedProjectId && !selectedProject)}
-                        >
-                          {savedCandidates.has(index) ? (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
-                              Saved
-                            </>
-                          ) : (
-                            <ButtonLoading 
-                              isLoading={savingCandidates.has(index)}
-                              loadingText="Saving..."
-                            >
-                              <Save className="w-4 h-4 mr-1" />
-                              Save to Project
-                            </ButtonLoading>
-                          )}
-                        </Button>
-                      </div>
-
-                      {/* Analysis Results */}
-                      {analysis && (
-                        <div className="bg-white p-3 rounded border">
-                          <h4 className="font-semibold text-sm mb-2">🎯 Analysis Results</h4>
-                          <div className="space-y-2">
-                            {analysis.match_score && (
-                              <div className="flex justify-between">
-                                <span className="text-sm font-medium">Match Score:</span>
-                                <span className={`text-sm font-bold ${
-                                  analysis.match_score >= 80 ? 'text-green-600' :
-                                  analysis.match_score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                                }`}>{analysis.match_score}%</span>
-                              </div>
-                            )}
-                            {analysis.strengths && (
-                              <div>
-                                <span className="text-sm font-medium text-green-600">Strengths:</span>
-                                <ul className="text-xs text-gray-600 list-disc list-inside ml-2">
-                                  {analysis.strengths.map((strength: string, i: number) => (
-                                    <li key={i}>{strength}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {analysis.concerns && (
-                              <div>
-                                <span className="text-sm font-medium text-red-600">Concerns:</span>
-                                <ul className="text-xs text-gray-600 list-disc list-inside ml-2">
-                                  {analysis.concerns.map((concern: string, i: number) => (
-                                    <li key={i}>{concern}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Contact Information */}
-                      {contact && (
-                        <div className="bg-white p-3 rounded border">
-                          <h4 className="font-semibold text-sm mb-1.5">📞 Contact Information</h4>
-                          <div className="space-y-0.5 text-sm">
-                            {contact.email && (
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium text-xs">Email:</span>
-                                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline text-xs">
-                                  {contact.email}
-                                </a>
-                              </div>
-                            )}
-                            {contact.phone && (
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium text-xs">Phone:</span>
-                                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline text-xs">
-                                  {contact.phone}
-                                </a>
-                              </div>
-                            )}
-                            {contact.linkedin && (
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium text-xs">LinkedIn:</span>
-                                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
-                                  View Profile
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                  {/* Infinite Scroll Loader */}
+                  {displayedResults < searchResults.length && (
+                    <div className="col-span-full flex justify-center py-8">
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setIsLoadingMore(true);
+                          setTimeout(() => {
+                            setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
+                            setIsLoadingMore(false);
+                          }, 500);
+                        }}
+                        disabled={isLoadingMore}
+                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Loading more candidates...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDown className="w-4 h-4 mr-2" />
+                            Load More Results
+                          </>
+                        )}
+                      </Button>
                     </div>
                   )}
                 </div>
-              );
-            })}
+                {analysis.concerns.map((concern: string, i: number) => (
+                  <li key={i}>{concern}</li>
+                ))}
+              </ul>
+            </div>
+                                  )}
           </div>
-          
-          {/* Load More Button & Status */}
-          <div className="mt-6 text-center border-t border-gray-200 pt-6">
-            {searchResults.length > displayedResults ? (
-              isLoadingMore ? (
-                <div className="flex items-center justify-center text-purple-600 py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
-                  <span className="font-medium">Loading more candidates...</span>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => {
-                      setIsLoadingMore(true);
-                      setTimeout(() => {
-                        setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
-                        setIsLoadingMore(false);
-                      }, 500);
-                    }}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
-                    size="lg"
-                  >
-                    Load More Candidates ({searchResults.length - displayedResults} remaining)
-                  </Button>
-                  <p className="text-sm text-gray-600">
-                    Showing {displayedResults} of {searchResults.length} • Scroll for auto-loading
-                  </p>
-                </div>
-              )
-            ) : (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800 font-medium">
-                  ✅ All {searchResults.length} candidates loaded
-                </p>
-                <p className="text-green-600 text-sm mt-1">
-                  Use "Analyze with AI" above for detailed insights
-                </p>
+                              </div>
+                            )}
+
+      {/* Contact Information */}
+      {contact && (
+        <div className="bg-white p-3 rounded border">
+          <h4 className="font-semibold text-sm mb-1.5">📞 Contact Information</h4>
+          <div className="space-y-0.5 text-sm">
+            {contact.email && (
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-xs">Email:</span>
+                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline text-xs">
+                  {contact.email}
+                </a>
+              </div>
+            )}
+            {contact.phone && (
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-xs">Phone:</span>
+                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline text-xs">
+                  {contact.phone}
+                </a>
+              </div>
+            )}
+            {contact.linkedin && (
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-xs">LinkedIn:</span>
+                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
+                  View Profile
+                </a>
               </div>
             )}
           </div>
         </div>
-        </Card>
-        </ContainedLoading>
       )}
+    </div>
+  )
+}
+                      </div >
+                    );
+                  })}
+                </div >
 
-      {searchResults.length === 0 && booleanString && (
-        <Card className="p-6 border-2 border-gray-300">
-          <p className="text-center text-gray-500">
-            Click "Search LinkedIn Profiles" to find candidates
-          </p>
-        </Card>
-      )}
-      
-      {/* AI Analysis Button - Moved to search results header */}
-      
-      {/* Candidate Analysis Section */}
-      {searchResults.length > 0 && showAIAnalysis && (
-        <div className="mt-6">
-          <CompactCandidateAnalysis 
-            candidates={searchResults}
-            jobDescription={jobDescription}
-            onCandidateSelect={(candidate) => {
-              const index = searchResults.findIndex(r => r.link === candidate.link);
-              if (index !== -1) {
-                toggleProfileExpansion(index);
-              }
-            }}
-          />
+  {/* Load More Button & Status */ }
+  < div className = "mt-6 text-center border-t border-gray-200 pt-6" >
+  {
+    searchResults.length > displayedResults ? (
+      isLoadingMore ? (
+        <div className="flex items-center justify-center text-purple-600 py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
+          <span className="font-medium">Loading more candidates...</span>
         </div>
-      )}
+      ) : (
+        <div className="space-y-3">
+          <Button
+            onClick={() => {
+              setIsLoadingMore(true);
+              setTimeout(() => {
+                setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
+                setIsLoadingMore(false);
+              }, 500);
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
+            size="lg"
+          >
+            Load More Candidates ({searchResults.length - displayedResults} remaining)
+          </Button>
+          <p className="text-sm text-gray-600">
+            Showing {displayedResults} of {searchResults.length} • Scroll for auto-loading
+          </p>
+        </div>
+      )
+    ) : (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <p className="text-green-800 font-medium">
+          ✅ All {searchResults.length} candidates loaded
+        </p>
+        <p className="text-green-600 text-sm mt-1">
+          Use "Analyze with AI" above for detailed insights
+        </p>
+      </div>
+    )
+  }
+                </div >
+              </div >
+            </Card >
+          </ContainedLoading >
+        )}
 
-      {/* Email Generation Dialog */}
-      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Generate Email Templates</DialogTitle>
-            <DialogDescription>
-              Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Additional Context (Optional)
-              </label>
-              <Textarea
-                placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
-                value={emailContext}
-                onChange={(e) => setEmailContext(e.target.value)}
-                className="min-h-[120px]"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={generateEmailTemplates}
-                disabled={isGeneratingEmails}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
-              </Button>
-              <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+{
+  searchResults.length === 0 && booleanString && (
+    <Card className="p-6 border-2 border-gray-300">
+      <p className="text-center text-gray-500">
+        Click "Search LinkedIn Profiles" to find candidates
+      </p>
+    </Card>
+  )
+}
 
-      {/* Generated Email Templates */}
-      {generatedEmails.length > 0 && (
-        <Card className="p-6 border-2 border-blue-400">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
-            <Button
-              onClick={() => setGeneratedEmails([])}
-              variant="outline"
-              size="sm"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {generatedEmails.map((email, index) => (
-              <div key={index} className="border rounded-lg bg-white">
-                <div className="p-4 border-b bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-2 text-xs"
-                        onClick={() => copyToClipboard(email.subject)}
-                      >
-                        Copy Subject
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 px-2 text-xs"
-                        onClick={() => copyToClipboard(email.body)}
-                      >
-                        Copy Email
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 space-y-3">
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
-                    <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
-                      {email.subject}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
-                    <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
-                      {email.body}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <a 
-                      href={email.profileUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:underline flex items-center"
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      View LinkedIn Profile
-                    </a>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      Copy Complete
-                    </Button>
-                  </div>
+{/* AI Analysis Button - Moved to search results header */ }
+
+{/* Candidate Analysis Section */ }
+{
+  searchResults.length > 0 && showAIAnalysis && (
+    <div className="mt-6">
+      <CompactCandidateAnalysis
+        candidates={searchResults}
+        jobDescription={jobDescription}
+        onCandidateSelect={(candidate) => {
+          const index = searchResults.findIndex(r => r.link === candidate.link);
+          if (index !== -1) {
+            toggleProfileExpansion(index);
+          }
+        }}
+      />
+    </div>
+  )
+}
+
+{/* Email Generation Dialog */ }
+<Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Generate Email Templates</DialogTitle>
+      <DialogDescription>
+        Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
+      </DialogDescription>
+    </DialogHeader>
+    <div className="space-y-4">
+      <div>
+        <label className="text-sm font-medium mb-2 block">
+          Additional Context (Optional)
+        </label>
+        <Textarea
+          placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
+          value={emailContext}
+          onChange={(e) => setEmailContext(e.target.value)}
+          className="min-h-[120px]"
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button
+          onClick={generateEmailTemplates}
+          disabled={isGeneratingEmails}
+          className="flex-1 bg-green-600 hover:bg-green-700"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
+        </Button>
+        <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
+{/* Generated Email Templates */ }
+{
+  generatedEmails.length > 0 && (
+    <Card className="p-6 border-2 border-blue-400">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
+        <Button
+          onClick={() => setGeneratedEmails([])}
+          variant="outline"
+          size="sm"
+        >
+          <X className="w-4 h-4 mr-1" />
+          Clear
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {generatedEmails.map((email, index) => (
+          <div key={index} className="border rounded-lg bg-white">
+            <div className="p-4 border-b bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => copyToClipboard(email.subject)}
+                  >
+                    Copy Subject
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => copyToClipboard(email.body)}
+                  >
+                    Copy Email
+                  </Button>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="p-4 space-y-3">
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
+                <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
+                  {email.subject}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
+                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  {email.body}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t">
+                <a
+                  href={email.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline flex items-center"
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  View LinkedIn Profile
+                </a>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copy Complete
+                </Button>
+              </div>
+            </div>
           </div>
-        </Card>
-      )}
-
-      {/* Location Modal */}
-      <LocationModal
-        isOpen={showLocationDialog}
-        onClose={() => setShowLocationDialog(false)}
-        onLocationSelect={handleLocationSelect}
-      />
-
-      {/* Boolean Explanation Dialog */}
-      <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Boolean Search Explanation</DialogTitle>
-            <DialogDescription>
-              Understanding what your search will find and why
-            </DialogDescription>
-          </DialogHeader>
-          {booleanExplanation && (
-            <BooleanExplainer 
-              explanation={booleanExplanation} 
-              onClose={() => setShowExplanation(false)}
-              variant="modal"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Enhanced Boolean Generation Animation */}
-      <BooleanGenerationAnimation
-        isOpen={showBooleanAnimation}
-        onComplete={() => setShowBooleanAnimation(false)}
-        estimatedTimeMs={120000}
-      />
+        ))}
       </div>
-    </TooltipProvider>
+    </Card>
+  )
+}
+
+{/* Location Modal */ }
+<LocationModal
+  isOpen={showLocationDialog}
+  onClose={() => setShowLocationDialog(false)}
+  onLocationSelect={handleLocationSelect}
+/>
+
+{/* Boolean Explanation Dialog */ }
+<Dialog open={showExplanation} onOpenChange={setShowExplanation}>
+  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Boolean Search Explanation</DialogTitle>
+      <DialogDescription>
+        Understanding what your search will find and why
+      </DialogDescription>
+    </DialogHeader>
+    {booleanExplanation && (
+      <BooleanExplainer
+        explanation={booleanExplanation}
+        onClose={() => setShowExplanation(false)}
+        variant="modal"
+      />
+    )}
+  </DialogContent>
+</Dialog>
+
+{/* Enhanced Boolean Generation Animation */ }
+<BooleanGenerationAnimation
+  isOpen={showBooleanAnimation}
+  onComplete={() => setShowBooleanAnimation(false)}
+  estimatedTimeMs={120000}
+/>
+      </div >
+    </TooltipProvider >
   );
 }

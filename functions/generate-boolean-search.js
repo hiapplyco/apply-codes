@@ -45,14 +45,14 @@ exports.generateBooleanSearch = onCall(
 
     // Validate required fields - either description OR context items must be provided
     const hasDescription = description !== undefined &&
-                          description !== null &&
-                          typeof description === 'string' &&
-                          description.trim() !== '';
+      description !== null &&
+      typeof description === 'string' &&
+      description.trim() !== '';
 
     const hasContextItems = contextItems !== undefined &&
-                           contextItems !== null &&
-                           Array.isArray(contextItems) &&
-                           contextItems.length > 0;
+      contextItems !== null &&
+      Array.isArray(contextItems) &&
+      contextItems.length > 0;
 
     console.log('✅ VALIDATION RESULTS:', {
       hasDescription,
@@ -115,7 +115,7 @@ exports.generateBooleanSearch = onCall(
 
       console.log('Gemini API key found', { source: apiKeySource });
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
 
       // Extract location information from context items
       const locationItems = contextItems?.filter(item =>
@@ -323,9 +323,9 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
             source: 'generate-boolean-search',
             metadata: {
               job_title: jobTitle,
-              generated_at: admin.firestore.Timestamp.now()
+              generated_at: new Date()
             },
-            created_at: admin.firestore.Timestamp.now()
+            created_at: new Date()
           });
           console.log('Search history saved to Firestore');
         } catch (dbError) {

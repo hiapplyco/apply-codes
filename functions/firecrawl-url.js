@@ -6,7 +6,8 @@ exports.firecrawlUrl = onRequest(
     cors: true,
     invoker: 'public',
     timeoutSeconds: 300,
-    memory: '1GiB'
+    memory: '1GiB',
+    secrets: ['FIRECRAWL_API_KEY']
   },
   async (req, res) => {
     // Handle CORS preflight
