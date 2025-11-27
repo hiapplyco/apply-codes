@@ -2136,288 +2136,198 @@ This area is for your specific search instructions, filtering criteria, or addit
                     </div>
                   )}
                 </div>
-                {analysis.concerns.map((concern: string, i: number) => (
-                  <li key={i}>{concern}</li>
-                ))}
-              </ul>
-            </div>
-                                  )}
-          </div>
-                              </div>
-                            )}
 
-      {/* Contact Information */}
-      {contact && (
-        <div className="bg-white p-3 rounded border">
-          <h4 className="font-semibold text-sm mb-1.5">📞 Contact Information</h4>
-          <div className="space-y-0.5 text-sm">
-            {contact.email && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-xs">Email:</span>
-                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline text-xs">
-                  {contact.email}
-                </a>
-              </div>
-            )}
-            {contact.phone && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-xs">Phone:</span>
-                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline text-xs">
-                  {contact.phone}
-                </a>
-              </div>
-            )}
-            {contact.linkedin && (
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-xs">LinkedIn:</span>
-                <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">
-                  View Profile
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-                      </div >
-                    );
-                  })}
-                </div >
-
-  {/* Load More Button & Status */ }
-  < div className = "mt-6 text-center border-t border-gray-200 pt-6" >
-  {
-    searchResults.length > displayedResults ? (
-      isLoadingMore ? (
-        <div className="flex items-center justify-center text-purple-600 py-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mr-3"></div>
-          <span className="font-medium">Loading more candidates...</span>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <Button
-            onClick={() => {
-              setIsLoadingMore(true);
-              setTimeout(() => {
-                setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
-                setIsLoadingMore(false);
-              }, 500);
-            }}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3"
-            size="lg"
-          >
-            Load More Candidates ({searchResults.length - displayedResults} remaining)
-          </Button>
-          <p className="text-sm text-gray-600">
-            Showing {displayedResults} of {searchResults.length} • Scroll for auto-loading
-          </p>
-        </div>
-      )
-    ) : (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <p className="text-green-800 font-medium">
-          ✅ All {searchResults.length} candidates loaded
-        </p>
-        <p className="text-green-600 text-sm mt-1">
-          Use "Analyze with AI" above for detailed insights
-        </p>
-      </div>
-    )
-  }
-                </div >
               </div >
             </Card >
           </ContainedLoading >
         )}
 
-{
-  searchResults.length === 0 && booleanString && (
-    <Card className="p-6 border-2 border-gray-300">
-      <p className="text-center text-gray-500">
-        Click "Search LinkedIn Profiles" to find candidates
-      </p>
-    </Card>
-  )
-}
+        {
+          searchResults.length === 0 && booleanString && (
+            <Card className="p-6 border-2 border-gray-300">
+              <p className="text-center text-gray-500">
+                Click "Search LinkedIn Profiles" to find candidates
+              </p>
+            </Card>
+          )
+        }
 
-{/* AI Analysis Button - Moved to search results header */ }
+        {/* AI Analysis Button - Moved to search results header */}
 
-{/* Candidate Analysis Section */ }
-{
-  searchResults.length > 0 && showAIAnalysis && (
-    <div className="mt-6">
-      <CompactCandidateAnalysis
-        candidates={searchResults}
-        jobDescription={jobDescription}
-        onCandidateSelect={(candidate) => {
-          const index = searchResults.findIndex(r => r.link === candidate.link);
-          if (index !== -1) {
-            toggleProfileExpansion(index);
-          }
-        }}
-      />
-    </div>
-  )
-}
-
-{/* Email Generation Dialog */ }
-<Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-  <DialogContent className="max-w-2xl">
-    <DialogHeader>
-      <DialogTitle>Generate Email Templates</DialogTitle>
-      <DialogDescription>
-        Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
-      </DialogDescription>
-    </DialogHeader>
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium mb-2 block">
-          Additional Context (Optional)
-        </label>
-        <Textarea
-          placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
-          value={emailContext}
-          onChange={(e) => setEmailContext(e.target.value)}
-          className="min-h-[120px]"
-        />
-      </div>
-      <div className="flex gap-2">
-        <Button
-          onClick={generateEmailTemplates}
-          disabled={isGeneratingEmails}
-          className="flex-1 bg-green-600 hover:bg-green-700"
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
-        </Button>
-        <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  </DialogContent>
-</Dialog>
-
-{/* Generated Email Templates */ }
-{
-  generatedEmails.length > 0 && (
-    <Card className="p-6 border-2 border-blue-400">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
-        <Button
-          onClick={() => setGeneratedEmails([])}
-          variant="outline"
-          size="sm"
-        >
-          <X className="w-4 h-4 mr-1" />
-          Clear
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {generatedEmails.map((email, index) => (
-          <div key={index} className="border rounded-lg bg-white">
-            <div className="p-4 border-b bg-gray-50">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => copyToClipboard(email.subject)}
-                  >
-                    Copy Subject
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => copyToClipboard(email.body)}
-                  >
-                    Copy Email
-                  </Button>
-                </div>
-              </div>
+        {/* Candidate Analysis Section */}
+        {
+          searchResults.length > 0 && showAIAnalysis && (
+            <div className="mt-6">
+              <CompactCandidateAnalysis
+                candidates={searchResults}
+                jobDescription={jobDescription}
+                onCandidateSelect={(candidate) => {
+                  const index = searchResults.findIndex(r => r.link === candidate.link);
+                  if (index !== -1) {
+                    toggleProfileExpansion(index);
+                  }
+                }}
+              />
             </div>
+          )
+        }
 
-            <div className="p-4 space-y-3">
+        {/* Email Generation Dialog */}
+        <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Generate Email Templates</DialogTitle>
+              <DialogDescription>
+                Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
-                <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
-                  {email.subject}
-                </div>
+                <label className="text-sm font-medium mb-2 block">
+                  Additional Context (Optional)
+                </label>
+                <Textarea
+                  placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
+                  value={emailContext}
+                  onChange={(e) => setEmailContext(e.target.value)}
+                  className="min-h-[120px]"
+                />
               </div>
-
-              <div>
-                <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
-                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
-                  {email.body}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t">
-                <a
-                  href={email.profileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline flex items-center"
-                >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  View LinkedIn Profile
-                </a>
+              <div className="flex gap-2">
                 <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
+                  onClick={generateEmailTemplates}
+                  disabled={isGeneratingEmails}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
                 >
-                  <Copy className="w-3 h-3 mr-1" />
-                  Copy Complete
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
+                </Button>
+                <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+                  Cancel
                 </Button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
+          </DialogContent>
+        </Dialog>
 
-{/* Location Modal */ }
-<LocationModal
-  isOpen={showLocationDialog}
-  onClose={() => setShowLocationDialog(false)}
-  onLocationSelect={handleLocationSelect}
-/>
+        {/* Generated Email Templates */}
+        {
+          generatedEmails.length > 0 && (
+            <Card className="p-6 border-2 border-blue-400">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
+                <Button
+                  onClick={() => setGeneratedEmails([])}
+                  variant="outline"
+                  size="sm"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              </div>
 
-{/* Boolean Explanation Dialog */ }
-<Dialog open={showExplanation} onOpenChange={setShowExplanation}>
-  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle>Boolean Search Explanation</DialogTitle>
-      <DialogDescription>
-        Understanding what your search will find and why
-      </DialogDescription>
-    </DialogHeader>
-    {booleanExplanation && (
-      <BooleanExplainer
-        explanation={booleanExplanation}
-        onClose={() => setShowExplanation(false)}
-        variant="modal"
-      />
-    )}
-  </DialogContent>
-</Dialog>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {generatedEmails.map((email, index) => (
+                  <div key={index} className="border rounded-lg bg-white">
+                    <div className="p-4 border-b bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => copyToClipboard(email.subject)}
+                          >
+                            Copy Subject
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => copyToClipboard(email.body)}
+                          >
+                            Copy Email
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
 
-{/* Enhanced Boolean Generation Animation */ }
-<BooleanGenerationAnimation
-  isOpen={showBooleanAnimation}
-  onComplete={() => setShowBooleanAnimation(false)}
-  estimatedTimeMs={120000}
-/>
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
+                        <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
+                          {email.subject}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
+                        <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                          {email.body}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <a
+                          href={email.profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline flex items-center"
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View LinkedIn Profile
+                        </a>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
+                        >
+                          <Copy className="w-3 h-3 mr-1" />
+                          Copy Complete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )
+        }
+
+        {/* Location Modal */}
+        <LocationModal
+          isOpen={showLocationDialog}
+          onClose={() => setShowLocationDialog(false)}
+          onLocationSelect={handleLocationSelect}
+        />
+
+        {/* Boolean Explanation Dialog */}
+        <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Boolean Search Explanation</DialogTitle>
+              <DialogDescription>
+                Understanding what your search will find and why
+              </DialogDescription>
+            </DialogHeader>
+            {booleanExplanation && (
+              <BooleanExplainer
+                explanation={booleanExplanation}
+                onClose={() => setShowExplanation(false)}
+                variant="modal"
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Enhanced Boolean Generation Animation */}
+        <BooleanGenerationAnimation
+          isOpen={showBooleanAnimation}
+          onComplete={() => setShowBooleanAnimation(false)}
+          estimatedTimeMs={120000}
+        />
       </div >
     </TooltipProvider >
   );

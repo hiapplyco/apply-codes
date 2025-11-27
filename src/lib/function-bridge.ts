@@ -439,9 +439,7 @@ class FunctionBridge {
     return this.callHttpFunction("generateClarvidaReport", { body: payload });
   }
 
-  async testOrchestration(payload: any): Promise<any> {
-    return this.callHttpFunction("testOrchestration", { body: payload });
-  }
+
 
   async initializeDailyBot(): Promise<{ websocket_url: string }> {
     return this.callHttpFunction("initializeDailyBot");
