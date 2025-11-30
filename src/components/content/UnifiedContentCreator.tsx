@@ -70,7 +70,12 @@ export const UnifiedContentCreator = () => {
     option.tooltip.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleContextContent = async (content: any) => {
+  interface ContextContent {
+    text: string;
+    type: string;
+  }
+
+  const handleContextContent = async (content: ContextContent) => {
     try {
       setContextContent(content.text);
       toast.success(`${content.type} context added to content creation`);

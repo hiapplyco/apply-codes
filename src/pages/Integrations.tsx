@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Check, Settings, ExternalLink, Loader2, Search } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { Plus, Check, Search } from 'lucide-react';
+import { useNewAuth } from '@/context/NewAuthContext';
 
 interface Integration {
   id: string;
@@ -112,7 +112,7 @@ const integrations: Integration[] = [
 ];
 
 export default function Integrations() {
-  const { user } = useAuth();
+  const { user } = useNewAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ATS' | 'HRIS' | 'CRM'>('all');
   const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
@@ -142,7 +142,7 @@ export default function Integrations() {
 
   const filteredIntegrations = integrations.filter((integration) => {
     const matchesSearch = integration.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         integration.description.toLowerCase().includes(searchTerm.toLowerCase());
+      integration.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || integration.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -200,9 +200,9 @@ export default function Integrations() {
                   className={`px-4 py-3 rounded-lg border-2 border-black font-semibold
                            transition-all duration-200 
                            ${selectedCategory === category
-                             ? 'bg-purple-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                             : 'bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                           }`}
+                      ? 'bg-purple-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                      : 'bg-white hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                    }`}
                 >
                   {category === 'all' ? 'All' : category}
                 </button>
@@ -219,7 +219,7 @@ export default function Integrations() {
               className={`bg-white rounded-xl border-2 border-black p-6 
                        shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
                        transition-all duration-200 hover:scale-[1.02] cursor-pointer
-                       `}`}
+                       `}
               onClick={() => setSelectedIntegration(integration)}
             >
               <div className="flex items-start justify-between mb-4">
@@ -275,10 +275,10 @@ export default function Integrations() {
       {/* Integration Detail Modal */}
       {selectedIntegration && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-             onClick={() => setSelectedIntegration(null)}>
+          onClick={() => setSelectedIntegration(null)}>
           <div className="bg-white rounded-xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] 
                         max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-               onClick={(e) => e.stopPropagation()}>
+            onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b-2 border-black">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -326,7 +326,7 @@ export default function Integrations() {
 
               <div className="flex gap-3">
                 {selectedIntegration.status === 'connected' && (
-                  <button 
+                  <button
                     onClick={() => handleIntegrationRequest(selectedIntegration)}
                     className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg 
                              border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
@@ -338,7 +338,7 @@ export default function Integrations() {
                   </button>
                 )}
                 {selectedIntegration.status === 'available' && (
-                  <button 
+                  <button
                     onClick={() => handleIntegrationRequest(selectedIntegration)}
                     className="w-full py-3 px-4 bg-purple-600 text-white rounded-lg 
                              border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 

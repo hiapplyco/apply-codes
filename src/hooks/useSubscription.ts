@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   doc,
   onSnapshot,
   setDoc,
   serverTimestamp,
-  getDoc
+  getDoc,
+  DocumentData
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useNewAuth } from '@/context/NewAuthContext';
@@ -43,6 +44,122 @@ export const useSubscription = () => {
   const [subscription, setSubscription] = useState<SubscriptionDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const calculateTimeRemaining = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      return { days: 0, hours: 0, minutes: 0 };
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return { days, hours, minutes };
+  };
+
+  const processSubscriptionData = useCallback((data: DocumentData) => {
+    try {
+      // Calculate time remaining
+      const endDate = data.status === 'trialing' ? data.trialEndDate : data.currentPeriodEnd;
+      const timeRemaining = calculateTimeRemaining(endDate);
+
+      setSubscription({
+        status: data.status,
+        tier: data.tier,
+        trialStartDate: data.trialStartDate,
+        trialEndDate: data.trialEndDate,
+        currentPeriodEnd: data.currentPeriodEnd,
+        canceledAt: data.canceledAt,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        timeRemaining,
+        limits: {
+          searches: data.searchesLimit,
+          candidatesEnriched: data.candidatesEnrichedLimit,
+          aiCalls: data.aiCallsLimit,
+          videoInterviews: data.videoInterviewsLimit,
+          projects: data.projectsLimit,
+          teamMembers: data.teamMembersLimit,
+        },
+        usage: {
+          searches: data.searchesCount || 0,
+          candidatesEnriched: data.candidatesEnrichedCount || 0,
+          aiCalls: data.aiCallsCount || 0,
+          videoInterviews: data.videoInterviewsCount || 0,
+        },
+      });
+
+      setError(null);
+    } catch (err) {
+      console.error('Error processing subscription data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process subscription data');
+    }
+  }, []);
+
+  const createDefaultSubscription = useCallback(async () => {
+    if (!user || !db) return;
+
+    try {
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 days from now
+
+      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+
+      await setDoc(subscriptionDocRef, {
+        userId: user.uid,
+        status: 'trialing',
+        tier: 'free_trial',
+        trialStartDate: new Date().toISOString(),
+        trialEndDate: trialEndDate.toISOString(),
+        currentPeriodEnd: null,
+        canceledAt: null,
+        cancelAtPeriodEnd: false,
+        searchesLimit: 10,
+        candidatesEnrichedLimit: 50,
+        aiCallsLimit: 100,
+        videoInterviewsLimit: 5,
+        projectsLimit: 3,
+        teamMembersLimit: 1,
+        searchesCount: 0,
+        candidatesEnrichedCount: 0,
+        aiCallsCount: 0,
+        videoInterviewsCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // The real-time listener will automatically update the subscription state
+    } catch (err) {
+      console.error('Error creating default subscription:', err);
+      throw err;
+    }
+  }, [user, db]);
+
+  const fetchSubscription = useCallback(async () => {
+    if (!user || !db) return;
+
+    try {
+      setLoading(true);
+
+      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+      const docSnapshot = await getDoc(subscriptionDocRef);
+
+      if (docSnapshot.exists()) {
+        processSubscriptionData(docSnapshot.data());
+      } else {
+        // No subscription record found, create default trial subscription
+        await createDefaultSubscription();
+      }
+    } catch (err) {
+      console.error('Error fetching subscription:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch subscription');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, createDefaultSubscription, processSubscriptionData]);
 
   useEffect(() => {
     if (!user || !db) {
@@ -91,123 +208,7 @@ export const useSubscription = () => {
         unsubscribeSubscription();
       }
     };
-  }, [user]);
-
-  const processSubscriptionData = (data: any) => {
-    try {
-      // Calculate time remaining
-      const endDate = data.status === 'trialing' ? data.trialEndDate : data.currentPeriodEnd;
-      const timeRemaining = calculateTimeRemaining(endDate);
-
-      setSubscription({
-        status: data.status,
-        tier: data.tier,
-        trialStartDate: data.trialStartDate,
-        trialEndDate: data.trialEndDate,
-        currentPeriodEnd: data.currentPeriodEnd,
-        canceledAt: data.canceledAt,
-        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-        timeRemaining,
-        limits: {
-          searches: data.searchesLimit,
-          candidatesEnriched: data.candidatesEnrichedLimit,
-          aiCalls: data.aiCallsLimit,
-          videoInterviews: data.videoInterviewsLimit,
-          projects: data.projectsLimit,
-          teamMembers: data.teamMembersLimit,
-        },
-        usage: {
-          searches: data.searchesCount || 0,
-          candidatesEnriched: data.candidatesEnrichedCount || 0,
-          aiCalls: data.aiCallsCount || 0,
-          videoInterviews: data.videoInterviewsCount || 0,
-        },
-      });
-
-      setError(null);
-    } catch (err) {
-      console.error('Error processing subscription data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to process subscription data');
-    }
-  };
-
-  const fetchSubscription = async () => {
-    if (!user || !db) return;
-
-    try {
-      setLoading(true);
-
-      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
-      const docSnapshot = await getDoc(subscriptionDocRef);
-
-      if (docSnapshot.exists()) {
-        processSubscriptionData(docSnapshot.data());
-      } else {
-        // No subscription record found, create default trial subscription
-        await createDefaultSubscription();
-      }
-    } catch (err) {
-      console.error('Error fetching subscription:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch subscription');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createDefaultSubscription = async () => {
-    if (!user || !db) return;
-
-    try {
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 days from now
-
-      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
-
-      await setDoc(subscriptionDocRef, {
-        userId: user.uid,
-        status: 'trialing',
-        tier: 'free_trial',
-        trialStartDate: new Date().toISOString(),
-        trialEndDate: trialEndDate.toISOString(),
-        currentPeriodEnd: null,
-        canceledAt: null,
-        cancelAtPeriodEnd: false,
-        searchesLimit: 10,
-        candidatesEnrichedLimit: 50,
-        aiCallsLimit: 100,
-        videoInterviewsLimit: 5,
-        projectsLimit: 3,
-        teamMembersLimit: 1,
-        searchesCount: 0,
-        candidatesEnrichedCount: 0,
-        aiCallsCount: 0,
-        videoInterviewsCount: 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
-      // The real-time listener will automatically update the subscription state
-    } catch (err) {
-      console.error('Error creating default subscription:', err);
-      throw err;
-    }
-  };
-
-  const calculateTimeRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    const diff = end.getTime() - now.getTime();
-
-    if (diff <= 0) {
-      return { days: 0, hours: 0, minutes: 0 };
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    return { days, hours, minutes };
-  };
+  }, [user, createDefaultSubscription, processSubscriptionData]);
 
   const createCheckoutSession = async (priceId: string) => {
     try {
@@ -223,7 +224,7 @@ export const useSubscription = () => {
         cancelUrl: `${window.location.origin}/pricing?canceled=true`,
       });
 
-      const data = result.data as any;
+      const data = result.data as { url: string };
       return data;
     } catch (err) {
       console.error('Error creating checkout session:', err);
@@ -243,12 +244,56 @@ export const useSubscription = () => {
         returnUrl: `${window.location.origin}/account`,
       });
 
-      const data = result.data as any;
+      const data = result.data as { url: string };
       return data;
     } catch (err) {
       console.error('Error creating portal session:', err);
       throw err;
     }
+  };
+
+  const canUseFeature = (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'): boolean => {
+    if (!subscription) return false;
+
+    const limitKey = (usageType.replace('_', '') + 'Limit') as keyof typeof subscription.limits;
+    const usageKey = (usageType.replace('_', '') + 'Count') as keyof typeof subscription.usage; // Fixed usage key mapping
+
+    // Handle legacy usage keys if needed, but for now assuming strict mapping
+    // Actually, let's look at the interface:
+    // limits: searches, candidatesEnriched, aiCalls, videoInterviews
+    // usage: searches, candidatesEnriched, aiCalls, videoInterviews
+    // The usageType is 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'
+
+    // Map usageType to interface keys
+    let limitProp: keyof typeof subscription.limits;
+    let usageProp: keyof typeof subscription.usage;
+
+    switch (usageType) {
+      case 'searches':
+        limitProp = 'searches';
+        usageProp = 'searches';
+        break;
+      case 'candidates_enriched':
+        limitProp = 'candidatesEnriched';
+        usageProp = 'candidatesEnriched';
+        break;
+      case 'ai_calls':
+        limitProp = 'aiCalls';
+        usageProp = 'aiCalls';
+        break;
+      case 'video_interviews':
+        limitProp = 'videoInterviews';
+        usageProp = 'videoInterviews';
+        break;
+    }
+
+    const limit = subscription.limits[limitProp];
+    const usage = subscription.usage[usageProp];
+
+    // Null limit means unlimited
+    if (limit === null) return true;
+
+    return usage < limit;
   };
 
   const checkUsageLimit = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
@@ -293,21 +338,6 @@ export const useSubscription = () => {
     };
 
     return featureMap[feature] || false;
-  };
-
-  const canUseFeature = (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'): boolean => {
-    if (!subscription) return false;
-
-    const limitKey = usageType.replace('_', '') + 'Limit' as keyof typeof subscription.limits;
-    const usageKey = usageType.replace('_', '') as keyof typeof subscription.usage;
-
-    const limit = subscription.limits[limitKey];
-    const usage = subscription.usage[usageKey];
-
-    // Null limit means unlimited
-    if (limit === null) return true;
-
-    return usage < limit;
   };
 
   return {
