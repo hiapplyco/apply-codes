@@ -55,7 +55,7 @@ export const useSubscription = () => {
 
     const setupSubscriptionListener = async () => {
       try {
-        const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+        const subscriptionDocRef = doc(db!, 'user_subscription_details', user.uid);
 
         // Set up real-time listener for subscription changes
         unsubscribeSubscription = onSnapshot(
@@ -211,25 +211,20 @@ export const useSubscription = () => {
 
   const createCheckoutSession = async (priceId: string) => {
     try {
-      // Use Firebase Cloud Function instead of Supabase function
-      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
-      const response = await fetch(`${functionUrl}/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          successUrl: `${window.location.origin}/dashboard?success=true`,
-          cancelUrl: `${window.location.origin}/pricing?canceled=true`,
-        }),
+      const { functions } = await import('@/lib/firebase');
+      if (!functions) throw new Error('Firebase Functions not initialized');
+
+      const { httpsCallable } = await import('firebase/functions');
+      const createSession = httpsCallable(functions, 'createCheckoutSession');
+
+      const result = await createSession({
+        priceId,
+        successUrl: `${window.location.origin}/dashboard?success=true`,
+        cancelUrl: `${window.location.origin}/pricing?canceled=true`,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
-
-      return await response.json();
+      const data = result.data as any;
+      return data;
     } catch (err) {
       console.error('Error creating checkout session:', err);
       throw err;
@@ -238,23 +233,18 @@ export const useSubscription = () => {
 
   const createPortalSession = async () => {
     try {
-      // Use Firebase Cloud Function instead of Supabase function
-      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
-      const response = await fetch(`${functionUrl}/create-portal-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          returnUrl: `${window.location.origin}/account`,
-        }),
+      const { functions } = await import('@/lib/firebase');
+      if (!functions) throw new Error('Firebase Functions not initialized');
+
+      const { httpsCallable } = await import('firebase/functions');
+      const createSession = httpsCallable(functions, 'createPortalSession');
+
+      const result = await createSession({
+        returnUrl: `${window.location.origin}/account`,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create portal session');
-      }
-
-      return await response.json();
+      const data = result.data as any;
+      return data;
     } catch (err) {
       console.error('Error creating portal session:', err);
       throw err;
@@ -262,53 +252,27 @@ export const useSubscription = () => {
   };
 
   const checkUsageLimit = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
-    try {
-      // Use Firebase Cloud Function instead of Supabase RPC
-      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
-      const response = await fetch(`${functionUrl}/check-usage-limit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_uuid: user!.id,
-          usage_type: usageType,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to check usage limit');
-      }
-
-      const data = await response.json();
-      return data as boolean;
-    } catch (err) {
-      console.error('Error checking usage limit:', err);
-      return false;
-    }
+    return canUseFeature(usageType);
   };
 
   const incrementUsage = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
+    if (!user || !db) return;
+
     try {
-      // Use Firebase Cloud Function instead of Supabase RPC
-      const functionUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || 'https://us-central1-apply-codes.cloudfunctions.net';
-      const response = await fetch(`${functionUrl}/increment-usage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_uuid: user!.id,
-          usage_type: usageType,
-        }),
+      const { increment, updateDoc, doc } = await import('firebase/firestore');
+      const subscriptionDocRef = doc(db, 'user_subscription_details', user.uid);
+
+      const fieldName = usageType === 'searches' ? 'searchesCount' :
+        usageType === 'candidates_enriched' ? 'candidatesEnrichedCount' :
+          usageType === 'ai_calls' ? 'aiCallsCount' :
+            'videoInterviewsCount';
+
+      await updateDoc(subscriptionDocRef, {
+        [fieldName]: increment(1),
+        updatedAt: serverTimestamp()
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to increment usage');
-      }
-
-      // Refresh subscription data
-      await fetchSubscription();
+      // No need to manually refetch, onSnapshot will handle it
     } catch (err) {
       console.error('Error incrementing usage:', err);
       throw err;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Folder, Briefcase, Users, Star, Hash, Target } from 'lucide-react';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjectContext } from '@/context/ProjectContext';
 import { CreateProjectInput } from '@/types/project';
 
 interface ProjectSelectorProps {
@@ -61,14 +61,14 @@ export function ProjectSelector({
   label = 'Project',
   size = 'default'
 }: ProjectSelectorProps) {
-  const { 
-    projects, 
-    loading, 
-    selectedProjectId, 
+  const {
+    projects,
+    loading,
+    selectedProjectId,
     setSelectedProjectId,
-    createProject 
-  } = useProjects();
-  
+    createProject
+  } = useProjectContext();
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newProject, setNewProject] = useState<CreateProjectInput>({
@@ -92,7 +92,7 @@ export function ProjectSelector({
 
     setCreating(true);
     const created = await createProject(newProject);
-    
+
     if (created) {
       setSelectedProjectId(created.id);
       onProjectChange?.(created.id);
@@ -127,7 +127,7 @@ export function ProjectSelector({
           onValueChange={handleProjectChange}
           disabled={loading}
         >
-          <SelectTrigger 
+          <SelectTrigger
             id="project-selector"
             className={`
               ${size === 'sm' && 'h-8 text-sm'}
@@ -162,7 +162,7 @@ export function ProjectSelector({
                 <SelectSeparator />
               </>
             )}
-            
+
             {projects.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">
                 No projects yet
@@ -185,7 +185,7 @@ export function ProjectSelector({
                 );
               })
             )}
-            
+
             <SelectSeparator />
             <SelectItem value="create-new">
               <div className="flex items-center gap-2 text-primary">
@@ -205,7 +205,7 @@ export function ProjectSelector({
               Create a new project to organize your recruitment activities.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Project Name *</Label>
@@ -217,7 +217,7 @@ export function ProjectSelector({
                 autoFocus
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -228,7 +228,7 @@ export function ProjectSelector({
                 rows={3}
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label>Color</Label>
               <div className="flex gap-2 flex-wrap">
@@ -236,16 +236,15 @@ export function ProjectSelector({
                   <button
                     key={color}
                     type="button"
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      newProject.color === color ? 'border-gray-900 scale-110' : 'border-transparent'
-                    }`}
+                    className={`w-8 h-8 rounded-full border-2 transition-all ${newProject.color === color ? 'border-gray-900 scale-110' : 'border-transparent'
+                      }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setNewProject({ ...newProject, color })}
                   />
                 ))}
               </div>
             </div>
-            
+
             <div className="grid gap-2">
               <Label>Icon</Label>
               <div className="flex gap-2 flex-wrap">
@@ -253,33 +252,32 @@ export function ProjectSelector({
                   <button
                     key={value}
                     type="button"
-                    className={`p-2 rounded border-2 transition-all ${
-                      newProject.icon === value 
-                        ? 'border-primary bg-primary/10' 
+                    className={`p-2 rounded border-2 transition-all ${newProject.icon === value
+                        ? 'border-primary bg-primary/10'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                     onClick={() => setNewProject({ ...newProject, icon: value })}
                     title={label}
                   >
-                    <Icon className="h-5 w-5" style={{ 
-                      color: newProject.icon === value ? newProject.color : undefined 
+                    <Icon className="h-5 w-5" style={{
+                      color: newProject.icon === value ? newProject.color : undefined
                     }} />
                   </button>
                 ))}
               </div>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowCreateDialog(false)}
               disabled={creating}
               type="button"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreateProject}
               disabled={!newProject.name.trim() || creating}
               type="button"

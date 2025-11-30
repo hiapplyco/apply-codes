@@ -86,19 +86,9 @@ exports.generateBooleanSearch = onCall(
     console.log('  - Context Item Types:', contextItems?.map(item => item.type).join(', ') || 'None');
 
     try {
-      // Get Gemini API key from secret
-      let runtimeConfig = {};
-      try {
-        runtimeConfig = functions.config ? functions.config() : {};
-      } catch (configError) {
-        console.warn('Unable to load firebase functions config:', configError);
-      }
+      // Get Gemini API key from secret (injected by Firebase)
+      const apiKey = process.env.GEMINI_API_KEY;
 
-      const apiKey =
-        process.env.GEMINI_API_KEY ||
-        runtimeConfig?.gemini?.api_key ||
-        runtimeConfig?.gemini_api_key ||
-        null;
       if (!apiKey) {
         console.error('GEMINI_API_KEY is not configured');
         throw new HttpsError(
@@ -107,13 +97,7 @@ exports.generateBooleanSearch = onCall(
         );
       }
 
-      const apiKeySource = process.env.GEMINI_API_KEY
-        ? 'secret_manager'
-        : runtimeConfig?.gemini?.api_key
-          ? 'functions_config'
-          : 'unknown';
-
-      console.log('Gemini API key found', { source: apiKeySource });
+      console.log('Gemini API key found from secret manager');
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
 
