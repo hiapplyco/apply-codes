@@ -69,7 +69,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const lastProcessedLocation = useRef<string>('');
@@ -114,8 +114,8 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
       if (place.geometry?.location) {
         geometry = {
           location: {
-            lat: typeof place.geometry.location.lat === 'function' 
-              ? place.geometry.location.lat() 
+            lat: typeof place.geometry.location.lat === 'function'
+              ? place.geometry.location.lat()
               : place.geometry.location.lat || 0,
             lng: typeof place.geometry.location.lng === 'function'
               ? place.geometry.location.lng()
@@ -171,10 +171,10 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
           strictBounds: false
         }
       );
-      
+
       console.log('✅ Autocomplete instance created:', autocompleteRef.current);
       console.log('📍 Input element:', inputRef.current);
-      
+
       // Function to position the dropdown correctly
       const positionDropdown = () => {
         const pacContainer = document.querySelector('.pac-container') as HTMLElement;
@@ -248,34 +248,34 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList') {
             const addedNodes = Array.from(mutation.addedNodes);
-            const pacContainer = addedNodes.find(node => 
+            const pacContainer = addedNodes.find(node =>
               node instanceof HTMLElement && node.classList?.contains('pac-container')
             ) as HTMLElement;
-            
+
             if (pacContainer) {
               console.log('🔍 Google Places dropdown appeared, adding click handlers');
-              
+
               // Add click handlers to all pac-items
               const pacItems = pacContainer.querySelectorAll('.pac-item');
               pacItems.forEach((item, index) => {
                 console.log(`📌 Adding click handler to item ${index}:`, item.textContent);
-                
+
                 // Remove any existing click handlers to prevent duplicates
                 const newItem = item.cloneNode(true) as HTMLElement;
                 item.parentNode?.replaceChild(newItem, item);
-                
+
                 // Add mousedown handler (fires before Google's blur event)
                 newItem.addEventListener('mousedown', (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  
+
                   const itemText = newItem.textContent || '';
                   console.log('🎯 Dropdown item mousedown:', itemText);
-                  
+
                   // Simulate place selection by setting input value and triggering place_changed
                   if (inputRef.current) {
                     inputRef.current.value = itemText;
-                    
+
                     // Try to get place data first
                     setTimeout(() => {
                       const place = autocompleteRef.current?.getPlace();
@@ -296,7 +296,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
                     }, 100);
                   }
                 }, true); // Use capture phase
-                
+
                 // Also add click handler as backup
                 newItem.addEventListener('click', (e) => {
                   e.preventDefault();
@@ -308,13 +308,13 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
           }
         });
       });
-      
+
       // Observe the document body for dropdown changes
       dropdownObserver.observe(document.body, {
         childList: true,
         subtree: true
       });
-      
+
       // Store observer for cleanup
       (window as any).placesObserver = dropdownObserver;
 
@@ -327,7 +327,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
   // Load Google Maps API with proper error handling
   const loadGoogleMapsAPI = useCallback(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-    
+
     if (!apiKey) {
       setError('Google Maps API key not configured');
       return;
@@ -354,7 +354,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
     script.onload = () => {
       console.log('✅ Google Maps API loaded');
       setIsApiLoaded(true);
-      
+
       // Add optimized CSS for dropdown
       const style = document.createElement('style');
       style.id = 'google-places-styles';
@@ -400,15 +400,15 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
           pointer-events: none;
         }
       `;
-      
+
       // Remove existing styles to prevent duplicates
       const existingStyle = document.getElementById('google-places-styles');
       if (existingStyle) {
         existingStyle.remove();
       }
-      
+
       document.head.appendChild(style);
-      
+
       // Initialize autocomplete after a brief delay
       setTimeout(initializeAutocomplete, 100);
     };
@@ -454,7 +454,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
   useEffect(() => {
     const cleanup = loadGoogleMapsAPI();
     return cleanup;
-  }, []); // Empty dependency array to run only once
+  }, [loadGoogleMapsAPI]); // Empty dependency array to run only once
 
   // Re-initialize autocomplete when API loads
   useEffect(() => {
@@ -559,7 +559,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
           )}
         </div>
       </div>
-      
+
       {!hidePreview && selectedLocation && (
         <div className="mt-2 p-2 bg-green-50 border-2 border-green-200 rounded-lg">
           <div className="flex items-center gap-2">

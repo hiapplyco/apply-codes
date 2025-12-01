@@ -14,13 +14,13 @@ import { toast } from 'sonner';
 export interface ContextButtonsProps {
   /** Current page context for targeted content handling */
   context: 'sourcing' | 'meeting' | 'chat' | 'job-posting' | 'screening' | 'general';
-  
+
   /** Size variant for responsive layouts */
   size?: 'sm' | 'default' | 'lg' | 'compact';
-  
+
   /** Display variant - inline, toolbar, floating, or responsive */
   variant?: 'inline' | 'toolbar' | 'floating' | 'responsive';
-  
+
   /** Callback when content is processed and ready */
   onContentProcessed?: (content: {
     type: 'upload' | 'firecrawl' | 'perplexity' | 'location';
@@ -28,7 +28,7 @@ export interface ContextButtonsProps {
     metadata?: Record<string, any>;
     projectId?: string;
   }) => void;
-  
+
   /** Callback when location is selected */
   onLocationSelected?: (location: {
     formatted_address: string;
@@ -36,7 +36,7 @@ export interface ContextButtonsProps {
     geometry: any;
     address_components: any[];
   }) => void;
-  
+
   /** Enable/disable specific buttons */
   enabledButtons?: {
     upload?: boolean;
@@ -44,13 +44,13 @@ export interface ContextButtonsProps {
     perplexity?: boolean;
     location?: boolean;
   };
-  
+
   /** Custom styling classes */
   className?: string;
-  
+
   /** Show labels alongside icons */
   showLabels?: boolean;
-  
+
   /** Compact mode for minimal space */
   compact?: boolean;
 }
@@ -115,7 +115,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
       }
 
       const content = await DocumentProcessor.processDocument(file);
-      
+
       // Store in project context if selected
       if (selectedProject?.id) {
         await DocumentProcessor.saveToProject(selectedProject.id, {
@@ -163,7 +163,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
         fileInputRef.current.value = '';
       }
     }
-  }, [selectedProject, context, onContentProcessed]);
+  }, [selectedProject, context, onContentProcessed, saveContextItem]);
 
   const handleFirecrawlContent = useCallback(async (content: any) => {
     setIsProcessing('firecrawl');

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { z } from 'zod';
 import { BaseMCPTool } from '../utils/base-tool.js';
 import { MCPSession, MCPError } from '../types/mcp.js';
@@ -21,13 +21,13 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
   }
 
   protected async handler(input: any, session?: MCPSession) {
-    const { 
-      jobRole, 
-      experienceLevel, 
-      interviewType, 
-      skills = [], 
-      duration = 60, 
-      company = 'our company' 
+    const {
+      jobRole,
+      experienceLevel,
+      interviewType,
+      skills = [],
+      duration = 60,
+      company = 'our company'
     } = input;
 
     const questions = this.generateQuestions(jobRole, experienceLevel, interviewType, skills, duration);
@@ -82,7 +82,7 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
   private getTechnicalQuestions(role: string, level: string, skills: string[], count: number) {
     const questions = [];
     const isEngineering = role.toLowerCase().includes('engineer') || role.toLowerCase().includes('developer');
-    
+
     if (isEngineering) {
       questions.push(
         {
@@ -99,7 +99,7 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
         },
         {
           category: 'System Design',
-          question: level === 'entry' ? 
+          question: level === 'entry' ?
             'How would you structure a simple REST API for a basic CRUD application?' :
             'Design a system that can handle 1 million concurrent users. What are your main considerations?',
           followUps: ['How would you handle data consistency?', 'What about security considerations?'],
@@ -231,7 +231,7 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
       },
       {
         category: 'Technical Fit',
-        question: skills.length > 0 ? 
+        question: skills.length > 0 ?
           `Tell me about your experience with ${skills.slice(0, 2).join(' and ')}.` :
           'What technical skills are you most confident in?',
         followUps: ['Can you give me a specific example?', 'How do you stay current with new developments?'],
@@ -306,7 +306,7 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
 
   private getRoleSpecificTechnicalQuestions(role: string, level: string) {
     const roleLower = role.toLowerCase();
-    
+
     if (roleLower.includes('product')) {
       return [
         {
@@ -332,7 +332,7 @@ export class GenerateInterviewQuestionsTool extends BaseMCPTool {
         }
       ];
     }
-    
+
     return [
       {
         category: 'Domain Knowledge',
@@ -463,7 +463,7 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
       analysis,
       overallRecommendation: recommendation,
       nextSteps,
-      interviewerFeedback: feedback.map(f => ({
+      interviewerFeedback: feedback.map((f: any) => ({
         interviewer: f.interviewer,
         role: f.role || 'Not specified',
         interviewType: f.interviewType || 'General',
@@ -483,7 +483,7 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
   private analyzeFeedback(feedback: any[]) {
     const allStrengths = feedback.flatMap(f => f.strengths || []);
     const allConcerns = feedback.flatMap(f => f.concerns || []);
-    
+
     return {
       strengthsConsensus: this.findCommonThemes(allStrengths),
       concernsConsensus: this.findCommonThemes(allConcerns),
@@ -510,7 +510,7 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
     // Find themes mentioned by multiple interviewers
     Object.entries(themes).forEach(([theme, count]) => {
       if (count > 1) {
-        const relatedItems = items.filter(item => 
+        const relatedItems = items.filter(item =>
           item.toLowerCase().includes(theme)
         );
         commonThemes.push({
@@ -535,10 +535,10 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
   private assessInterviewerAlignment(feedback: any[]) {
     const ratings = feedback.map(f => f.rating);
     const recommendations = feedback.map(f => f.recommendation);
-    
+
     const ratingVariance = this.calculateVariance(ratings);
     const recommendationConsensus = this.calculateRecommendationConsensus(recommendations);
-    
+
     return {
       ratingVariance,
       alignment: ratingVariance < 1 ? 'high' : ratingVariance < 2 ? 'medium' : 'low',
@@ -554,18 +554,19 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
   }
 
   private calculateRecommendationConsensus(recommendations: string[]) {
-    const counts = {};
+    const counts: Record<string, number> = {};
     recommendations.forEach(rec => {
       counts[rec] = (counts[rec] || 0) + 1;
     });
-    
-    const maxCount = Math.max(...Object.values(counts));
+
+    const values = Object.values(counts);
+    const maxCount = values.length > 0 ? Math.max(...values) : 0;
     return maxCount / recommendations.length;
   }
 
   private identifyConflictingViews(feedback: any[]) {
     const conflicts = [];
-    
+
     // Check for rating conflicts (difference > 2)
     const ratings = feedback.map(f => ({ interviewer: f.interviewer, rating: f.rating }));
     for (let i = 0; i < ratings.length; i++) {
@@ -581,10 +582,10 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
     }
 
     // Check for recommendation conflicts
-    const hireRecommendations = feedback.filter(f => 
+    const hireRecommendations = feedback.filter(f =>
       f.recommendation === 'hire' || f.recommendation === 'strong_hire'
     );
-    const noHireRecommendations = feedback.filter(f => 
+    const noHireRecommendations = feedback.filter(f =>
       f.recommendation === 'no_hire' || f.recommendation === 'strong_no_hire'
     );
 
@@ -601,15 +602,15 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
 
   private extractKeyInsights(feedback: any[]) {
     const insights = [];
-    
+
     // Check for unanimous strong hire
     if (feedback.every(f => f.recommendation === 'strong_hire')) {
       insights.push('Unanimous strong hire recommendation - exceptional candidate');
     }
-    
+
     // Check for concerns about specific areas
-    const technicalConcerns = feedback.filter(f => 
-      (f.concerns || []).some(c => c.toLowerCase().includes('technical'))
+    const technicalConcerns = feedback.filter(f =>
+      (f.concerns || []).some((c: string) => c.toLowerCase().includes('technical'))
     );
     if (technicalConcerns.length > feedback.length / 2) {
       insights.push('Multiple interviewers expressed technical concerns');
@@ -617,8 +618,8 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
 
     // Check for cultural fit issues  
     const culturalConcerns = feedback.filter(f =>
-      (f.concerns || []).some(c => 
-        c.toLowerCase().includes('culture') || 
+      (f.concerns || []).some((c: string) =>
+        c.toLowerCase().includes('culture') ||
         c.toLowerCase().includes('fit') ||
         c.toLowerCase().includes('communication')
       )
@@ -636,15 +637,22 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
   }
 
   private calculateConsensus(feedback: any[]) {
-    const recommendations = feedback.map(f => f.recommendation);
-    const counts = {};
-    recommendations.forEach(rec => {
-      counts[rec] = (counts[rec] || 0) + 1;
+    if (!feedback.length) {
+      return { percentage: 0, level: 'low' };
+    }
+
+    const counts: Record<string, number> = {};
+    feedback.forEach(f => {
+      const rec = f.recommendation as string;
+      if (rec) {
+        counts[rec] = (counts[rec] || 0) + 1;
+      }
     });
-    
-    const maxCount = Math.max(...Object.values(counts));
+
+    const values = Object.values(counts);
+    const maxCount = values.length > 0 ? Math.max(...values) : 0;
     const consensusPercentage = Math.round((maxCount / feedback.length) * 100);
-    
+
     return {
       percentage: consensusPercentage,
       level: consensusPercentage >= 80 ? 'high' : consensusPercentage >= 60 ? 'medium' : 'low'
@@ -652,23 +660,26 @@ export class AnalyzeFeedbackTool extends BaseMCPTool {
   }
 
   private getRecommendationDistribution(feedback: any[]) {
-    const distribution = {
+    const distribution: Record<string, number> = {
       strong_hire: 0,
       hire: 0,
       no_hire: 0,
       strong_no_hire: 0
     };
-    
+
     feedback.forEach(f => {
-      distribution[f.recommendation] = (distribution[f.recommendation] || 0) + 1;
+      const rec = f.recommendation as string;
+      if (rec && rec in distribution) {
+        distribution[rec] = (distribution[rec] || 0) + 1;
+      }
     });
-    
+
     return distribution;
   }
 
   private generateRecommendation(analysis: any, feedback: any[]) {
     const avgRating = this.calculateAverageRating(feedback);
-    const hireVotes = feedback.filter(f => 
+    const hireVotes = feedback.filter(f =>
       f.recommendation === 'hire' || f.recommendation === 'strong_hire'
     ).length;
     const totalVotes = feedback.length;

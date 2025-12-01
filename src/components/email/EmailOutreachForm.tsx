@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
-  DialogFooter 
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { Mail, Send, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,11 +44,11 @@ interface EmailResult {
   subject?: string;
 }
 
-export function EmailOutreachForm({ 
-  candidateProfileUrl, 
-  candidateName, 
+export function EmailOutreachForm({
+  candidateProfileUrl,
+  candidateName,
   projectId,
-  onEmailSent 
+  onEmailSent
 }: EmailOutreachFormProps) {
   const { user } = useNewAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -64,7 +64,7 @@ export function EmailOutreachForm({
     if (isOpen && user && !projectId) {
       fetchProjects();
     }
-  }, [isOpen, user, projectId]);
+  }, [isOpen, user, projectId, fetchProjects]);
 
   // Update selected project when prop changes
   useEffect(() => {
@@ -139,7 +139,7 @@ export function EmailOutreachForm({
         setEmailResult(result);
         toast.success('Email sent successfully!');
         onEmailSent?.();
-        
+
         // Clear form after successful send
         setTimeout(() => {
           setCustomText('');
@@ -173,8 +173,8 @@ export function EmailOutreachForm({
       if (!open) resetForm();
     }}>
       <DialogTrigger asChild>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           variant="outline"
           className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.25)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.25)] transition-all duration-200"
         >
@@ -182,7 +182,7 @@ export function EmailOutreachForm({
           Send Email
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-[500px] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
@@ -203,8 +203,8 @@ export function EmailOutreachForm({
               <label className="block text-sm font-medium mb-2">
                 Send from Project *
               </label>
-              <Select 
-                value={selectedProjectId} 
+              <Select
+                value={selectedProjectId}
                 onValueChange={setSelectedProjectId}
                 disabled={isLoading || loadingProjects}
               >
@@ -256,11 +256,10 @@ export function EmailOutreachForm({
           </div>
 
           {emailResult && (
-            <div className={`p-4 rounded-lg border-2 ${
-              emailResult.success 
-                ? 'border-green-500 bg-green-50' 
+            <div className={`p-4 rounded-lg border-2 ${emailResult.success
+                ? 'border-green-500 bg-green-50'
                 : 'border-red-500 bg-red-50'
-            }`}>
+              }`}>
               <div className="flex items-start gap-2">
                 {emailResult.success ? (
                   <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -268,9 +267,8 @@ export function EmailOutreachForm({
                   <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
                 )}
                 <div className="flex-1">
-                  <p className={`font-medium ${
-                    emailResult.success ? 'text-green-800' : 'text-red-800'
-                  }`}>
+                  <p className={`font-medium ${emailResult.success ? 'text-green-800' : 'text-red-800'
+                    }`}>
                     {emailResult.success ? 'Email Sent Successfully!' : 'Failed to Send Email'}
                   </p>
                   {emailResult.success && emailResult.recipient && (

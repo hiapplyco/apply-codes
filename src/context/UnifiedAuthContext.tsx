@@ -43,8 +43,8 @@ const UnifiedAuthContext = createContext<UnifiedAuthContextType>({
   signOut: async () => ({ error: new Error("UnifiedAuthContext not initialized") }),
   resetPasswordForEmail: async () => ({ error: new Error("UnifiedAuthContext not initialized") }),
   updateUser: async () => ({ error: new Error("UnifiedAuthContext not initialized") }),
-  enableFirebase: () => {},
-  disableFirebase: () => {},
+  enableFirebase: () => { },
+  disableFirebase: () => { },
   isUsingFirebase: () => false,
 });
 
@@ -53,7 +53,7 @@ export const UnifiedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const firebaseAuth = useFirebaseAuth();
 
-  const activeProvider: 'firebase' = 'firebase';
+  const activeProvider = 'firebase' as const;
 
   // Create unified user object
   const unifiedUser = useMemo((): UnifiedUser | null => {

@@ -1216,7 +1216,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     } finally {
       setLoadingContext(false);
     }
-  }, [userId, selectedProjectId, selectedProject?.id]);
+  }, [userId, selectedProjectId, selectedProject?.id, selectedProject?.name]);
 
   // Load context items when component mounts or project changes
   useEffect(() => {

@@ -54,12 +54,12 @@ interface ShareSettings {
   message: string;
 }
 
-export function GoogleDocsModal({ 
-  content, 
-  onExport, 
-  onClose, 
+export function GoogleDocsModal({
+  content,
+  onExport,
+  onClose,
   isExporting,
-  currentDocUrl 
+  currentDocUrl
 }: GoogleDocsModalProps) {
   const [exportSettings, setExportSettings] = useState<ExportSettings>({
     title: `Apply Content - ${new Date().toLocaleDateString()}`,
@@ -77,7 +77,7 @@ export function GoogleDocsModal({
 
   const [isSharing, setIsSharing] = useState(false);
   const [shareEmails, setShareEmails] = useState('');
-  const [availableFolders, setAvailableFolders] = useState<Array<{id: string, name: string}>>([]);
+  const [availableFolders, setAvailableFolders] = useState<Array<{ id: string, name: string }>>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
   const [shareUrl, setShareUrl] = useState(currentDocUrl || '');
   const [exportProgress, setExportProgress] = useState(0);
@@ -89,11 +89,11 @@ export function GoogleDocsModal({
     if (currentAccount) {
       loadAvailableFolders();
     }
-  }, [currentAccount]);
+  }, [currentAccount, loadAvailableFolders]);
 
-  const loadAvailableFolders = async () => {
+  const loadAvailableFolders = useCallback(async () => {
     if (!currentAccount) return;
-    
+
     setLoadingFolders(true);
     try {
       const response = await functionBridge.getDriveFolders({
@@ -110,12 +110,12 @@ export function GoogleDocsModal({
     } finally {
       setLoadingFolders(false);
     }
-  };
+  }, [currentAccount]);
 
   const handleExportWithSettings = async () => {
     try {
       setExportProgress(25);
-      
+
       const exportResult = await functionBridge.exportToGoogleDocs({
         content,
         title: exportSettings.title,
@@ -130,9 +130,9 @@ export function GoogleDocsModal({
 
       setShareUrl(exportResult.documentUrl);
       setExportProgress(100);
-      
+
       toast.success('Content exported to Google Docs successfully!');
-      
+
       // Auto-copy link if sharing is enabled
       if (exportSettings.sharing !== 'private') {
         navigator.clipboard.writeText(exportResult.documentUrl);
@@ -159,7 +159,7 @@ export function GoogleDocsModal({
     setIsSharing(true);
     try {
       const emails = shareEmails.split(',').map(email => email.trim()).filter(email => email);
-      
+
       await functionBridge.shareGoogleDoc({
         documentUrl: shareUrl,
         emails,
@@ -237,9 +237,9 @@ export function GoogleDocsModal({
 
               <div className="space-y-2">
                 <Label htmlFor="doc-format">Export Format</Label>
-                <Select 
-                  value={exportSettings.format} 
-                  onValueChange={(value: 'docx' | 'pdf' | 'html' | 'txt') => 
+                <Select
+                  value={exportSettings.format}
+                  onValueChange={(value: 'docx' | 'pdf' | 'html' | 'txt') =>
                     setExportSettings(prev => ({ ...prev, format: value }))
                   }
                 >
@@ -277,8 +277,8 @@ export function GoogleDocsModal({
 
               <div className="space-y-2">
                 <Label htmlFor="doc-folder">Destination Folder</Label>
-                <Select 
-                  value={exportSettings.folder} 
+                <Select
+                  value={exportSettings.folder}
                   onValueChange={(value) => setExportSettings(prev => ({ ...prev, folder: value }))}
                   disabled={loadingFolders}
                 >
@@ -303,9 +303,9 @@ export function GoogleDocsModal({
 
               <div className="space-y-2">
                 <Label htmlFor="doc-sharing">Sharing Settings</Label>
-                <Select 
-                  value={exportSettings.sharing} 
-                  onValueChange={(value: 'private' | 'anyone_with_link' | 'domain') => 
+                <Select
+                  value={exportSettings.sharing}
+                  onValueChange={(value: 'private' | 'anyone_with_link' | 'domain') =>
                     setExportSettings(prev => ({ ...prev, sharing: value }))
                   }
                 >
@@ -353,7 +353,7 @@ export function GoogleDocsModal({
                     <span className="text-sm font-medium">{exportProgress}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${exportProgress}%` }}
                     />
@@ -437,9 +437,9 @@ export function GoogleDocsModal({
 
               <div className="space-y-2">
                 <Label htmlFor="share-permission">Permission Level</Label>
-                <Select 
-                  value={shareSettings.permission} 
-                  onValueChange={(value: 'view' | 'comment' | 'edit') => 
+                <Select
+                  value={shareSettings.permission}
+                  onValueChange={(value: 'view' | 'comment' | 'edit') =>
                     setShareSettings(prev => ({ ...prev, permission: value }))
                   }
                 >
@@ -515,7 +515,7 @@ export function GoogleDocsModal({
                 <p className="text-sm text-gray-600 mb-2">Content Preview:</p>
                 <p className="text-sm">{getContentPreview()}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium text-gray-700">Title:</p>

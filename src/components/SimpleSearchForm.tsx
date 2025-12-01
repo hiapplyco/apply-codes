@@ -24,8 +24,8 @@ interface SimpleSearchFormProps {
   jobTitle?: string;
 }
 
-const SimpleSearchForm = ({ 
-  userId, 
+const SimpleSearchForm = ({
+  userId,
   autoRun = false,
   initialRequirements,
   initialJobId,
@@ -43,10 +43,10 @@ const SimpleSearchForm = ({
     console.log('Job created/submitted:', { jobId, submittedText });
 
     if (currentJobId !== jobId) {
-        setIsProcessingComplete(false);
-        setIsGeneratingAnalysis(false);
-        setShowGoogleSearch(false);
-        setOutput(jobId, null);
+      setIsProcessingComplete(false);
+      setIsGeneratingAnalysis(false);
+      setShowGoogleSearch(false);
+      setOutput(jobId, null);
     }
 
     setCurrentJobId(jobId);
@@ -72,13 +72,13 @@ const SimpleSearchForm = ({
 
   useEffect(() => {
     const state = location.state as { content?: string; autoRun?: boolean; searchString?: string } | null;
-    
+
     if (initialRequirements) {
       setSearchText(initialRequirements);
     } else if (state?.content) {
       setSearchText(state.content);
     }
-    
+
     if (initialSearchString) {
       setSearchString(initialSearchString);
       setShowGoogleSearch(true);
@@ -86,7 +86,7 @@ const SimpleSearchForm = ({
       setSearchString(state.searchString);
       setShowGoogleSearch(true);
     }
-    
+
     if (state) {
       window.history.replaceState({}, document.title);
     }
@@ -94,14 +94,14 @@ const SimpleSearchForm = ({
 
   useEffect(() => {
     if ((autoRun || (location.state as { autoRun?: boolean })?.autoRun) && searchText && currentJobId && !isProcessing && !isGeneratingAnalysis) {
-       console.log('Auto-running analysis generation...');
-       handleGenerateAnalysis();
-       if (location.state) {
-         window.history.replaceState({}, document.title);
-       }
+      console.log('Auto-running analysis generation...');
+      handleGenerateAnalysis();
+      if (location.state) {
+        window.history.replaceState({}, document.title);
+      }
     }
-  }, [autoRun, searchText, location.state, isProcessing, isGeneratingAnalysis, currentJobId]);
-  
+  }, [autoRun, searchText, location.state, isProcessing, isGeneratingAnalysis, currentJobId, handleGenerateAnalysis]);
+
   useEffect(() => {
     if (autoRun && initialSearchString && !showGoogleSearch) {
       console.log('Auto-showing Google search with initial search string');
@@ -150,13 +150,13 @@ const SimpleSearchForm = ({
   }, [agentOutput, isLoadingAgentOutput, setSearchString]);
 
   const handleGenerateAnalysis = useCallback(() => {
-      if (!searchText || !currentJobId) {
-          toast.error('Cannot generate analysis without requirements and a job ID.');
-          return;
-      }
-      console.log('Triggering analysis generation for job:', currentJobId);
-      setIsGeneratingAnalysis(true);
-      setIsProcessingComplete(false);
+    if (!searchText || !currentJobId) {
+      toast.error('Cannot generate analysis without requirements and a job ID.');
+      return;
+    }
+    console.log('Triggering analysis generation for job:', currentJobId);
+    setIsGeneratingAnalysis(true);
+    setIsProcessingComplete(false);
   }, [searchText, currentJobId]);
 
   const handleShowGoogleSearch = (generatedSearchString: string) => {
@@ -205,21 +205,21 @@ const SimpleSearchForm = ({
               />
             )}
             {!isGeneratingAnalysis && currentJobId && !agentOutput && (
-               <GenerateAnalysisButton onClick={handleGenerateAnalysis} />
+              <GenerateAnalysisButton onClick={handleGenerateAnalysis} />
             )}
-             {isLoadingAgentOutput && <p>Loading analysis data...</p>}
+            {isLoadingAgentOutput && <p>Loading analysis data...</p>}
           </AnalysisReport>
         )}
 
-         {showGoogleSearch && searchString && (
-           <div className="mt-6">
-             <StructuredSearchResults
-               searchString={searchString}
-               jobId={currentJobId || undefined}
-               searchType="candidates"
-             />
-           </div>
-         )}
+        {showGoogleSearch && searchString && (
+          <div className="mt-6">
+            <StructuredSearchResults
+              searchString={searchString}
+              jobId={currentJobId || undefined}
+              searchType="candidates"
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -230,7 +230,7 @@ const SimpleSearchForm = ({
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           {jobTitle ? `Search for: ${jobTitle}` : 'AI-Powered Boolean Search'}
         </h2>
-        
+
         <Card className="p-6 border-2 border-purple-400 bg-purple-50 mb-6">
           <div className="flex items-center justify-between">
             <div>

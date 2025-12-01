@@ -2,12 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Bot, 
-  User, 
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  User,
   Loader2,
   Minimize2,
   Maximize2,
@@ -36,10 +36,10 @@ interface Message {
 interface FloatingChatBotProps {
   /** Page context for targeted responses */
   context?: 'sourcing' | 'meeting' | 'chat' | 'job-posting' | 'screening' | 'general';
-  
+
   /** Custom position */
   position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  
+
   /** Custom styling */
   className?: string;
 }
@@ -58,7 +58,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   const [contextContent, setContextContent] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
+
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
@@ -90,7 +90,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
       };
       setMessages([welcomeMessage]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -131,14 +131,14 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     } catch (error) {
       console.error('Chat error:', error);
       toast.error('Failed to send message. Please try again.');
-      
+
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date()
       };
-      
+
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -149,7 +149,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     try {
       await processContent(content);
       setContextContent(content.text);
-      
+
       // Add context message to chat
       const contextMessage: Message = {
         id: `context-${Date.now()}`,
@@ -158,7 +158,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         timestamp: new Date()
       };
       setMessages(prev => [...prev, contextMessage]);
-      
+
       toast.success(`${content.type} context added to chat`);
     } catch (error) {
       console.error('Chat context processing error:', error);
@@ -170,7 +170,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     setIsDragging(true);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+
     const rect = (isOpen ? chatRef : dragRef).current?.getBoundingClientRect();
     if (rect) {
       setDragPosition({
@@ -181,24 +181,24 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   };
 
   // Handle drag move
-  const handleDragMove = (e: MouseEvent | TouchEvent) => {
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!isDragging) return;
-    
+
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+
     const newX = clientX - dragPosition.x;
     const newY = clientY - dragPosition.y;
-    
+
     // Ensure it stays within viewport
     const maxX = window.innerWidth - (isOpen ? 384 : 56); // 384px = w-96, 56px = w-14
     const maxY = window.innerHeight - (isOpen ? 600 : 56);
-    
+
     setCustomPosition({
       x: Math.min(Math.max(0, newX), maxX),
       y: Math.min(Math.max(0, newY), maxY)
     });
-  };
+  }, [isDragging, dragPosition, isOpen]);
 
   // Handle drag end
   const handleDragEnd = () => {
@@ -210,12 +210,12 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     if (isDragging) {
       const handleMove = (e: MouseEvent | TouchEvent) => handleDragMove(e);
       const handleEnd = () => handleDragEnd();
-      
+
       document.addEventListener('mousemove', handleMove);
       document.addEventListener('mouseup', handleEnd);
       document.addEventListener('touchmove', handleMove, { passive: false });
       document.addEventListener('touchend', handleEnd);
-      
+
       return () => {
         document.removeEventListener('mousemove', handleMove);
         document.removeEventListener('mouseup', handleEnd);
@@ -223,7 +223,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         document.removeEventListener('touchend', handleEnd);
       };
     }
-  }, [isDragging, dragPosition.x, dragPosition.y, isOpen]);
+  }, [isDragging, handleDragMove]);
 
   // Position classes
   const positionClasses = {
@@ -232,7 +232,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     'top-right': 'top-6 right-6',
     'top-left': 'top-6 left-6'
   };
-  
+
   // Get position style
   const getPositionStyle = () => {
     if (customPosition) {
@@ -281,7 +281,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   }
 
   return (
-    <div 
+    <div
       ref={chatRef}
       className={cn(
         "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
@@ -294,7 +294,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
       style={getPositionStyle()}
     >
       {/* Header */}
-      <div 
+      <div
         className="flex items-center justify-between p-4 border-b-2 border-black bg-purple-50 rounded-t-lg cursor-move"
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}

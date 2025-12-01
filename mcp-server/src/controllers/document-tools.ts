@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { z } from 'zod';
 import { BaseMCPTool } from '../utils/base-tool.js';
 import { MCPSession } from '../types/mcp.js';
@@ -32,25 +32,25 @@ export class ParseResumeTool extends BaseMCPTool {
 
     // Parse the resume content using actual content analysis
     const parsedResume = this.parseResumeContent(content, extractSections);
-    
+
     const result = {
       id: `resume-${Date.now()}`,
       filename: filename || 'resume.txt',
       parsedAt: new Date().toISOString(),
       contentType,
-      
+
       ...parsedResume,
-      
+
       // Analysis based on extracted data
       analysis: this.analyzeResume(parsedResume),
-      
+
       // Matching scores for common roles
       roleMatches: this.calculateRoleMatches(parsedResume),
     };
 
-    this.log('Resume parsing completed', { 
+    this.log('Resume parsing completed', {
       skillsFound: result.skills?.technical?.length || 0,
-      experienceYears: result.analysis?.totalExperienceYears 
+      experienceYears: result.analysis?.totalExperienceYears
     });
 
     return result;
@@ -58,7 +58,7 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private parseResumeContent(content: string, extractSections: any): any {
     const result: any = {};
-    
+
     // Personal Information
     if (extractSections.contact !== false) {
       result.personalInfo = this.extractContactInfo(content);
@@ -99,11 +99,11 @@ export class ParseResumeTool extends BaseMCPTool {
     const emailMatch = content.match(/[\w\.-]+@[\w\.-]+\.\w+/);
     const phoneMatch = content.match(/[\+]?[(]?[\d\s\-\(\)]{10,}/);
     const nameMatch = content.match(/^([A-Z][a-z]+ [A-Z][a-z]+)/m);
-    
+
     // Look for LinkedIn URL
     const linkedinMatch = content.match(/linkedin\.com\/in\/([^\s\n]+)/);
     const githubMatch = content.match(/github\.com\/([^\s\n]+)/);
-    
+
     // Extract location from common patterns
     const locationMatch = content.match(/([A-Z][a-z]+,\s*[A-Z]{2})|([A-Z][a-z]+\s*[A-Z][a-z]+,\s*[A-Z]{2})/);
 
@@ -137,7 +137,7 @@ export class ParseResumeTool extends BaseMCPTool {
       const currentRole = experience[0];
       const skills = this.extractSkills(content);
       const topSkills = skills.technical?.slice(0, 3)?.map((cat: any) => cat.skills).flat().slice(0, 3) || [];
-      
+
       return `Experienced ${currentRole.title || 'professional'} with expertise in ${topSkills.join(', ')}. ${this.calculateExperienceYears(experience)}+ years of experience in software development.`;
     }
 
@@ -146,10 +146,10 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private extractExperience(content: string): any[] {
     const experiences = [];
-    
+
     // Split content into potential experience sections
     const sections = content.split(/\n(?=\S)/);
-    
+
     for (const section of sections) {
       if (this.looksLikeExperience(section)) {
         const experience = this.parseExperienceSection(section);
@@ -181,14 +181,14 @@ export class ParseResumeTool extends BaseMCPTool {
   private parseExperienceSection(section: string): any | null {
     // Extract title
     const titleMatch = section.match(/^([^•\n]+)/);
-    
+
     // Extract company
-    const companyMatch = section.match(/(?:at\s+|@\s+)([^•\n,]+)/i) || 
-                        section.match(/([A-Z][^•\n,]+(?:Inc|LLC|Corp|Ltd|Company))/);
-    
+    const companyMatch = section.match(/(?:at\s+|@\s+)([^•\n,]+)/i) ||
+      section.match(/([A-Z][^•\n,]+(?:Inc|LLC|Corp|Ltd|Company))/);
+
     // Extract dates
     const dateMatch = section.match(/(\w{3}\s+\d{4}|\d{1,2}\/\d{4}|\d{4})\s*[-–]\s*(\w{3}\s+\d{4}|\d{1,2}\/\d{4}|\d{4}|present|current)/i);
-    
+
     // Extract responsibilities (bullet points)
     const responsibilities = [];
     const bulletMatches = section.match(/[•▪▫▸▹◦‣⁃]\s*([^•▪▫▸▹◦‣⁃\n]+)/g);
@@ -215,13 +215,13 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private extractEducation(content: string): any[] {
     const education = [];
-    
+
     // Look for education section
     const educationSection = content.match(/(?:education|academic|university|college|degree)[:\s]*\n([^]+?)(?:\n\n|\nexperience|\nskills|\ncertifications|$)/i);
-    
+
     if (educationSection) {
       const section = educationSection[1];
-      
+
       // Parse degree information
       const degreeMatch = section.match(/(bachelor|master|phd|doctorate|associate|bs|ba|ms|ma|mba|phd).*?(?:in\s+)?([^\n,]+)/i);
       const institutionMatch = section.match(/(?:from\s+|at\s+)?([A-Z][^,\n]+(?:university|college|institute|school))/i);
@@ -254,7 +254,7 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private extractTechnicalSkills(content: string): string[] {
     const skills = new Set<string>();
-    
+
     // Common technical skills to look for
     const techSkillsDatabase = [
       // Programming Languages
@@ -272,7 +272,7 @@ export class ParseResumeTool extends BaseMCPTool {
     ];
 
     const contentLower = content.toLowerCase();
-    
+
     for (const skill of techSkillsDatabase) {
       if (contentLower.includes(skill.toLowerCase())) {
         skills.add(skill);
@@ -302,12 +302,12 @@ export class ParseResumeTool extends BaseMCPTool {
     };
 
     const categorized = [];
-    
+
     for (const [category, categorySkills] of Object.entries(categories)) {
-      const matchingSkills = skills.filter(skill => 
+      const matchingSkills = skills.filter(skill =>
         categorySkills.some(catSkill => catSkill.toLowerCase() === skill.toLowerCase())
       );
-      
+
       if (matchingSkills.length > 0) {
         categorized.push({
           category,
@@ -350,13 +350,13 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private extractCertifications(content: string): any[] {
     const certifications: any[] = [];
-    
+
     // Look for certification section
     const certSection = content.match(/(?:certifications?|licenses?)[:\s]*([^]+?)(?:\n\n|\nexperience|\neducation|\nskills|$)/i);
-    
+
     if (certSection) {
       const section = certSection[1];
-      
+
       // Common certification patterns
       const certPatterns = [
         /AWS Certified ([^,\n]+)/gi,
@@ -371,7 +371,7 @@ export class ParseResumeTool extends BaseMCPTool {
         if (matches) {
           matches.forEach(match => {
             const dateMatch = section.match(new RegExp(match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '.*?(\\d{4})'));
-            
+
             certifications.push({
               name: match.trim(),
               issuer: this.extractCertificationIssuer(match),
@@ -388,22 +388,22 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private extractProjects(content: string): any[] {
     const projects = [];
-    
+
     // Look for projects section
     const projectSection = content.match(/(?:projects?|portfolio)[:\s]*([^]+?)(?:\n\n|\nexperience|\neducation|\nskills|$)/i);
-    
+
     if (projectSection) {
       const section = projectSection[1];
-      
+
       // Split by project indicators
       const projectBlocks = section.split(/\n(?=[A-Z])/);
-      
+
       for (const block of projectBlocks) {
         if (block.trim().length > 20) {
           const nameMatch = block.match(/^([^:\n]+)/);
           const urlMatch = block.match(/(https?:\/\/[^\s\n]+)/);
           const technologies = this.extractTechnologiesFromText(block);
-          
+
           if (nameMatch) {
             projects.push({
               name: nameMatch[1].trim(),
@@ -426,7 +426,7 @@ export class ParseResumeTool extends BaseMCPTool {
       'React', 'Angular', 'Vue', 'Node.js', 'Python', 'Java', 'JavaScript', 'TypeScript',
       'AWS', 'Docker', 'Kubernetes', 'SQL', 'MongoDB', 'PostgreSQL', 'Git'
     ];
-    
+
     return techTerms.filter(term => text.toLowerCase().includes(term.toLowerCase()));
   }
 
@@ -439,11 +439,11 @@ export class ParseResumeTool extends BaseMCPTool {
     // Simple duration calculation
     const start = new Date(startDate);
     const end = endDate.toLowerCase().includes('present') ? new Date() : new Date(endDate);
-    
+
     const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
-    
+
     if (years > 0 && remainingMonths > 0) {
       return `${years} year${years > 1 ? 's' : ''} ${remainingMonths} month${remainingMonths > 1 ? 's' : ''}`;
     } else if (years > 0) {
@@ -489,7 +489,7 @@ export class ParseResumeTool extends BaseMCPTool {
   private analyzeResume(parsedResume: any): any {
     const experienceYears = this.calculateExperienceYears(parsedResume.experience || []);
     const skillsCount = parsedResume.skills?.technical?.reduce((sum: number, cat: any) => sum + cat.skills.length, 0) || 0;
-    
+
     return {
       experienceLevel: this.determineExperienceLevel(experienceYears),
       totalExperienceYears: experienceYears,
@@ -504,7 +504,7 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private calculateExperienceYears(experiences: any[]): number {
     let totalMonths = 0;
-    
+
     for (const exp of experiences) {
       if (exp.startDate && exp.endDate) {
         const start = new Date(exp.startDate);
@@ -513,7 +513,7 @@ export class ParseResumeTool extends BaseMCPTool {
         totalMonths += months;
       }
     }
-    
+
     return Math.round(totalMonths / 12 * 10) / 10; // Round to 1 decimal
   }
 
@@ -531,7 +531,7 @@ export class ParseResumeTool extends BaseMCPTool {
 
   private identifyIndustryFocus(experiences: any[]): string {
     if (!experiences || experiences.length === 0) return 'Technology';
-    
+
     // Analyze company names and titles for industry indicators
     const companies = experiences.map(exp => exp.company?.toLowerCase() || '').join(' ');
     const titles = experiences.map(exp => exp.title?.toLowerCase() || '').join(' ');
@@ -541,74 +541,74 @@ export class ParseResumeTool extends BaseMCPTool {
     if (combined.includes('healthcare') || combined.includes('medical')) return 'Healthcare Technology';
     if (combined.includes('e-commerce') || combined.includes('retail')) return 'E-commerce';
     if (combined.includes('gaming') || combined.includes('game')) return 'Gaming';
-    
+
     return 'Technology';
   }
 
   private analyzeCareerProgression(experiences: any[]): string {
     if (!experiences || experiences.length < 2) return 'Limited data';
-    
+
     const titles = experiences.slice(0, 3).map(exp => exp.title?.toLowerCase() || '');
-    
+
     if (titles.some(title => title.includes('senior')) || titles.some(title => title.includes('lead'))) {
       return 'Upward progression to senior roles';
     }
-    
+
     return 'Consistent experience level';
   }
 
   private identifyStrengths(parsedResume: any): string[] {
     const strengths = [];
-    
+
     if (parsedResume.skills?.technical?.length > 3) {
       strengths.push('Strong technical skill set');
     }
-    
+
     if (parsedResume.experience?.length > 3) {
       strengths.push('Extensive work experience');
     }
-    
+
     if (parsedResume.education?.length > 0) {
       strengths.push('Strong educational background');
     }
-    
+
     if (parsedResume.certifications?.length > 0) {
       strengths.push('Professional certifications');
     }
-    
+
     if (parsedResume.projects?.length > 0) {
       strengths.push('Project portfolio demonstrates practical skills');
     }
-    
+
     return strengths;
   }
 
   private generateResumeRecommendations(parsedResume: any): string[] {
     const recommendations = [];
-    
+
     if (!parsedResume.personalInfo?.email) {
       recommendations.push('Add contact email address');
     }
-    
+
     if (!parsedResume.personalInfo?.linkedinUrl) {
       recommendations.push('Include LinkedIn profile URL');
     }
-    
+
     if (!parsedResume.skills?.technical?.length) {
       recommendations.push('Add technical skills section');
     }
-    
+
     if (!parsedResume.projects?.length && parsedResume.skills?.technical?.length > 0) {
       recommendations.push('Include relevant projects to showcase skills');
     }
-    
+
     return recommendations;
   }
 
   private calculateRoleMatches(parsedResume: any): any[] {
-    const skills = parsedResume.skills?.technical?.flatMap((cat: any) => cat.skills) || [];
-    const experienceLevel = parsedResume.analysis?.experienceLevel || 'mid';
-    
+    const skills: string[] = parsedResume.skills?.technical?.flatMap((cat: any) => cat.skills) || [];
+    const experienceLevel: string = (parsedResume.analysis?.experienceLevel || 'mid').toLowerCase();
+
     const roles = [
       {
         role: 'Full Stack Developer',
@@ -616,7 +616,7 @@ export class ParseResumeTool extends BaseMCPTool {
         experienceMatch: ['entry', 'mid', 'senior']
       },
       {
-        role: 'Frontend Developer', 
+        role: 'Frontend Developer',
         requiredSkills: ['React', 'JavaScript', 'HTML5', 'CSS3', 'TypeScript'],
         experienceMatch: ['entry', 'mid', 'senior']
       },
@@ -638,14 +638,14 @@ export class ParseResumeTool extends BaseMCPTool {
     ];
 
     return roles.map(role => {
-      const skillMatches = role.requiredSkills.filter(reqSkill => 
+      const skillMatches = role.requiredSkills.filter(reqSkill =>
         skills.some(skill => skill.toLowerCase().includes(reqSkill.toLowerCase()))
       );
-      
+
       const skillScore = (skillMatches.length / role.requiredSkills.length) * 70;
       const experienceScore = role.experienceMatch.includes(experienceLevel) ? 30 : 15;
       const totalScore = Math.round(skillScore + experienceScore);
-      
+
       return {
         role: role.role,
         score: totalScore,
@@ -657,7 +657,7 @@ export class ParseResumeTool extends BaseMCPTool {
   private generateMatchReasoning(skillMatches: string[], requiredSkills: string[], candidateLevel: string, roleExperience: string[]): string {
     const skillMatchPercent = Math.round((skillMatches.length / requiredSkills.length) * 100);
     const experienceMatch = roleExperience.includes(candidateLevel) ? 'perfect' : 'partial';
-    
+
     return `${skillMatchPercent}% skill match (${skillMatches.length}/${requiredSkills.length} required skills), ${experienceMatch} experience level match`;
   }
 }
@@ -685,21 +685,21 @@ export class EnhanceJobDescriptionTool extends BaseMCPTool {
   protected async handler(input: any, session?: MCPSession): Promise<any> {
     const { jobDescription, companyInfo, optimizeFor, includeStructure } = input;
 
-    this.log('Enhancing job description', { 
+    this.log('Enhancing job description', {
       originalLength: jobDescription.length,
-      optimizations: optimizeFor 
+      optimizations: optimizeFor
     });
 
     // Analyze the original job description
     const analysis = this.analyzeJobDescription(jobDescription);
-    
+
     // Generate enhanced version
     const enhanced = this.generateEnhancedDescription(jobDescription, companyInfo, optimizeFor, includeStructure, analysis);
-    
+
     const result = {
       originalLength: jobDescription.length,
       enhancedDescription: enhanced.content,
-      
+
       improvements: {
         structure: includeStructure ? enhanced.structureImprovements : [],
         content: enhanced.contentImprovements,
@@ -708,13 +708,13 @@ export class EnhanceJobDescriptionTool extends BaseMCPTool {
       },
 
       metrics: this.calculateMetrics(jobDescription, enhanced.content, optimizeFor),
-      
+
       keywords: enhanced.keywords,
-      
+
       suggestions: this.generateSuggestions(analysis, optimizeFor),
     };
 
-    this.log('Job description enhancement completed', { 
+    this.log('Job description enhancement completed', {
       improvementAreas: Object.keys(result.improvements).length,
       newLength: enhanced.content.length
     });
@@ -739,7 +739,13 @@ export class EnhanceJobDescriptionTool extends BaseMCPTool {
 
   private generateEnhancedDescription(original: string, companyInfo: any, optimizeFor: string[], includeStructure: boolean, analysis: any): any {
     let enhanced = original;
-    const improvements = {
+    const improvements: {
+      structureImprovements: string[];
+      contentImprovements: string[];
+      seoImprovements: string[];
+      diversityImprovements: string[];
+      keywords: string[];
+    } = {
       structureImprovements: [],
       contentImprovements: [],
       seoImprovements: [],
@@ -751,7 +757,7 @@ export class EnhanceJobDescriptionTool extends BaseMCPTool {
     const jobTitle = this.extractJobTitle(original);
     const skills = this.extractSkills(original);
     const responsibilities = this.extractResponsibilities(original);
-    
+
     if (includeStructure) {
       enhanced = this.addStructuredFormat(enhanced, jobTitle, companyInfo, skills, responsibilities);
       improvements.structureImprovements = [
@@ -794,20 +800,20 @@ export class EnhanceJobDescriptionTool extends BaseMCPTool {
 
   private addStructuredFormat(content: string, jobTitle: string, companyInfo: any, skills: string[], responsibilities: string[]): string {
     const companyName = companyInfo?.name || 'Our Company';
-    
+
     return `# ${jobTitle} - Join Our Innovation Team! 🚀
 
 ## About the Role
 We're seeking a passionate ${jobTitle} to join our dynamic team and help build the next generation of scalable applications. This is an excellent opportunity to work with cutting-edge technologies while making a meaningful impact.
 
 ## What You'll Do
-${responsibilities.length > 0 ? 
-  responsibilities.map(resp => `• **${this.extractActionFromResponsibility(resp)}**: ${resp}`).join('\n') :
-  `• **Lead Development**: Architect and develop high-performance applications
+${responsibilities.length > 0 ?
+        responsibilities.map(resp => `• **${this.extractActionFromResponsibility(resp)}**: ${resp}`).join('\n') :
+        `• **Lead Development**: Architect and develop high-performance applications
 • **Collaborate**: Work closely with cross-functional teams to deliver exceptional products  
 • **Drive Innovation**: Contribute to technical strategy and help shape our engineering culture
 • **Ensure Quality**: Implement best practices for testing, deployment, and monitoring`
-}
+      }
 
 ## What We're Looking For
 ### Required Qualifications
@@ -844,7 +850,7 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
     // Add enthusiasm and energy
     improved = improved.replace(/We are looking for/gi, 'We\'re seeking a passionate');
     improved = improved.replace(/The candidate will/gi, 'You\'ll have the opportunity to');
-    
+
     // Improve call-to-action
     if (!improved.toLowerCase().includes('apply') && !improved.toLowerCase().includes('submit')) {
       improved += '\n\nReady to join our team? Apply now and let\'s build something amazing together!';
@@ -896,7 +902,7 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
     optimized = optimized.replace(/\bguys?\b/gi, 'team members');
     optimized = optimized.replace(/\bninja\b/gi, 'expert');
     optimized = optimized.replace(/\brockstar\b/gi, 'talented professional');
-    
+
     // Add inclusive statements
     if (!optimized.toLowerCase().includes('equal opportunity')) {
       optimized += '\n\n*We are an equal opportunity employer committed to building a diverse and inclusive team. We welcome applications from all qualified candidates regardless of race, gender, age, religion, sexual orientation, or any other protected characteristic.*';
@@ -906,7 +912,7 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
     // Soften requirements language
     optimized = optimized.replace(/\bmust have\b/gi, 'ideally have');
     optimized = optimized.replace(/\brequired:\s*PhD/gi, 'Preferred: PhD');
-    
+
     improvements.push('Used inclusive language throughout');
     improvements.push('Softened requirement language to encourage diverse applicants');
     improvements.push('Added diversity and inclusion commitment');
@@ -947,7 +953,7 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
     const sentences = description.split(/[.!?]+/).length;
     const words = description.split(/\s+/).length;
     const avgWordsPerSentence = words / sentences;
-    
+
     // Score from 1-10 (higher is more readable)
     let score = 10 - (avgWordsPerSentence - 15) * 0.5;
     return Math.max(1, Math.min(10, Math.round(score * 10) / 10));
@@ -985,43 +991,43 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
       'JavaScript', 'TypeScript', 'Python', 'Java', 'React', 'Angular', 'Vue.js',
       'Node.js', 'Express', 'Django', 'AWS', 'Docker', 'Kubernetes', 'SQL'
     ];
-    
+
     const descLower = description.toLowerCase();
     for (const skill of commonSkills) {
       if (descLower.includes(skill.toLowerCase())) {
         skills.push(skill);
       }
     }
-    
+
     return skills;
   }
 
   private extractResponsibilities(description: string): string[] {
     const responsibilities = [];
-    
+
     // Look for bullet points or numbered lists
     const bulletMatches = description.match(/^[\s]*[-*•]\s*(.+)$/gm);
     if (bulletMatches) {
       responsibilities.push(...bulletMatches.map(match => match.replace(/^[\s]*[-*•]\s*/, '')));
     }
-    
+
     // Look for "you will" statements
     const youWillMatches = description.match(/you will ([^.]+)/gi);
     if (youWillMatches) {
       responsibilities.push(...youWillMatches.map(match => match.replace(/you will /i, '')));
     }
-    
+
     return responsibilities.slice(0, 6); // Limit to top 6
   }
 
   private extractActionFromResponsibility(responsibility: string): string {
     const actionWords = ['Develop', 'Build', 'Design', 'Implement', 'Lead', 'Collaborate', 'Manage', 'Create'];
     const firstWord = responsibility.split(' ')[0];
-    
+
     if (actionWords.some(action => action.toLowerCase() === firstWord.toLowerCase())) {
       return firstWord;
     }
-    
+
     return 'Execute';
   }
 
@@ -1038,26 +1044,26 @@ Ready to make an impact? We'd love to hear from you! Please submit your resume a
 
   private generateSuggestions(analysis: any, optimizeFor: string[]): string[] {
     const suggestions = [];
-    
+
     if (!analysis.hasCompanyInfo) {
       suggestions.push('Consider adding a brief company mission statement');
     }
-    
+
     if (!analysis.hasSalaryInfo) {
       suggestions.push('Adding salary range can increase application rates by 30%');
     }
-    
+
     if (analysis.skillsCount < 3) {
       suggestions.push('Include more specific technical requirements');
     }
-    
+
     if (!optimizeFor.includes('diversity')) {
       suggestions.push('Consider diversity optimization to attract underrepresented candidates');
     }
-    
+
     suggestions.push('Add employee testimonials or quotes for authenticity');
     suggestions.push('Consider creating a video job description for higher engagement');
-    
+
     return suggestions;
   }
 }
@@ -1085,42 +1091,42 @@ export class CompareDocumentsTool extends BaseMCPTool {
   protected async handler(input: any, session?: MCPSession): Promise<any> {
     const { resumeContent, jobDescription, criteria = {}, detailed } = input;
 
-    this.log('Comparing documents', { 
+    this.log('Comparing documents', {
       resumeLength: resumeContent.length,
-      jobDescriptionLength: jobDescription.length 
+      jobDescriptionLength: jobDescription.length
     });
 
     // Parse both documents
     const resumeData = this.parseResumeForComparison(resumeContent);
     const jobData = this.parseJobForComparison(jobDescription);
-    
+
     // Calculate detailed scores
     const scores = this.calculateDetailedScores(resumeData, jobData, criteria);
-    
+
     // Generate overall assessment
     const comparison = {
       overallScore: this.calculateOverallScore(scores),
       matchCategory: this.determineMatchCategory(this.calculateOverallScore(scores)),
-      
+
       detailedScores: scores,
-      
+
       strengths: this.identifyStrengths(resumeData, jobData, scores),
-      
+
       gaps: this.identifyGaps(resumeData, jobData),
-      
+
       recommendations: {
         forRecruiter: this.generateRecruiterRecommendations(scores, resumeData, jobData),
         forCandidate: this.generateCandidateRecommendations(resumeData, jobData),
       },
-      
+
       interviewQuestions: detailed ? this.generateInterviewQuestions(resumeData, jobData, scores) : undefined,
-      
+
       nextSteps: this.generateNextSteps(this.calculateOverallScore(scores), scores),
     };
 
-    this.log('Document comparison completed', { 
+    this.log('Document comparison completed', {
       overallScore: comparison.overallScore,
-      matchCategory: comparison.matchCategory 
+      matchCategory: comparison.matchCategory
     });
 
     return comparison;
@@ -1195,27 +1201,27 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private calculateSkillsScore(candidateSkills: string[], requiredSkills: string[], preferredSkills: string[] = []): any {
     const allJobSkills = [...requiredSkills, ...preferredSkills];
     const candidateSkillsLower = candidateSkills.map(s => s.toLowerCase());
-    
-    const matched = requiredSkills.filter(skill => 
-      candidateSkillsLower.some(candidateSkill => 
+
+    const matched = requiredSkills.filter(skill =>
+      candidateSkillsLower.some(candidateSkill =>
         candidateSkill.includes(skill.toLowerCase()) || skill.toLowerCase().includes(candidateSkill)
       )
     );
-    
+
     const preferredMatched = preferredSkills.filter(skill =>
-      candidateSkillsLower.some(candidateSkill => 
+      candidateSkillsLower.some(candidateSkill =>
         candidateSkill.includes(skill.toLowerCase()) || skill.toLowerCase().includes(candidateSkill)
       )
     );
-    
+
     const missing = requiredSkills.filter(skill => !matched.includes(skill));
-    
+
     // Calculate score: 70% for required skills, 30% for preferred skills
     const requiredScore = requiredSkills.length > 0 ? (matched.length / requiredSkills.length) * 70 : 70;
     const preferredScore = preferredSkills.length > 0 ? (preferredMatched.length / preferredSkills.length) * 30 : 30;
-    
+
     const totalScore = Math.min(100, requiredScore + preferredScore);
-    
+
     return {
       score: Math.round(totalScore),
       matched: [...matched, ...preferredMatched],
@@ -1227,9 +1233,9 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private calculateExperienceScore(candidateExp: any, requiredExp: string, jobLevel: string): any {
     const candidateYears = this.extractYearsFromExperience(candidateExp);
     const requiredYears = this.extractYearsFromRequirement(requiredExp);
-    
+
     let score = 50; // Base score
-    
+
     // Compare years of experience
     if (candidateYears >= requiredYears) {
       score += 30;
@@ -1240,7 +1246,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
       const shortfall = (requiredYears - candidateYears) / requiredYears;
       score -= shortfall * 30;
     }
-    
+
     // Compare experience level
     const candidateLevel = this.determineExperienceLevelFromYears(candidateYears);
     if (candidateLevel === jobLevel) {
@@ -1248,13 +1254,13 @@ export class CompareDocumentsTool extends BaseMCPTool {
     } else if (this.isExperienceLevelClose(candidateLevel, jobLevel)) {
       score += 10;
     }
-    
+
     return {
       score: Math.max(0, Math.min(100, Math.round(score))),
       candidateLevel: `${candidateLevel} (${candidateYears} years)`,
       requiredLevel: `${jobLevel} (${requiredYears}+ years)`,
-      details: candidateYears >= requiredYears ? 
-        'Experience level meets or exceeds requirements' : 
+      details: candidateYears >= requiredYears ?
+        'Experience level meets or exceeds requirements' :
         `${requiredYears - candidateYears} years below requirement`
     };
   }
@@ -1268,27 +1274,27 @@ export class CompareDocumentsTool extends BaseMCPTool {
         details: 'Education requirements flexible'
       };
     }
-    
+
     let score = 50; // Base score
-    
+
     if (candidateEdu.length === 0) {
       score = 30; // Some penalty for missing education info
     } else {
       const highestDegree = candidateEdu[0];
-      
+
       // Check degree level match
       if (this.degreeMeetsRequirement(highestDegree.degree || '', requiredEdu)) {
         score += 40;
       } else {
         score += 20; // Partial credit for having some education
       }
-      
+
       // Bonus for relevant field
       if (this.isRelevantField(highestDegree.degree || '', requiredEdu)) {
         score += 10;
       }
     }
-    
+
     return {
       score: Math.max(0, Math.min(100, score)),
       candidateEducation: candidateEdu.length > 0 ? candidateEdu[0].degree : 'Not specified',
@@ -1300,31 +1306,31 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private calculateOtherFactorsScore(resumeData: any, jobData: any): any {
     let score = 50; // Base score
     const factors = [];
-    
+
     // Portfolio/Projects
     if (resumeData.projects && resumeData.projects.length > 0) {
       score += 15;
       factors.push('Has relevant project portfolio');
     }
-    
+
     // Certifications
     if (resumeData.certifications && resumeData.certifications.length > 0) {
       score += 15;
       factors.push('Professional certifications');
     }
-    
+
     // Communication skills (inferred from resume quality)
     if (resumeData.summary && resumeData.summary.length > 100) {
       score += 10;
       factors.push('Strong communication evident in resume');
     }
-    
+
     // Contact completeness
     if (resumeData.contact && resumeData.contact.email && resumeData.contact.linkedinUrl) {
       score += 10;
       factors.push('Complete contact information');
     }
-    
+
     return {
       score: Math.min(100, score),
       factors,
@@ -1339,7 +1345,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
       scores.education.weightedScore,
       scores.other.weightedScore
     ];
-    
+
     return Math.round(weightedScores.reduce((sum, score) => sum + score, 0));
   }
 
@@ -1353,40 +1359,41 @@ export class CompareDocumentsTool extends BaseMCPTool {
 
   private identifyStrengths(resumeData: any, jobData: any, scores: any): string[] {
     const strengths = [];
-    
+
     if (scores.skills.score >= 80) {
       strengths.push(`Strong technical skill alignment (${scores.skills.score}% match)`);
     }
-    
+
     if (scores.experience.score >= 80) {
       strengths.push('Experience level perfectly matches requirements');
     }
-    
+
     if (scores.education.score >= 80) {
       strengths.push('Relevant educational background');
     }
-    
+
     if (resumeData.certifications && resumeData.certifications.length > 0) {
       strengths.push('Professional certifications demonstrate commitment');
     }
-    
+
     if (resumeData.projects && resumeData.projects.length > 0) {
       strengths.push('Portfolio demonstrates practical application of skills');
     }
-    
+
     return strengths;
   }
 
   private identifyGaps(resumeData: any, jobData: any): any[] {
     const gaps = [];
-    
+
     // Skill gaps
-    const missingSkills = jobData.requiredSkills.filter(skill =>
-      !resumeData.skills.some((candidateSkill: string) => 
+    // Skill gaps
+    const missingSkills = jobData.requiredSkills.filter((skill: string) =>
+      !resumeData.skills.some((candidateSkill: string) =>
         candidateSkill.toLowerCase().includes(skill.toLowerCase())
       )
     );
-    
+
     if (missingSkills.length > 0) {
       gaps.push({
         category: 'Technical Skills',
@@ -1395,11 +1402,11 @@ export class CompareDocumentsTool extends BaseMCPTool {
         recommendation: 'Consider technical assessment to validate undocumented skills'
       });
     }
-    
+
     // Experience gaps
     const candidateYears = this.extractYearsFromExperience(resumeData.experience);
     const requiredYears = this.extractYearsFromRequirement(jobData.experienceRequired);
-    
+
     if (candidateYears < requiredYears) {
       gaps.push({
         category: 'Experience',
@@ -1408,14 +1415,14 @@ export class CompareDocumentsTool extends BaseMCPTool {
         recommendation: 'Evaluate for potential and growth trajectory'
       });
     }
-    
+
     return gaps;
   }
 
   private generateRecruiterRecommendations(scores: any, resumeData: any, jobData: any): string[] {
     const recommendations = [];
     const overallScore = this.calculateOverallScore(scores);
-    
+
     if (overallScore >= 80) {
       recommendations.push('Excellent candidate - recommend moving to phone screen immediately');
     } else if (overallScore >= 70) {
@@ -1425,49 +1432,49 @@ export class CompareDocumentsTool extends BaseMCPTool {
     } else {
       recommendations.push('Below threshold - consider only if requirements can be adjusted');
     }
-    
+
     if (scores.skills.missing.length > 0) {
       recommendations.push(`Focus interview on: ${scores.skills.missing.slice(0, 3).join(', ')}`);
     }
-    
+
     if (scores.experience.score < 70) {
       recommendations.push('Assess learning ability and growth potential');
     }
-    
+
     recommendations.push('Verify key skills through practical assessment');
-    
+
     return recommendations;
   }
 
   private generateCandidateRecommendations(resumeData: any, jobData: any): string[] {
     const recommendations = [];
-    
-    const missingSkills = jobData.requiredSkills.filter(skill =>
-      !resumeData.skills.some((candidateSkill: string) => 
+
+    const missingSkills = jobData.requiredSkills.filter((skill: string) =>
+      !resumeData.skills.some((candidateSkill: string) =>
         candidateSkill.toLowerCase().includes(skill.toLowerCase())
       )
     );
-    
+
     if (missingSkills.length > 0) {
       recommendations.push(`Consider highlighting experience with: ${missingSkills.slice(0, 3).join(', ')}`);
     }
-    
+
     if (!resumeData.projects || resumeData.projects.length === 0) {
       recommendations.push('Add relevant projects to demonstrate practical skills');
     }
-    
+
     if (!resumeData.certifications || resumeData.certifications.length === 0) {
       recommendations.push('Consider obtaining relevant certifications');
     }
-    
+
     recommendations.push('Prepare specific examples demonstrating key required skills');
-    
+
     return recommendations;
   }
 
   private generateInterviewQuestions(resumeData: any, jobData: any, scores: any): any[] {
     const questions = [];
-    
+
     // Technical questions based on gaps
     if (scores.skills.missing.length > 0) {
       questions.push({
@@ -1476,27 +1483,27 @@ export class CompareDocumentsTool extends BaseMCPTool {
         purpose: 'Assess learning ability and growth mindset',
       });
     }
-    
+
     // Experience validation
     questions.push({
       category: 'Experience',
       question: 'Walk me through your most challenging technical project.',
       purpose: 'Validate experience level and problem-solving skills',
     });
-    
+
     // Behavioral questions
     questions.push({
       category: 'Behavioral',
       question: 'How do you stay current with technology trends?',
       purpose: 'Assess continuous learning and professional development',
     });
-    
+
     return questions;
   }
 
   private generateNextSteps(overallScore: number, scores: any): string[] {
     const steps = [];
-    
+
     if (overallScore >= 80) {
       steps.push('Schedule phone screening within 3-5 days');
       steps.push('Prepare technical assessment for key skills');
@@ -1510,9 +1517,9 @@ export class CompareDocumentsTool extends BaseMCPTool {
       steps.push('Provide constructive feedback if declining');
       steps.push('Keep profile for future opportunities');
     }
-    
+
     steps.push('Check references from relevant previous roles');
-    
+
     return steps;
   }
 
@@ -1523,14 +1530,14 @@ export class CompareDocumentsTool extends BaseMCPTool {
       'JavaScript', 'TypeScript', 'Python', 'Java', 'React', 'Angular', 'Vue.js',
       'Node.js', 'Express', 'Django', 'AWS', 'Docker', 'Kubernetes', 'SQL'
     ];
-    
+
     const textLower = text.toLowerCase();
     for (const skill of commonSkills) {
       if (textLower.includes(skill.toLowerCase())) {
         skills.push(skill);
       }
     }
-    
+
     return skills;
   }
 
@@ -1538,7 +1545,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
     // Simple experience extraction
     const yearMatches = text.match(/(\d+)\+?\s*years?/gi);
     const years = yearMatches ? Math.max(...yearMatches.map(match => parseInt(match))) : 0;
-    
+
     return {
       totalYears: years,
       positions: [] // Would be more sophisticated in real implementation
@@ -1547,7 +1554,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
 
   private extractEducationFromText(text: string): any[] {
     const education = [];
-    
+
     const degreeMatch = text.match(/(bachelor|master|phd|bs|ba|ms|ma|mba)/i);
     if (degreeMatch) {
       education.push({
@@ -1556,30 +1563,30 @@ export class CompareDocumentsTool extends BaseMCPTool {
         year: null
       });
     }
-    
+
     return education;
   }
 
   private extractCertificationsFromText(text: string): any[] {
     const certs = [];
     const certPatterns = ['AWS Certified', 'Microsoft Certified', 'Google Cloud', 'Certified'];
-    
+
     for (const pattern of certPatterns) {
       if (text.toLowerCase().includes(pattern.toLowerCase())) {
         certs.push({ name: pattern });
       }
     }
-    
+
     return certs;
   }
 
   private extractProjectsFromText(text: string): any[] {
     // Look for project indicators
     const projectIndicators = ['project', 'portfolio', 'github', 'built', 'developed'];
-    const hasProjects = projectIndicators.some(indicator => 
+    const hasProjects = projectIndicators.some(indicator =>
       text.toLowerCase().includes(indicator)
     );
-    
+
     return hasProjects ? [{ name: 'Project mentioned' }] : [];
   }
 
@@ -1591,7 +1598,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private extractContactFromText(text: string): any {
     const emailMatch = text.match(/[\w\.-]+@[\w\.-]+\.\w+/);
     const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/);
-    
+
     return {
       email: emailMatch ? emailMatch[0] : null,
       linkedinUrl: linkedinMatch ? linkedinMatch[0] : null
@@ -1605,11 +1612,11 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private extractPreferredSkillsFromJob(jobDescription: string): string[] {
     // Look for "preferred", "nice to have", "plus" sections
     const preferredSection = jobDescription.match(/(?:preferred|nice to have|plus)[:\s]*([^.]+)/gi);
-    
+
     if (preferredSection) {
       return this.extractSkillsFromText(preferredSection.join(' '));
     }
-    
+
     return [];
   }
 
@@ -1626,13 +1633,13 @@ export class CompareDocumentsTool extends BaseMCPTool {
   private extractResponsibilitiesFromJob(jobDescription: string): string[] {
     const responsibilities = [];
     const bulletMatches = jobDescription.match(/[•▪▫▸▹◦‣⁃]\s*([^•▪▫▸▹◦‣⁃\n]+)/g);
-    
+
     if (bulletMatches) {
-      responsibilities.push(...bulletMatches.map(match => 
+      responsibilities.push(...bulletMatches.map(match =>
         match.replace(/^[•▪▫▸▹◦‣⁃]\s*/, '').trim()
       ));
     }
-    
+
     return responsibilities;
   }
 
@@ -1643,7 +1650,7 @@ export class CompareDocumentsTool extends BaseMCPTool {
 
   private extractJobLevel(jobDescription: string): string {
     const descLower = jobDescription.toLowerCase();
-    
+
     if (descLower.includes('senior') || descLower.includes('lead')) return 'senior';
     if (descLower.includes('junior') || descLower.includes('entry')) return 'entry';
     return 'mid';
@@ -1668,25 +1675,25 @@ export class CompareDocumentsTool extends BaseMCPTool {
     const levels = ['entry', 'mid', 'senior'];
     const candidateIndex = levels.indexOf(candidateLevel);
     const jobIndex = levels.indexOf(jobLevel);
-    
+
     return Math.abs(candidateIndex - jobIndex) <= 1;
   }
 
   private degreeMeetsRequirement(candidateDegree: string, requiredEducation: string): boolean {
     const candidateLower = candidateDegree.toLowerCase();
     const requiredLower = requiredEducation.toLowerCase();
-    
+
     // Simple matching logic
     if (requiredLower.includes('bachelor') && candidateLower.includes('bachelor')) return true;
     if (requiredLower.includes('master') && (candidateLower.includes('master') || candidateLower.includes('bachelor'))) return true;
-    
+
     return false;
   }
 
   private isRelevantField(candidateDegree: string, requiredEducation: string): boolean {
     const techFields = ['computer science', 'engineering', 'computer', 'software', 'technology'];
     const candidateLower = candidateDegree.toLowerCase();
-    
+
     return techFields.some(field => candidateLower.includes(field));
   }
 }
