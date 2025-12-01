@@ -1,8 +1,8 @@
-
 import { lazy, Suspense, memo } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
 import { Loader2 } from "lucide-react";
-import { ContextBar, type ContextBarProps } from "@/components/context/ContextBar";
+import { type ContextBarProps } from "@/components/context/ContextBar";
+import { StandardProjectContext } from '@/components/project/StandardProjectContext';
 import { useContextIntegration } from "@/hooks/useContextIntegration";
 import { useProjectContext } from "@/context/ProjectContext";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ const LoadingState = () => (
 const SourcingComponent = () => {
   const { user, isLoading, isAuthenticated } = useNewAuth();
   const { selectedProjectId } = useProjectContext();
-  
+
   const { processContent } = useContextIntegration({
     context: 'sourcing'
   });
@@ -61,32 +61,22 @@ const SourcingComponent = () => {
           </p>
         </div>
       </div>
-      
+
       {/* Project & Context Selection */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-        <ContextBar
-          context="sourcing"
-          title="Project & Context"
-          description="Select a project and add context through uploads, web scraping, or AI search"
-          onContentProcessed={handleContextContent}
-          projectSelectorProps={{
-            placeholder: "Choose a project to save candidates to...",
-            className: "w-full max-w-md"
-          }}
-          enabledButtons={{
-            upload: true,
-            firecrawl: true,
-            perplexity: true,
-            location: true
-          }}
-          showLabels={true}
-          size="default"
-        />
-      </div>
+      <StandardProjectContext
+        context="sourcing"
+        onContentProcessed={handleContextContent}
+        enabledButtons={{
+          upload: true,
+          firecrawl: true,
+          perplexity: true,
+          location: true
+        }}
+      />
 
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>
-        <MinimalSearchForm 
+        <MinimalSearchForm
           userId={user?.uid ?? null}
           selectedProjectId={selectedProjectId}
         />

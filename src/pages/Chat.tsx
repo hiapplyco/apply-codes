@@ -10,28 +10,26 @@ import {
   query,
   where
 } from "firebase/firestore";
-import { 
-  Send, 
-  Bot, 
+import {
+  Send,
+  Bot,
   User,
   Loader2,
   Search,
   Folder,
   Users,
   Sparkles,
-  Info,
   X
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ProjectSelector } from "@/components/project/ProjectSelector";
-import { ContextBar } from "@/components/context/ContextBar";
+import { StandardProjectContext } from '@/components/project/StandardProjectContext';
 import { useContextIntegration } from "@/hooks/useContextIntegration";
+import { useProjectContext } from "@/context/ProjectContext";
 
 interface Message {
   id: string;
@@ -66,18 +64,17 @@ interface UserContext {
 
 const Chat = () => {
   const { user } = useNewAuth();
+  const { selectedProjectId } = useProjectContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [showContext, setShowContext] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [contextContent, setContextContent] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   // Context integration for chat
-  const { processContent, isProcessing } = useContextIntegration({
+  const { processContent } = useContextIntegration({
     context: 'chat'
   });
 
@@ -202,15 +199,15 @@ Provide helpful, specific advice based on their data. Be conversational but prof
     try {
       // Call our chat assistant function
       const data = await chatAssistant({
-          message: input.trim(),
-          systemPrompt: generateSystemPrompt(),
-          history: messages.slice(-10).map(message => ({
-            role: message.role,
-            content: message.content
-          })),
-          projectId: selectedProjectId,
-          userId: user?.uid
-        });
+        message: input.trim(),
+        systemPrompt: generateSystemPrompt(),
+        history: messages.slice(-10).map(message => ({
+          role: message.role,
+          content: message.content
+        })),
+        projectId: selectedProjectId,
+        userId: user?.uid
+      });
       const error = null;
 
       if (error) throw error;
@@ -248,50 +245,34 @@ Provide helpful, specific advice based on their data. Be conversational but prof
             <Bot className="w-6 h-6 text-purple-600" />
             AI Assistant
           </h1>
-          <div className="flex items-center gap-2">
-            {/* Compact Context Bar */}
-            <ContextBar
-              context="chat"
-              title=""
-              description=""
-              onContentProcessed={async (content) => {
-                try {
-                  await processContent(content);
-                  setContextContent(content.text);
-                  
-                  const contextMessage: Message = {
-                    id: `context-${Date.now()}`,
-                    role: 'assistant',
-                    content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses.`,
-                    timestamp: new Date()
-                  };
-                  setMessages(prev => [...prev, contextMessage]);
-                  
-                  toast.success(`${content.type} context added`);
-                } catch (error) {
-                  console.error('Chat context processing error:', error);
-                }
-              }}
-              projectSelectorProps={{
-                placeholder: "Project",
-                className: "w-32"
-              }}
-              showLabels={false}
-              size="sm"
-              layout="horizontal"
-              compact={true}
-              className="border-none shadow-none bg-transparent"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowContext(!showContext)}
-              className="h-9"
-            >
-              <Info className="w-4 h-4" />
-            </Button>
-          </div>
         </div>
+      </div>
+
+      {/* Standard Project Context */}
+      <div className="mb-4">
+        <StandardProjectContext
+          context="chat"
+          title=""
+          description=""
+          onContentProcessed={async (content) => {
+            try {
+              await processContent(content);
+
+              const contextMessage: Message = {
+                id: `context-${Date.now()}`,
+                role: 'assistant',
+                content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses.`,
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, contextMessage]);
+
+              toast.success(`${content.type} context added`);
+            } catch (error) {
+              console.error('Chat context processing error:', error);
+            }
+          }}
+          projectSelectorPlaceholder="Project"
+        />
       </div>
 
       <div className="flex gap-4 flex-1 min-h-0">
@@ -303,9 +284,8 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
                   >
                     {message.role === 'assistant' && (
                       <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -313,16 +293,14 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                       </div>
                     )}
                     <div
-                      className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
+                      className={`max-w-[70%] rounded-lg px-4 py-3 ${message.role === 'user'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-900'
+                        }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
-                      <p className={`text-xs mt-2 ${
-                        message.role === 'user' ? 'text-purple-200' : 'text-gray-500'
-                      }`}>
+                      <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-purple-200' : 'text-gray-500'
+                        }`}>
                         {format(message.timestamp, 'h:mm a')}
                       </p>
                     </div>
@@ -395,67 +373,67 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                   </Button>
                 </div>
 
-              {userContext ? (
-                <div className="space-y-6">
-                  {/* Compact Statistics */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center p-2 bg-purple-50 rounded">
-                      <Search className="w-4 h-4 text-purple-600 mx-auto mb-1" />
-                      <div className="text-xs text-gray-600">Searches</div>
-                      <div className="font-bold text-sm">{userContext.totalSearches}</div>
+                {userContext ? (
+                  <div className="space-y-6">
+                    {/* Compact Statistics */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="text-center p-2 bg-purple-50 rounded">
+                        <Search className="w-4 h-4 text-purple-600 mx-auto mb-1" />
+                        <div className="text-xs text-gray-600">Searches</div>
+                        <div className="font-bold text-sm">{userContext.totalSearches}</div>
+                      </div>
+                      <div className="text-center p-2 bg-blue-50 rounded">
+                        <Folder className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+                        <div className="text-xs text-gray-600">Projects</div>
+                        <div className="font-bold text-sm">{userContext.totalProjects}</div>
+                      </div>
+                      <div className="text-center p-2 bg-green-50 rounded">
+                        <Users className="w-4 h-4 text-green-600 mx-auto mb-1" />
+                        <div className="text-xs text-gray-600">Candidates</div>
+                        <div className="font-bold text-sm">{userContext.totalCandidates}</div>
+                      </div>
                     </div>
-                    <div className="text-center p-2 bg-blue-50 rounded">
-                      <Folder className="w-4 h-4 text-blue-600 mx-auto mb-1" />
-                      <div className="text-xs text-gray-600">Projects</div>
-                      <div className="font-bold text-sm">{userContext.totalProjects}</div>
-                    </div>
-                    <div className="text-center p-2 bg-green-50 rounded">
-                      <Users className="w-4 h-4 text-green-600 mx-auto mb-1" />
-                      <div className="text-xs text-gray-600">Candidates</div>
-                      <div className="font-bold text-sm">{userContext.totalCandidates}</div>
-                    </div>
-                  </div>
 
-                  {/* Compact Recent Searches */}
-                  <div className="space-y-2">
-                    <h4 className="font-semibold text-xs text-gray-600 uppercase">Recent Searches</h4>
-                    <div className="space-y-1">
-                      {userContext.recentSearches.slice(0, 3).map((search) => (
-                        <div key={search.id} className="text-xs p-2 bg-gray-50 rounded">
-                          <p className="font-medium truncate">{search.search_query}</p>
-                          <p className="text-[10px] text-gray-500">
-                            {search.results_count} results
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Compact Projects */}
-                  {userContext.projects.length > 0 && (
+                    {/* Compact Recent Searches */}
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-xs text-gray-600 uppercase">Projects</h4>
+                      <h4 className="font-semibold text-xs text-gray-600 uppercase">Recent Searches</h4>
                       <div className="space-y-1">
-                        {userContext.projects.slice(0, 3).map((project) => (
-                          <div key={project.id} className="text-xs p-2 bg-gray-50 rounded">
-                            <p className="font-medium truncate">{project.name}</p>
+                        {userContext.recentSearches.slice(0, 3).map((search) => (
+                          <div key={search.id} className="text-xs p-2 bg-gray-50 rounded">
+                            <p className="font-medium truncate">{search.search_query}</p>
                             <p className="text-[10px] text-gray-500">
-                              {project.candidates_count} candidates
+                              {search.results_count} results
                             </p>
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                    {/* Compact Projects */}
+                    {userContext.projects.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-xs text-gray-600 uppercase">Projects</h4>
+                        <div className="space-y-1">
+                          {userContext.projects.slice(0, 3).map((project) => (
+                            <div key={project.id} className="text-xs p-2 bg-gray-50 rounded">
+                              <p className="font-medium truncate">{project.name}</p>
+                              <p className="text-[10px] text-gray-500">
+                                {project.candidates_count} candidates
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 

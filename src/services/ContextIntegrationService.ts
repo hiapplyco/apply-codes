@@ -1,21 +1,18 @@
 import {
   collection,
-  doc,
-  getDocs,
   addDoc,
   query,
   where,
   orderBy,
+  getDocs,
   serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { DocumentProcessor } from '@/lib/documentProcessing';
-import { FirecrawlService } from '@/utils/FirecrawlService';
 import { analyzeCandidate } from '@/lib/firebase/functions/analyzeCandidate';
 import { handleInterview } from '@/lib/firebase/functions/handleInterview';
 
 export interface ContextContent {
-  type: 'upload' | 'firecrawl' | 'perplexity';
+  type: 'upload' | 'firecrawl' | 'perplexity' | 'location';
   text: string;
   metadata?: Record<string, any>;
   projectId?: string;
@@ -40,7 +37,7 @@ export class ContextIntegrationService {
   private websockets: Map<string, WebSocket> = new Map();
   private activeAgents: Map<string, any> = new Map();
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): ContextIntegrationService {
     if (!ContextIntegrationService.instance) {
@@ -262,11 +259,11 @@ export class ContextIntegrationService {
       }
 
       const ws = new WebSocket(connectionData.websocketUrl);
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected for session:', sessionId);
       };
-      
+
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (onMessage) {
@@ -274,7 +271,7 @@ export class ContextIntegrationService {
         }
         this.handleWebSocketMessage(sessionId, data);
       };
-      
+
       ws.onclose = () => {
         console.log('WebSocket disconnected for session:', sessionId);
         this.websockets.delete(sessionId);

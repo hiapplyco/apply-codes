@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { functionBridge } from "@/lib/function-bridge";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ContextBar } from "@/components/context/ContextBar";
+import { StandardProjectContext } from '@/components/project/StandardProjectContext';
 import { ContentGenerationDialog } from "@/components/content/ContentGenerationDialog";
 import { useProjectContext } from "@/context/ProjectContext";
 import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
@@ -158,20 +158,12 @@ export const UnifiedContentCreator = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Context Bar with Project Selector */}
       <div className="animate-in slide-in-from-top duration-700 delay-100">
-        <ContextBar
+        <StandardProjectContext
           context="general"
           title="Add Context for Content Creation"
           description="Upload documents, scrape websites, or search for additional context to enhance your content"
           onContentProcessed={handleContextContent}
-          showProjectSelector={true}
-          projectSelectorProps={{
-            label: "Select project for content creation",
-            placeholder: "Choose a project (optional)",
-            className: "w-full"
-          }}
-          showLabels={true}
-          layout="vertical"
-          compact={false}
+          projectSelectorPlaceholder="Choose a project (optional)"
           className="mb-6"
         />
       </div>
