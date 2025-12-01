@@ -38,6 +38,11 @@ service cloud.firestore {
       }
     }
 
+    // User profiles - separate profiles collection
+    match /profiles/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // Projects - users can access projects they own or are members of
     match /projects/{projectId} {
       allow read: if isAuthenticated() &&
@@ -120,8 +125,20 @@ service cloud.firestore {
         resource.data.user_id == request.auth.uid;
     }
 
+    // Search history with underscore naming
+    match /search_history/{searchId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
     // Saved candidates - top level collection for backward compatibility
     match /savedCandidates/{candidateId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.user_id == request.auth.uid;
+    }
+
+    // Saved candidates with underscore naming
+    match /saved_candidates/{candidateId} {
       allow read, write: if isAuthenticated() &&
         resource.data.user_id == request.auth.uid;
     }
@@ -141,6 +158,13 @@ service cloud.firestore {
         request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() &&
         resource.data.userId == request.auth.uid;
+    }
+
+    // User stats - users can access their own stats
+    match /user_stats/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false; // Stats should not be deleted by users
     }
 
     // Kickoff summaries - users can access their own summaries

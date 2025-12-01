@@ -14,12 +14,12 @@ import {
   deleteDoc
 } from "firebase/firestore";
 import { uploadAvatar } from "@/lib/firebase-storage";
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Search, 
-  Folder, 
+import {
+  User,
+  Mail,
+  Calendar,
+  Search,
+  Folder,
   Users,
   Star,
   Activity,
@@ -114,7 +114,7 @@ export default function Profile() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingName, setEditingName] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  
+
   // Search History states
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -159,7 +159,7 @@ export default function Profile() {
 
   const fetchProfileData = async () => {
     if (!user) return;
-    
+
     try {
       if (!db) {
         console.warn("[Profile] Firestore not initialized");
@@ -191,7 +191,7 @@ export default function Profile() {
 
   const fetchUserStats = async () => {
     if (!user) return;
-    
+
     try {
       if (!db) {
         console.warn("[Profile] Firestore not initialized");
@@ -234,7 +234,7 @@ export default function Profile() {
           description: `Searched for "${search.search_query}"`,
           timestamp: search.created_at
         }));
-      
+
       setUserStats({
         totalSearches: searchCount,
         totalCandidatesSaved: candidatesSnapshot.size,
@@ -345,7 +345,7 @@ export default function Profile() {
 
   const handleUpdateProfile = async () => {
     if (!user || !profileData) return;
-    
+
     try {
       if (!db) {
         throw new Error('Firestore not initialized');
@@ -356,7 +356,7 @@ export default function Profile() {
         full_name: editingName,
         updated_at: new Date().toISOString()
       });
-      
+
       setProfileData({ ...profileData, full_name: editingName });
       setEditModalOpen(false);
       toast.success("Profile updated successfully");
@@ -442,7 +442,7 @@ export default function Profile() {
         is_favorite: !currentStatus,
         updated_at: new Date().toISOString()
       });
-      
+
       fetchSearchHistory();
       toast.success(currentStatus ? "Removed from favorites" : "Added to favorites");
     } catch (error) {
@@ -458,7 +458,7 @@ export default function Profile() {
       }
 
       await deleteDoc(doc(db, 'search_history', searchId));
-      
+
       fetchSearchHistory();
       toast.success("Search deleted successfully");
     } catch (error) {
@@ -482,7 +482,7 @@ export default function Profile() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
-      
+
       fetchProjects();
       setShowCreateProject(false);
       setNewProject({ name: "", description: "", color: "#8B5CF6", icon: "folder" });
@@ -509,7 +509,7 @@ export default function Profile() {
         icon: editingProject.icon,
         updated_at: new Date().toISOString()
       });
-      
+
       fetchProjects();
       setEditingProject(null);
       toast.success("Project updated successfully");
@@ -530,7 +530,7 @@ export default function Profile() {
         is_archived: true,
         updated_at: new Date().toISOString()
       });
-      
+
       fetchProjects();
       toast.success("Project archived successfully");
     } catch (error) {
@@ -574,13 +574,14 @@ export default function Profile() {
   const activeProjects = projects.filter(p => !p.is_archived);
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 px-4 space-y-8 max-w-7xl">
       {/* Profile Header */}
       <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
-        <CardContent className="p-8">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="relative">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col gap-6">
+            {/* Avatar and Info Row */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div className="relative flex-shrink-0">
                 <Avatar className="h-24 w-24 border-2 border-black">
                   <AvatarImage src={profileData?.avatar_url || undefined} />
                   <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl font-bold">
@@ -588,14 +589,14 @@ export default function Profile() {
                   </AvatarFallback>
                 </Avatar>
                 <label className="absolute -bottom-2 -right-2 cursor-pointer">
-                  <input 
-                    type="file" 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    className="hidden"
                     accept="image/*"
                     onChange={handleAvatarUpload}
                     disabled={uploadingAvatar}
                   />
-                  <div className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors">
+                  <div className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors border-2 border-black">
                     {uploadingAvatar ? (
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                     ) : (
@@ -604,35 +605,36 @@ export default function Profile() {
                   </div>
                 </label>
               </div>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
                   {profileData?.full_name || 'Unnamed User'}
                 </h1>
-                <p className="text-gray-600 flex items-center gap-2 mt-1">
-                  <Mail className="h-4 w-4" />
-                  {user?.email}
+                <p className="text-gray-600 flex items-center gap-2 mt-1 text-sm sm:text-base">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{user?.email}</span>
                 </p>
-                <p className="text-gray-500 flex items-center gap-2 mt-1">
-                  <Calendar className="h-4 w-4" />
+                <p className="text-gray-500 flex items-center gap-2 mt-1 text-sm">
+                  <Calendar className="h-4 w-4 flex-shrink-0" />
                   Member since {profileData && format(new Date(profileData.created_at), 'MMMM yyyy')}
                 </p>
               </div>
             </div>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+
+            {/* Action Buttons Row */}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
                 onClick={() => setEditModalOpen(true)}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all"
               >
                 <Edit3 className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleSignOut}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -655,7 +657,7 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -667,7 +669,7 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -679,7 +681,7 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -709,7 +711,7 @@ export default function Profile() {
             Settings
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="activity" className="space-y-4">
           <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
             <CardHeader>
@@ -741,7 +743,7 @@ export default function Profile() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="searches" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Search History</h2>
@@ -829,8 +831,8 @@ export default function Profile() {
                           <span>{search.results_count} results</span>
                           <span>{format(new Date(search.created_at), 'MMM d, yyyy')}</span>
                           {search.project && (
-                            <Badge 
-                              variant="secondary" 
+                            <Badge
+                              variant="secondary"
                               style={{ backgroundColor: search.project.color + '20', color: search.project.color }}
                             >
                               {search.project.name}
@@ -871,7 +873,7 @@ export default function Profile() {
         <TabsContent value="projects" className="space-y-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Projects</h2>
-            <Button 
+            <Button
               onClick={() => setShowCreateProject(true)}
               className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
             >
@@ -884,14 +886,14 @@ export default function Profile() {
             {activeProjects.map((project) => {
               const IconComponent = getProjectIcon(project.icon);
               return (
-                <Card 
-                  key={project.id} 
+                <Card
+                  key={project.id}
                   className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
-                      <div 
+                      <div
                         className="p-3 rounded-lg"
                         style={{ backgroundColor: project.color + '20' }}
                       >
@@ -933,7 +935,7 @@ export default function Profile() {
             })}
           </div>
         </TabsContent>
-        
+
         <TabsContent value="settings" className="space-y-4">
           <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
             <CardHeader>
@@ -960,7 +962,7 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <h3 className="text-lg font-semibold mb-4">Danger Zone</h3>
                 <p className="text-sm text-gray-600 mb-4">
@@ -993,14 +995,14 @@ export default function Profile() {
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setEditModalOpen(false)}
               className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdateProfile}
               className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
@@ -1047,11 +1049,10 @@ export default function Profile() {
                   <button
                     key={name}
                     onClick={() => setNewProject({ ...newProject, icon: name })}
-                    className={`p-3 rounded-lg border-2 ${
-                      newProject.icon === name 
-                        ? 'border-purple-600 bg-purple-50' 
+                    className={`p-3 rounded-lg border-2 ${newProject.icon === name
+                        ? 'border-purple-600 bg-purple-50'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5" />
                   </button>
@@ -1065,11 +1066,10 @@ export default function Profile() {
                   <button
                     key={color}
                     onClick={() => setNewProject({ ...newProject, color })}
-                    className={`w-10 h-10 rounded-lg border-2 ${
-                      newProject.color === color 
-                        ? 'border-gray-900 scale-110' 
+                    className={`w-10 h-10 rounded-lg border-2 ${newProject.color === color
+                        ? 'border-gray-900 scale-110'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                     style={{ backgroundColor: color }}
                   />
                 ))}
@@ -1077,14 +1077,14 @@ export default function Profile() {
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowCreateProject(false)}
               className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={createProject}
               disabled={!newProject.name}
               className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
@@ -1128,11 +1128,10 @@ export default function Profile() {
                     <button
                       key={name}
                       onClick={() => setEditingProject({ ...editingProject, icon: name })}
-                      className={`p-3 rounded-lg border-2 ${
-                        editingProject.icon === name 
-                          ? 'border-purple-600 bg-purple-50' 
+                      className={`p-3 rounded-lg border-2 ${editingProject.icon === name
+                          ? 'border-purple-600 bg-purple-50'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                     >
                       <Icon className="h-5 w-5" />
                     </button>
@@ -1146,11 +1145,10 @@ export default function Profile() {
                     <button
                       key={color}
                       onClick={() => setEditingProject({ ...editingProject, color })}
-                      className={`w-10 h-10 rounded-lg border-2 ${
-                        editingProject.color === color 
-                          ? 'border-gray-900 scale-110' 
+                      className={`w-10 h-10 rounded-lg border-2 ${editingProject.color === color
+                          ? 'border-gray-900 scale-110'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                       style={{ backgroundColor: color }}
                     />
                   ))}
@@ -1158,14 +1156,14 @@ export default function Profile() {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setEditingProject(null)}
                 className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={updateProject}
                 className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
               >
