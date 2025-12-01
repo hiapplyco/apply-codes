@@ -1,5 +1,5 @@
 
-import { AlertCircle, Loader2, Search } from "lucide-react";
+import { AlertCircle, Loader2, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchResultItem } from "./SearchResultItem";
 import { SearchResultsListProps } from "../types";
@@ -13,74 +13,85 @@ export const SearchResultsList = ({
   isLoadingMore,
   searchType
 }: SearchResultsListProps) => {
-  console.log("🔍 [DEBUG] SearchResultsList rendering with:", {
-    resultsCount: results?.length || 0,
-    isLoading,
-    totalResults,
-    currentResults,
-    isLoadingMore,
-    searchType
-  });
-
-  if (results && results.length > 0) {
-    console.log("🔍 [DEBUG] First result sample:", JSON.stringify(results[0], null, 2));
-  }
+  const hasMoreResults = totalResults && Number(totalResults) > (currentResults || results.length);
+  const remainingResults = totalResults ? Math.min(Number(totalResults) - (currentResults || results.length), 10) : 0;
 
   return (
-    <div className="space-y-4">
-      {isLoading && results.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-8 text-gray-500">
-          <Loader2 className="w-10 h-10 mb-4 animate-spin text-purple-500" />
-          <p className="text-lg">Searching for results...</p>
-          <p className="text-sm text-gray-400 mt-2">This may take a few moments</p>
+    <div className="space-y-3">
+      {/* Results Header */}
+      {results.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-gray-500 pb-2 border-b border-gray-100">
+          <span>
+            Showing {currentResults || results.length} of {totalResults || results.length} results
+          </span>
+          {hasMoreResults && (
+            <span className="text-purple-600 font-medium">
+              {remainingResults}+ more available
+            </span>
+          )}
         </div>
       )}
-      
+
+      {/* Loading State */}
+      {isLoading && results.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+          <Loader2 className="w-8 h-8 mb-3 animate-spin text-purple-500" />
+          <p className="text-sm font-medium">Searching for candidates...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
       {results.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center justify-center p-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
-          <AlertCircle className="w-10 h-10 mb-4 text-amber-500" />
-          <p className="text-lg font-medium mb-2">No results found</p>
-          <p className="text-sm text-center text-gray-500 mb-4">
-            Try adjusting your search terms or click the Search button to try again.
+        <div className="flex flex-col items-center justify-center py-12 text-gray-500 border border-dashed border-gray-200 rounded-lg bg-gray-50">
+          <AlertCircle className="w-8 h-8 mb-3 text-amber-500" />
+          <p className="text-sm font-medium mb-1">No results found</p>
+          <p className="text-xs text-gray-400 mb-4 text-center max-w-xs">
+            Try adjusting your search terms or modifying the boolean query.
           </p>
-          <Button 
-            onClick={() => onLoadMore()} 
+          <Button
+            onClick={() => onLoadMore()}
             variant="outline"
-            className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200"
+            size="sm"
+            className="border-gray-200 hover:bg-white"
           >
-            <Search className="w-4 h-4 mr-2" />
-            Try Search Again
+            <Search className="w-3.5 h-3.5 mr-1.5" />
+            Try Again
           </Button>
         </div>
       )}
-      
+
+      {/* Results Grid */}
       {results.length > 0 && (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {results.map((result, index) => (
-            <SearchResultItem 
-              key={`${result.link || result.profileUrl}-${index}`} 
-              result={result} 
-              searchType={searchType} 
+            <SearchResultItem
+              key={`${result.link || result.profileUrl}-${index}`}
+              result={result}
+              searchType={searchType}
             />
           ))}
         </div>
       )}
-      
-      {results.length > 0 && totalResults && Number(totalResults) > (currentResults || results.length) && (
-        <div className="flex justify-center mt-4">
-          <Button 
-            onClick={onLoadMore} 
+
+      {/* Load More */}
+      {results.length > 0 && hasMoreResults && (
+        <div className="flex justify-center pt-2">
+          <Button
+            onClick={onLoadMore}
             disabled={isLoadingMore}
             variant="outline"
-            className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-200"
+            className="border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700"
           >
             {isLoadingMore ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Loading more results...
+                Loading more...
               </>
             ) : (
-              <>Load More Results</>
+              <>
+                <ChevronDown className="w-4 h-4 mr-2" />
+                Load {remainingResults} More Results
+              </>
             )}
           </Button>
         </div>

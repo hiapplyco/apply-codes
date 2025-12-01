@@ -109,7 +109,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   const [jobTitle, setJobTitle] = useState('');
   const [booleanString, setBooleanString] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [displayedResults, setDisplayedResults] = useState(10); // Start with 10 results
+  const [searchPage, setSearchPage] = useState(1);
+  const [totalSearchResults, setTotalSearchResults] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Default to grid view
@@ -823,13 +824,18 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
     }
   };
 
-  const searchGoogle = async () => {
+  const searchGoogle = async (page = 1) => {
     if (!booleanString.trim()) {
       toast.error('Please generate or enter a boolean search string');
       return;
     }
 
-    setIsSearching(true);
+    if (page === 1) {
+      setIsSearching(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+
     try {
       // Get the API key from Supabase edge function (same as original implementation)
       const keyData = await functionBridge.getGoogleCseKey();
@@ -841,13 +847,22 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       const searchQuery = `${booleanString} site:linkedin.com/in/`;
       const cseId = keyData.engineId;
 
+      // Google CSE pagination: start parameter is 1-indexed
+      // Page 1 = start 1, Page 2 = start 11, Page 3 = start 21, etc.
+      const startIndex = (page - 1) * 10 + 1;
+
       const response = await fetch(
-        `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}`
+        `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}&start=${startIndex}&num=10`
       );
 
       if (!response.ok) throw new Error('Search failed');
 
       const data = await response.json();
+
+      // Get total results (capped at 100 by Google CSE)
+      const total = Math.min(Number(data.searchInformation?.totalResults || 0), 100);
+      setTotalSearchResults(total);
+      setSearchPage(page);
 
       if (data.items) {
         // Map Google search results to SearchResult objects with location extraction
@@ -856,24 +871,30 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           link: item.link,
           snippet: item.snippet,
           displayLink: item.displayLink,
-          location: extractLocationFromSnippet(item.snippet) // Add location extraction logic here
+          htmlTitle: item.htmlTitle,
+          location: extractLocationFromSnippet(item.snippet)
         }));
 
-        setSearchResults(mappedResults);
-
-        // Collapse Boolean container to focus on Search Results
-        setBooleanCollapsed(true);
-
-        toast.success(`Found ${data.items.length} results`);
+        if (page === 1) {
+          setSearchResults(mappedResults);
+          // Collapse Boolean container to focus on Search Results
+          setBooleanCollapsed(true);
+          toast.success(`Found ${total} results`);
+        } else {
+          setSearchResults(prev => [...prev, ...mappedResults]);
+          toast.success(`Loaded ${mappedResults.length} more results`);
+        }
 
         // Track successful search
-        trackCandidateSearch('google_cse', data.items.length, {
+        trackCandidateSearch('google_cse', mappedResults.length, {
           hasLocation: selectedLocation ? 'yes' : 'no',
           booleanLength: booleanString.length.toString()
         });
       } else {
-        setSearchResults([]);
-        toast.info('No results found');
+        if (page === 1) {
+          setSearchResults([]);
+          toast.info('No results found');
+        }
         trackCandidateSearch('google_cse', 0, {
           hasLocation: selectedLocation ? 'yes' : 'no',
           booleanLength: booleanString.length.toString()
@@ -884,6 +905,14 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.error('Search failed');
     } finally {
       setIsSearching(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const loadMoreResults = () => {
+    // Google CSE allows max 100 results (10 pages of 10)
+    if (searchResults.length < totalSearchResults && searchPage < 10) {
+      searchGoogle(searchPage + 1);
     }
   };
 
@@ -1907,7 +1936,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                   className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'}
                   style={{ maxHeight: viewMode === 'grid' ? '800px' : 'none', overflowY: viewMode === 'grid' ? 'auto' : 'visible' }}
                 >
-                  {searchResults.slice(0, displayedResults).map((result, index) => {
+                  {searchResults.map((result, index) => {
                     const isExpanded = expandedProfiles.has(index);
                     const analysis = analysisResults[index];
                     const contact = contactInfo[index];
@@ -2106,30 +2135,27 @@ This area is for your specific search instructions, filtering criteria, or addit
                     );
                   })}
 
-                  {/* Infinite Scroll Loader */}
-                  {displayedResults < searchResults.length && (
-                    <div className="col-span-full flex justify-center py-8">
+                  {/* Load More Results */}
+                  {searchResults.length < totalSearchResults && searchPage < 10 && (
+                    <div className="col-span-full flex flex-col items-center gap-2 py-6">
+                      <p className="text-sm text-gray-500">
+                        Showing {searchResults.length} of {totalSearchResults} results
+                      </p>
                       <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setIsLoadingMore(true);
-                          setTimeout(() => {
-                            setDisplayedResults(prev => Math.min(prev + 10, searchResults.length));
-                            setIsLoadingMore(false);
-                          }, 500);
-                        }}
+                        variant="outline"
+                        onClick={loadMoreResults}
                         disabled={isLoadingMore}
-                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        className="border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700"
                       >
                         {isLoadingMore ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Loading more candidates...
+                            Loading more...
                           </>
                         ) : (
                           <>
                             <ArrowDown className="w-4 h-4 mr-2" />
-                            Load More Results
+                            Load 10 More Results
                           </>
                         )}
                       </Button>

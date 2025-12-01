@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Sparkles, 
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface BooleanGenerationAnimationProps {
   isOpen: boolean;
@@ -10,18 +7,20 @@ interface BooleanGenerationAnimationProps {
   estimatedTimeMs?: number;
 }
 
-// Fun messages about time savings
-const MESSAGES = [
-  "While a human would still be drinking their first coffee...",
-  "In the time it takes to say 'Boolean search', we've analyzed 1,000 factors",
-  "Making your recruiter friends jealous with this speed...",
-  "Faster than ordering a complicated coffee at Starbucks",
-  "Meanwhile, your competitors are still writing their first OR statement",
-  "Saving you from a lifetime of LinkedIn search tutorials",
-  "This used to take an expert recruiter 30 minutes. We're almost done!",
-  "By now you've saved enough time for a proper lunch break",
-  "While others debate AND vs OR, we're already optimizing",
-  "Creating search magic while you relax..."
+// Quirky tips and tricks about recruiting and the platform
+const TIPS = [
+  "💡 Tip: Use quotes for exact phrases like \"project manager\"",
+  "🎯 Pro move: Combine titles with OR to cast a wider net",
+  "⚡ Speed hack: Save your best searches to your project",
+  "🔍 Did you know? LinkedIn X-ray searches find hidden profiles",
+  "💼 Recruiter tip: Location + title combos reduce noise by 60%",
+  "🚀 Power user: Use the Analyze feature to enrich profiles instantly",
+  "📊 Fun fact: Boolean searches outperform basic searches 3x",
+  "🎪 Trick: Add company names to find alumni in new roles",
+  "💡 Insider tip: Exclude recruiters with -recruiter -staffing",
+  "🌟 Best practice: Start broad, then narrow with filters",
+  "⏱️ Time saver: Upload job descriptions to auto-generate searches",
+  "🎯 Precision tip: Use parentheses to group related terms",
 ];
 
 const TOTAL_DURATION = 120000; // 2 minutes in ms
@@ -31,94 +30,43 @@ export const BooleanGenerationAnimation: React.FC<BooleanGenerationAnimationProp
   onComplete,
   estimatedTimeMs = TOTAL_DURATION
 }) => {
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
 
-  // Calculate progress
-  const progressPercentage = Math.min((elapsedTime / estimatedTimeMs) * 100, 100);
-  const isComplete = progressPercentage >= 100;
-
-  // Change message every 12 seconds
   useEffect(() => {
     if (!isOpen) {
-      setElapsedTime(0);
-      setCurrentMessageIndex(0);
+      setCurrentTipIndex(0);
       return;
     }
 
-    // Timer for elapsed time (updates every 100ms for smooth progress)
-    const elapsedTimer = setInterval(() => {
-      setElapsedTime(prev => {
-        const newTime = prev + 100;
-        if (newTime >= estimatedTimeMs) {
-          setTimeout(() => onComplete?.(), 500);
-        }
-        return newTime;
-      });
-    }, 100);
-
-    // Timer for changing messages
-    const messageTimer = setInterval(() => {
-      setCurrentMessageIndex(prev => (prev + 1) % MESSAGES.length);
-    }, 12000);
+    // Rotate tips every 4 seconds
+    const tipTimer = setInterval(() => {
+      setCurrentTipIndex(prev => (prev + 1) % TIPS.length);
+    }, 4000);
 
     return () => {
-      clearInterval(elapsedTimer);
-      clearInterval(messageTimer);
+      clearInterval(tipTimer);
     };
-  }, [isOpen, estimatedTimeMs, onComplete]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] p-8 transform animate-in zoom-in-95 duration-500">
-          
-          {/* Simple Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-6 w-6 text-purple-600 animate-pulse" />
-              <h2 className="text-2xl font-bold text-gray-900">Creating Your Boolean Search</h2>
-              <Sparkles className="h-6 w-6 text-purple-600 animate-pulse" />
-            </div>
-          </div>
-
-          {/* Fun Message */}
-          <div className="text-center mb-8">
-            <p className="text-lg text-gray-700 font-medium leading-relaxed animate-in fade-in duration-1000">
-              {MESSAGES[currentMessageIndex]}
-            </p>
-          </div>
-
-          {/* Simple Progress Bar */}
-          <div className="mb-8">
-            <div className="h-6 bg-gray-200 rounded-full overflow-hidden border-2 border-gray-300">
-              <div 
-                className="h-full bg-gradient-to-r from-purple-600 via-blue-500 to-green-500 rounded-full transition-all duration-300 ease-out relative overflow-hidden"
-                style={{ width: `${progressPercentage}%` }}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-              </div>
-            </div>
-            <div className="flex justify-between mt-2 text-sm text-gray-600">
-              <span>{Math.round(progressPercentage)}% complete</span>
-              <span className="font-medium">
-                {isComplete ? "Almost there!" : `${Math.ceil((estimatedTimeMs - elapsedTime) / 1000)}s remaining`}
-              </span>
-            </div>
-          </div>
-
-          {/* Completion State */}
-          {isComplete && (
-            <div className="text-center animate-in fade-in zoom-in-95 duration-500">
-              <p className="text-lg font-semibold text-green-600">
-                ✨ Search string ready! You just saved 30 minutes!
-              </p>
-            </div>
-          )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full mx-4 text-center">
+        {/* Spinner */}
+        <div className="flex justify-center mb-6">
+          <Loader2 className="h-12 w-12 text-purple-600 animate-spin" />
         </div>
+
+        {/* Title */}
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Creating Your Boolean Search
+        </h2>
+
+        {/* Rotating Tip */}
+        <p className="text-sm text-gray-600 min-h-[48px] transition-opacity duration-300">
+          {TIPS[currentTipIndex]}
+        </p>
       </div>
     </div>
   );
