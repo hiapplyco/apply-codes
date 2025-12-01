@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Folder, ChevronDown, ChevronUp } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Loader2, FileText, Info } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ export const UnifiedContentCreator = () => {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [contentOptions, setContentOptions] = useState<ContentType[]>([]);
   const [isLoadingContentTypes, setIsLoadingContentTypes] = useState(true);
+  const [showContext, setShowContext] = useState(false);
 
   const { selectedProject } = useProjectContext();
 
@@ -155,26 +156,49 @@ export const UnifiedContentCreator = () => {
   const selectedOption = contentOptions.find((opt: ContentType) => opt.content_type === selectedContentType);
 
   return (
-    <div className="space-y-8">
-      {/* Context Bar with Project Selector */}
-      <div>
-        <StandardProjectContext
-          context="general"
-          title="Add Context for Content Creation"
-          description="Upload documents, scrape websites, or search for additional context to enhance your content"
-          onContentProcessed={handleContextContent}
-          projectSelectorPlaceholder="Choose a project (optional)"
-          className="mb-6"
-        />
-      </div>
+    <div className="space-y-6">
+      {/* Content Creation Form with integrated context toggle */}
+      <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-bold text-[#8B5CF6]">Create Content</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Generate professional recruitment content with AI
+                </CardDescription>
+              </div>
+              <button
+                onClick={() => setShowContext(!showContext)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  selectedProject || contextContent
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Folder className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline max-w-[120px] truncate">
+                  {selectedProject?.name || (contextContent ? 'Context Added' : 'Add Context')}
+                </span>
+                {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            </div>
 
-      {/* Content Creation Form */}
-      <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-[#8B5CF6]">Create Content</CardTitle>
-            <CardDescription className="text-gray-600">
-              Generate professional recruitment content with AI assistance
-            </CardDescription>
+            {/* Collapsible Context Section */}
+            {showContext && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <StandardProjectContext
+                  context="general"
+                  title=""
+                  description=""
+                  onContentProcessed={(content) => {
+                    handleContextContent(content);
+                    setShowContext(false);
+                  }}
+                  projectSelectorPlaceholder="Choose a project..."
+                  className="border border-gray-200 rounded-lg"
+                />
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Content Type Dropdown */}

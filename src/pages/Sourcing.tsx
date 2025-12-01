@@ -1,4 +1,4 @@
-import { lazy, Suspense, memo } from "react";
+import { lazy, Suspense, memo, useState } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { type ContextBarProps } from "@/components/context/ContextBar";
@@ -6,6 +6,7 @@ import { StandardProjectContext } from '@/components/project/StandardProjectCont
 import { useContextIntegration } from "@/hooks/useContextIntegration";
 import { useProjectContext } from "@/context/ProjectContext";
 import { toast } from "sonner";
+import { Folder, ChevronDown, ChevronUp } from "lucide-react";
 
 // Minimal stable search form 
 const MinimalSearchForm = lazy(() => import("@/components/MinimalSearchForm"));
@@ -18,7 +19,8 @@ const LoadingState = () => (
 
 const SourcingComponent = () => {
   const { user, isLoading, isAuthenticated } = useNewAuth();
-  const { selectedProjectId } = useProjectContext();
+  const { selectedProjectId, selectedProject } = useProjectContext();
+  const [showContext, setShowContext] = useState(false);
 
   const { processContent } = useContextIntegration({
     context: 'sourcing'
@@ -51,28 +53,54 @@ const SourcingComponent = () => {
   };
 
   return (
-    <div className="container max-w-5xl py-6 space-y-6">
-      {/* Enhanced Page Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 text-white shadow-lg">
-        <div className="max-w-4xl">
-          <h1 className="text-4xl font-bold mb-3">Candidate Sourcing</h1>
-          <p className="text-lg opacity-95 leading-relaxed">
-            Find qualified candidates, research companies, or discover talent at specific organizations with AI-powered search
-          </p>
+    <div className="container max-w-5xl py-6 space-y-4">
+      {/* Compact Header with Context Toggle */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Candidate Sourcing</h1>
+            <p className="text-sm opacity-90 mt-1">
+              AI-powered search for qualified candidates
+            </p>
+          </div>
+          <button
+            onClick={() => setShowContext(!showContext)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedProject
+                ? 'bg-white/20 text-white border border-white/30'
+                : 'bg-white/10 text-white/90 hover:bg-white/20'
+            }`}
+          >
+            <Folder className="w-4 h-4" />
+            <span className="hidden sm:inline max-w-[140px] truncate">
+              {selectedProject?.name || 'Add Context'}
+            </span>
+            {showContext ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
-      </div>
 
-      {/* Project & Context Selection */}
-      <StandardProjectContext
-        context="sourcing"
-        onContentProcessed={handleContextContent}
-        enabledButtons={{
-          upload: true,
-          firecrawl: true,
-          perplexity: true,
-          location: true
-        }}
-      />
+        {/* Collapsible Context Section */}
+        {showContext && (
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <StandardProjectContext
+              context="sourcing"
+              title=""
+              description=""
+              onContentProcessed={async (content) => {
+                await handleContextContent(content);
+                setShowContext(false);
+              }}
+              enabledButtons={{
+                upload: true,
+                firecrawl: true,
+                perplexity: true,
+                location: true
+              }}
+              className="bg-white/10 border-white/20 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>

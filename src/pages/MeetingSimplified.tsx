@@ -12,10 +12,10 @@ import { useNavigate } from 'react-router-dom';
 import { InterviewContext } from '@/types/interview';
 import { dailySingleton } from '@/lib/dailySingleton';
 import { trackVideoMeeting, trackEvent } from '@/lib/analytics';
-import { 
-  Video, 
-  Users, 
-  MessageSquare, 
+import {
+  Video,
+  Users,
+  MessageSquare,
   Loader2,
   ChevronRight,
   Phone,
@@ -30,7 +30,10 @@ import {
   AlertCircle,
   Sparkles,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Folder,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +60,7 @@ export default function MeetingSimplified() {
   // Meeting state
   const [meetingStep, setMeetingStep] = useState<'welcome' | 'setup' | 'meeting'>('welcome');
   const [meetingPurpose, setMeetingPurpose] = useState<'interview' | 'kickoff' | 'other'>('interview');
+  const [showContext, setShowContext] = useState(false);
 
   // Clean up Daily instance on unmount if in meeting view
   useEffect(() => {
@@ -357,7 +361,7 @@ export default function MeetingSimplified() {
     return (
       <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
         <div className="max-w-3xl mx-auto p-8 w-full">
-          <div className="mb-8">
+          <div className="mb-6">
             <Button
               onClick={() => setMeetingStep('welcome')}
               variant="ghost"
@@ -365,58 +369,74 @@ export default function MeetingSimplified() {
             >
               ← Back
             </Button>
-            
-            <h1 className="text-3xl font-bold mb-2">
-              {meetingPurpose === 'interview' && 'Interview Setup'}
-              {meetingPurpose === 'kickoff' && 'Kickoff Call Setup'}
-              {meetingPurpose === 'other' && 'Meeting Setup'}
-            </h1>
-            <p className="text-gray-600">
-              Let's gather some information to make your meeting more productive
-            </p>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-1">
+                  {meetingPurpose === 'interview' && 'Interview Setup'}
+                  {meetingPurpose === 'kickoff' && 'Kickoff Call Setup'}
+                  {meetingPurpose === 'other' && 'Meeting Setup'}
+                </h1>
+                <p className="text-gray-600">
+                  Configure your meeting settings
+                </p>
+              </div>
+              <button
+                onClick={() => setShowContext(!showContext)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedProject || uploadedFiles.length > 0
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Folder className="w-4 h-4" />
+                <span className="hidden sm:inline max-w-[120px] truncate">
+                  {selectedProject?.name || (uploadedFiles.length > 0 ? 'Context Added' : 'Add Context')}
+                </span>
+                {showContext ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
-          {/* Context Bar for uploads, scraping, and AI search */}
-          <div className="mb-8">
-            <ContextBar
-              context="meeting"
-              title="Meeting Context & Project"
-              description="Optionally select a project to save meeting data, and add context through uploads, web scraping, or AI search"
-              onContentProcessed={async (content) => {
-                try {
-                  // Process with orchestration
-                  await processContent(content);
-                  
-                  // Add to uploaded files for display
-                  setUploadedFiles(prev => [...prev, {
-                    name: content.metadata?.filename || `${content.type} content`,
-                    content: content.text,
-                    type: content.type,
-                    size: content.text.length,
-                  }]);
-                  
-                  toast.success(`${content.type} content processed and ready for meeting`);
-                } catch (error) {
-                  console.error('Meeting context processing error:', error);
-                }
-              }}
-              projectSelectorProps={{
-                placeholder: "Select project for this meeting...",
-                className: "w-full"
-              }}
-              showLabels={false}
-              size="compact"
-              layout="stacked"
-            />
-            
-            {/* Real-time status indicator */}
-            {isWebSocketConnected && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-green-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Real-time AI processing enabled</span>
-              </div>
-            )}
-          </div>
+          {/* Collapsible Context Section */}
+          {showContext && (
+            <div className="mb-6 p-4 bg-white border-2 border-gray-200 rounded-xl">
+              <ContextBar
+                context="meeting"
+                title=""
+                description=""
+                onContentProcessed={async (content) => {
+                  try {
+                    await processContent(content);
+                    setUploadedFiles(prev => [...prev, {
+                      name: content.metadata?.filename || `${content.type} content`,
+                      content: content.text,
+                      type: content.type,
+                      size: content.text.length,
+                    }]);
+                    toast.success(`${content.type} content added`);
+                    setShowContext(false);
+                  } catch (error) {
+                    console.error('Meeting context processing error:', error);
+                  }
+                }}
+                projectSelectorProps={{
+                  placeholder: "Select project...",
+                  className: "w-full"
+                }}
+                showLabels={false}
+                size="compact"
+                layout="stacked"
+              />
+
+              {isWebSocketConnected && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-green-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Real-time AI processing enabled</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <CardContent className="p-6 space-y-6">
