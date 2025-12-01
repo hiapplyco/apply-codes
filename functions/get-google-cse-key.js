@@ -1,5 +1,10 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { defineString } = require('firebase-functions/params');
+
+// Define parameters that will be read from .env
+const googleCseApiKey = defineString('GOOGLE_CSE_API_KEY');
+const googleCseId = defineString('GOOGLE_CSE_ID');
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -35,10 +40,12 @@ exports.getGoogleCseKey = functions.https.onRequest(async (req, res) => {
     const token = authHeader.replace('Bearer ', '');
     await admin.auth().verifyIdToken(token);
 
-    const apiKey = functions.config().google?.cse_key || process.env.GOOGLE_CSE_API_KEY;
-    const engineId = functions.config().google?.cse_id || process.env.GOOGLE_CSE_ID;
+    // Use params which read from .env file
+    const apiKey = googleCseApiKey.value();
+    const engineId = googleCseId.value();
 
     if (!apiKey || !engineId) {
+      console.error('Missing CSE config:', { hasApiKey: !!apiKey, hasEngineId: !!engineId });
       res.status(500).json({ error: 'Google CSE configuration missing' });
       return;
     }
