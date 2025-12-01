@@ -156,51 +156,51 @@ export const UnifiedContentCreator = () => {
   const selectedOption = contentOptions.find((opt: ContentType) => opt.content_type === selectedContentType);
 
   return (
-    <div className="space-y-6">
-      {/* Content Creation Form with integrated context toggle */}
-      <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold text-[#8B5CF6]">Create Content</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Generate professional recruitment content with AI
-                </CardDescription>
-              </div>
-              <button
-                onClick={() => setShowContext(!showContext)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  selectedProject || contextContent
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Folder className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline max-w-[120px] truncate">
-                  {selectedProject?.name || (contextContent ? 'Context Added' : 'Add Context')}
-                </span>
-                {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
-            </div>
+    <div className="space-y-4">
+      {/* Header with context toggle */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Create Content</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Generate professional recruitment content with AI
+          </p>
+        </div>
+        <button
+          onClick={() => setShowContext(!showContext)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            selectedProject || contextContent
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Folder className="w-4 h-4" />
+          <span className="hidden sm:inline max-w-[120px] truncate">
+            {selectedProject?.name || (contextContent ? 'Context Added' : 'Add Context')}
+          </span>
+          {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+      </div>
 
-            {/* Collapsible Context Section */}
-            {showContext && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <StandardProjectContext
-                  context="general"
-                  title=""
-                  description=""
-                  onContentProcessed={(content) => {
-                    handleContextContent(content);
-                    setShowContext(false);
-                  }}
-                  projectSelectorPlaceholder="Choose a project..."
-                  className="border border-gray-200 rounded-lg"
-                />
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-6">
+      {/* Collapsible Context Section */}
+      {showContext && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <StandardProjectContext
+            context="general"
+            title=""
+            description=""
+            onContentProcessed={(content) => {
+              handleContextContent(content);
+              setShowContext(false);
+            }}
+            projectSelectorPlaceholder="Choose a project..."
+            className="border-0 shadow-none p-0 mb-0"
+          />
+        </div>
+      )}
+
+      {/* Content Creation Form */}
+      <Card className="border border-gray-200 bg-white rounded-lg">
+          <CardContent className="p-6 space-y-6">
             {/* Content Type Dropdown */}
             <div className="space-y-2">
               <Label htmlFor="content-type" className="text-sm font-medium">
@@ -218,11 +218,11 @@ export const UnifiedContentCreator = () => {
                 >
                   <SelectTrigger
                     id="content-type"
-                    className="w-full border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] transition-all duration-200"
+                    className="w-full border border-gray-300 hover:border-gray-400 transition-colors"
                   >
                     <SelectValue placeholder="Select content type..." />
                   </SelectTrigger>
-                  <SelectContent className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] max-h-[60vh] overflow-hidden">
+                  <SelectContent className="border border-gray-200 shadow-lg max-h-[60vh] overflow-hidden">
                     {/* Search Input */}
                     <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2">
                       <div className="relative">
@@ -317,7 +317,7 @@ export const UnifiedContentCreator = () => {
                 }
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                className="min-h-[150px] border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                className="min-h-[150px] border border-gray-300"
                 disabled={!selectedContentType}
               />
             </div>
@@ -326,7 +326,7 @@ export const UnifiedContentCreator = () => {
             <Button
               onClick={handleGenerate}
               disabled={!selectedContentType || !userInput.trim() || isGenerating}
-              className="w-full bg-[#8B5CF6] text-white hover:bg-[#7C3AED] border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)] disabled:opacity-50 transition-all duration-200 hover:shadow-[5px_5px_0px_0px_rgba(0,0,0,0.7)] hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
               type="button"
             >
               {isGenerating ? (
@@ -346,12 +346,12 @@ export const UnifiedContentCreator = () => {
 
       {/* Generated Content Editor */}
       {generatedContent && (
-        <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
+        <Card className="border border-gray-200 bg-white rounded-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-[#8B5CF6]">
+            <CardTitle className="text-xl font-bold text-gray-900">
               Generated {selectedContentType}
             </CardTitle>
-            <CardDescription className="text-gray-600">
+            <CardDescription className="text-gray-500">
               Edit and refine your content below
             </CardDescription>
           </CardHeader>

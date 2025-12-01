@@ -359,8 +359,8 @@ export default function MeetingSimplified() {
 
   if (meetingStep === 'setup') {
     return (
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
-        <div className="max-w-3xl mx-auto p-8 w-full">
+      <div className="flex-1 flex flex-col bg-gray-50 rounded-lg overflow-auto">
+        <div className="max-w-3xl mx-auto p-6 w-full">
           <div className="mb-6">
             <Button
               onClick={() => setMeetingStep('welcome')}
@@ -372,18 +372,18 @@ export default function MeetingSimplified() {
 
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-1">
+                <h1 className="text-2xl font-bold text-gray-900">
                   {meetingPurpose === 'interview' && 'Interview Setup'}
                   {meetingPurpose === 'kickoff' && 'Kickoff Call Setup'}
                   {meetingPurpose === 'other' && 'Meeting Setup'}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-sm text-gray-500 mt-1">
                   Configure your meeting settings
                 </p>
               </div>
               <button
                 onClick={() => setShowContext(!showContext)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   selectedProject || uploadedFiles.length > 0
                     ? 'bg-green-50 text-green-700 border border-green-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -393,14 +393,14 @@ export default function MeetingSimplified() {
                 <span className="hidden sm:inline max-w-[120px] truncate">
                   {selectedProject?.name || (uploadedFiles.length > 0 ? 'Context Added' : 'Add Context')}
                 </span>
-                {showContext ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
             </div>
           </div>
 
           {/* Collapsible Context Section */}
           {showContext && (
-            <div className="mb-6 p-4 bg-white border-2 border-gray-200 rounded-xl">
+            <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
               <ContextBar
                 context="meeting"
                 title=""
@@ -424,21 +424,21 @@ export default function MeetingSimplified() {
                   placeholder: "Select project...",
                   className: "w-full"
                 }}
-                showLabels={false}
-                size="compact"
+                showLabels={true}
                 layout="stacked"
+                className="border-0 shadow-none p-0 mb-0"
               />
 
               {isWebSocketConnected && (
                 <div className="mt-3 flex items-center gap-2 text-sm text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span>Real-time AI processing enabled</span>
                 </div>
               )}
             </div>
           )}
 
-          <Card className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <Card className="border border-gray-200 rounded-lg">
             <CardContent className="p-6 space-y-6">
 
               {/* Job Title (for interviews) */}
@@ -455,7 +455,7 @@ export default function MeetingSimplified() {
                         setJobTitle(e.target.value);
                       }}
                       placeholder="e.g., Senior Software Engineer"
-                      className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      className="border border-gray-300"
                     />
                   </div>
 
@@ -468,7 +468,7 @@ export default function MeetingSimplified() {
                       onChange={(e) => setJobDescription(e.target.value)}
                       placeholder="Paste the job description here for AI-powered insights..."
                       rows={4}
-                      className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      className="border border-gray-300"
                     />
                   </div>
 
@@ -504,12 +504,12 @@ export default function MeetingSimplified() {
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     placeholder="e.g., Initial Requirements Discussion"
-                    className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                    className="border border-gray-300"
                   />
                 </div>
               )}
 
-              <Alert className="border-2 border-green-400 bg-green-50">
+              <Alert className="border border-green-200 bg-green-50">
                 <Sparkles className="h-4 w-4 text-green-600" />
                 <AlertDescription>
                   <strong>AI Assistant Ready!</strong> Your meeting will have real-time AI support for:
@@ -533,21 +533,10 @@ export default function MeetingSimplified() {
               <Button
                 onClick={(e) => {
                   console.log('Start Meeting button clicked!');
-                  console.log('Button state:', {
-                    selectedProjectId,
-                    meetingPurpose,
-                    jobTitle,
-                    isLoading,
-                    isContextProcessing,
-                    disabled: (meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing
-                  });
                   startMeeting();
                 }}
                 disabled={(meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 text-lg font-semibold 
-                         border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
-                         hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] 
-                         hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 font-medium disabled:opacity-50"
               >
                 {isLoading ? (
                   <>

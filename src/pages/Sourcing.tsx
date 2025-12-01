@@ -54,53 +54,51 @@ const SourcingComponent = () => {
 
   return (
     <div className="container max-w-5xl py-6 space-y-4">
-      {/* Compact Header with Context Toggle */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-5 text-white shadow-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Candidate Sourcing</h1>
-            <p className="text-sm opacity-90 mt-1">
-              AI-powered search for qualified candidates
-            </p>
-          </div>
-          <button
-            onClick={() => setShowContext(!showContext)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              selectedProject
-                ? 'bg-white/20 text-white border border-white/30'
-                : 'bg-white/10 text-white/90 hover:bg-white/20'
-            }`}
-          >
-            <Folder className="w-4 h-4" />
-            <span className="hidden sm:inline max-w-[140px] truncate">
-              {selectedProject?.name || 'Add Context'}
-            </span>
-            {showContext ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Candidate Sourcing</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            AI-powered search for qualified candidates
+          </p>
         </div>
-
-        {/* Collapsible Context Section */}
-        {showContext && (
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <StandardProjectContext
-              context="sourcing"
-              title=""
-              description=""
-              onContentProcessed={async (content) => {
-                await handleContextContent(content);
-                setShowContext(false);
-              }}
-              enabledButtons={{
-                upload: true,
-                firecrawl: true,
-                perplexity: true,
-                location: true
-              }}
-              className="bg-white/10 border-white/20 rounded-lg"
-            />
-          </div>
-        )}
+        <button
+          onClick={() => setShowContext(!showContext)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            selectedProject
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Folder className="w-4 h-4" />
+          <span className="hidden sm:inline max-w-[120px] truncate">
+            {selectedProject?.name || 'Add Context'}
+          </span>
+          {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
       </div>
+
+      {/* Collapsible Context Section */}
+      {showContext && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <StandardProjectContext
+            context="sourcing"
+            title=""
+            description=""
+            onContentProcessed={async (content) => {
+              await handleContextContent(content);
+              setShowContext(false);
+            }}
+            enabledButtons={{
+              upload: true,
+              firecrawl: true,
+              perplexity: true,
+              location: true
+            }}
+            className="border-0 shadow-none p-0 mb-0"
+          />
+        </div>
+      )}
 
       {/* Main content */}
       <Suspense fallback={<LoadingState />}>

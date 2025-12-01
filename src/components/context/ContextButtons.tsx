@@ -347,23 +347,23 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   const buttonSize = size === 'sm' || size === 'compact' ? 'sm' : size === 'lg' ? 'lg' : 'default';
   const iconSize = size === 'sm' || size === 'compact' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5';
 
-  // Brutalist styling consistent with Apply design system
+  // Clean, minimal button styling
   const buttonStyles = cn(
-    "border-2 border-black transition-all duration-200",
-    "hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
-    "shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
-    "bg-white hover:bg-gray-50",
+    "border border-gray-300 transition-colors duration-150",
+    "hover:border-gray-400 hover:bg-gray-50",
+    "bg-white",
     "disabled:opacity-50 disabled:cursor-not-allowed",
-    "flex-shrink-0", // Prevent buttons from shrinking
+    "flex-shrink-0",
+    "rounded-lg",
     compact && "p-2"
   );
 
-  // Container styling based on variant
+  // Container styling based on variant - simplified
   const containerStyles = cn(
     "flex flex-wrap gap-2 items-center",
     size === 'compact' && "gap-1",
-    variant === 'toolbar' && "bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3 rounded-lg",
-    variant === 'floating' && "fixed bottom-6 right-6 z-50 bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-lg p-3",
+    variant === 'toolbar' && "bg-white border border-gray-200 p-3 rounded-lg",
+    variant === 'floating' && "fixed bottom-6 right-6 z-50 bg-white border border-gray-200 shadow-lg rounded-lg p-3",
     variant === 'inline' && "justify-start",
     variant === 'responsive' && "justify-start w-full",
     className

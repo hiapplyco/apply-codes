@@ -254,7 +254,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto relative">
       {/* Single Card containing everything */}
-      <Card className="flex-1 min-h-0 flex flex-col border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
+      <Card className="flex-1 min-h-0 flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
         {/* Compact Header */}
         <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
@@ -271,13 +271,13 @@ Provide helpful, specific advice based on their data. Be conversational but prof
               {/* Compact Project Indicator */}
               <button
                 onClick={() => setShowProjectContext(!showProjectContext)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   selectedProject
                     ? 'bg-green-50 text-green-700 border border-green-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <Folder className="w-3.5 h-3.5" />
+                <Folder className="w-4 h-4" />
                 <span className="hidden sm:inline max-w-[120px] truncate">
                   {selectedProject?.name || 'Add Context'}
                 </span>
@@ -287,7 +287,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                 variant="outline"
                 size="sm"
                 onClick={() => setShowContext(!showContext)}
-                className={`h-8 px-2 ${showContext ? 'bg-purple-50 border-purple-200 text-purple-700' : ''}`}
+                className={`h-8 px-2 border-gray-300 ${showContext ? 'bg-purple-50 border-purple-200 text-purple-700' : ''}`}
               >
                 <Sparkles className="w-4 h-4" />
               </Button>
@@ -318,7 +318,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                   }
                 }}
                 projectSelectorPlaceholder="Select project..."
-                className="border border-gray-200 rounded-lg"
+                className="border-0 shadow-none p-0 mb-0"
               />
             </div>
           )}

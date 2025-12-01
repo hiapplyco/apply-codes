@@ -61,11 +61,11 @@ export const ContextBar: React.FC<ContextBarProps> = ({
 }) => {
   const { selectedProject } = useProjectContext();
 
-  // Container styling with Apply's brutalist design system
+  // Clean, minimal container styling
   const containerStyles = cn(
-    compact 
+    compact
       ? "bg-transparent border-none shadow-none p-2 mb-2"
-      : "bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-lg p-4 mb-6",
+      : "bg-white border border-gray-200 rounded-lg p-4 mb-4",
     hideOnMobile && "hidden sm:block",
     className
   );
