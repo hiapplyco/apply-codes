@@ -15,11 +15,11 @@ import {
   Bot,
   User,
   Loader2,
-  Search,
-  Folder,
-  Users,
   Sparkles,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Folder
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,12 +64,13 @@ interface UserContext {
 
 const Chat = () => {
   const { user } = useNewAuth();
-  const { selectedProjectId } = useProjectContext();
+  const { selectedProjectId, selectedProject } = useProjectContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userContext, setUserContext] = useState<UserContext | null>(null);
   const [showContext, setShowContext] = useState(false);
+  const [showProjectContext, setShowProjectContext] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -251,240 +252,257 @@ Provide helpful, specific advice based on their data. Be conversational but prof
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto gap-3 relative">
-      {/* Header & Context Section */}
-      <div className="flex-shrink-0 space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center shadow-sm">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">AI Assistant</h1>
-              <p className="text-xs text-gray-500">Powered by Apply Agentic Intelligence</p>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowContext(!showContext)}
-            className={`gap-2 ${showContext ? 'bg-purple-50 border-purple-200 text-purple-700' : ''}`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Context</span>
-          </Button>
-        </div>
-
-        <StandardProjectContext
-          context="chat"
-          title="Project Context"
-          description="Select a project to give the AI specific context"
-          onContentProcessed={async (content) => {
-            try {
-              await processContent(content);
-              const contextMessage: Message = {
-                id: `context-${Date.now()}`,
-                role: 'assistant',
-                content: `📎 I've received and processed your ${content.type} content. This context will help me provide more relevant responses.`,
-                timestamp: new Date()
-              };
-              setMessages(prev => [...prev, contextMessage]);
-              toast.success(`${content.type} context added`);
-            } catch (error) {
-              console.error('Chat context processing error:', error);
-            }
-          }}
-          projectSelectorPlaceholder="Select active project..."
-          className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-        />
-      </div>
-
-      <div className="flex gap-4 flex-1 min-h-0 relative">
-        {/* Main Chat Area */}
-        <Card className="flex-1 min-h-0 flex flex-col border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white z-10">
-          <ScrollArea className="flex-1 p-4 sm:p-6">
-            <div className="space-y-6 max-w-3xl mx-auto">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Bot className="w-5 h-5 text-purple-600" />
-                    </div>
-                  )}
-
-                  <div className={`flex flex-col gap-1 max-w-[85%] sm:max-w-[75%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                    {message.role === 'user' && (
-                      <span className="text-[10px] text-gray-400 font-medium mr-1">You</span>
-                    )}
-                    {message.role === 'assistant' && (
-                      <span className="text-[10px] text-gray-400 font-medium ml-1">AI Assistant</span>
-                    )}
-
-                    <div
-                      className={`rounded-2xl px-5 py-3 shadow-sm text-sm leading-relaxed ${message.role === 'user'
-                        ? 'bg-purple-600 text-white rounded-tr-none'
-                        : 'bg-gray-50 border border-gray-200 text-gray-800 rounded-tl-none'
-                        }`}
-                    >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
-                      {message.metadata && (
-                        <div className="mt-2 pt-2 border-t border-gray-200/20 text-xs opacity-70">
-                          {message.metadata.searchCount && <span>Searches: {message.metadata.searchCount} • </span>}
-                          {message.metadata.projectCount && <span>Projects: {message.metadata.projectCount}</span>}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-gray-300 px-1">
-                      {format(new Date(message.timestamp), 'h:mm a')}
-                    </span>
-                  </div>
-
-                  {message.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 mt-1">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-
-              {isLoading && (
-                <div className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          {/* Input Area */}
-          <div className="p-4 bg-gray-50 border-t border-gray-200">
-            <div className="max-w-3xl mx-auto space-y-3">
-              {/* Quick Replies */}
-              {messages.length < 3 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                  {quickReplies.map((reply, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleQuickReply(reply)}
-                      className="whitespace-nowrap px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors shadow-sm"
-                    >
-                      {reply}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="relative flex items-end gap-2">
-                <div className="relative flex-1">
-                  <Textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask about candidates, projects, or recruitment strategies..."
-                    className="min-h-[50px] max-h-[150px] pr-12 resize-none rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white shadow-sm py-3"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md flex-shrink-0"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </Button>
-              </form>
-              <div className="text-center">
-                <p className="text-[10px] text-gray-400">
-                  AI can make mistakes. Please verify important information.
-                </p>
+    <div className="flex flex-col h-full max-w-4xl mx-auto relative">
+      {/* Single Card containing everything */}
+      <Card className="flex-1 min-h-0 flex flex-col border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white">
+        {/* Compact Header */}
+        <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">AI Assistant</h1>
+                <p className="text-[11px] text-gray-500">Powered by Apply</p>
               </div>
             </div>
-          </div>
-        </Card>
-
-        {/* Context Panel - Sliding Overlay */}
-        {showContext && (
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white border-l-2 border-black shadow-xl z-20 flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                Context Data
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowContext(false)}
-                className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full"
+            <div className="flex items-center gap-2">
+              {/* Compact Project Indicator */}
+              <button
+                onClick={() => setShowProjectContext(!showProjectContext)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  selectedProject
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
               >
-                <X className="w-4 h-4" />
+                <Folder className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline max-w-[120px] truncate">
+                  {selectedProject?.name || 'Add Context'}
+                </span>
+                {showProjectContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowContext(!showContext)}
+                className={`h-8 px-2 ${showContext ? 'bg-purple-50 border-purple-200 text-purple-700' : ''}`}
+              >
+                <Sparkles className="w-4 h-4" />
               </Button>
             </div>
-
-            <ScrollArea className="flex-1 p-4">
-              {userContext ? (
-                <div className="space-y-6">
-                  {/* Stats Grid */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                      <div className="text-xs text-purple-600 font-medium mb-1">Searches</div>
-                      <div className="text-xl font-bold text-purple-900">{userContext.totalSearches}</div>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="text-xs text-blue-600 font-medium mb-1">Projects</div>
-                      <div className="text-xl font-bold text-blue-900">{userContext.totalProjects}</div>
-                    </div>
-                  </div>
-
-                  {/* Recent Searches */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Searches</h4>
-                    <div className="space-y-2">
-                      {userContext.recentSearches.slice(0, 5).map((search) => (
-                        <div key={search.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setInput(`Analyze search: ${search.search_query}`)}>
-                          <p className="text-sm font-medium text-gray-900 truncate">{search.search_query}</p>
-                          <p className="text-xs text-gray-500 mt-1">{search.results_count} results • {format(new Date(search.created_at), 'MMM d')}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Active Projects */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Active Projects</h4>
-                    <div className="space-y-2">
-                      {userContext.projects.slice(0, 5).map((project) => (
-                        <div key={project.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setInput(`Find candidates for project: ${project.name}`)}>
-                          <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">{project.candidates_count} candidates</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-                  <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                  <p className="text-sm">Loading context...</p>
-                </div>
-              )}
-            </ScrollArea>
           </div>
-        )}
-      </div>
+
+          {/* Collapsible Project Context */}
+          {showProjectContext && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <StandardProjectContext
+                context="chat"
+                title=""
+                description=""
+                onContentProcessed={async (content) => {
+                  try {
+                    await processContent(content);
+                    const contextMessage: Message = {
+                      id: `context-${Date.now()}`,
+                      role: 'assistant',
+                      content: `I've received your ${content.type} content. This will help me provide more relevant responses.`,
+                      timestamp: new Date()
+                    };
+                    setMessages(prev => [...prev, contextMessage]);
+                    toast.success(`${content.type} context added`);
+                    setShowProjectContext(false);
+                  } catch (error) {
+                    console.error('Chat context processing error:', error);
+                  }
+                }}
+                projectSelectorPlaceholder="Select project..."
+                className="border border-gray-200 rounded-lg"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Messages Area - Takes remaining space */}
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-4 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {message.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="w-4 h-4 text-purple-600" />
+                  </div>
+                )}
+
+                <div className={`flex flex-col gap-0.5 max-w-[80%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div
+                    className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${message.role === 'user'
+                      ? 'bg-purple-600 text-white rounded-tr-sm'
+                      : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                      }`}
+                  >
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    {message.metadata && (
+                      <div className="mt-2 pt-2 border-t border-gray-200/20 text-xs opacity-70">
+                        {message.metadata.searchCount && <span>Searches: {message.metadata.searchCount} </span>}
+                        {message.metadata.projectCount && <span>Projects: {message.metadata.projectCount}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-gray-400 px-1">
+                    {format(new Date(message.timestamp), 'h:mm a')}
+                  </span>
+                </div>
+
+                {message.role === 'user' && (
+                  <div className="w-7 h-7 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+
+            {isLoading && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-2.5 flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        {/* Input Area - Fixed at bottom */}
+        <div className="flex-shrink-0 p-3 bg-gray-50 border-t border-gray-200">
+          {/* Quick Replies */}
+          {messages.length < 3 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+              {quickReplies.map((reply, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleQuickReply(reply)}
+                  className="whitespace-nowrap px-3 py-1 bg-white border border-gray-200 rounded-full text-xs text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
+                >
+                  {reply}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex items-end gap-2">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about candidates, projects, or recruitment..."
+              className="flex-1 min-h-[44px] max-h-[120px] resize-none rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white text-sm py-2.5"
+              rows={1}
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="h-[44px] w-[44px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </Button>
+          </form>
+          <p className="text-[10px] text-gray-400 text-center mt-2">
+            AI can make mistakes. Please verify important information.
+          </p>
+        </div>
+      </Card>
+
+      {/* Context Panel - Sliding Overlay */}
+      {showContext && (
+        <div className="absolute right-0 top-0 bottom-0 w-72 bg-white border-l-2 border-black shadow-xl z-20 flex flex-col">
+          <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              Your Data
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowContext(false)}
+              className="h-7 w-7 p-0 hover:bg-gray-200 rounded-full"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <ScrollArea className="flex-1 p-3">
+            {userContext ? (
+              <div className="space-y-4">
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-purple-50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-purple-900">{userContext.totalSearches}</div>
+                    <div className="text-[10px] text-purple-600">Searches</div>
+                  </div>
+                  <div className="p-2 bg-blue-50 rounded-lg text-center">
+                    <div className="text-lg font-bold text-blue-900">{userContext.totalProjects}</div>
+                    <div className="text-[10px] text-blue-600">Projects</div>
+                  </div>
+                </div>
+
+                {/* Recent Searches */}
+                <div>
+                  <h4 className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Recent Searches</h4>
+                  <div className="space-y-1.5">
+                    {userContext.recentSearches.slice(0, 4).map((search) => (
+                      <div
+                        key={search.id}
+                        className="p-2 bg-gray-50 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
+                        onClick={() => setInput(`Analyze: ${search.search_query}`)}
+                      >
+                        <p className="text-xs font-medium text-gray-900 truncate">{search.search_query}</p>
+                        <p className="text-[10px] text-gray-500">{search.results_count} results</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Projects */}
+                <div>
+                  <h4 className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Projects</h4>
+                  <div className="space-y-1.5">
+                    {userContext.projects.slice(0, 4).map((project) => (
+                      <div
+                        key={project.id}
+                        className="p-2 bg-gray-50 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
+                        onClick={() => setInput(`Find candidates for: ${project.name}`)}
+                      >
+                        <p className="text-xs font-medium text-gray-900 truncate">{project.name}</p>
+                        <p className="text-[10px] text-gray-500">{project.candidates_count} candidates</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                <p className="text-xs">Loading...</p>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      )}
     </div>
   );
 };
