@@ -1,6 +1,6 @@
-import { 
-  FileSearch, 
-  Video, 
+import {
+  FileSearch,
+  Video,
   MessageSquare,
   PlusCircle,
   Briefcase,
@@ -72,7 +72,7 @@ const Dashboard = () => {
       title: "Integrations",
       description: "Connect 20+ platforms",
       icon: Link2,
-      path: "/integrations",
+      path: "/documentation",
       gradient: "from-teal-500 to-cyan-500"
     },
     {
@@ -109,9 +109,8 @@ const Dashboard = () => {
               <Tooltip key={tool.title}>
                 <TooltipTrigger asChild>
                   <Card
-                    className={`group relative h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer bg-white ${
-                      tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
-                    }`}
+                    className={`group relative h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer bg-white ${tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
+                      }`}
                     onClick={() => {
                       if (tool.action) {
                         tool.action();
@@ -132,7 +131,7 @@ const Dashboard = () => {
                       <CardDescription className="text-xs text-gray-600 mt-1">
                         {tool.description}
                       </CardDescription>
-                      
+
                       {/* Action */}
                       <div className="mt-2">
                         <span className="text-xs text-[#8B5CF6] font-medium group-hover:translate-x-1 inline-flex items-center transition-all">
@@ -160,7 +159,7 @@ const Dashboard = () => {
                 Join thousands using Apply's AI approach to find top talent
               </p>
               <div className="flex gap-3 justify-center">
-                <Button 
+                <Button
                   onClick={() => navigate("/sourcing")}
                   className="bg-[#8B5CF6] hover:bg-[#9b87f5] text-white px-4 py-2 text-sm shadow"
                   size="sm"
@@ -168,7 +167,7 @@ const Dashboard = () => {
                   <Sparkles className="w-4 h-4 mr-1" />
                   Start Sourcing
                 </Button>
-                <Button 
+                <Button
                   onClick={() => navigate("/search-history")}
                   variant="outline"
                   className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6] hover:text-white px-4 py-2 text-sm"
@@ -184,9 +183,9 @@ const Dashboard = () => {
       </div>
 
       {/* MCP Instructions Modal */}
-      <MCPInstructionsModal 
-        isOpen={showMCPModal} 
-        onClose={() => setShowMCPModal(false)} 
+      <MCPInstructionsModal
+        isOpen={showMCPModal}
+        onClose={() => setShowMCPModal(false)}
       />
     </TooltipProvider>
   );

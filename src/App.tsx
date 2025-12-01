@@ -30,7 +30,7 @@ import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
 import MarketingIntegrations from "@/pages/MarketingIntegrations";
-import PlatformIntegrations from "@/pages/PlatformIntegrations";
+import Documentation from "@/pages/Documentation";
 import Meeting from "@/pages/MeetingSimplified";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
@@ -91,7 +91,7 @@ function App() {
                       <Route path="/analytics/:jobId" element={<DashboardAnalytics />} />
                       <Route path="/projects/:projectId" element={<ProjectDetail />} />
                       <Route path="/profile" element={<Profile />} />
-                      <Route path="/platform/integrations" element={<PlatformIntegrations />} />
+                      <Route path="/documentation" element={<Documentation />} />
                     </Route>
                   </Route>
 

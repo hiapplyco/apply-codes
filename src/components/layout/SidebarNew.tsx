@@ -1,12 +1,12 @@
 import { memo, useCallback } from "react";
-import { 
-  Home, 
-  Theater, 
-  PhoneCall, 
-  MessageSquare, 
-  Search, 
-  PlusCircle, 
-  LayoutDashboard, 
+import {
+  Home,
+  Theater,
+  PhoneCall,
+  MessageSquare,
+  Search,
+  PlusCircle,
+  LayoutDashboard,
   User,
   Users,
   LogOut,
@@ -23,7 +23,7 @@ import { useNewAuth } from "@/context/NewAuthContext";
 export type MenuItem = {
   title: string;
   path: string;
-  icon: React.ComponentType<{className?: string}>;
+  icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 };
 
@@ -32,7 +32,7 @@ const menuItems: MenuItem[] = [
   { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Sourcing', path: '/sourcing', icon: Search },
   { title: 'Meeting', path: '/meeting', icon: Users },
-  { title: 'Integrations', path: '/platform/integrations', icon: Plug },
+  { title: 'Documentation', path: '/documentation', icon: Plug },
   { title: 'Profile', path: '/profile', icon: User },
   { title: 'Chat', path: '/chat', icon: MessageSquare },
 ];
@@ -122,10 +122,10 @@ export const SidebarNew = memo(({
                     disabled={item.disabled}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group",
-                      isActive 
-                        ? "bg-purple-600 text-white shadow-md" 
-                        : item.disabled 
-                          ? "text-gray-400 cursor-not-allowed opacity-50" 
+                      isActive
+                        ? "bg-purple-600 text-white shadow-md"
+                        : item.disabled
+                          ? "text-gray-400 cursor-not-allowed opacity-50"
                           : "text-gray-700 hover:bg-purple-50 hover:text-purple-700",
                       !isOpen && "justify-center px-2"
                     )}
