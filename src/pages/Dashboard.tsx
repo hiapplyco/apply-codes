@@ -1,86 +1,63 @@
 import {
-  FileSearch,
-  Video,
   MessageSquare,
   PlusCircle,
-  Briefcase,
   ArrowRight,
-  Clock,
   Sparkles,
-  Bot,
   Users,
-  Link2,
-  Terminal,
-  Settings
+  Book,
+  Search,
+  User
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { MCPInstructionsModal } from "@/components/dashboard/MCPInstructionsModal";
-
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [showMCPModal, setShowMCPModal] = useState(false);
 
   const toolCards = [
     {
-      title: "Sourcing Assistant",
-      description: "AI-powered boolean searches across platforms",
-      icon: FileSearch,
+      title: "Sourcing",
+      description: "Find candidates with AI-powered searches",
+      icon: Search,
       path: "/sourcing",
-      gradient: "from-blue-500 to-cyan-500",
+      gradient: "from-purple-500 to-violet-600",
       isPrimary: true
     },
     {
-      title: "Search History",
-      description: "View saved candidates and projects",
-      icon: Clock,
-      path: "/search-history",
-      gradient: "from-indigo-500 to-purple-600"
+      title: "Create Content",
+      description: "Job posts, emails, and more",
+      icon: PlusCircle,
+      path: "/content-creation",
+      gradient: "from-blue-500 to-cyan-500"
     },
     {
-      title: "Meeting Room",
-      description: "AI-assisted interviews and calls",
+      title: "Meeting",
+      description: "AI-assisted video interviews",
       icon: Users,
       path: "/meeting",
       gradient: "from-green-500 to-emerald-500"
     },
     {
       title: "Chat Assistant",
-      description: "Your AI recruitment copilot",
+      description: "Your AI recruiting copilot",
       icon: MessageSquare,
       path: "/chat",
       gradient: "from-pink-500 to-rose-500"
     },
     {
-      title: "Post a Job",
-      description: "Create optimized job postings",
-      icon: Briefcase,
-      path: "/job-post",
-      gradient: "from-yellow-500 to-orange-500"
-    },
-    {
-      title: "Content Creation",
-      description: "Generate LinkedIn posts",
-      icon: PlusCircle,
-      path: "/linkedin-post",
-      gradient: "from-purple-500 to-violet-600"
-    },
-    {
-      title: "Integrations",
-      description: "Connect 20+ platforms",
-      icon: Link2,
+      title: "Documentation",
+      description: "Guides, MCP setup & integrations",
+      icon: Book,
       path: "/documentation",
-      gradient: "from-teal-500 to-cyan-500"
+      gradient: "from-orange-500 to-amber-500"
     },
     {
-      title: "MCP Tools",
-      description: "Enable Claude Desktop integration",
-      icon: Terminal,
-      action: () => setShowMCPModal(true),
-      gradient: "from-gray-600 to-gray-800"
+      title: "Profile & History",
+      description: "Settings, searches, and projects",
+      icon: User,
+      path: "/profile",
+      gradient: "from-indigo-500 to-purple-600"
     }
   ];
 
@@ -109,12 +86,9 @@ const Dashboard = () => {
               <Tooltip key={tool.title}>
                 <TooltipTrigger asChild>
                   <Card
-                    className={`group relative h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer bg-white ${tool.disabled ? 'opacity-60 cursor-not-allowed' : ''
-                      }`}
+                    className="group relative h-full flex flex-col overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer bg-white"
                     onClick={() => {
-                      if (tool.action) {
-                        tool.action();
-                      } else if (!tool.disabled && tool.path) {
+                      if (tool.path) {
                         navigate(tool.path);
                       }
                     }}
@@ -135,8 +109,8 @@ const Dashboard = () => {
                       {/* Action */}
                       <div className="mt-2">
                         <span className="text-xs text-[#8B5CF6] font-medium group-hover:translate-x-1 inline-flex items-center transition-all">
-                          {tool.disabled ? 'Coming Soon' : 'Open'}
-                          {!tool.disabled && <ArrowRight className="ml-1 h-3 w-3" />}
+                          Open
+                          <ArrowRight className="ml-1 h-3 w-3" />
                         </span>
                       </div>
                     </CardHeader>
@@ -168,25 +142,19 @@ const Dashboard = () => {
                   Start Sourcing
                 </Button>
                 <Button
-                  onClick={() => navigate("/search-history")}
+                  onClick={() => navigate("/profile")}
                   variant="outline"
                   className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6] hover:text-white px-4 py-2 text-sm"
                   size="sm"
                 >
-                  <Clock className="w-4 h-4 mr-1" />
-                  View History
+                  <User className="w-4 h-4 mr-1" />
+                  My Profile
                 </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* MCP Instructions Modal */}
-      <MCPInstructionsModal
-        isOpen={showMCPModal}
-        onClose={() => setShowMCPModal(false)}
-      />
     </TooltipProvider>
   );
 };

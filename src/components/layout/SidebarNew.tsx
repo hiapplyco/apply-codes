@@ -1,8 +1,5 @@
 import { memo, useCallback } from "react";
 import {
-  Home,
-  Theater,
-  PhoneCall,
   MessageSquare,
   Search,
   PlusCircle,
@@ -13,7 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Plug
+  Book
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -29,12 +26,12 @@ export type MenuItem = {
 
 const menuItems: MenuItem[] = [
   { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Sourcing', path: '/sourcing', icon: Search },
+  { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Meeting', path: '/meeting', icon: Users },
-  { title: 'Documentation', path: '/documentation', icon: Plug },
-  { title: 'Profile', path: '/profile', icon: User },
   { title: 'Chat', path: '/chat', icon: MessageSquare },
+  { title: 'Documentation', path: '/documentation', icon: Book },
+  { title: 'Profile', path: '/profile', icon: User },
 ];
 
 interface SidebarNewProps {
