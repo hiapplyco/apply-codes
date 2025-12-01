@@ -236,28 +236,52 @@ Provide helpful, specific advice based on their data. Be conversational but prof
     }
   };
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-7xl mx-auto p-4">
-      {/* Compact Header */}
-      <div className="mb-4 flex-shrink-0">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Bot className="w-6 h-6 text-purple-600" />
-            AI Assistant
-          </h1>
-        </div>
-      </div>
+  // Quick replies
+  const quickReplies = [
+    "Find candidates for my active project",
+    "Analyze my recent search history",
+    "Help me create a boolean string",
+    "Draft a candidate outreach message"
+  ];
 
-      {/* Standard Project Context */}
-      <div className="mb-4">
+  const handleQuickReply = (reply: string) => {
+    setInput(reply);
+    // Optional: auto-submit
+    // handleSubmit({ preventDefault: () => {} } as any);
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-5xl mx-auto p-2 sm:p-4 gap-4 relative">
+      {/* Header & Context Section */}
+      <div className="flex-shrink-0 space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center shadow-sm">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">AI Assistant</h1>
+              <p className="text-xs text-gray-500">Powered by Apply Agentic Intelligence</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowContext(!showContext)}
+            className={`gap-2 ${showContext ? 'bg-purple-50 border-purple-200 text-purple-700' : ''}`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Context</span>
+          </Button>
+        </div>
+
         <StandardProjectContext
           context="chat"
-          title=""
-          description=""
+          title="Project Context"
+          description="Select a project to give the AI specific context"
           onContentProcessed={async (content) => {
             try {
               await processContent(content);
-
               const contextMessage: Message = {
                 id: `context-${Date.now()}`,
                 role: 'assistant',
@@ -265,217 +289,201 @@ Provide helpful, specific advice based on their data. Be conversational but prof
                 timestamp: new Date()
               };
               setMessages(prev => [...prev, contextMessage]);
-
               toast.success(`${content.type} context added`);
             } catch (error) {
               console.error('Chat context processing error:', error);
             }
           }}
-          projectSelectorPlaceholder="Project"
+          projectSelectorPlaceholder="Select active project..."
+          className="border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
         />
       </div>
 
-      <div className="flex gap-4 flex-1 min-h-0">
-        {/* Main Chat Area - Now takes most space */}
-        <div className="flex-1 min-h-0">
-          <Card className="h-full flex flex-col border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)]">
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                      }`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-5 h-5 text-purple-600" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[70%] rounded-lg px-4 py-3 ${message.role === 'user'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                        }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-purple-200' : 'text-gray-500'
-                        }`}>
-                        {format(message.timestamp, 'h:mm a')}
-                      </p>
-                    </div>
-                    {message.role === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+      <div className="flex gap-4 flex-1 min-h-0 relative">
+        {/* Main Chat Area */}
+        <Card className="flex-1 min-h-0 flex flex-col border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden bg-white z-10">
+          <ScrollArea className="flex-1 p-4 sm:p-6">
+            <div className="space-y-6 max-w-3xl mx-auto">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0 mt-1">
                       <Bot className="w-5 h-5 text-purple-600" />
                     </div>
-                    <div className="bg-gray-100 rounded-lg px-4 py-3">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
+                  )}
 
-            {/* Input Area */}
-            <form onSubmit={handleSubmit} className="p-4 border-t-2 border-black">
-              <div className="flex gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask about your searches, projects, or candidates..."
-                  className="flex-1 min-h-[60px] max-h-[120px] resize-none"
-                  disabled={isLoading}
-                />
+                  <div className={`flex flex-col gap-1 max-w-[85%] sm:max-w-[75%] ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    {message.role === 'user' && (
+                      <span className="text-[10px] text-gray-400 font-medium mr-1">You</span>
+                    )}
+                    {message.role === 'assistant' && (
+                      <span className="text-[10px] text-gray-400 font-medium ml-1">AI Assistant</span>
+                    )}
+
+                    <div
+                      className={`rounded-2xl px-5 py-3 shadow-sm text-sm leading-relaxed ${message.role === 'user'
+                        ? 'bg-purple-600 text-white rounded-tr-none'
+                        : 'bg-gray-50 border border-gray-200 text-gray-800 rounded-tl-none'
+                        }`}
+                    >
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      {message.metadata && (
+                        <div className="mt-2 pt-2 border-t border-gray-200/20 text-xs opacity-70">
+                          {message.metadata.searchCount && <span>Searches: {message.metadata.searchCount} • </span>}
+                          {message.metadata.projectCount && <span>Projects: {message.metadata.projectCount}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-300 px-1">
+                      {format(new Date(message.timestamp), 'h:mm a')}
+                    </span>
+                  </div>
+
+                  {message.role === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 mt-1">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Input Area */}
+          <div className="p-4 bg-gray-50 border-t border-gray-200">
+            <div className="max-w-3xl mx-auto space-y-3">
+              {/* Quick Replies */}
+              {messages.length < 3 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {quickReplies.map((reply, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleQuickReply(reply)}
+                      className="whitespace-nowrap px-3 py-1.5 bg-white border border-gray-200 rounded-full text-xs text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors shadow-sm"
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="relative flex items-end gap-2">
+                <div className="relative flex-1">
+                  <Textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask about candidates, projects, or recruitment strategies..."
+                    className="min-h-[50px] max-h-[150px] pr-12 resize-none rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 bg-white shadow-sm py-3"
+                  />
+                </div>
                 <Button
                   type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  disabled={isLoading || !input.trim()}
+                  className="h-[50px] w-[50px] rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md flex-shrink-0"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Send className="w-5 h-5" />
                   )}
                 </Button>
+              </form>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">
+                  AI can make mistakes. Please verify important information.
+                </p>
               </div>
-            </form>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </Card>
 
-        {/* Compact Context Panel - Only shows when toggled */}
+        {/* Context Panel - Sliding Overlay */}
         {showContext && (
-          <div className="w-80 min-h-0">
-            <Card className="h-full border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.25)] overflow-hidden">
-              <CardContent className="p-4 h-full overflow-y-auto">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-sm flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
-                    Context
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowContext(false)}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white border-l-2 border-black shadow-xl z-20 flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                Context Data
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowContext(false)}
+                className="h-8 w-8 p-0 hover:bg-gray-200 rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
 
-                {userContext ? (
-                  <div className="space-y-6">
-                    {/* Compact Statistics */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="text-center p-2 bg-purple-50 rounded">
-                        <Search className="w-4 h-4 text-purple-600 mx-auto mb-1" />
-                        <div className="text-xs text-gray-600">Searches</div>
-                        <div className="font-bold text-sm">{userContext.totalSearches}</div>
-                      </div>
-                      <div className="text-center p-2 bg-blue-50 rounded">
-                        <Folder className="w-4 h-4 text-blue-600 mx-auto mb-1" />
-                        <div className="text-xs text-gray-600">Projects</div>
-                        <div className="font-bold text-sm">{userContext.totalProjects}</div>
-                      </div>
-                      <div className="text-center p-2 bg-green-50 rounded">
-                        <Users className="w-4 h-4 text-green-600 mx-auto mb-1" />
-                        <div className="text-xs text-gray-600">Candidates</div>
-                        <div className="font-bold text-sm">{userContext.totalCandidates}</div>
-                      </div>
+            <ScrollArea className="flex-1 p-4">
+              {userContext ? (
+                <div className="space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                      <div className="text-xs text-purple-600 font-medium mb-1">Searches</div>
+                      <div className="text-xl font-bold text-purple-900">{userContext.totalSearches}</div>
                     </div>
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="text-xs text-blue-600 font-medium mb-1">Projects</div>
+                      <div className="text-xl font-bold text-blue-900">{userContext.totalProjects}</div>
+                    </div>
+                  </div>
 
-                    {/* Compact Recent Searches */}
+                  {/* Recent Searches */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Searches</h4>
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-xs text-gray-600 uppercase">Recent Searches</h4>
-                      <div className="space-y-1">
-                        {userContext.recentSearches.slice(0, 3).map((search) => (
-                          <div key={search.id} className="text-xs p-2 bg-gray-50 rounded">
-                            <p className="font-medium truncate">{search.search_query}</p>
-                            <p className="text-[10px] text-gray-500">
-                              {search.results_count} results
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Compact Projects */}
-                    {userContext.projects.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-xs text-gray-600 uppercase">Projects</h4>
-                        <div className="space-y-1">
-                          {userContext.projects.slice(0, 3).map((project) => (
-                            <div key={project.id} className="text-xs p-2 bg-gray-50 rounded">
-                              <p className="font-medium truncate">{project.name}</p>
-                              <p className="text-[10px] text-gray-500">
-                                {project.candidates_count} candidates
-                              </p>
-                            </div>
-                          ))}
+                      {userContext.recentSearches.slice(0, 5).map((search) => (
+                        <div key={search.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setInput(`Analyze search: ${search.search_query}`)}>
+                          <p className="text-sm font-medium text-gray-900 truncate">{search.search_query}</p>
+                          <p className="text-xs text-gray-500 mt-1">{search.results_count} results • {format(new Date(search.created_at), 'MMM d')}</p>
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+
+                  {/* Active Projects */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Active Projects</h4>
+                    <div className="space-y-2">
+                      {userContext.projects.slice(0, 5).map((project) => (
+                        <div key={project.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setInput(`Find candidates for project: ${project.name}`)}>
+                          <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
+                          <p className="text-xs text-gray-500 mt-1">{project.candidates_count} candidates</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                  <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                  <p className="text-sm">Loading context...</p>
+                </div>
+              )}
+            </ScrollArea>
           </div>
         )}
-      </div>
-
-      {/* Compact Example Prompts */}
-      <div className="mt-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Try:</span>
-          <div className="flex flex-wrap gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setInput("Analyze my search patterns")}
-              className="text-xs h-7 px-2"
-            >
-              Analyze searches
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setInput("Create boolean search")}
-              className="text-xs h-7 px-2"
-            >
-              Boolean search
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setInput("Project insights")}
-              className="text-xs h-7 px-2"
-            >
-              Projects
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setInput("Sourcing tips")}
-              className="text-xs h-7 px-2"
-            >
-              Tips
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );
