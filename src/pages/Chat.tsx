@@ -251,7 +251,7 @@ Provide helpful, specific advice based on their data. Be conversational but prof
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-5xl mx-auto p-2 sm:p-4 gap-4 relative">
+    <div className="flex flex-col h-full max-w-5xl mx-auto gap-3 relative">
       {/* Header & Context Section */}
       <div className="flex-shrink-0 space-y-4">
         <div className="flex items-center justify-between px-1">

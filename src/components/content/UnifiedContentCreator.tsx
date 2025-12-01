@@ -155,9 +155,9 @@ export const UnifiedContentCreator = () => {
   const selectedOption = contentOptions.find((opt: ContentType) => opt.content_type === selectedContentType);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8">
       {/* Context Bar with Project Selector */}
-      <div className="animate-in slide-in-from-top duration-700 delay-100">
+      <div>
         <StandardProjectContext
           context="general"
           title="Add Context for Content Creation"
@@ -169,8 +169,7 @@ export const UnifiedContentCreator = () => {
       </div>
 
       {/* Content Creation Form */}
-      <div className="animate-in slide-in-from-bottom duration-700 delay-200">
-        <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
+      <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-[#8B5CF6]">Create Content</CardTitle>
             <CardDescription className="text-gray-600">
@@ -265,17 +264,17 @@ export const UnifiedContentCreator = () => {
 
             {/* Context Status Indicator */}
             {(contextContent || selectedProject) && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg animate-in slide-in-from-left duration-500 shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg shadow-sm">
                 <div className="flex items-center gap-2 text-sm text-green-700">
-                  <Info className="w-4 h-4 animate-pulse" />
+                  <Info className="w-4 h-4" />
                   <span className="font-medium">Context Active:</span>
                 </div>
                 <div className="mt-1 text-xs text-green-600 space-y-1">
                   {selectedProject && (
-                    <div className="animate-in fade-in duration-300 delay-100">• Project: {selectedProject.name}</div>
+                    <div>• Project: {selectedProject.name}</div>
                   )}
                   {contextContent && (
-                    <div className="animate-in fade-in duration-300 delay-200">• Additional context from uploaded/scraped content</div>
+                    <div>• Additional context from uploaded/scraped content</div>
                   )}
                 </div>
               </div>
@@ -320,32 +319,29 @@ export const UnifiedContentCreator = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
 
       {/* Generated Content Editor */}
       {generatedContent && (
-        <div className="animate-in slide-in-from-bottom duration-700 delay-300">
-          <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-[#8B5CF6]">
-                Generated {selectedContentType}
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Edit and refine your content below
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="min-h-[400px]">
-                <JobEditorContent
-                  initialContent={rawContent}
-                  onUpdate={handleContentChange}
-                  isAnalysisComplete={true}
-                  isError={false}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="border-2 border-black bg-white shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)]">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-[#8B5CF6]">
+              Generated {selectedContentType}
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Edit and refine your content below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="min-h-[400px]">
+              <JobEditorContent
+                initialContent={rawContent}
+                onUpdate={handleContentChange}
+                isAnalysisComplete={true}
+                isError={false}
+              />
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Content Generation Dialog */}
