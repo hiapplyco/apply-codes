@@ -1,6 +1,6 @@
 import { lazy, Suspense, memo } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
-import { Loader2 } from "lucide-react";
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { type ContextBarProps } from "@/components/context/ContextBar";
 import { StandardProjectContext } from '@/components/project/StandardProjectContext';
 import { useContextIntegration } from "@/hooks/useContextIntegration";
@@ -11,8 +11,8 @@ import { toast } from "sonner";
 const MinimalSearchForm = lazy(() => import("@/components/MinimalSearchForm"));
 
 const LoadingState = () => (
-  <div className="h-96 flex items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-[#8B5CF6]" />
+  <div className="flex items-center justify-center h-screen">
+    <LoadingSpinner size="lg" text="Loading sourcing data..." />
   </div>
 );
 
