@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
 import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
@@ -2038,6 +2038,27 @@ This area is for your specific search instructions, filtering criteria, or addit
                               Analyze
                             </Button>
 
+                            {/* Get Contact Info Button (Nymeria) */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => getContactInfo(result, index)}
+                              disabled={loadingContact.has(index) || !!contact}
+                              className={`h-8 text-xs font-medium ${contact
+                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                                : 'text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                            >
+                              {loadingContact.has(index) ? (
+                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              ) : contact ? (
+                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                              ) : (
+                                <User className="w-3.5 h-3.5 mr-1.5" />
+                              )}
+                              {contact ? 'Contact Found' : 'Get Contact'}
+                            </Button>
+
                             {/* Email Button */}
                             <Button
                               size="sm"
@@ -2077,6 +2098,64 @@ This area is for your specific search instructions, filtering criteria, or addit
                             </Button>
                           </div>
                         </div>
+
+                        {/* Contact Info Section */}
+                        {contact && (
+                          <div className={`
+                            bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-4
+                            ${viewMode === 'list' ? 'w-72 flex-shrink-0' : 'mt-4'}
+                          `}>
+                            <h4 className="font-semibold text-sm text-emerald-900 flex items-center gap-2 mb-3">
+                              <User className="w-4 h-4 text-emerald-600" />
+                              Contact Info
+                            </h4>
+                            <div className="space-y-2">
+                              {contact.email && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                  <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline truncate">
+                                    {contact.email}
+                                  </a>
+                                </div>
+                              )}
+                              {contact.work_email && contact.work_email !== contact.email && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Briefcase className="w-3.5 h-3.5 text-gray-400" />
+                                  <a href={`mailto:${contact.work_email}`} className="text-blue-600 hover:underline truncate">
+                                    {contact.work_email}
+                                  </a>
+                                </div>
+                              )}
+                              {contact.phone && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                                  <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                                    {contact.phone}
+                                  </a>
+                                </div>
+                              )}
+                              {contact.twitter_url && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Globe className="w-3.5 h-3.5 text-gray-400" />
+                                  <a href={contact.twitter_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
+                                    Twitter
+                                  </a>
+                                </div>
+                              )}
+                              {contact.github_url && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Code className="w-3.5 h-3.5 text-gray-400" />
+                                  <a href={contact.github_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
+                                    GitHub
+                                  </a>
+                                </div>
+                              )}
+                              {!contact.email && !contact.phone && (
+                                <p className="text-xs text-gray-500 italic">No contact details found</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Analysis Results Overlay/Section */}
                         {analysis && (
