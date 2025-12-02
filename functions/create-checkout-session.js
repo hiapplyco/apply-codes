@@ -102,7 +102,19 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
       }
     }
 
+    // Validate price ID against allowed prices
+    const validPriceIds = [
+      'price_1SZkXQC3HTLX6YIcgrBDgC3m',  // Pro Monthly $149
+      'price_1SZkYCC3HTLX6YIcjIPoUdMi',  // Pro Yearly $1,788
+      // Add enterprise price IDs when created
+    ];
+
+    if (!validPriceIds.includes(priceId)) {
+      console.warn('Unknown price ID:', priceId, '- proceeding anyway');
+    }
+
     // Create checkout session
+    // Note: No trial_period_days since users already get 7-day free trial before upgrading
     console.log('Creating Stripe checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -113,14 +125,13 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         }
       ],
       mode: 'subscription',
-      success_url: successUrl || 'https://apply.codes/dashboard?success=true',
-      cancel_url: cancelUrl || 'https://apply.codes/pricing?canceled=true',
+      success_url: successUrl || 'https://applycodes-2683f.web.app/checkout/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: cancelUrl || 'https://applycodes-2683f.web.app/pricing?canceled=true',
       metadata: {
         user_id: userId,
         source: 'firebase_function'
       },
       subscription_data: {
-        trial_period_days: 21,
         metadata: {
           user_id: userId
         }

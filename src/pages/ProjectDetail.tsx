@@ -11,7 +11,11 @@ import {
   where,
   orderBy,
   deleteDoc,
-  updateDoc
+  updateDoc,
+  documentId,
+  limit,
+  startAfter,
+  QueryDocumentSnapshot
 } from "firebase/firestore";
 import { 
   ArrowLeft,
@@ -39,6 +43,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { URLScrapeButton } from "@/components/url-scraper";
 import { useProfileEnrichment } from "@/components/search/hooks/useProfileEnrichment";
+import { normalizeTimestamp } from "@/lib/timestamp";
 
 interface Project {
   id: string;
@@ -73,6 +78,8 @@ interface SavedCandidate {
   };
 }
 
+const CANDIDATES_PER_PAGE = 20;
+
 const ProjectDetail = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -80,28 +87,16 @@ const ProjectDetail = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [candidates, setCandidates] = useState<SavedCandidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [enrichingCandidate, setEnrichingCandidate] = useState<string | null>(null);
-  
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+
   // Use profile enrichment hook
   const { enrichProfile, isLoading: isEnriching } = useProfileEnrichment();
-
-  const normalizeTimestamp = (value: any): string => {
-    if (!value) {
-      return new Date().toISOString();
-    }
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    if (value && typeof value.toDate === "function") {
-      return value.toDate().toISOString();
-    }
-    if (typeof value === "string") {
-      return value;
-    }
-    return new Date().toISOString();
-  };
 
   useEffect(() => {
     if (user && projectId) {
@@ -126,9 +121,16 @@ const ProjectDetail = () => {
     );
   }
 
-  const fetchProjectData = async () => {
+  const fetchProjectData = async (loadMore = false) => {
     try {
-      setLoading(true);
+      if (loadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        // Reset pagination state on fresh load
+        setLastDoc(null);
+        setHasMore(true);
+      }
 
       if (!projectId) {
         throw new Error("Project ID missing");
@@ -143,40 +145,96 @@ const ProjectDetail = () => {
         throw new Error("Firestore not initialized");
       }
 
-      const projectRef = doc(db, "projects", projectId);
-      const projectSnap = await getDoc(projectRef);
+      // Fetch project data only on initial load
+      let projectData: Project | null = project;
+      if (!loadMore) {
+        const projectRef = doc(db, "projects", projectId);
+        const projectSnap = await getDoc(projectRef);
 
-      if (!projectSnap.exists()) {
-        throw new Error("Project not found or access denied");
+        if (!projectSnap.exists()) {
+          throw new Error("Project not found or access denied");
+        }
+
+        projectData = projectSnap.data() as Project;
+
+        if (projectData.user_id && projectData.user_id !== user.uid) {
+          throw new Error("Access denied for this project");
+        }
+
+        // Get total count for display
+        const countQuery = query(
+          collection(db, "project_candidates"),
+          where("project_id", "==", projectId)
+        );
+        const countSnapshot = await getDocs(countQuery);
+        setTotalCount(countSnapshot.size);
       }
 
-      const projectData = projectSnap.data() as Project;
+      // Build paginated query for project_candidates
+      const queryConstraints = [
+        where("project_id", "==", projectId),
+        orderBy("created_at", "desc"),
+        limit(CANDIDATES_PER_PAGE)
+      ];
 
-      if (projectData.user_id && projectData.user_id !== user.uid) {
-        throw new Error("Access denied for this project");
+      if (loadMore && lastDoc) {
+        queryConstraints.push(startAfter(lastDoc));
       }
 
       const projectCandidatesQuery = query(
         collection(db, "project_candidates"),
-        where("project_id", "==", projectId),
-        orderBy("created_at", "desc")
+        ...queryConstraints
       );
 
       const projectCandidatesSnapshot = await getDocs(projectCandidatesQuery);
 
-      const candidateEntries = await Promise.all(
-        projectCandidatesSnapshot.docs.map(async (projectCandidateDoc) => {
-          const projectCandidateData = projectCandidateDoc.data() as any;
-          const candidateRef = doc(db, "saved_candidates", projectCandidateData.candidate_id);
-          const candidateSnap = await getDoc(candidateRef);
+      // Check if there are more results
+      setHasMore(projectCandidatesSnapshot.docs.length === CANDIDATES_PER_PAGE);
 
-          if (!candidateSnap.exists()) {
-            return null;
-          }
+      // Store last document for pagination cursor
+      if (projectCandidatesSnapshot.docs.length > 0) {
+        setLastDoc(projectCandidatesSnapshot.docs[projectCandidatesSnapshot.docs.length - 1]);
+      }
 
-          const candidateData = candidateSnap.data() as any;
+      // Build a map of candidate_id -> project metadata for efficient lookup
+      const projectCandidateMap = new Map<string, { docId: string; metadata: any }>();
+      const candidateIds: string[] = [];
 
-          const candidate: SavedCandidate = {
+      projectCandidatesSnapshot.docs.forEach((projectCandidateDoc) => {
+        const data = projectCandidateDoc.data();
+        if (data.candidate_id) {
+          candidateIds.push(data.candidate_id);
+          projectCandidateMap.set(data.candidate_id, {
+            docId: projectCandidateDoc.id,
+            metadata: {
+              added_at: normalizeTimestamp(data.added_at || data.created_at),
+              notes: data.notes || null,
+              tags: data.tags || []
+            }
+          });
+        }
+      });
+
+      // Batch fetch all candidates - Firestore IN query supports up to 30 items
+      const BATCH_SIZE = 30;
+      const candidateBatches: SavedCandidate[][] = [];
+
+      for (let i = 0; i < candidateIds.length; i += BATCH_SIZE) {
+        const batchIds = candidateIds.slice(i, i + BATCH_SIZE);
+        if (batchIds.length === 0) continue;
+
+        const candidatesQuery = query(
+          collection(db, "saved_candidates"),
+          where(documentId(), "in", batchIds)
+        );
+
+        const candidatesSnapshot = await getDocs(candidatesQuery);
+
+        const batchCandidates = candidatesSnapshot.docs.map((candidateSnap) => {
+          const candidateData = candidateSnap.data();
+          const projData = projectCandidateMap.get(candidateSnap.id);
+
+          return {
             id: candidateSnap.id,
             name: candidateData.name,
             linkedin_url: candidateData.linkedin_url,
@@ -189,38 +247,58 @@ const ProjectDetail = () => {
             profile_summary: candidateData.profile_summary ?? null,
             profile_completeness: candidateData.profile_completeness ?? null,
             created_at: normalizeTimestamp(candidateData.created_at),
-            projectCandidateId: projectCandidateDoc.id,
-            projectMetadata: {
-              added_at: normalizeTimestamp(projectCandidateData.added_at || projectCandidateData.created_at),
-              notes: projectCandidateData.notes || null,
-              tags: projectCandidateData.tags || []
-            }
-          };
+            projectCandidateId: projData?.docId,
+            projectMetadata: projData?.metadata
+          } as SavedCandidate;
+        });
 
-          return candidate;
-        })
-      );
+        candidateBatches.push(batchCandidates);
+      }
 
-      const filteredCandidates = candidateEntries.filter(
-        (candidate): candidate is SavedCandidate => candidate !== null
-      );
-
-      setProject({
-        id: projectSnap.id,
-        ...projectData,
-        candidates_count: filteredCandidates.length,
-        created_at: normalizeTimestamp(projectData.created_at),
-        updated_at: normalizeTimestamp(projectData.updated_at)
+      // Flatten and maintain original order based on project_candidates order
+      const candidatesMap = new Map<string, SavedCandidate>();
+      candidateBatches.flat().forEach(candidate => {
+        candidatesMap.set(candidate.id, candidate);
       });
 
-      setCandidates(filteredCandidates);
+      // Preserve original order from project_candidates query
+      const newCandidates = candidateIds
+        .map(id => candidatesMap.get(id))
+        .filter((candidate): candidate is SavedCandidate => candidate !== undefined);
+
+      if (loadMore) {
+        // Append to existing candidates
+        setCandidates(prev => [...prev, ...newCandidates]);
+      } else {
+        // Replace candidates
+        setCandidates(newCandidates);
+
+        if (projectData) {
+          setProject({
+            id: projectId,
+            ...projectData,
+            candidates_count: totalCount || newCandidates.length,
+            created_at: normalizeTimestamp(projectData.created_at),
+            updated_at: normalizeTimestamp(projectData.updated_at)
+          });
+        }
+      }
     } catch (error) {
       console.error("Error fetching project data:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to load project data: ${errorMessage}`);
-      navigate("/profile");
+      if (!loadMore) {
+        navigate("/profile");
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchProjectData(true);
     }
   };
 
@@ -333,7 +411,6 @@ const ProjectDetail = () => {
     );
   });
 
-  const totalCandidates = candidates.length;
   const projectCreatedDate = project?.created_at ? new Date(project.created_at) : null;
 
   if (loading) {
@@ -393,7 +470,7 @@ const ProjectDetail = () => {
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <Users className="w-3 h-3" />
-                  {(project.candidates_count ?? totalCandidates)} candidates
+                  {totalCount || candidates.length} candidates
                 </span>
               </div>
             </div>
@@ -594,6 +671,34 @@ const ProjectDetail = () => {
               </CardContent>
             </Card>
           ))
+        )}
+
+        {/* Load More Button */}
+        {hasMore && candidates.length > 0 && !searchTerm && (
+          <div className="flex justify-center mt-6">
+            <Button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              variant="outline"
+              className="min-w-[200px]"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>Load More Candidates</>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Pagination Status */}
+        {candidates.length > 0 && (
+          <div className="text-center text-sm text-gray-500 mt-4">
+            Showing {candidates.length} of {totalCount} candidates
+          </div>
         )}
       </div>
       </div>

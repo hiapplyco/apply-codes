@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -11,7 +12,8 @@ import {
   orderBy,
   addDoc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  documentId
 } from "firebase/firestore";
 import { uploadAvatar } from "@/lib/firebase-storage";
 import {
@@ -34,7 +36,12 @@ import {
   MoreVertical,
   Plus,
   Filter,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  Crown,
+  Zap,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format, startOfWeek, startOfMonth, formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { normalizeTimestamp } from "@/lib/timestamp";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,6 +116,8 @@ interface SearchHistoryItem {
 export default function Profile() {
   const { user, signOut, updateUser } = useNewAuth();
   const navigate = useNavigate();
+  const { subscription, createPortalSession, loading: subscriptionLoading } = useSubscription();
+  const [openingPortal, setOpeningPortal] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,19 +152,27 @@ export default function Profile() {
     "#EF4444", // Red
   ];
 
-  const normalizeTimestamp = (value: any): string => {
-    if (!value) return new Date().toISOString();
-    if (value instanceof Date) return value.toISOString();
-    if (value && typeof value.toDate === "function") return value.toDate().toISOString();
-    if (typeof value === "string") return value;
-    return new Date().toISOString();
-  };
-
   useEffect(() => {
-    fetchProfileData();
-    fetchUserStats();
-    fetchSearchHistory();
-    fetchProjects();
+    if (!user) return;
+
+    const loadAllData = async () => {
+      setLoading(true);
+      try {
+        // Run profile and projects fetch in parallel
+        await Promise.all([
+          fetchProfileData(),
+          fetchProjects()
+        ]);
+
+        // Fetch search history first, then compute stats from it (eliminates duplicate fetch)
+        const history = await fetchSearchHistory();
+        computeUserStats(history);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllData();
   }, [user]);
 
   const fetchProfileData = async () => {
@@ -189,7 +207,7 @@ export default function Profile() {
     }
   };
 
-  const fetchUserStats = async () => {
+  const computeUserStats = async (searchHistoryData: SearchHistoryItem[]) => {
     if (!user) return;
 
     try {
@@ -198,23 +216,14 @@ export default function Profile() {
         return;
       }
 
-      const [searchSnapshot, candidatesSnapshot, projectsSnapshot] = await Promise.all([
-        getDocs(query(collection(db, 'search_history'), where('user_id', '==', user.uid))),
+      // Only fetch candidates and projects count (search history is already loaded)
+      const [candidatesSnapshot, projectsSnapshot] = await Promise.all([
         getDocs(query(collection(db, 'saved_candidates'), where('user_id', '==', user.uid))),
         getDocs(query(collection(db, 'projects'), where('user_id', '==', user.uid)))
       ]);
 
-      const searchDocs = searchSnapshot.docs.map(doc => {
-        const data = doc.data() as any;
-        return {
-          id: doc.id,
-          ...data,
-          created_at: normalizeTimestamp(data.created_at)
-        };
-      });
-
-      const searchCount = searchDocs.length;
-      const favoritesCount = searchDocs.filter(search => search.is_favorite).length;
+      const searchCount = searchHistoryData.length;
+      const favoritesCount = searchHistoryData.filter(search => search.is_favorite).length;
 
       const weekStart = startOfWeek(new Date());
       const monthStart = startOfMonth(new Date());
@@ -222,10 +231,10 @@ export default function Profile() {
       const weekIso = weekStart.toISOString();
       const monthIso = monthStart.toISOString();
 
-      const weekSearches = searchDocs.filter(search => search.created_at >= weekIso).length;
-      const monthSearches = searchDocs.filter(search => search.created_at >= monthIso).length;
+      const weekSearches = searchHistoryData.filter(search => search.created_at >= weekIso).length;
+      const monthSearches = searchHistoryData.filter(search => search.created_at >= monthIso).length;
 
-      const recentActivity = searchDocs
+      const recentActivity = [...searchHistoryData]
         .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
         .slice(0, 5)
         .map(search => ({
@@ -245,20 +254,18 @@ export default function Profile() {
         recentActivity
       });
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('Error computing user stats:', error);
       toast.error("Failed to load statistics");
-    } finally {
-      setLoading(false);
     }
   };
 
-  const fetchSearchHistory = async () => {
-    if (!user) return;
+  const fetchSearchHistory = async (): Promise<SearchHistoryItem[]> => {
+    if (!user) return [];
 
     try {
       if (!db) {
         console.warn("[Profile] Firestore not initialized");
-        return;
+        return [];
       }
 
       const historyQuery = query(
@@ -268,45 +275,61 @@ export default function Profile() {
       );
 
       const snapshot = await getDocs(historyQuery);
-      const projectCache = new Map<string, Project>();
 
-      const history = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const data = docSnap.data() as any;
-          let project: Project | undefined;
+      // Collect all unique project_ids for batch fetching
+      const projectIds = new Set<string>();
+      const historyDocs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as any;
+        if (data.project_id) {
+          projectIds.add(data.project_id);
+        }
+        return {
+          docId: docSnap.id,
+          data
+        };
+      });
 
-          if (data.project_id) {
-            if (projectCache.has(data.project_id)) {
-              project = projectCache.get(data.project_id);
-            } else {
-              const projectRef = doc(db, 'projects', data.project_id);
-              const projectSnap = await getDoc(projectRef);
-              if (projectSnap.exists()) {
-                const projectData = projectSnap.data() as Project;
-                project = {
-                  id: projectSnap.id,
-                  ...projectData,
-                  created_at: normalizeTimestamp(projectData.created_at),
-                  updated_at: normalizeTimestamp(projectData.updated_at)
-                };
-                projectCache.set(data.project_id, project);
-              }
-            }
-          }
+      // Batch fetch all projects at once (instead of N+1 queries)
+      const projectMap = new Map<string, Project>();
+      const projectIdArray = Array.from(projectIds);
 
-          return {
-            id: docSnap.id,
-            ...(data as SearchHistoryItem),
-            created_at: normalizeTimestamp(data.created_at),
-            project
-          } as SearchHistoryItem;
-        })
-      );
+      if (projectIdArray.length > 0) {
+        // Firestore IN query supports up to 30 items
+        const BATCH_SIZE = 30;
+        for (let i = 0; i < projectIdArray.length; i += BATCH_SIZE) {
+          const batchIds = projectIdArray.slice(i, i + BATCH_SIZE);
+          const projectsQuery = query(
+            collection(db, 'projects'),
+            where(documentId(), 'in', batchIds)
+          );
+          const projectsSnapshot = await getDocs(projectsQuery);
+
+          projectsSnapshot.docs.forEach(projectSnap => {
+            const projectData = projectSnap.data() as Project;
+            projectMap.set(projectSnap.id, {
+              id: projectSnap.id,
+              ...projectData,
+              created_at: normalizeTimestamp(projectData.created_at),
+              updated_at: normalizeTimestamp(projectData.updated_at)
+            });
+          });
+        }
+      }
+
+      // Map history items with their projects
+      const history = historyDocs.map(({ docId, data }) => ({
+        id: docId,
+        ...(data as SearchHistoryItem),
+        created_at: normalizeTimestamp(data.created_at),
+        project: data.project_id ? projectMap.get(data.project_id) : undefined
+      } as SearchHistoryItem));
 
       setSearchHistory(history);
+      return history;
     } catch (error) {
       console.error('Error fetching search history:', error);
       toast.error("Failed to load search history");
+      return [];
     }
   };
 
@@ -547,6 +570,38 @@ export default function Profile() {
       console.error('Error signing out:', error);
       toast.error("Failed to sign out");
     }
+  };
+
+  const handleManageSubscription = async () => {
+    setOpeningPortal(true);
+    try {
+      const result = await createPortalSession();
+      if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Error opening billing portal:', error);
+      toast.error("Failed to open billing portal");
+    } finally {
+      setOpeningPortal(false);
+    }
+  };
+
+  const getTierBadge = () => {
+    if (!subscription) return null;
+    const tierConfig = {
+      free_trial: { label: 'Free Trial', color: 'bg-blue-100 text-blue-700', icon: Clock },
+      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700', icon: Crown },
+      enterprise: { label: 'Enterprise', color: 'bg-amber-100 text-amber-700', icon: Zap },
+    };
+    const config = tierConfig[subscription.tier] || tierConfig.free_trial;
+    const Icon = config.icon;
+    return (
+      <Badge className={`${config.color} border-0 font-semibold`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -937,32 +992,176 @@ export default function Profile() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
+          {/* Subscription Card */}
+          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5" />
+                    Subscription
+                  </CardTitle>
+                  <CardDescription>Manage your subscription and billing</CardDescription>
+                </div>
+                {getTierBadge()}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {subscriptionLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                </div>
+              ) : subscription ? (
+                <>
+                  {/* Current Plan Info */}
+                  <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="font-semibold text-lg">
+                          {subscription.tier === 'free_trial' ? 'Free Trial' :
+                           subscription.tier === 'pro' ? 'Pro Plan' : 'Enterprise Plan'}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {subscription.status === 'trialing' && subscription.timeRemaining && (
+                            <>
+                              {subscription.timeRemaining.days > 0
+                                ? `${subscription.timeRemaining.days} days remaining`
+                                : subscription.timeRemaining.hours > 0
+                                ? `${subscription.timeRemaining.hours} hours remaining`
+                                : 'Trial expires soon'}
+                            </>
+                          )}
+                          {subscription.status === 'active' && 'Active subscription'}
+                          {subscription.status === 'past_due' && 'Payment past due'}
+                          {subscription.status === 'canceled' && 'Subscription cancelled'}
+                          {subscription.status === 'expired' && 'Subscription expired'}
+                        </p>
+                      </div>
+                      {subscription.tier === 'free_trial' && (
+                        <Button
+                          onClick={() => navigate('/pricing')}
+                          className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Upgrade to Pro
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Trial Warning Banner */}
+                    {subscription.status === 'trialing' && subscription.timeRemaining && subscription.timeRemaining.days <= 3 && (
+                      <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3 mt-4">
+                        <p className="text-amber-800 text-sm font-medium">
+                          Your trial ends {subscription.timeRemaining.days === 0
+                            ? 'today'
+                            : `in ${subscription.timeRemaining.days} day${subscription.timeRemaining.days !== 1 ? 's' : ''}`}.
+                          Upgrade now to keep your access!
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Payment Failed Banner */}
+                    {subscription.status === 'past_due' && (
+                      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 mt-4">
+                        <p className="text-red-800 text-sm font-medium">
+                          Your payment failed. Please update your payment method to continue using Pro features.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Usage Meters */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Usage This Period</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm text-gray-600">Searches</span>
+                          <span className="text-sm font-medium">
+                            {subscription.usage.searches} / {subscription.limits.searches ?? 'Unlimited'}
+                          </span>
+                        </div>
+                        <Progress
+                          value={subscription.limits.searches
+                            ? (subscription.usage.searches / subscription.limits.searches) * 100
+                            : 0}
+                          className="h-2"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm text-gray-600">Contact Enrichments</span>
+                          <span className="text-sm font-medium">
+                            {subscription.usage.candidatesEnriched} / {subscription.limits.candidatesEnriched ?? 'Unlimited'}
+                          </span>
+                        </div>
+                        <Progress
+                          value={subscription.limits.candidatesEnriched
+                            ? (subscription.usage.candidatesEnriched / subscription.limits.candidatesEnriched) * 100
+                            : 0}
+                          className="h-2"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm text-gray-600">AI Calls</span>
+                          <span className="text-sm font-medium">
+                            {subscription.usage.aiCalls} / {subscription.limits.aiCalls ?? 'Unlimited'}
+                          </span>
+                        </div>
+                        <Progress
+                          value={subscription.limits.aiCalls
+                            ? (subscription.usage.aiCalls / subscription.limits.aiCalls) * 100
+                            : 0}
+                          className="h-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Manage Subscription Button */}
+                  {subscription.tier !== 'free_trial' && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        onClick={handleManageSubscription}
+                        disabled={openingPortal}
+                        variant="outline"
+                        className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                      >
+                        {openingPortal ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
+                        Manage Subscription
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Update payment method, view invoices, or cancel subscription
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">No subscription found</p>
+                  <Button
+                    onClick={() => navigate('/pricing')}
+                    className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
+                  >
+                    View Plans
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Account Settings Card */}
           <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
               <CardDescription>Manage your account preferences</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Usage & Limits</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">Monthly Searches</span>
-                      <span className="text-sm font-medium">{userStats?.searchesThisMonth || 0} / 500</span>
-                    </div>
-                    <Progress value={(userStats?.searchesThisMonth || 0) / 5} className="h-2" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-gray-600">Saved Candidates</span>
-                      <span className="text-sm font-medium">{userStats?.totalCandidatesSaved || 0} / 1000</span>
-                    </div>
-                    <Progress value={(userStats?.totalCandidatesSaved || 0) / 10} className="h-2" />
-                  </div>
-                </div>
-              </div>
-
               <div>
                 <h3 className="text-lg font-semibold mb-4">Danger Zone</h3>
                 <p className="text-sm text-gray-600 mb-4">

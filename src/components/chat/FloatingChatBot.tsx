@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface Message {
   id: string;
@@ -50,6 +52,8 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   className
 }) => {
   const { user } = useNewAuth();
+  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = useUsageLimit();
+  const { incrementUsage } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -100,6 +104,12 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    // Check AI calls usage limit
+    if (isLimitReached('ai_calls')) {
+      await checkAndExecute('ai_calls', async () => null);
+      return;
+    }
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -128,6 +138,9 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Increment AI calls usage after successful response
+      incrementUsage('ai_calls').catch(err => console.error('Failed to increment AI calls usage:', err));
     } catch (error) {
       console.error('Chat error:', error);
       toast.error('Failed to send message. Please try again.');
@@ -249,17 +262,19 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   // Chat trigger button
   if (!isOpen) {
     return (
-      <div
-        ref={dragRef}
-        className={cn(
-          "fixed z-50 w-14 h-14",
-          !customPosition && positionClasses[position],
-          isDragging && "cursor-grabbing",
-          className
-        )}
-        style={getPositionStyle()}
-      >
-        <Button
+      <>
+        <UsageLimitModalComponent />
+        <div
+          ref={dragRef}
+          className={cn(
+            "fixed z-50 w-14 h-14",
+            !customPosition && positionClasses[position],
+            isDragging && "cursor-grabbing",
+            className
+          )}
+          style={getPositionStyle()}
+        >
+          <Button
           onClick={() => setIsOpen(true)}
           onMouseDown={handleDragStart}
           onTouchStart={handleDragStart}
@@ -277,14 +292,17 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
           Drag to move • Click to open
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div
-      ref={chatRef}
-      className={cn(
-        "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
+    <>
+      <UsageLimitModalComponent />
+      <div
+        ref={chatRef}
+        className={cn(
+          "fixed z-50 bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-lg",
         "flex flex-col transition-all duration-300",
         !customPosition && positionClasses[position],
         isMinimized ? "w-80 h-16" : "w-96 h-[600px]",
@@ -429,6 +447,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         </>
       )}
     </div>
+    </>
   );
 };
 

@@ -12,7 +12,7 @@ import { useNewAuth } from '@/context/NewAuthContext';
 
 export interface SubscriptionDetails {
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'expired';
-  tier: 'free_trial' | 'starter' | 'professional' | 'enterprise';
+  tier: 'free_trial' | 'pro' | 'enterprise';  // Simplified 3-tier system
   trialStartDate: string;
   trialEndDate: string;
   currentPeriodEnd: string | null;
@@ -220,8 +220,8 @@ export const useSubscription = () => {
 
       const result = await createSession({
         priceId,
-        successUrl: `${window.location.origin}/dashboard?success=true`,
-        cancelUrl: `${window.location.origin}/pricing?canceled=true`,
+        successUrl: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/checkout/cancel`,
       });
 
       const data = result.data as { url: string };
@@ -241,7 +241,7 @@ export const useSubscription = () => {
       const createSession = httpsCallable(functions, 'createPortalSession');
 
       const result = await createSession({
-        returnUrl: `${window.location.origin}/account`,
+        returnUrl: `${window.location.origin}/profile`,
       });
 
       const data = result.data as { url: string };
@@ -327,14 +327,18 @@ export const useSubscription = () => {
   const isFeatureEnabled = (feature: string): boolean => {
     if (!subscription) return false;
 
+    // Simplified 3-tier feature access
     const featureMap: Record<string, boolean> = {
-      boolean_search: true, // Always enabled
-      candidate_enrichment: true, // Always enabled
-      ai_chat: true, // Always enabled
-      video_interviews: true, // Always enabled
-      bulk_operations: subscription.tier !== 'free_trial',
-      api_access: subscription.tier === 'professional' || subscription.tier === 'enterprise',
-      custom_integrations: subscription.tier === 'enterprise',
+      boolean_search: true,           // All tiers
+      candidate_enrichment: true,     // All tiers
+      ai_chat: true,                  // All tiers
+      video_interviews: true,         // All tiers
+      bulk_operations: subscription.tier !== 'free_trial',  // Pro & Enterprise
+      api_access: subscription.tier === 'pro' || subscription.tier === 'enterprise',  // Pro & Enterprise
+      advanced_analytics: subscription.tier === 'pro' || subscription.tier === 'enterprise',  // Pro & Enterprise
+      custom_integrations: subscription.tier === 'enterprise',  // Enterprise only
+      sso: subscription.tier === 'enterprise',  // Enterprise only
+      unlimited_team: subscription.tier === 'enterprise',  // Enterprise only
     };
 
     return featureMap[feature] || false;

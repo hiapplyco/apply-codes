@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ClarvidaProtectedRoute } from "@/components/clarvida/ClarvidaProtectedRoute";
 import MainLayout from "@/components/layout/MainLayout";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { TrialExpirationModal } from "@/components/subscription/TrialExpirationModal";
 
 // Import test utility for debugging
 import "./utils/testNymeria";
@@ -36,6 +37,8 @@ import Meeting from "@/pages/MeetingSimplified";
 import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Pricing from "@/pages/Pricing";
+import CheckoutSuccess from "@/pages/CheckoutSuccess";
+import CheckoutCancel from "@/pages/CheckoutCancel";
 import { DashboardAnalytics } from "@/pages/DashboardAnalytics";
 import { PageTracker } from "@/components/analytics/PageTracker";
 // Firebase test pages removed - migration complete
@@ -52,11 +55,14 @@ function App() {
               <Router>
                 <PageTracker />
                 <Toaster position="top-center" />
+                <TrialExpirationModal />
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<PageTransition><Index /></PageTransition>} />
                   <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
                   <Route path="/pricing" element={<PageTransition><Pricing /></PageTransition>} />
+                  <Route path="/checkout/success" element={<PageTransition><CheckoutSuccess /></PageTransition>} />
+                  <Route path="/checkout/cancel" element={<PageTransition><CheckoutCancel /></PageTransition>} />
                   <Route path="/integrations" element={<PageTransition><MarketingIntegrations /></PageTransition>} />
                   <Route path="/auth/callback" element={<PageTransition><AuthCallback /></PageTransition>} />
                   <Route path="/reset-password-request" element={<PageTransition><ResetPasswordRequest /></PageTransition>} />

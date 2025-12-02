@@ -1,62 +1,88 @@
-import { Check, X, Zap, Users, Building2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Check, X, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useNewAuth } from '@/context/NewAuthContext';
+
+// Stripe Price IDs
+const PRICE_IDS = {
+  pro_monthly: 'price_1SZkXQC3HTLX6YIcgrBDgC3m',
+  pro_yearly: 'price_1SZkYCC3HTLX6YIcjIPoUdMi',
+};
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useNewAuth();
+  const { createCheckoutSession, subscription } = useSubscription();
+  const [isYearly, setIsYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handleSelectPlan = async (tier: string) => {
+    if (tier === 'enterprise') {
+      window.location.href = 'mailto:sales@apply.codes?subject=Enterprise%20Plan%20Inquiry';
+      return;
+    }
+
+    if (tier === 'free_trial') {
+      navigate('/login');
+      return;
+    }
+
+    // For Pro plan, need to be authenticated
+    if (!isAuthenticated) {
+      navigate(`/login?plan=${tier}&billing=${isYearly ? 'yearly' : 'monthly'}`);
+      return;
+    }
+
+    // Create checkout session
+    setLoadingPlan(tier);
+    try {
+      const priceId = isYearly ? PRICE_IDS.pro_yearly : PRICE_IDS.pro_monthly;
+      const result = await createCheckoutSession(priceId);
+      if (result?.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   const tiers = [
     {
       name: 'Free Trial',
       price: 'Free',
+      yearlyPrice: 'Free',
       period: '7 days',
       description: 'Try all features with no commitment',
       features: [
-        { text: '10 AI searches', included: true },
+        { text: '10 AI-powered searches', included: true },
         { text: 'Boolean search generation', included: true },
         { text: 'LinkedIn & platform integrations', included: true },
         { text: '50 contact enrichments', included: true },
         { text: '100 AI chat interactions', included: true },
         { text: '5 video interviews', included: true },
-        { text: '3 projects', included: true },
-        { text: '1 team member (you)', included: true },
+        { text: '3 active projects', included: true },
         { text: 'Email support', included: true },
-        { text: 'Full feature access', included: true },
         { text: 'No credit card required', included: true },
-        { text: 'Upgrade anytime', included: true },
       ],
       popular: false,
-      cta: 'Start Free Trial',
+      cta: isAuthenticated ? 'Current Plan' : 'Start Free Trial',
       tier: 'free_trial',
+      disabled: isAuthenticated && subscription?.status !== 'expired',
     },
     {
-      name: 'Starter',
-      price: '$99',
+      name: 'Pro',
+      price: '$149',
+      yearlyPrice: '$1,490',
       period: 'month',
-      description: 'Perfect for individual recruiters',
-      features: [
-        { text: '100 AI searches per month', included: true },
-        { text: 'Boolean search generation', included: true },
-        { text: 'LinkedIn & platform integrations', included: true },
-        { text: '200 contact enrichments', included: true },
-        { text: '500 AI chat interactions', included: true },
-        { text: '10 video interviews', included: true },
-        { text: '10 projects', included: true },
-        { text: '3 team members', included: true },
-        { text: 'Email support', included: true },
-        { text: 'Search history & analytics', included: true },
-        { text: 'Bulk operations', included: false },
-        { text: 'API access', included: false },
-      ],
-      popular: false,
-      cta: 'Choose Starter',
-      tier: 'starter',
-    },
-    {
-      name: 'Professional',
-      price: '$299',
-      period: 'month',
-      description: 'Ideal for growing recruiting teams',
+      yearlyPeriod: 'year',
+      yearlySavings: 'Save $298/year',
+      description: 'Everything you need to hire faster',
       features: [
         { text: 'Unlimited AI searches', included: true },
         { text: 'Advanced boolean optimization', included: true },
@@ -64,25 +90,27 @@ const Pricing = () => {
         { text: 'Unlimited contact enrichments', included: true },
         { text: 'Unlimited AI chat interactions', included: true },
         { text: 'Unlimited video interviews', included: true },
-        { text: 'Unlimited projects', included: true },
-        { text: '10 team members', included: true },
-        { text: 'Priority support', included: true },
+        { text: '25 active projects', included: true },
+        { text: '5 team members', included: true },
+        { text: 'Priority email support', included: true },
         { text: 'Advanced analytics & reporting', included: true },
         { text: 'Bulk operations', included: true },
         { text: 'API access', included: true },
       ],
       popular: true,
-      cta: 'Choose Professional',
-      tier: 'professional',
+      cta: subscription?.tier === 'pro' ? 'Current Plan' : 'Upgrade to Pro',
+      tier: 'pro',
+      disabled: subscription?.tier === 'pro',
     },
     {
       name: 'Enterprise',
       price: 'Custom',
+      yearlyPrice: 'Custom',
       period: '',
       description: 'For large teams with advanced needs',
       features: [
-        { text: 'Everything in Professional', included: true },
-        { text: 'Custom usage limits', included: true },
+        { text: 'Everything in Pro', included: true },
+        { text: 'Unlimited projects', included: true },
         { text: 'Unlimited team members', included: true },
         { text: 'SSO & advanced security', included: true },
         { text: 'Custom integrations', included: true },
@@ -90,13 +118,12 @@ const Pricing = () => {
         { text: 'SLA guarantees', included: true },
         { text: 'Training & onboarding', included: true },
         { text: 'White-label options', included: true },
-        { text: 'On-premise deployment', included: true },
-        { text: 'Custom AI development', included: true },
-        { text: '24/7 phone support', included: true },
+        { text: '24/7 priority support', included: true },
       ],
       popular: false,
       cta: 'Contact Sales',
       tier: 'enterprise',
+      disabled: false,
     },
   ];
 
@@ -106,17 +133,20 @@ const Pricing = () => {
       <div className="bg-white border-b-4 border-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => navigate('/')}
+            >
               <div className="w-12 h-12 bg-purple-600 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
                 <span className="text-white font-black text-xl">A</span>
               </div>
               <h1 className="text-2xl font-black">Apply</h1>
             </div>
-            <Button 
-              onClick={() => navigate('/login')}
+            <Button
+              onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
               className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
             >
-              Sign In
+              {isAuthenticated ? 'Dashboard' : 'Sign In'}
             </Button>
           </div>
         </div>
@@ -130,23 +160,43 @@ const Pricing = () => {
             <span className="text-sm font-semibold text-purple-800">AI-POWERED RECRUITING</span>
           </div>
           <h1 className="text-5xl font-black mb-6">
-            Pricing that scales with your
-            <span className="block text-purple-600">recruiting success</span>
+            Simple, transparent
+            <span className="block text-purple-600">pricing</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Start with a 7-day free trial. No credit card required. 
-            Upgrade, downgrade, or cancel anytime.
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+            Start with a 7-day free trial. No credit card required.
+            Upgrade when you're ready.
           </p>
+
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4">
+            <span className={`text-lg font-semibold ${!isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
+              Monthly
+            </span>
+            <Switch
+              checked={isYearly}
+              onCheckedChange={setIsYearly}
+              className="data-[state=checked]:bg-purple-600"
+            />
+            <span className={`text-lg font-semibold ${isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
+              Yearly
+            </span>
+            {isYearly && (
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold border-2 border-green-300">
+                Save 17%
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {tiers.map((tier, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {tiers.map((tier) => (
             <div
               key={tier.name}
               className={`relative bg-white rounded-2xl border-4 border-black p-8 ${
                 tier.popular
-                  ? 'shadow-[8px_8px_0px_0px_rgba(147,51,234,1)] scale-105'
+                  ? 'shadow-[8px_8px_0px_0px_rgba(147,51,234,1)] scale-105 z-10'
                   : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
               } hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all`}
             >
@@ -161,11 +211,22 @@ const Pricing = () => {
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-black mb-2">{tier.name}</h3>
                 <div className="flex items-baseline justify-center gap-1">
-                  <span className="text-4xl font-black">{tier.price}</span>
+                  <span className="text-4xl font-black">
+                    {isYearly && tier.yearlyPrice !== 'Custom' && tier.yearlyPrice !== 'Free'
+                      ? tier.yearlyPrice
+                      : tier.price}
+                  </span>
                   {tier.period && (
-                    <span className="text-gray-600 font-medium">/{tier.period}</span>
+                    <span className="text-gray-600 font-medium">
+                      /{isYearly && tier.yearlyPeriod ? tier.yearlyPeriod : tier.period}
+                    </span>
                   )}
                 </div>
+                {isYearly && tier.yearlySavings && (
+                  <span className="inline-block mt-2 bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">
+                    {tier.yearlySavings}
+                  </span>
+                )}
                 <p className="text-gray-600 mt-2">{tier.description}</p>
               </div>
 
@@ -185,23 +246,19 @@ const Pricing = () => {
               </ul>
 
               <Button
-                onClick={() => {
-                  if (tier.name === 'Enterprise') {
-                    navigate('/contact');
-                  } else if (tier.name === 'Free Trial') {
-                    navigate('/login');
-                  } else {
-                    // For paid plans, redirect to login with plan parameter
-                    navigate(`/login?plan=${tier.tier}`);
-                  }
-                }}
-                className={`w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${
+                onClick={() => handleSelectPlan(tier.tier)}
+                disabled={tier.disabled || loadingPlan === tier.tier}
+                className={`w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   tier.popular
                     ? 'bg-purple-600 hover:bg-purple-700 text-white'
                     : 'bg-white hover:bg-gray-50 text-black'
                 }`}
               >
-                {tier.cta}
+                {loadingPlan === tier.tier ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  tier.cta
+                )}
               </Button>
             </div>
           ))}
@@ -220,19 +277,19 @@ const Pricing = () => {
             <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h3 className="font-bold text-lg mb-2">Can I change plans anytime?</h3>
               <p className="text-gray-600">
-                Yes! You can upgrade, downgrade, or cancel your subscription at any time from your account settings.
+                Yes! You can upgrade or cancel your subscription at any time from your account settings. Changes take effect immediately.
               </p>
             </div>
             <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h3 className="font-bold text-lg mb-2">How does contact enrichment work?</h3>
               <p className="text-gray-600">
-                Our AI agents automatically find and verify email addresses and phone numbers for candidates you're interested in.
+                Our AI agents automatically find and verify email addresses and phone numbers for candidates you're interested in using multiple data sources.
               </p>
             </div>
             <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <h3 className="font-bold text-lg mb-2">What platforms do you integrate with?</h3>
+              <h3 className="font-bold text-lg mb-2">What payment methods do you accept?</h3>
               <p className="text-gray-600">
-                We support LinkedIn, Indeed, Monster, Dice, and many other major job platforms. Enterprise plans can add custom integrations.
+                We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.
               </p>
             </div>
           </div>
@@ -246,7 +303,7 @@ const Pricing = () => {
           <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
             Join thousands of recruiters using AI to find perfect candidates faster
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <Button
               onClick={() => navigate('/login')}
               size="lg"

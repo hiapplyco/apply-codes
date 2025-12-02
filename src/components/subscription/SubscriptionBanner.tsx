@@ -20,11 +20,12 @@ export const SubscriptionBanner = () => {
 
   useEffect(() => {
     if (!loading && subscription) {
-      const shouldShow = 
-        subscription.status === 'trialing' || 
+      const shouldShow =
+        subscription.status === 'trialing' ||
         subscription.status === 'past_due' ||
+        subscription.status === 'expired' ||
         (subscription.status === 'canceled' && !subscription.cancelAtPeriodEnd);
-      
+
       setShowBanner(shouldShow);
     }
   }, [subscription, loading]);
@@ -152,11 +153,36 @@ export const SubscriptionBanner = () => {
     );
   };
 
+  const renderExpiredBanner = () => {
+    return (
+      <Alert className="border-2 border-red-500 bg-red-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <AlertDescription className="text-base font-medium text-red-800">
+              Your free trial has expired. Upgrade to Pro to continue using Apply.
+            </AlertDescription>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => navigate('/pricing')}
+          >
+            <Sparkles className="h-4 w-4 mr-1" />
+            Upgrade Now
+          </Button>
+        </div>
+      </Alert>
+    );
+  };
+
   switch (subscription.status) {
     case 'trialing':
       return renderTrialBanner();
     case 'past_due':
       return renderPastDueBanner();
+    case 'expired':
+      return renderExpiredBanner();
     case 'canceled':
       return subscription.cancelAtPeriodEnd ? null : renderCanceledBanner();
     default:

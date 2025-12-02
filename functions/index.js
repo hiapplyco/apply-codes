@@ -60,6 +60,7 @@ const { exchangeGoogleToken } = require('./exchange-google-token');
 const { refreshGoogleToken } = require('./refresh-google-token');
 const { revokeGoogleToken } = require('./revoke-google-token');
 const { processRecording } = require('./process-recording');
+const { checkTrialExpirations, sendSubscriptionNotification } = require('./subscription-emails');
 
 // Export functions
 exports.generateBooleanSearch = generateBooleanSearch;
@@ -124,6 +125,10 @@ exports.exchangeGoogleToken = exchangeGoogleToken;
 exports.refreshGoogleToken = refreshGoogleToken;
 exports.revokeGoogleToken = revokeGoogleToken;
 exports.processRecording = processRecording;
+
+// Subscription email notifications
+exports.checkTrialExpirations = checkTrialExpirations;
+exports.sendSubscriptionNotification = sendSubscriptionNotification;
 
 // Example: Health check function
 exports.healthCheck = functions.https.onRequest((req, res) => {

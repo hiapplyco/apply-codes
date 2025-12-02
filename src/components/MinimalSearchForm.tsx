@@ -26,6 +26,8 @@ import { BooleanGenerationAnimation } from '@/components/search/BooleanGeneratio
 import { trackBooleanGeneration, trackCandidateSearch, trackEvent } from '@/lib/analytics';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useUsageLimit } from '@/hooks/useUsageLimit';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface MinimalSearchFormProps {
   userId: string | null;
@@ -105,6 +107,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   // Get project context
   const { selectedProject } = useProjectContext();
+
+  // Usage limit hook for subscription enforcement
+  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = useUsageLimit();
+  // Get incrementUsage directly for manual usage tracking
+  const { incrementUsage } = useSubscription();
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [booleanString, setBooleanString] = useState('');
@@ -830,7 +837,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       return;
     }
 
+    // Check usage limit only for new searches (page 1), not for loading more results
     if (page === 1) {
+      if (isLimitReached('searches')) {
+        // The modal will be shown by the hook - we just need to trigger it
+        await checkAndExecute('searches', async () => null);
+        return;
+      }
       setIsSearching(true);
     } else {
       setIsLoadingMore(true);
@@ -880,6 +893,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           // Collapse Boolean container to focus on Search Results
           setBooleanCollapsed(true);
           toast.success(`Found ${total} results`);
+          // Increment search usage count for new searches only
+          incrementUsage('searches').catch(err => console.error('Failed to increment search usage:', err));
         } else {
           setSearchResults(prev => [...prev, ...mappedResults]);
           toast.success(`Loaded ${mappedResults.length} more results`);
@@ -984,12 +999,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
   };
 
   const getContactInfo = async (candidate: SearchResult, index: number) => {
+    // Check usage limit before enriching
+    if (isLimitReached('candidates_enriched')) {
+      await checkAndExecute('candidates_enriched', async () => null);
+      return;
+    }
+
     setLoadingContact(prev => new Set([...prev, index]));
     try {
       const contactData = await enrichProfile(candidate.link);
       if (contactData) {
         setContactInfo(prev => ({ ...prev, [index]: contactData }));
         toast.success('Contact information retrieved!');
+        // Increment enrichment usage count
+        incrementUsage('candidates_enriched').catch(err => console.error('Failed to increment enrichment usage:', err));
         // Track successful enrichment
         trackProfileEnrichment(candidate.link, true);
         trackEvent('Profile Enrichment', {
@@ -1311,6 +1334,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
   return (
     <TooltipProvider>
+      {/* Usage Limit Modal */}
+      <UsageLimitModalComponent />
       <div className="space-y-8 max-w-5xl mx-auto p-4">
         {/* Hero Section with Better Visual Hierarchy */}
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-100 shadow-sm">

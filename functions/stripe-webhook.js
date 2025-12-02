@@ -7,6 +7,9 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+// Import subscription email sender
+const { sendSubscriptionEmail } = require('./subscription-emails');
+
 // Get configuration from environment
 const stripeApiKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder';
@@ -105,6 +108,23 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             currentPeriodEnd: new Date(subscription.current_period_end * 1000),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
+
+          // Send welcome email
+          try {
+            const userRecord = await admin.auth().getUser(session.metadata.user_id);
+            if (userRecord.email) {
+              await sendSubscriptionEmail(
+                userRecord.email,
+                userRecord.displayName,
+                'subscriptionCreated',
+                { tier }
+              );
+              console.log(`Welcome email sent to ${userRecord.email}`);
+            }
+          } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Don't fail the webhook for email errors
+          }
         }
         break;
       }
@@ -157,6 +177,33 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             canceledAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
+
+          // Send subscription canceled email
+          try {
+            const userRecord = await admin.auth().getUser(customer.metadata.user_id);
+            if (userRecord.email) {
+              const endDate = subscription.current_period_end
+                ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })
+                : 'soon';
+
+              await sendSubscriptionEmail(
+                userRecord.email,
+                userRecord.displayName,
+                'subscriptionCanceled',
+                {
+                  endDate,
+                  reactivateUrl: 'https://hiapply.co/pricing'
+                }
+              );
+              console.log(`Subscription canceled email sent to ${userRecord.email}`);
+            }
+          } catch (emailError) {
+            console.error('Failed to send subscription canceled email:', emailError);
+          }
         }
         break;
       }
@@ -214,6 +261,22 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             failureReason: 'Payment failed',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
           });
+
+          // Send payment failed email
+          try {
+            const userRecord = await admin.auth().getUser(customer.metadata.user_id);
+            if (userRecord.email) {
+              await sendSubscriptionEmail(
+                userRecord.email,
+                userRecord.displayName,
+                'paymentFailed',
+                { updatePaymentUrl: 'https://hiapply.co/profile' }
+              );
+              console.log(`Payment failed email sent to ${userRecord.email}`);
+            }
+          } catch (emailError) {
+            console.error('Failed to send payment failed email:', emailError);
+          }
         }
         break;
       }
@@ -256,23 +319,24 @@ function mapStripeStatusToDb(stripeStatus) {
 }
 
 // Helper function to map price IDs to subscription tiers
+// Simplified 3-tier system: free_trial, pro, enterprise
 function mapPriceIdToTier(priceId) {
-  // These will need to be updated with actual Stripe price IDs
   const priceMap = {
-    'price_starter_monthly': 'starter',
-    'price_starter_yearly': 'starter',
-    'price_professional_monthly': 'professional',
-    'price_professional_yearly': 'professional',
-    'price_enterprise_monthly': 'enterprise',
-    'price_enterprise_yearly': 'enterprise',
+    // Pro Plan - $149/month or $1,788/year
+    'price_1SZkXQC3HTLX6YIcgrBDgC3m': 'pro',  // Pro Monthly
+    'price_1SZkYCC3HTLX6YIcjIPoUdMi': 'pro',  // Pro Yearly
+    // Enterprise - Custom pricing
+    // Add enterprise price IDs here when created
   };
 
-  return priceMap[priceId] || 'starter';
+  return priceMap[priceId] || 'pro';
 }
 
 // Helper function to get limits for a tier
+// Simplified 3-tier system: free_trial, pro, enterprise
 function getLimitsForTier(tier) {
   const limits = {
+    // Free Trial - 7 days, limited features
     free_trial: {
       searchesLimit: 10,
       candidatesEnrichedLimit: 50,
@@ -281,24 +345,18 @@ function getLimitsForTier(tier) {
       projectsLimit: 3,
       teamMembersLimit: 1,
     },
-    starter: {
-      searchesLimit: 100,
-      candidatesEnrichedLimit: 200,
-      aiCallsLimit: 500,
-      videoInterviewsLimit: 20,
-      projectsLimit: 10,
-      teamMembersLimit: 3,
+    // Pro Plan - $149/month, generous limits
+    pro: {
+      searchesLimit: null,      // Unlimited
+      candidatesEnrichedLimit: null,
+      aiCallsLimit: null,
+      videoInterviewsLimit: null,
+      projectsLimit: 25,
+      teamMembersLimit: 5,
     },
-    professional: {
-      searchesLimit: 500,
-      candidatesEnrichedLimit: 1000,
-      aiCallsLimit: 2000,
-      videoInterviewsLimit: 100,
-      projectsLimit: 50,
-      teamMembersLimit: 10,
-    },
+    // Enterprise - Custom, everything unlimited
     enterprise: {
-      searchesLimit: null, // Unlimited
+      searchesLimit: null,
       candidatesEnrichedLimit: null,
       aiCallsLimit: null,
       videoInterviewsLimit: null,
@@ -307,5 +365,5 @@ function getLimitsForTier(tier) {
     }
   };
 
-  return limits[tier] || limits.starter;
+  return limits[tier] || limits.free_trial;
 }
