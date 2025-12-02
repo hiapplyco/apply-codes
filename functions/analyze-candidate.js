@@ -47,7 +47,7 @@ exports.analyzeCandidate = functions
       }
 
       const genAI = new GoogleGenerativeAI(geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = `You are a technical recruiter. Analyze the candidate profile against the job requirements and return ONLY a JSON object.
 
