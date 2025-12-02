@@ -1785,7 +1785,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                         </Button>
                       </div>
                       <Button
-                        onClick={searchGoogle}
+                        onClick={() => searchGoogle()}
                         disabled={isSearching}
                         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 sm:ml-auto"
                       >
