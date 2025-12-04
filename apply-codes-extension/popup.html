@@ -14,9 +14,24 @@
       <div id="results"></div>
       <button id="evaluate-candidate">Evaluate Candidate on Page</button>
       <button id="get-contact-info">Get Contact Info</button>
-      <button id="generate-boolean">Generate Boolean Search</button>
-      <button id="generate-content">Generate Outreach Content</button>
+      <button id="show-generate-boolean">Generate Boolean Search</button>
+      <button id="show-generate-content">Generate Outreach Content</button>
       <button id="logout">Sign Out</button>
+    </div>
+    <div id="generate-boolean-view" style="display: none;">
+      <h3>Generate Boolean Search</h3>
+      <input type="text" id="job-title" placeholder="Job Title">
+      <textarea id="job-description" placeholder="Job Description..."></textarea>
+      <div id="boolean-results"></div>
+      <button id="generate-boolean-action">Generate</button>
+      <button id="back-to-main-from-boolean">Back</button>
+    </div>
+    <div id="generate-content-view" style="display: none;">
+      <h3>Generate Outreach Content</h3>
+      <textarea id="content-prompt" placeholder="Enter your prompt here... e.g., 'Write a follow-up email to a candidate who just completed a first-round interview.'"></textarea>
+      <div id="content-results"></div>
+      <button id="generate-content-action">Generate</button>
+      <button id="back-to-main-from-content">Back</button>
     </div>
     <script type="module" src="popup.js"></script>
     <!-- Firebase -->

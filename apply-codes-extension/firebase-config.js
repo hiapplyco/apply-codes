@@ -1,13 +1,9 @@
-// IMPORTANT: Replace the placeholder values below with your actual Firebase project configuration.
-// You can find this in your Firebase project settings.
-// Do not commit this file with your actual credentials.
-
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID"
+  apiKey: "AIzaSyB2gdbYSgiRI5n0ckjEIu_rtS4RzM3ezho",
+  authDomain: "applycodes-2683f.firebaseapp.com",
+  projectId: "applycodes-2683f",
+  storageBucket: "applycodes-2683f.firebasestorage.app",
+  messagingSenderId: "697220767333",
+  appId: "1:697220767333:web:5f1019152e66f489dbf08c",
+  measurementId: "G-Z78WVK7LDG"
 };

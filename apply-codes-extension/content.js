@@ -1,18 +1,48 @@
 // This script is injected into LinkedIn profile pages.
-// It extracts the candidate's name and profile information.
+// It extracts the candidate's name and profile information in a more structured way.
 
 function getCandidateProfile() {
   const nameElement = document.querySelector('h1');
-  const name = nameElement ? nameElement.innerText : 'Unknown';
+  const name = nameElement ? nameElement.innerText.trim() : 'Unknown';
 
-  // This is a very simplified way to get the profile text.
-  // A more robust solution would be to traverse the DOM and extract
-  // relevant sections like experience, education, skills, etc.
-  const profileText = document.body.innerText;
+  let headline = '';
+  if (nameElement) {
+    // The headline is usually in a div that's a sibling to the h1's parent
+    const headlineElement = nameElement.parentElement.nextElementSibling;
+    if (headlineElement) {
+      headline = headlineElement.innerText.trim();
+    }
+  }
+
+  const experienceSection = document.getElementById('experience');
+  const educationSection = document.getElementById('education');
+
+  let experienceText = '';
+  if (experienceSection) {
+    experienceText = Array.from(experienceSection.querySelectorAll('ul > li')).map(li => li.innerText).join('\\n\\n');
+  }
+
+  let educationText = '';
+  if (educationSection) {
+    educationText = Array.from(educationSection.querySelectorAll('ul > li')).map(li => li.innerText).join('\\n\\n');
+  }
+
+  const profile = `
+Name: ${name}
+Headline: ${headline}
+
+---
+Experience:
+${experienceText}
+
+---
+Education:
+${educationText}
+  `;
 
   return {
     name: name,
-    profile: profileText
+    profile: profile.trim()
   };
 }
 
@@ -20,10 +50,5 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === 'get-candidate-profile') {
     sendResponse(getCandidateProfile());
   }
+  return true; // Keep the message channel open for async response
 });
-
-// To handle the case where the script is injected after the page is loaded
-if (document.readyState === "complete") {
-  // The page is already loaded, do nothing special.
-  // The background script will message this script when it's time to act.
-}
