@@ -1384,16 +1384,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-                {/* Action Buttons */}
+                {/* Action Buttons - Neo-brutalist Design */}
                 <div className="flex flex-wrap gap-3 mb-6">
-                  {/* URL Scraper Button */}
+                  {/* URL Scraper Button - Blue */}
                   <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                            className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
                           >
                             <Link className="w-4 h-4" />
                             <span className="text-sm font-medium">Scrape</span>
@@ -1445,12 +1445,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                     </DialogContent>
                   </Dialog>
 
-                  {/* File Upload Button */}
+                  {/* File Upload Button - Green */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploadingFile}
                       >
@@ -1461,32 +1461,28 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Upload and extract content with Gemini AI</p>
-                      <p className="text-xs text-gray-500 mt-1">Best with PDFs and text files. DOCX processing temporarily limited.</p>
+                      <p>Upload and extract content locally</p>
+                      <p className="text-xs text-gray-500 mt-1">Supports PDF, DOCX, TXT, Excel, CSV, PPTX, and images</p>
                     </TooltipContent>
                   </Tooltip>
                   <input
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.csv,.pptx,.jpg,.jpeg,.png"
                     onChange={handleFileUpload}
                   />
 
-                  {/* Perplexity Search Button */}
+                  {/* Perplexity Search Button - Purple */}
                   <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                            className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
                           >
-                            <img
-                              src="/assets/perplexity.svg"
-                              alt="Perplexity"
-                              className="w-4 h-4"
-                            />
+                            <Sparkles className="w-4 h-4" />
                             <span className="text-sm font-medium">Search</span>
                           </Button>
                         </DialogTrigger>
@@ -1536,12 +1532,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
                     </DialogContent>
                   </Dialog>
 
-                  {/* Location Button */}
+                  {/* Location Button - Amber */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 h-10 px-4 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                        className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
                         onClick={() => setShowLocationDialog(true)}
                       >
                         <MapPin className="w-4 h-4" />
