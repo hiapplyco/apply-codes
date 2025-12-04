@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { functionBridge } from '@/lib/function-bridge';
+import { StepLoadingDialog, LOADING_PRESETS } from '@/components/ui/StepLoadingDialog';
 
 interface PerplexitySearchModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface PerplexitySearchModalProps {
 export function PerplexitySearchModal({ isOpen, onClose, onSearchResult, projectId }: PerplexitySearchModalProps) {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) {
@@ -20,22 +22,44 @@ export function PerplexitySearchModal({ isOpen, onClose, onSearchResult, project
     }
 
     setIsLoading(true);
+    setShowLoadingDialog(true);
+
     try {
       const data = await functionBridge.perplexitySearch({ query, projectId });
 
       const answer = data.choices?.[0]?.message?.content;
       onSearchResult({ text: answer, query, searchId: data.searchId });
-      toast.success('Search successful!');
+      toast.success('Search completed successfully!');
       onClose();
     } catch (error) {
       console.error('Perplexity search failed:', error);
-      toast.error('Failed to perform search. Please try again.');
+      toast.error('Search encountered an issue. Please try again.');
     } finally {
       setIsLoading(false);
+      setShowLoadingDialog(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !showLoadingDialog) return null;
+
+  // Show loading dialog when searching
+  if (showLoadingDialog) {
+    return (
+      <StepLoadingDialog
+        isOpen={showLoadingDialog}
+        onClose={() => {
+          setShowLoadingDialog(false);
+          setIsLoading(false);
+        }}
+        title={LOADING_PRESETS.perplexitySearch.title}
+        subtitle={`Searching for: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`}
+        steps={LOADING_PRESETS.perplexitySearch.steps}
+        isLoading={isLoading}
+        hasContext={!!projectId}
+        contextMessage="Using project context for better results"
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -49,8 +73,8 @@ export function PerplexitySearchModal({ isOpen, onClose, onSearchResult, project
           rows={4}
         />
         <div className="flex justify-end gap-3">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="px-4 py-2 bg-gray-200 text-black rounded-lg border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform"
           >
             Cancel

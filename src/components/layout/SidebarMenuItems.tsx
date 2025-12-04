@@ -1,6 +1,6 @@
 
 import { memo } from "react";
-import { Home, Video, Theater, PhoneCall, MessageSquare, Search, PlusCircle, LayoutDashboard, Clock, User, Users } from "lucide-react";
+import { Home, Video, Theater, PhoneCall, MessageSquare, Search, PlusCircle, LayoutDashboard, Clock, User, Users, UserSearch } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar/context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -21,15 +21,21 @@ export const menuItems: MenuItem[] = [
     icon: LayoutDashboard,
     tooltip: 'Access all recruitment tools and see your activity overview'
   },
-  { 
-    title: 'Sourcing', 
-    path: '/sourcing', 
+  {
+    title: 'Sourcing',
+    path: '/sourcing',
     icon: Search,
     tooltip: 'Generate powerful boolean searches to find perfect candidates across LinkedIn, Indeed, and other platforms'
   },
-  { 
-    title: 'Search History', 
-    path: '/search-history', 
+  {
+    title: 'Enrichment',
+    path: '/enrichment',
+    icon: UserSearch,
+    tooltip: 'Look up contact information for candidates using LinkedIn, email, or name'
+  },
+  {
+    title: 'Search History',
+    path: '/search-history',
     icon: Clock,
     tooltip: 'View your search database, saved candidates, and manage recruitment projects'
   },

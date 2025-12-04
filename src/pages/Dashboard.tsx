@@ -6,7 +6,8 @@ import {
   Users,
   Book,
   Search,
-  User
+  User,
+  UserSearch
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,13 @@ const Dashboard = () => {
       path: "/sourcing",
       gradient: "from-purple-500 to-violet-600",
       isPrimary: true
+    },
+    {
+      title: "Enrichment",
+      description: "Look up contact info by LinkedIn or email",
+      icon: UserSearch,
+      path: "/enrichment",
+      gradient: "from-teal-500 to-cyan-500"
     },
     {
       title: "Create Content",

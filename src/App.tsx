@@ -22,6 +22,7 @@ import { JobPostingPage } from "@/components/jobs/JobPostingPage";
 import { JobEditorPage } from "@/components/jobs/JobEditorPage";
 import ContentCreationPage from "@/pages/ContentCreationPage";
 import Sourcing from "@/pages/Sourcing";
+import ProfileEnrichment from "@/pages/ProfileEnrichment";
 import Chat from "@/pages/Chat";
 import Report from "@/pages/Report";
 import Clarvida from "@/pages/Clarvida";
@@ -92,6 +93,7 @@ function App() {
 
                       <Route path="/content-creation" element={<PageTransition><ContentCreationPage /></PageTransition>} />
                       <Route path="/sourcing" element={<PageTransition><Sourcing /></PageTransition>} />
+                      <Route path="/enrichment" element={<PageTransition><ProfileEnrichment /></PageTransition>} />
                       <Route path="/meeting" element={<PageTransition><Meeting /></PageTransition>} />
                       <Route path="/chat" element={<PageTransition><Chat /></PageTransition>} />
                       <Route path="/report/:jobId" element={<PageTransition><Report /></PageTransition>} />

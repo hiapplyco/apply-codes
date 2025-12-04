@@ -8,7 +8,8 @@ import { FirecrawlService } from '@/utils/FirecrawlService';
 import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchModal';
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
 import LocationModal from '@/components/LocationModal';
-import { functionBridge } from '@/lib/function-bridge';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
+import { useUnifiedAuth } from '@/context/UnifiedAuthContext';
 import { toast } from 'sonner';
 
 export interface ContextButtonsProps {
@@ -67,6 +68,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   compact = false
 }) => {
   const { selectedProject } = useProjectContext();
+  const { user } = useUnifiedAuth();
   const [isPerplexityModalOpen, setIsPerplexityModalOpen] = useState(false);
   const [isFirecrawlModalOpen, setIsFirecrawlModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -75,7 +77,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   // File input ref for upload functionality
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Universal context item storage function
+  // Universal context item storage function - uses direct Firestore writes
   const saveContextItem = useCallback(async (item: {
     type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input' | 'location_input';
     title: string;
@@ -86,19 +88,32 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     file_type?: string;
     metadata?: Record<string, any>;
   }) => {
-    try {
-      const data = await functionBridge.saveContextItem({
-        ...item,
-        project_id: selectedProject?.id || null, // Always store, project optional
-        tags: [context] // Add context as a tag
-      });
+    if (!user?.uid) {
+      console.warn('User not authenticated, skipping context item save');
+      return;
+    }
 
-      console.log('Context item saved successfully:', data);
+    try {
+      const insertResult = await firestoreClient
+        .from('context_items')
+        .insert({
+          ...item,
+          user_id: user.uid,
+          project_id: selectedProject?.id || null,
+          tags: [context],
+          created_at: new Date().toISOString()
+        });
+
+      if (insertResult.error) {
+        throw insertResult.error;
+      }
+
+      console.log('Context item saved successfully:', insertResult.data);
     } catch (error) {
       console.error('Error saving context item:', error);
       // Don't throw - graceful degradation
     }
-  }, [selectedProject, context]);
+  }, [user, selectedProject, context]);
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

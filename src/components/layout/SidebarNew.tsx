@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Book
+  Book,
+  UserSearch
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +28,7 @@ export type MenuItem = {
 const menuItems: MenuItem[] = [
   { title: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { title: 'Sourcing', path: '/sourcing', icon: Search },
+  { title: 'Enrichment', path: '/enrichment', icon: UserSearch },
   { title: 'Create Content', path: '/content-creation', icon: PlusCircle },
   { title: 'Meeting', path: '/meeting', icon: Users },
   { title: 'Chat', path: '/chat', icon: MessageSquare },

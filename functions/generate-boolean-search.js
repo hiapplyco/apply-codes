@@ -11,8 +11,8 @@ if (!admin.apps.length) {
 exports.generateBooleanSearch = onCall(
   {
     cors: true,
-    maxInstances: 10,
-    secrets: ['GEMINI_API_KEY']
+    maxInstances: 10
+    // Note: GEMINI_API_KEY is loaded from .env file, not Secret Manager
   },
   async (request) => {
     console.log('Generate boolean search function called');

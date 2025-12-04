@@ -283,7 +283,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       toast.success('Copied to clipboard');
       setTimeout(() => setCopiedField(null), 2000);
     } catch (err) {
-      toast.error('Failed to copy');
+      toast.error('Could not copy to clipboard');
     }
   };
 
@@ -363,7 +363,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       toast.success(finalProjectId ? 'Candidate saved to project' : 'Candidate saved successfully');
     } catch (error) {
       console.error('Error saving candidate:', error);
-      toast.error('Failed to save candidate');
+      toast.error('Could not save candidate. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -384,7 +384,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       }
     } catch (error) {
       console.error('Error enriching profile:', error);
-      toast.error('Failed to enrich profile');
+      toast.error('Could not retrieve contact information. Please try again.');
     } finally {
       setIsEnriching(false);
     }

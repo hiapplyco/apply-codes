@@ -344,6 +344,39 @@ export const useSubscription = () => {
     return featureMap[feature] || false;
   };
 
+  // Check if trial/subscription is expired
+  const isExpired = (): boolean => {
+    if (!subscription) return false;
+
+    // Explicit expired status
+    if (subscription.status === 'expired') return true;
+
+    // Trial ended (time ran out)
+    if (subscription.status === 'trialing' && subscription.tier === 'free_trial') {
+      const { days, hours, minutes } = subscription.timeRemaining;
+      if (days === 0 && hours === 0 && minutes === 0) return true;
+    }
+
+    return false;
+  };
+
+  // Check if user has active paid subscription
+  const hasActiveSubscription = (): boolean => {
+    if (!subscription) return false;
+
+    // Active paid subscription
+    if (subscription.status === 'active' && (subscription.tier === 'pro' || subscription.tier === 'enterprise')) {
+      return true;
+    }
+
+    // Still in valid trial period
+    if (subscription.status === 'trialing' && !isExpired()) {
+      return true;
+    }
+
+    return false;
+  };
+
   return {
     subscription,
     loading,
@@ -354,6 +387,8 @@ export const useSubscription = () => {
     incrementUsage,
     isFeatureEnabled,
     canUseFeature,
+    isExpired,
+    hasActiveSubscription,
     refetch: fetchSubscription,
   };
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useNewAuth } from '@/context/NewAuthContext';
 import {
@@ -10,44 +10,70 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Clock, Zap, AlertTriangle, Crown } from 'lucide-react';
+import { Clock, Zap, AlertTriangle, Crown, Lock } from 'lucide-react';
 
 export const TrialExpirationModal = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useNewAuth();
-  const { subscription, loading } = useSubscription();
+  const { subscription, loading, isExpired } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+
+  // Check if trial is truly expired (not just ending soon)
+  const trialFullyExpired = isExpired();
 
   useEffect(() => {
-    if (!user || loading || dismissed) return;
+    if (!user || loading) return;
+
+    // Don't show on pricing page - let them browse pricing
+    if (location.pathname === '/pricing') return;
 
     // Check if trial is expired
-    if (subscription?.status === 'expired' ||
-        (subscription?.status === 'trialing' && subscription?.timeRemaining?.days === 0 &&
-         subscription?.timeRemaining?.hours === 0 && subscription?.timeRemaining?.minutes === 0)) {
+    if (trialFullyExpired) {
       setIsOpen(true);
     }
-  }, [user, subscription, loading, dismissed]);
+  }, [user, subscription, loading, trialFullyExpired, location.pathname]);
 
   const handleUpgrade = () => {
     setIsOpen(false);
     navigate('/pricing');
   };
 
+  // Only allow dismissal if trial is NOT fully expired (just a warning)
   const handleDismiss = () => {
-    setDismissed(true);
-    setIsOpen(false);
+    // Can only dismiss if trial hasn't fully expired yet
+    if (!trialFullyExpired) {
+      setIsOpen(false);
+    }
   };
 
-  // Don't show on pricing page or if already pro/enterprise
+  // Handle dialog open change - prevent closing if expired
+  const handleOpenChange = (open: boolean) => {
+    // If trying to close and trial is expired, don't allow
+    if (!open && trialFullyExpired) {
+      return; // Block closing
+    }
+    setIsOpen(open);
+  };
+
+  // Don't show if already pro/enterprise
   if (subscription?.tier === 'pro' || subscription?.tier === 'enterprise') {
     return null;
   }
 
+  // Don't show if subscription status is active
+  if (subscription?.status === 'active') {
+    return null;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-md border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+        hideCloseButton={trialFullyExpired}
+        onPointerDownOutside={(e) => trialFullyExpired && e.preventDefault()}
+        onEscapeKeyDown={(e) => trialFullyExpired && e.preventDefault()}
+      >
         <DialogHeader>
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
@@ -109,18 +135,28 @@ export const TrialExpirationModal = () => {
             <Crown className="w-5 h-5 mr-2" />
             Upgrade to Pro
           </Button>
-          <Button
-            onClick={handleDismiss}
-            variant="ghost"
-            className="text-gray-500 hover:text-gray-700"
-          >
-            Maybe later
-          </Button>
+          {/* Only show "Maybe later" if trial hasn't fully expired yet */}
+          {!trialFullyExpired && (
+            <Button
+              onClick={handleDismiss}
+              variant="ghost"
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Maybe later
+            </Button>
+          )}
         </div>
 
-        <p className="text-xs text-center text-gray-400 mt-2">
-          Your data is safe. Upgrade anytime to pick up where you left off.
-        </p>
+        {trialFullyExpired ? (
+          <div className="flex items-center justify-center gap-2 text-xs text-center text-red-500 mt-2">
+            <Lock className="w-3 h-3" />
+            <span>Upgrade required to continue using Apply</span>
+          </div>
+        ) : (
+          <p className="text-xs text-center text-gray-400 mt-2">
+            Your data is safe. Upgrade anytime to pick up where you left off.
+          </p>
+        )}
       </DialogContent>
     </Dialog>
   );

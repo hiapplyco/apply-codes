@@ -61,6 +61,7 @@ const { refreshGoogleToken } = require('./refresh-google-token');
 const { revokeGoogleToken } = require('./revoke-google-token');
 const { processRecording } = require('./process-recording');
 const { checkTrialExpirations, sendSubscriptionNotification } = require('./subscription-emails');
+const { adminGrantPro, grantProAccess } = require('./admin-grant-pro');
 
 // Export functions
 exports.generateBooleanSearch = generateBooleanSearch;
@@ -129,6 +130,10 @@ exports.processRecording = processRecording;
 // Subscription email notifications
 exports.checkTrialExpirations = checkTrialExpirations;
 exports.sendSubscriptionNotification = sendSubscriptionNotification;
+
+// Admin functions
+exports.adminGrantPro = adminGrantPro;
+exports.grantProAccess = grantProAccess;
 
 // Example: Health check function
 exports.healthCheck = functions.https.onRequest((req, res) => {

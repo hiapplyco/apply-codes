@@ -23,7 +23,7 @@ import LocationModal from '@/components/LocationModal';
 import ProjectLocationService from '@/services/ProjectLocationService';
 import { useProjectContext } from '@/context/ProjectContext';
 import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
-import { trackBooleanGeneration, trackCandidateSearch, trackEvent } from '@/lib/analytics';
+import { trackBooleanGeneration, trackCandidateSearch, trackEvent, trackProfileEnrichment } from '@/lib/analytics';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
@@ -305,7 +305,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       return newContextItem;
     } catch (error) {
       console.error('Error saving context item:', error);
-      toast.error('Failed to save context item');
+      toast.error('Could not save context. Please try again.');
       return null;
     }
   }, [userId, selectedProject, selectedProjectId]);
@@ -790,7 +790,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
     } catch (error) {
       console.error('Error generating boolean search:', error);
-      toast.error('Failed to generate boolean search');
+      toast.error('Could not generate search query. Please try again.');
       trackBooleanGeneration(jobDescription, false);
     } finally {
       setIsGenerating(false);
@@ -825,7 +825,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
     } catch (error) {
       console.error('Error explaining boolean search:', error);
-      toast.error('Failed to explain boolean search');
+      toast.error('Could not explain search query. Please try again.');
     } finally {
       setIsExplaining(false);
     }
@@ -877,6 +877,11 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       setTotalSearchResults(total);
       setSearchPage(page);
 
+      // Track location context for analytics
+      const hasLocationContext = contextItems.some(item =>
+        item.type === 'manual_input' && item.metadata?.isLocationContext
+      );
+
       if (data.items) {
         // Map Google search results to SearchResult objects with location extraction
         const mappedResults: SearchResult[] = data.items.map((item: any) => ({
@@ -902,7 +907,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
         // Track successful search
         trackCandidateSearch('google_cse', mappedResults.length, {
-          hasLocation: selectedLocation ? 'yes' : 'no',
+          hasLocation: hasLocationContext ? 'yes' : 'no',
           booleanLength: booleanString.length.toString()
         });
       } else {
@@ -911,13 +916,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           toast.info('No results found');
         }
         trackCandidateSearch('google_cse', 0, {
-          hasLocation: selectedLocation ? 'yes' : 'no',
+          hasLocation: hasLocationContext ? 'yes' : 'no',
           booleanLength: booleanString.length.toString()
         });
       }
     } catch (error) {
       console.error('Error searching:', error);
-      toast.error('Search failed');
+      toast.error('Search encountered an issue. Please try again.');
     } finally {
       setIsSearching(false);
       setIsLoadingMore(false);
@@ -988,7 +993,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.success('Candidate analyzed successfully!');
     } catch (error) {
       console.error('Analysis failed:', error);
-      toast.error('Failed to analyze candidate');
+      toast.error('Could not analyze candidate. Please try again.');
     } finally {
       setLoadingAnalysis(prev => {
         const newSet = new Set(prev);
@@ -1021,12 +1026,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
           hasPhone: contactData.phone ? 1 : 0
         });
       } else {
-        toast.error('No contact information found');
+        toast.info('No contact information available for this profile');
         trackProfileEnrichment(candidate.link, false);
       }
     } catch (error) {
       console.error('Contact enrichment failed:', error);
-      toast.error('Failed to get contact information');
+      toast.error('Could not retrieve contact information. Please try again.');
       trackProfileEnrichment(candidate.link, false);
     } finally {
       setLoadingContact(prev => {
@@ -1145,7 +1150,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
 
     } catch (error) {
       console.error('Error saving candidate:', error);
-      toast.error('Failed to save candidate');
+      toast.error('Could not save candidate. Please try again.');
     } finally {
       setSavingCandidates(prev => {
         const newSet = new Set(prev);
@@ -1175,7 +1180,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.success('Context item removed');
     } catch (error) {
       console.error('Error removing context item:', error);
-      toast.error('Failed to remove context item');
+      toast.error('Could not remove item. Please try again.');
     }
   };
 
@@ -1207,7 +1212,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       toast.success('All context items cleared', { id: 'clear-all' });
     } catch (error) {
       console.error('Error clearing all context items:', error);
-      toast.error('Failed to clear all context items', { id: 'clear-all' });
+      toast.error('Could not clear items. Please try again.', { id: 'clear-all' });
     }
   };
 
@@ -1317,7 +1322,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       }
     } catch (error) {
       console.error('Error generating email templates:', error);
-      toast.error('Failed to generate email templates');
+      toast.error('Could not generate email templates. Please try again.');
     } finally {
       setIsGeneratingEmails(false);
     }

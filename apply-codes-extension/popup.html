@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Apply Codes Extension</title>
+    <link rel="stylesheet" type="text/css" href="popup.css">
+  </head>
+  <body>
+    <div id="login-view">
+      <h1>Apply Codes Extension</h1>
+      <button id="login-google">Sign in with Google</button>
+    </div>
+    <div id="main-view" style="display: none;">
+      <textarea id="job-requirements" placeholder="Paste job requirements here..."></textarea>
+      <div id="results"></div>
+      <button id="evaluate-candidate">Evaluate Candidate on Page</button>
+      <button id="get-contact-info">Get Contact Info</button>
+      <button id="generate-boolean">Generate Boolean Search</button>
+      <button id="generate-content">Generate Outreach Content</button>
+      <button id="logout">Sign Out</button>
+    </div>
+    <script type="module" src="popup.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js"></script>
+  </body>
+</html>

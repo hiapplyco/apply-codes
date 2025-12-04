@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useProjectContext } from '../../context/ProjectContext';
 import { auth, db } from "@/lib/firebase";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { StepLoadingDialog, LOADING_PRESETS } from '@/components/ui/StepLoadingDialog';
 
 interface URLScrapeModalProps {
   isOpen: boolean;
@@ -23,9 +24,10 @@ export function URLScrapeModal({
 }: URLScrapeModalProps) {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
   const [scrapedData, setScrapedData] = useState<{ text: string; rawContent: string } | null>(null);
   const { selectedProject } = useProjectContext();
-  
+
   // Use passed projectId or fall back to selected project
   const activeProjectId = projectId || selectedProject?.id;
 
@@ -37,28 +39,30 @@ export function URLScrapeModal({
 
     try {
       setIsLoading(true);
+      setShowLoadingDialog(true);
       const result = await FirecrawlService.crawlWebsite(url);
-      
+
       if (result.success && result.data) {
         setScrapedData({
           text: result.data.text,
           rawContent: result.data.rawContent
         });
-        
+
         // Save to project if we have one
         if (activeProjectId) {
           await saveToProject(result.data.text, result.data.rawContent);
         }
-        
+
         toast.success('Content scraped successfully!');
       } else {
         throw new Error(result.error || 'Failed to scrape content');
       }
     } catch (error) {
       console.error('Error scraping URL:', error);
-      toast.error('Failed to scrape URL. Please try again.');
+      toast.error('Could not scrape this URL. Please try again.');
     } finally {
       setIsLoading(false);
+      setShowLoadingDialog(false);
     }
   };
 
@@ -107,7 +111,26 @@ export function URLScrapeModal({
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !showLoadingDialog) return null;
+
+  // Show loading dialog when scraping
+  if (showLoadingDialog) {
+    return (
+      <StepLoadingDialog
+        isOpen={showLoadingDialog}
+        onClose={() => {
+          setShowLoadingDialog(false);
+          setIsLoading(false);
+        }}
+        title={LOADING_PRESETS.urlScrape.title}
+        subtitle={`Scraping: ${url.substring(0, 40)}${url.length > 40 ? '...' : ''}`}
+        steps={LOADING_PRESETS.urlScrape.steps}
+        isLoading={isLoading}
+        hasContext={!!activeProjectId}
+        contextMessage="Content will be saved to your project"
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
