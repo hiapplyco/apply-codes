@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const loginView = document.getElementById('login-view');
   const mainView = document.getElementById('main-view');
   const loginButton = document.getElementById('login-google');
-  const logoutButton = a-zA-Z0-9_-('logout');
+  const logoutButton = document.getElementById('logout');
 
   // Evaluate candidate elements
   const evaluateCandidateButton = document.getElementById('evaluate-candidate');
