@@ -234,18 +234,136 @@ class ClientDocumentProcessor {
     try {
       // Dynamic import to avoid bundling issues
       const Tesseract = await import('tesseract.js');
-      
+
       const { data: { text } } = await Tesseract.recognize(file, 'eng', {
         logger: (m: any) => console.log('OCR Progress:', m)
       });
-      
+
       return text.trim();
     } catch (error) {
       console.error('OCR extraction failed:', error);
       throw new Error('Failed to extract text from image. OCR processing failed.');
     }
   }
-  
+
+  /**
+   * Extract text from Excel files (xlsx, xls, csv) using xlsx library
+   */
+  static async extractTextFromExcel(file: File): Promise<string> {
+    try {
+      console.log('Starting Excel/CSV extraction with xlsx library');
+
+      // Dynamic import to avoid bundling issues
+      const XLSX = await import('xlsx');
+
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+      let fullText = '';
+      const sheetCount = workbook.SheetNames.length;
+
+      console.log(`Processing ${sheetCount} sheet(s) from workbook`);
+
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csvContent = XLSX.utils.sheet_to_csv(sheet);
+
+        // Add sheet header for multi-sheet workbooks
+        if (sheetCount > 1) {
+          fullText += `\n--- Sheet: ${sheetName} ---\n`;
+        }
+        fullText += csvContent + '\n\n';
+      }
+
+      const cleanedText = fullText
+        .replace(/\n{3,}/g, '\n\n') // Reduce excessive line breaks
+        .trim();
+
+      console.log('Excel/CSV extraction successful:', {
+        sheetCount,
+        originalLength: fullText.length,
+        cleanedLength: cleanedText.length,
+        hasContent: cleanedText.length > 0
+      });
+
+      if (cleanedText.length === 0) {
+        throw new Error('Spreadsheet contains no extractable data.');
+      }
+
+      return cleanedText;
+    } catch (error) {
+      console.error('Excel/CSV extraction failed:', error);
+      throw new Error('Failed to extract data from spreadsheet. The file may be corrupted or password-protected.');
+    }
+  }
+
+  /**
+   * Extract text from PowerPoint files (pptx) using JSZip
+   */
+  static async extractTextFromPPTX(file: File): Promise<string> {
+    try {
+      console.log('Starting PPTX extraction with JSZip');
+
+      // Dynamic import JSZip
+      const JSZip = await import('jszip');
+
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      const texts: string[] = [];
+
+      // Find all slide files (ppt/slides/slide1.xml, slide2.xml, etc.)
+      const slideFiles = Object.keys(zip.files)
+        .filter(name => name.match(/ppt\/slides\/slide\d+\.xml/))
+        .sort((a, b) => {
+          // Sort by slide number
+          const numA = parseInt(a.match(/slide(\d+)/)?.[1] || '0');
+          const numB = parseInt(b.match(/slide(\d+)/)?.[1] || '0');
+          return numA - numB;
+        });
+
+      console.log(`Found ${slideFiles.length} slides in presentation`);
+
+      for (let i = 0; i < slideFiles.length; i++) {
+        const slidePath = slideFiles[i];
+        try {
+          const xml = await zip.files[slidePath].async('string');
+
+          // Extract text from <a:t> tags (PowerPoint text elements)
+          const textMatches = xml.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+          const slideText = textMatches
+            .map(m => m.replace(/<\/?a:t>/g, ''))
+            .filter(t => t.trim().length > 0)
+            .join(' ');
+
+          if (slideText.trim()) {
+            texts.push(`--- Slide ${i + 1} ---\n${slideText}`);
+          }
+        } catch (slideError) {
+          console.warn(`Failed to extract text from slide ${i + 1}:`, slideError);
+        }
+      }
+
+      const fullText = texts.join('\n\n').trim();
+
+      console.log('PPTX extraction successful:', {
+        slideCount: slideFiles.length,
+        extractedSlides: texts.length,
+        textLength: fullText.length,
+        hasContent: fullText.length > 0
+      });
+
+      if (fullText.length === 0) {
+        throw new Error('PowerPoint contains no extractable text. It may only contain images or shapes.');
+      }
+
+      return fullText;
+    } catch (error) {
+      console.error('PPTX extraction failed:', error);
+      throw new Error('Failed to extract text from PowerPoint. The file may be corrupted or in an unsupported format.');
+    }
+  }
+
   /**
    * Main extraction method with DOCX optimization and smart routing
    * DOCX files are prioritized as the primary supported format
@@ -278,28 +396,49 @@ class ClientDocumentProcessor {
       console.log('📝 Processing plain text file');
       return await this.extractTextFromTXT(file);
     }
-    
-    // PRIORITY 4: Images with OCR (slower but comprehensive)
+
+    // PRIORITY 4: Excel/CSV files (spreadsheet data)
+    if (fileName.match(/\.(xlsx|xls|csv)$/i) ||
+        fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+        fileType === 'application/vnd.ms-excel' ||
+        fileType === 'text/csv') {
+      console.log('📊 Processing Excel/CSV with xlsx library');
+      return await this.extractTextFromExcel(file);
+    }
+
+    // PRIORITY 5: PowerPoint files (presentation text)
+    if (fileName.endsWith('.pptx') ||
+        fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+      console.log('📽️ Processing PowerPoint with JSZip');
+      return await this.extractTextFromPPTX(file);
+    }
+
+    // PRIORITY 6: Images with OCR (slower but comprehensive)
     if (fileName.match(/\.(jpg|jpeg|png)$/i) || fileType.startsWith('image/')) {
       console.log('🖼️ Processing image with OCR (this may take longer)');
       return await this.extractTextFromImage(file);
     }
-    
-    // Legacy DOC files - provide helpful guidance
+
+    // Legacy DOC/PPT files - provide helpful guidance
     if (fileName.endsWith('.doc') || fileType === 'application/msword') {
       throw new Error('Legacy .doc files are not supported. Please save your document as .docx format for optimal processing.');
     }
-    
+    if (fileName.endsWith('.ppt') || fileType === 'application/vnd.ms-powerpoint') {
+      throw new Error('Legacy .ppt files are not supported. Please save your presentation as .pptx format for optimal processing.');
+    }
+
     // Unsupported format with guidance
-    throw new Error(`Unsupported file type: "${fileName}". 
-    
+    throw new Error(`Unsupported file type: "${fileName}".
+
 Supported formats (in order of recommendation):
 • .docx (Word documents) - ⭐ BEST support with advanced formatting
 • .pdf (PDF documents) - ✅ Full text extraction
 • .txt (Plain text) - ✅ Direct reading
+• .xlsx, .xls, .csv (Spreadsheets) - ✅ Full data extraction
+• .pptx (PowerPoint) - ✅ Slide text extraction
 • .jpg, .jpeg, .png (Images) - ✅ OCR text extraction
 
-Tip: For best results, save Word documents as .docx format.`);
+Tip: For best results, save Office documents in modern formats (.docx, .xlsx, .pptx).`);
   }
 }
 
@@ -338,6 +477,14 @@ export class DocumentProcessor {
     'image/jpeg',
     'image/png',
     'image/jpg',
+    // Excel/CSV types
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-excel', // .xls
+    'text/csv', // .csv
+    'application/csv', // Alternative CSV MIME type
+    // PowerPoint types
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+    'application/vnd.ms-powerpoint', // .ppt (legacy - will show helpful error)
     // Common variations browsers might report
     'application/octet-stream', // Generic binary - often reported for .docx
     'application/zip', // Some browsers report .docx as zip
@@ -348,7 +495,10 @@ export class DocumentProcessor {
     'text/pdf' // Some systems report PDF as text
   ];
 
-  private static readonly SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.txt', '.jpg', '.jpeg', '.png'];
+  private static readonly SUPPORTED_EXTENSIONS = [
+    '.pdf', '.docx', '.doc', '.txt', '.jpg', '.jpeg', '.png',
+    '.xlsx', '.xls', '.csv', '.pptx'
+  ];
   private static readonly MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
   /**
@@ -401,9 +551,9 @@ export class DocumentProcessor {
 
     // Neither extension nor MIME type is valid
     console.error('Invalid file type:', { fileType: file.type, fileName });
-    return { 
-      valid: false, 
-      error: `Unsupported file: "${file.name}". Please use: PDF, DOC, DOCX, TXT, JPG, or PNG files` 
+    return {
+      valid: false,
+      error: `Unsupported file: "${file.name}". Please use: PDF, DOCX, TXT, XLSX, CSV, PPTX, JPG, or PNG files`
     };
   }
 
@@ -639,6 +789,10 @@ export class DocumentProcessor {
           onProgress?.('🎯 Processing DOCX locally with optimized engine...');
         } else if (fileName.endsWith('.pdf')) {
           onProgress?.('📄 Processing PDF locally with enhanced extraction...');
+        } else if (fileName.match(/\.(xlsx|xls|csv)$/)) {
+          onProgress?.('📊 Processing spreadsheet locally...');
+        } else if (fileName.endsWith('.pptx')) {
+          onProgress?.('📽️ Processing PowerPoint locally...');
         } else {
           onProgress?.('Processing file locally...');
         }

@@ -151,7 +151,7 @@ exports.generateBooleanSearch = onCall(
       // Organize context items by type for better prompt structure
       const perplexityItems = contextItems?.filter(item => item.type === 'perplexity' || item.type === 'perplexity_search') || [];
       const firecrawlItems = contextItems?.filter(item => item.type === 'url_scrape') || [];
-      const documentItems = contextItems?.filter(item => item.type === 'document_upload') || [];
+      const documentItems = contextItems?.filter(item => item.type === 'file_upload' || item.type === 'document_upload') || [];
       const manualItems = contextItems?.filter(item => item.type === 'manual_input' && !item.metadata?.isLocationContext) || [];
 
       const prompt = `You are an expert LinkedIn recruiter with 10+ years of experience creating sophisticated boolean search strings. Generate a comprehensive, precise LinkedIn boolean search string using ALL available context.
