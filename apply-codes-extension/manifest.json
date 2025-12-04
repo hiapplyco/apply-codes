@@ -33,6 +33,6 @@
     "128": "images/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; script-src-elem 'self' https://www.gstatic.com;"
+    "extension_pages": "script-src 'self' https://www.gstatic.com; object-src 'self'; script-src-elem 'self' https://www.gstatic.com;"
   }
 }
