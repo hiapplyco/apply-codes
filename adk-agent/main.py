@@ -17,7 +17,6 @@ from firebase_admin import auth, credentials, firestore
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
-from google import genai
 from google.genai import types
 
 from app.agent import create_agent, get_agent_capabilities
@@ -26,23 +25,17 @@ from app.config import settings
 from app.tools.base import set_user_context, clear_user_context
 
 
-# Initialize Google AI API with API key
-def init_google_ai():
-    """Initialize Google AI with API key from environment."""
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    if api_key:
-        genai.configure(api_key=api_key)
-        print(f"Google AI configured with API key")
-    else:
-        print("WARNING: GOOGLE_API_KEY not set, will try Application Default Credentials")
-
-
 # Initialize Firebase Admin
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown."""
-    # Startup
-    init_google_ai()
+    # Startup - ADK reads GOOGLE_API_KEY from environment automatically
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if api_key:
+        print(f"GOOGLE_API_KEY is set (length: {len(api_key)})")
+    else:
+        print("WARNING: GOOGLE_API_KEY not set")
+
     if not firebase_admin._apps:
         cred = credentials.ApplicationDefault()
         firebase_admin.initialize_app(cred)
