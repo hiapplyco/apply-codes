@@ -220,7 +220,11 @@ async def chat(
         try:
             # Create session service and runner
             session_service = InMemorySessionService()
-            runner = Runner(agent=agent, session_service=session_service)
+            runner = Runner(
+                agent=agent,
+                app_name="apply_codes_agent",
+                session_service=session_service
+            )
 
             # Create or get session
             session = await session_service.create_session(
@@ -316,7 +320,11 @@ async def chat_stream(
 
             # Create session service and runner
             session_service = InMemorySessionService()
-            runner = Runner(agent=agent, session_service=session_service)
+            runner = Runner(
+                agent=agent,
+                app_name="apply_codes_agent",
+                session_service=session_service
+            )
 
             # Create or get session
             session = await session_service.create_session(
