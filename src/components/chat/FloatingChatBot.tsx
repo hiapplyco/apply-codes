@@ -181,6 +181,11 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         throw new Error(`HTTP error ${response.status}`);
       }
 
+      // Check if streaming is supported
+      if (!response.body) {
+        throw new Error('Streaming not supported');
+      }
+
       // Create streaming assistant message
       const assistantMsgId = `assistant-${Date.now()}`;
       setMessages(prev => [...prev, {
@@ -191,21 +196,28 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         isStreaming: true
       }]);
 
-      // Read streaming response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      // Read streaming response using text reader for better compatibility
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
       let fullContent = '';
       const toolCalls: Array<{ name: string; status: string }> = [];
+      let buffer = '';
 
-      if (reader) {
+      try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
+          // Decode the chunk and add to buffer
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process complete SSE messages from buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
           for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+
             try {
               const data = JSON.parse(line.slice(6));
 
@@ -263,10 +275,12 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
                   break;
               }
             } catch (parseError) {
-              console.warn('Failed to parse SSE data:', parseError);
+              console.warn('Failed to parse SSE data:', line, parseError);
             }
           }
         }
+      } finally {
+        reader.releaseLock();
       }
 
       // Increment AI calls usage after successful response
