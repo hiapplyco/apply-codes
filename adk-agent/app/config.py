@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # Firebase Configuration
-    firebase_project_id: str = "apply-codes-prod"
-    firebase_functions_url: str = "https://us-central1-apply-codes-prod.cloudfunctions.net"
+    firebase_project_id: str = "applycodes-2683f"
+    firebase_functions_url: str = "https://us-central1-applycodes-2683f.cloudfunctions.net"
 
     # Google AI Configuration
     google_api_key: str = ""
