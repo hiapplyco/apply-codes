@@ -1,13 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Apply Codes Extension",
-  "version": "0.1.0",
-  "description": "A lite extension of the Apply-codes web platform to help with recruiting tasks.",
+  "name": "Apply Codes - AI Recruiting Tools",
+  "version": "1.3.0",
+  "description": "AI recruiting sidebar for LinkedIn. Multi-source contact enrichment (PDL, Hunter.io, Nymeria), AI chat assistant, candidate evaluation & outreach.",
+  "oauth2": {
+    "client_id": "697220767333-a3te2aq05l86ngntdb3e6r6pa3vlvdts.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "httpshttps://*.linkedin.com/*"
+    "identity"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://*.cloudfunctions.net/*",
+    "https://identitytoolkit.googleapis.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -15,11 +24,11 @@
       "16": "images/icon16.png",
       "48": "images/icon48.png",
       "128": "images/icon128.png"
-    }
+    },
+    "default_title": "Apply Codes - AI Recruiting Tools"
   },
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -32,7 +41,5 @@
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' www.gstatic.com; object-src 'self'; script-src-elem 'self' www.gstatic.com;"
-  }
+  "minimum_chrome_version": "102"
 }

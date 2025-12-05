@@ -1,42 +1,181 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8">
     <title>Apply Codes Extension</title>
+    <!-- Inter font from Google Fonts (matching web app) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="popup.css">
   </head>
   <body>
-    <div id="login-view">
-      <h1>Apply Codes Extension</h1>
-      <button id="login-google">Sign in with Google</button>
+    <!-- Onboarding View -->
+    <div id="onboarding-view" style="display: none;" role="main" aria-labelledby="onboarding-title">
+      <div class="onboarding-content">
+        <h1 id="onboarding-title">Welcome to Apply Codes</h1>
+        <p class="onboarding-subtitle">AI-powered recruiting tools for LinkedIn</p>
+
+        <div class="onboarding-steps">
+          <div class="onboarding-step">
+            <span class="step-number" aria-hidden="true">1</span>
+            <div class="step-content">
+              <strong>Navigate to LinkedIn</strong>
+              <p>Open any LinkedIn profile page</p>
+            </div>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-number" aria-hidden="true">2</span>
+            <div class="step-content">
+              <strong>Evaluate Candidates</strong>
+              <p>Get AI-powered analysis against job requirements</p>
+            </div>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-number" aria-hidden="true">3</span>
+            <div class="step-content">
+              <strong>Generate Searches</strong>
+              <p>Create boolean search strings and outreach content</p>
+            </div>
+          </div>
+        </div>
+
+        <button id="start-onboarding" aria-label="Get started with Apply Codes">Get Started</button>
+      </div>
     </div>
-    <div id="main-view" style="display: none;">
-      <textarea id="job-requirements" placeholder="Paste job requirements here..."></textarea>
-      <div id="results"></div>
-      <button id="evaluate-candidate">Evaluate Candidate on Page</button>
-      <button id="get-contact-info">Get Contact Info</button>
-      <button id="show-generate-boolean">Generate Boolean Search</button>
-      <button id="show-generate-content">Generate Outreach Content</button>
-      <button id="logout">Sign Out</button>
+
+    <!-- Login View -->
+    <div id="login-view" style="display: none;" role="main" aria-labelledby="login-title">
+      <h1 id="login-title">Apply Codes Extension</h1>
+      <p class="subtitle" id="login-subtitle">Recruiting tools for LinkedIn</p>
+      <button id="login-google" aria-describedby="login-subtitle">Sign in with Google</button>
+      <button id="skip-login" class="secondary" aria-label="Continue without signing in">Continue as Guest</button>
     </div>
-    <div id="generate-boolean-view" style="display: none;">
-      <h3>Generate Boolean Search</h3>
-      <input type="text" id="job-title" placeholder="Job Title">
-      <textarea id="job-description" placeholder="Job Description..."></textarea>
-      <div id="boolean-results"></div>
-      <button id="generate-boolean-action">Generate</button>
-      <button id="back-to-main-from-boolean">Back</button>
+
+    <!-- Main View -->
+    <div id="main-view" style="display: none;" role="main" aria-labelledby="main-heading">
+      <h2 id="main-heading" class="visually-hidden">Main Dashboard</h2>
+
+      <!-- User Info Bar -->
+      <div class="user-info" role="banner">
+        <span id="user-email" aria-label="Logged in user"></span>
+        <button id="logout" class="small-btn" aria-label="Sign out of your account">Sign Out</button>
+      </div>
+
+      <!-- Project Selector -->
+      <div class="project-selector" id="project-selector-container">
+        <label for="project-select" class="project-label">Project Context</label>
+        <select id="project-select" aria-label="Select project for context">
+          <option value="">No Project Selected</option>
+        </select>
+        <p class="project-hint" id="project-hint">Select a project to save candidates and use project context</p>
+      </div>
+
+      <!-- Job Requirements -->
+      <label for="job-requirements" class="visually-hidden">Job Requirements</label>
+      <textarea id="job-requirements"
+                placeholder="Paste job requirements here..."
+                aria-label="Job requirements for candidate evaluation"></textarea>
+
+      <!-- Results Area -->
+      <div id="results" role="region" aria-live="polite" aria-label="Results"></div>
+
+      <!-- Main Action Buttons -->
+      <button id="evaluate-candidate" aria-label="Analyze the LinkedIn profile currently displayed">
+        Evaluate Candidate on Page
+      </button>
+      <button id="get-contact-info" aria-label="Find contact information for current profile">
+        Get Contact Info
+      </button>
+
+      <!-- Feature Buttons Grid -->
+      <div class="feature-grid">
+        <button id="show-generate-boolean" class="feature-btn" aria-label="Open boolean search generator">
+          <span class="feature-icon">🔍</span>
+          <span>Boolean Search</span>
+        </button>
+        <button id="show-perplexity-search" class="feature-btn" aria-label="Search the internet with AI">
+          <span class="feature-icon">🌐</span>
+          <span>Web Search</span>
+        </button>
+        <button id="show-url-scrape" class="feature-btn" aria-label="Import content from URL">
+          <span class="feature-icon">📄</span>
+          <span>Import URL</span>
+        </button>
+        <button id="show-generate-content" class="feature-btn" aria-label="Open content generator">
+          <span class="feature-icon">✉️</span>
+          <span>Outreach</span>
+        </button>
+      </div>
     </div>
-    <div id="generate-content-view" style="display: none;">
-      <h3>Generate Outreach Content</h3>
-      <textarea id="content-prompt" placeholder="Enter your prompt here... e.g., 'Write a follow-up email to a candidate who just completed a first-round interview.'"></textarea>
-      <div id="content-results"></div>
-      <button id="generate-content-action">Generate</button>
-      <button id="back-to-main-from-content">Back</button>
+
+    <!-- Boolean Search View -->
+    <div id="generate-boolean-view" style="display: none;" role="main" aria-labelledby="boolean-heading">
+      <h3 id="boolean-heading">Generate Boolean Search</h3>
+
+      <label for="job-title" class="visually-hidden">Job Title</label>
+      <input type="text" id="job-title" placeholder="Job Title (e.g., Senior Software Engineer)" aria-required="true">
+
+      <label for="job-description" class="visually-hidden">Job Description</label>
+      <textarea id="job-description" placeholder="Job Description..." aria-label="Job description details"></textarea>
+
+      <div id="boolean-results" role="region" aria-live="polite" aria-label="Boolean search results"></div>
+
+      <button id="generate-boolean-action" aria-label="Generate boolean search string">Generate</button>
+      <button id="back-to-main-from-boolean" class="secondary" aria-label="Return to main menu">Back</button>
     </div>
-    <script type="module" src="popup.js"></script>
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions.js"></script>
+
+    <!-- Perplexity Search View -->
+    <div id="perplexity-search-view" style="display: none;" role="main" aria-labelledby="perplexity-heading">
+      <h3 id="perplexity-heading">Search the Internet</h3>
+      <p class="view-subtitle">AI-powered web search for recruiting research</p>
+
+      <label for="perplexity-query" class="visually-hidden">Search Query</label>
+      <textarea id="perplexity-query"
+                placeholder="Enter your search query... e.g., 'What is the average salary for a Senior Software Engineer in San Francisco?'"
+                aria-required="true"
+                aria-label="Enter your search query"></textarea>
+
+      <div id="perplexity-results" role="region" aria-live="polite" aria-label="Search results"></div>
+
+      <button id="perplexity-search-action" aria-label="Search the internet">Search</button>
+      <button id="back-to-main-from-perplexity" class="secondary" aria-label="Return to main menu">Back</button>
+    </div>
+
+    <!-- URL Scrape View -->
+    <div id="url-scrape-view" style="display: none;" role="main" aria-labelledby="url-scrape-heading">
+      <h3 id="url-scrape-heading">Import from URL</h3>
+      <p class="view-subtitle">Scrape job postings, company pages, or any web content</p>
+
+      <label for="scrape-url" class="visually-hidden">URL to Scrape</label>
+      <input type="url" id="scrape-url"
+             placeholder="https://example.com/job-posting"
+             aria-required="true"
+             aria-label="Enter URL to scrape">
+
+      <div id="scrape-results" role="region" aria-live="polite" aria-label="Scraped content"></div>
+
+      <button id="scrape-url-action" aria-label="Scrape content from URL">Scrape Content</button>
+      <button id="use-scraped-content" class="secondary" style="display: none;" aria-label="Use scraped content as job requirements">Use as Job Requirements</button>
+      <button id="back-to-main-from-scrape" class="secondary" aria-label="Return to main menu">Back</button>
+    </div>
+
+    <!-- Content Generation View -->
+    <div id="generate-content-view" style="display: none;" role="main" aria-labelledby="content-heading">
+      <h3 id="content-heading">Generate Outreach Content</h3>
+
+      <label for="content-prompt" class="visually-hidden">Content Prompt</label>
+      <textarea id="content-prompt"
+                placeholder="Enter your prompt here... e.g., 'Write a follow-up email to a candidate who just completed a first-round interview.'"
+                aria-required="true"
+                aria-label="Describe the content you want to generate"></textarea>
+
+      <div id="content-results" role="region" aria-live="polite" aria-label="Generated content"></div>
+
+      <button id="generate-content-action" aria-label="Generate content">Generate</button>
+      <button id="back-to-main-from-content" class="secondary" aria-label="Return to main menu">Back</button>
+    </div>
+
+    <script src="popup.js"></script>
   </body>
 </html>

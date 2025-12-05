@@ -19,8 +19,8 @@ exports.analyzeCandidate = functions
       );
     }
 
-    const { candidate, requirements } = data;
-    console.log('Received analysis request for:', candidate?.name || 'Unknown candidate');
+    const { candidate, requirements, projectId } = data;
+    console.log('Received analysis request for:', candidate?.name || 'Unknown candidate', 'projectId:', projectId);
 
     // Validate input
     if (!candidate || !requirements) {
@@ -108,25 +108,35 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
         };
       }
 
-      // Optionally log to Firestore
+      // Save full analysis to Firestore
+      let analysisId = null;
       try {
         const db = admin.firestore();
-        await db.collection('candidate_analysis').add({
+        const docRef = await db.collection('candidate_analysis').add({
           candidate_name: candidate.name,
+          candidate_profile: candidate.profile,
           user_id: context.auth.uid,
+          project_id: projectId || null,
           match_score: analysisData.match_score,
           recommendation: analysisData.recommendation,
-          analyzed_at: admin.firestore.Timestamp.now()
+          strengths: analysisData.strengths || [],
+          concerns: analysisData.concerns || [],
+          summary: analysisData.summary || '',
+          requirements_summary: requirements?.substring(0, 500) || '',
+          analyzed_at: admin.firestore.Timestamp.now(),
+          source: 'extension'
         });
-        console.log('Analysis logged to Firestore');
+        analysisId = docRef.id;
+        console.log('Analysis saved to Firestore with ID:', analysisId);
       } catch (logError) {
-        console.error('Error logging analysis:', logError);
+        console.error('Error saving analysis:', logError);
         // Don't fail the main operation
       }
 
       return {
         success: true,
         ...analysisData,
+        analysisId: analysisId,
         timestamp: new Date().toISOString()
       };
 
