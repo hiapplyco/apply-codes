@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import {
   MessageCircle,
   X,
@@ -11,27 +12,37 @@ import {
   Loader2,
   Minimize2,
   Maximize2,
-  Move
+  Move,
+  Wrench,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNewAuth } from '@/context/NewAuthContext';
-import { functionBridge } from '@/lib/function-bridge';
+import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useProjectContext } from '@/context/ProjectContext';
+import { useAgentSession } from '@/hooks/useAgentSession';
+import { useToolConfirmation, HIGH_IMPACT_TOOLS } from '@/components/chat/ToolConfirmationDialog';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isStreaming?: boolean;
   metadata?: {
     searchCount?: number;
     projectCount?: number;
     candidateCount?: number;
+    toolCalls?: Array<{ name: string; status: string }>;
+    model?: string;
+    complexity?: string;
   };
 }
 
@@ -52,6 +63,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   className
 }) => {
   const { user } = useNewAuth();
+  const { selectedProjectId, selectedProject } = useProjectContext();
   const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = useUsageLimit();
   const { incrementUsage } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
@@ -60,8 +72,18 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [contextContent, setContextContent] = useState<string>('');
+  const [activeTools, setActiveTools] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // ADK Agent session management
+  const { sessionId, setSessionId, setModelInfo, resetSession } = useAgentSession({
+    projectId: selectedProjectId
+  });
+
+  // Tool confirmation
+  const { ConfirmationDialog, requestConfirmation, isToolHighImpact } = useToolConfirmation();
 
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
@@ -118,30 +140,144 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsLoading(true);
+    setActiveTools([]);
+
+    // Create abort controller for cancellation
+    abortControllerRef.current = new AbortController();
 
     try {
-      const data = await functionBridge.chatAssistant({
-        message: input,
-        context: contextContent,
-        pageContext: context,
-        userId: user?.id
+      // Get Firebase ID token
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Prepare history for context
+      const history = messages.slice(-10).map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      // Call ADK agent streaming API
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          session_id: sessionId,
+          project_id: selectedProjectId,
+          history
+        }),
+        signal: abortControllerRef.current.signal
       });
 
-      const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: data.response || 'Sorry, I encountered an issue. Please try again.',
-        timestamp: new Date(),
-        metadata: data.metadata
-      };
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Create streaming assistant message
+      const assistantMsgId = `assistant-${Date.now()}`;
+      setMessages(prev => [...prev, {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        isStreaming: true
+      }]);
+
+      // Read streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      const toolCalls: Array<{ name: string; status: string }> = [];
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
+
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              switch (data.type) {
+                case 'session':
+                  // Update session info
+                  if (data.session_id) setSessionId(data.session_id);
+                  if (data.model) setModelInfo(data.model, data.complexity || null);
+                  break;
+
+                case 'token':
+                  // Append token to message
+                  fullContent += data.content;
+                  setMessages(prev => prev.map(m =>
+                    m.id === assistantMsgId
+                      ? { ...m, content: fullContent }
+                      : m
+                  ));
+                  break;
+
+                case 'tool_call':
+                  // Show tool execution
+                  if (data.tool?.name) {
+                    setActiveTools(prev => [...prev, data.tool.name]);
+                    toolCalls.push({ name: data.tool.name, status: 'executing' });
+                    toast.info(`Using tool: ${data.tool.name.replace(/_/g, ' ')}`);
+                  }
+                  break;
+
+                case 'tool_result':
+                  // Update tool status
+                  setActiveTools(prev => prev.filter(t => t !== data.tool));
+                  const toolIndex = toolCalls.findIndex(t => t.name === data.tool);
+                  if (toolIndex >= 0) {
+                    toolCalls[toolIndex].status = 'complete';
+                  }
+                  break;
+
+                case 'error':
+                  toast.error(`Error: ${data.message}`);
+                  break;
+
+                case 'done':
+                  // Finalize message
+                  setMessages(prev => prev.map(m =>
+                    m.id === assistantMsgId
+                      ? {
+                          ...m,
+                          content: fullContent || 'Response completed.',
+                          isStreaming: false,
+                          metadata: { toolCalls }
+                        }
+                      : m
+                  ));
+                  break;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE data:', parseError);
+            }
+          }
+        }
+      }
 
       // Increment AI calls usage after successful response
       incrementUsage('ai_calls').catch(err => console.error('Failed to increment AI calls usage:', err));
+
     } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('Request was cancelled');
+        return;
+      }
+
       console.error('Chat error:', error);
       toast.error('Failed to send message. Please try again.');
 
@@ -155,7 +291,25 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setActiveTools([]);
+      abortControllerRef.current = null;
     }
+  };
+
+  // Cancel ongoing request
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+      setActiveTools([]);
+    }
+  };
+
+  // Reset conversation
+  const handleReset = () => {
+    setMessages([]);
+    resetSession();
+    toast.success('Conversation reset');
   };
 
   const handleContextContent = async (content: any) => {
@@ -299,6 +453,7 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
   return (
     <>
       <UsageLimitModalComponent />
+      {ConfirmationDialog}
       <div
         ref={chatRef}
         className={cn(
@@ -320,9 +475,24 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-purple-600" />
           <span className="font-semibold text-purple-900">AI Assistant</span>
+          {selectedProject && (
+            <Badge variant="outline" className="text-xs bg-purple-50">
+              {selectedProject.name}
+            </Badge>
+          )}
           {isDragging && <Move className="w-4 h-4 text-purple-600 animate-pulse" />}
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="w-8 h-8 p-0 hover:bg-purple-100"
+            type="button"
+            title="Reset conversation"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -410,8 +580,31 @@ export const FloatingChatBot: React.FC<FloatingChatBotProps> = ({
                   <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
                     <Bot className="w-3 h-3 text-purple-600" />
                   </div>
-                  <div className="bg-gray-100 rounded-lg px-3 py-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="bg-gray-100 rounded-lg px-3 py-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                      <span className="text-xs text-gray-500">
+                        {activeTools.length > 0 ? 'Processing...' : 'Thinking...'}
+                      </span>
+                    </div>
+                    {activeTools.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {activeTools.map((tool, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs flex items-center gap-1">
+                            <Wrench className="w-3 h-3" />
+                            {tool.replace(/_/g, ' ')}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancel}
+                      className="text-xs h-6 px-2 text-gray-500 hover:text-red-500"
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               )}
