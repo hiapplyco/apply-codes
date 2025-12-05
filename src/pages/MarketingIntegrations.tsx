@@ -1015,7 +1015,7 @@ export default function IntegrationsEnhanced() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
               <img
-                src="/assets/apply-logo.svg"
+                src="/assets/apply-logo-gradient.png"
                 alt="Apply - AI-Powered Recruitment Platform"
                 className="h-10 w-auto"
               />

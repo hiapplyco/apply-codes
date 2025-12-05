@@ -25,7 +25,7 @@ const LandingPage = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <img
-                src="/assets/apply-logo.svg"
+                src="/assets/apply-logo-gradient.png"
                 alt="Apply"
                 className="h-10 w-auto"
               />
@@ -46,7 +46,7 @@ const LandingPage = () => {
         {/* Hero Section */}
         <div className="text-center mb-4 sm:mb-6">
           <img
-            src="/assets/apply-logo.svg"
+            src="/assets/apply-logo-gradient.png"
             alt="Apply"
             className="h-24 sm:h-32 w-auto mx-auto mb-2 sm:mb-4"
           />

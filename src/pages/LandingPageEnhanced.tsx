@@ -199,7 +199,7 @@ const LandingPageEnhanced = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <img
-                  src="/assets/apply-logo.svg"
+                  src="/assets/apply-logo-gradient.png"
                   alt="Apply - AI-Powered Recruitment Platform"
                   className="h-10 w-auto"
                 />
@@ -468,7 +468,7 @@ const LandingPageEnhanced = () => {
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="flex items-center gap-4 mb-4 md:mb-0">
                 <img
-                  src="/assets/apply-logo.svg"
+                  src="/assets/apply-logo-gradient.png"
                   alt="Apply"
                   className="h-6 w-auto brightness-0 invert"
                 />

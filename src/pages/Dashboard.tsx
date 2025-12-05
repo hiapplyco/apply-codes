@@ -76,7 +76,7 @@ const Dashboard = () => {
           {/* Compact Hero Section */}
           <div className="mb-6 text-center">
             <img
-              src="/assets/apply-logo.svg"
+              src="/assets/apply-logo-gradient.png"
               alt="Apply Logo"
               className="h-12 object-contain mx-auto mb-3"
             />
