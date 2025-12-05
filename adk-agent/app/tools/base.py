@@ -38,16 +38,21 @@ async def call_firebase_function(
     retries: int = 3,
 ) -> dict[str, Any]:
     """
-    Call a Firebase Cloud Function with authentication and retry logic.
+    Call a Firebase Callable Function with authentication and retry logic.
+
+    Firebase Callable Functions expect a specific format:
+    - POST to https://REGION-PROJECT.cloudfunctions.net/FUNCTION_NAME
+    - Body: {"data": YOUR_PAYLOAD}
+    - Response: {"result": RESPONSE_DATA}
 
     Args:
         function_name: Name of the Firebase function to call
-        payload: JSON payload to send
+        payload: JSON payload to send (will be wrapped in {"data": ...})
         timeout: Request timeout in seconds
         retries: Number of retry attempts
 
     Returns:
-        JSON response from the function
+        JSON response from the function (unwrapped from {"result": ...})
 
     Raises:
         httpx.HTTPStatusError: If the request fails after all retries
@@ -63,18 +68,25 @@ async def call_firebase_function(
 
     url = f"{settings.firebase_functions_url}/{function_name}"
 
+    # Wrap payload in "data" for Firebase Callable functions
+    callable_payload = {"data": payload}
+
     last_error = None
     for attempt in range(retries):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     url,
-                    json=payload,
+                    json=callable_payload,
                     headers=headers,
                     timeout=timeout
                 )
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                # Unwrap the "result" from Firebase Callable response
+                if isinstance(result, dict) and "result" in result:
+                    return result["result"]
+                return result
 
         except httpx.TimeoutException as e:
             last_error = e
