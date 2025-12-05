@@ -1,8 +1,9 @@
 steps:
-  # Build the container image
+  # Build the container image (no-cache to ensure fresh build)
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--no-cache'
       - '-t'
       - 'gcr.io/$PROJECT_ID/adk-agent:latest'
       - '.'
@@ -39,6 +40,8 @@ steps:
       - '80'
       - '--set-env-vars'
       - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,FIREBASE_PROJECT_ID=$PROJECT_ID'
+      - '--set-secrets'
+      - 'GOOGLE_API_KEY=GEMINI_API_KEY:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/adk-agent:latest'
