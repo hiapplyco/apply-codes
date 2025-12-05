@@ -482,10 +482,10 @@ async def health():
 @app.get("/api/tools")
 async def list_tools():
     """List all available tools."""
-    from app.tools import ALL_TOOLS
+    from app.tools import _RAW_TOOLS
 
     tools = []
-    for tool_func in ALL_TOOLS:
+    for tool_func in _RAW_TOOLS:
         tool_info = {
             "name": tool_func.__name__,
             "description": tool_func.__doc__.split("\n")[1].strip() if tool_func.__doc__ else "",

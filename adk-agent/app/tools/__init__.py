@@ -1,5 +1,7 @@
 """ADK Tool definitions for Apply-Codes recruitment platform."""
 
+from google.adk.tools import FunctionTool
+
 from app.tools.search_tools import (
     generate_boolean_search,
     explain_boolean_search,
@@ -68,8 +70,8 @@ from app.tools.integration_tools import (
     share_google_doc,
 )
 
-# All tools list for agent registration
-ALL_TOOLS = [
+# Raw function list for metadata extraction
+_RAW_TOOLS = [
     # Search & Discovery
     generate_boolean_search,
     explain_boolean_search,
@@ -122,4 +124,7 @@ ALL_TOOLS = [
     share_google_doc,
 ]
 
-__all__ = ["ALL_TOOLS"] + [tool.__name__ for tool in ALL_TOOLS]
+# Wrap all functions with FunctionTool for ADK agent registration
+ALL_TOOLS = [FunctionTool(func=tool) for tool in _RAW_TOOLS]
+
+__all__ = ["ALL_TOOLS", "_RAW_TOOLS"] + [tool.__name__ for tool in _RAW_TOOLS]
