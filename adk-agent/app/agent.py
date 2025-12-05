@@ -1,6 +1,6 @@
 """ADK Agent configuration for Apply-Codes recruitment platform."""
 
-from google.adk.agents import Agent
+from google.adk.agents import LlmAgent
 from typing import Optional
 
 from app.tools import ALL_TOOLS
@@ -113,7 +113,7 @@ def create_agent(
     project_context: Optional[dict] = None,
     complexity: QueryComplexity = QueryComplexity.MODERATE,
     user_context: Optional[dict] = None,
-) -> Agent:
+) -> LlmAgent:
     """
     Create an ADK agent with all recruitment tools.
 
@@ -155,7 +155,7 @@ def create_agent(
 Use this context to provide relevant assistance. Reference the project name and requirements when appropriate.
 """
 
-    return Agent(
+    return LlmAgent(
         name="apply_codes_agent",
         model=model,
         description="Expert AI recruitment assistant with access to sourcing, outreach, interview, and analytics tools",
