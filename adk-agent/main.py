@@ -17,6 +17,7 @@ from firebase_admin import auth, credentials, firestore
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.genai import types
 
 from app.agent import create_agent, get_agent_capabilities
 from app.model_router import classify_query_complexity, get_complexity_description
@@ -237,12 +238,25 @@ async def chat(
             response_content = ""
             tool_calls = []
 
+            # Create Content object for the message
+            user_content = types.Content(
+                role='user',
+                parts=[types.Part(text=request.message)]
+            )
+
             async for event in runner.run_async(
-                session=session,
-                new_message=request.message
+                user_id=user_id,
+                session_id=session_id,
+                new_message=user_content
             ):
+                # Extract text from event content
                 if hasattr(event, 'content') and event.content:
-                    response_content += event.content
+                    if hasattr(event.content, 'parts') and event.content.parts:
+                        for part in event.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                response_content += part.text
+                    elif isinstance(event.content, str):
+                        response_content += event.content
                 if hasattr(event, 'tool_call') and event.tool_call:
                     tool_calls.append({
                         "name": event.tool_call.name,
@@ -341,14 +355,31 @@ async def chat_stream(
             full_response = ""
             tool_calls = []
 
+            # Create Content object for the message
+            user_content = types.Content(
+                role='user',
+                parts=[types.Part(text=request.message)]
+            )
+
             try:
                 async for event in runner.run_async(
-                    session=session,
-                    new_message=request.message
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=user_content
                 ):
+                    # Extract text from event content
                     if hasattr(event, 'content') and event.content:
-                        full_response += event.content
-                        yield f"data: {json.dumps({'type': 'token', 'content': event.content})}\n\n"
+                        text_content = ""
+                        if hasattr(event.content, 'parts') and event.content.parts:
+                            for part in event.content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    text_content += part.text
+                        elif isinstance(event.content, str):
+                            text_content = event.content
+
+                        if text_content:
+                            full_response += text_content
+                            yield f"data: {json.dumps({'type': 'token', 'content': text_content})}\n\n"
 
                     if hasattr(event, 'tool_call') and event.tool_call:
                         tool_info = {
