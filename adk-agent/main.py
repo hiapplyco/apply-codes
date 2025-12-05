@@ -228,8 +228,9 @@ async def chat(
 
             # Create or get session
             session = await session_service.create_session(
-                session_id=session_id,
-                user_id=user_id
+                app_name="apply_codes_agent",
+                user_id=user_id,
+                session_id=session_id
             )
 
             # Run the agent
@@ -328,8 +329,9 @@ async def chat_stream(
 
             # Create or get session
             session = await session_service.create_session(
-                session_id=session_id,
-                user_id=user_id
+                app_name="apply_codes_agent",
+                user_id=user_id,
+                session_id=session_id
             )
 
             # Send session info
