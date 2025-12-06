@@ -124,7 +124,10 @@ _RAW_TOOLS = [
     share_google_doc,
 ]
 
+# Create a map from function name to function object for easy execution
+TOOL_MAP = {tool.__name__: tool for tool in _RAW_TOOLS}
+
 # Wrap all functions with FunctionTool for ADK agent registration
 ALL_TOOLS = [FunctionTool(func=tool) for tool in _RAW_TOOLS]
 
-__all__ = ["ALL_TOOLS", "_RAW_TOOLS"] + [tool.__name__ for tool in _RAW_TOOLS]
+__all__ = ["ALL_TOOLS", "TOOL_MAP", "_RAW_TOOLS"] + [tool.__name__ for tool in _RAW_TOOLS]

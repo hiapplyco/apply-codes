@@ -147,7 +147,7 @@ async def linkedin_search(
     if years_experience:
         payload["yearsExperience"] = years_experience
 
-    return await call_firebase_function("linkedinSearch", payload)
+    return await call_firebase_function("linkedinSearch", payload, is_callable=False)
 async def pdl_search(
     query: str,
     location: Optional[str] = None,

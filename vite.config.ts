@@ -24,6 +24,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       timeout: 5000,
     },
+    proxy: {
+      '/api': {
+        target: 'https://adk-agent-697220767333.us-central1.run.app',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   plugins: [
     react(),

@@ -78,7 +78,7 @@ const Dashboard = () => {
             <img
               src="/assets/apply-logo-gradient.png"
               alt="Apply Logo"
-              className="h-12 object-contain mx-auto mb-3"
+              className="h-24 object-contain mx-auto mb-3"
             />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               AI-Powered Talent Acquisition

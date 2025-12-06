@@ -77,20 +77,20 @@ export const SidebarNew = memo(({
     <div className="h-screen flex flex-col bg-white shadow-lg overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
+        <div className={cn("flex items-center", isOpen ? "flex-1 justify-center" : "")}>
           <img
             src="/assets/apply-logo-gradient.png"
             alt="Apply"
             className={cn(
-              "transition-all duration-300",
-              isOpen ? "h-10 w-auto" : "h-8 w-auto object-contain"
+              "transition-all duration-300 object-contain",
+              isOpen ? "h-12" : "h-10"
             )}
           />
         </div>
         {!isMobile && (
           <button
             onClick={onToggle}
-            className="hidden lg:flex items-center justify-center h-9 w-9 rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm"
+            className="hidden lg:flex items-center justify-center h-9 w-9 rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm flex-shrink-0 ml-2"
           >
             {isOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
           </button>
@@ -98,7 +98,7 @@ export const SidebarNew = memo(({
         {isMobile && (
           <button
             onClick={onToggle}
-            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 transition-colors"
+            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0 ml-2"
           >
             <X className="h-4 w-4" />
           </button>

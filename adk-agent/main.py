@@ -23,6 +23,7 @@ from app.agent import create_agent, get_agent_capabilities
 from app.model_router import classify_query_complexity, get_complexity_description
 from app.config import settings
 from app.tools.base import set_user_context, clear_user_context
+from app.tools import TOOL_MAP
 
 
 # Initialize Firebase Admin
@@ -187,6 +188,53 @@ async def store_conversation(
         print(f"Error storing conversation: {e}")
 
 
+async def _execute_tool_calls(calls: list) -> types.Content:
+    """
+    Concurrently executes tool calls and returns a Content object with results.
+    This is the KEY function that was missing - ADK doesn't auto-execute tools.
+    """
+    async def run_one_tool(call) -> types.Part:
+        tool_name = call.name
+        tool_args = dict(call.args) if hasattr(call, 'args') else {}
+        print(f"Executing tool: {tool_name} with args: {tool_args}")
+
+        if tool_name not in TOOL_MAP:
+            error_msg = f"Tool '{tool_name}' not found."
+            print(error_msg)
+            return types.Part.from_function_response(
+                name=tool_name,
+                response={'error': error_msg}
+            )
+
+        try:
+            tool_func = TOOL_MAP[tool_name]
+            # Execute the async tool function
+            result = await tool_func(**tool_args)
+
+            # Ensure result is a dict for the API
+            if not isinstance(result, dict):
+                result = {'result': result}
+
+            print(f"Tool {tool_name} completed with result keys: {list(result.keys()) if isinstance(result, dict) else 'non-dict'}")
+            return types.Part.from_function_response(name=tool_name, response=result)
+
+        except Exception as e:
+            error_msg = f"Error executing tool {tool_name}: {str(e)}"
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
+            return types.Part.from_function_response(
+                name=tool_name,
+                response={'error': error_msg}
+            )
+
+    # Run all tool calls concurrently for efficiency
+    tasks = [run_one_tool(call) for call in calls]
+    tool_results = await asyncio.gather(*tasks)
+
+    return types.Content(role='tool', parts=list(tool_results))
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
@@ -240,9 +288,9 @@ async def chat(
                 session_id=session_id
             )
 
-            # Run the agent
+            # Run the agent with ACTIVE event loop that executes tools
             response_content = ""
-            tool_calls = []
+            final_tool_calls = []
 
             # Create Content object for the message
             user_content = types.Content(
@@ -250,25 +298,60 @@ async def chat(
                 parts=[types.Part(text=request.message)]
             )
 
-            async for event in runner.run_async(
+            # Get the async generator to control the conversation flow
+            run_generator = runner.run_async(
                 user_id=user_id,
                 session_id=session_id,
                 new_message=user_content
-            ):
-                # Extract text from event content
-                if hasattr(event, 'content') and event.content:
-                    if hasattr(event.content, 'parts') and event.content.parts:
-                        for part in event.content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                response_content += part.text
-                    elif isinstance(event.content, str):
-                        response_content += event.content
-                if hasattr(event, 'tool_call') and event.tool_call:
-                    tool_calls.append({
-                        "name": event.tool_call.name,
-                        "parameters": getattr(event.tool_call, 'parameters', {}),
-                        "result": getattr(event.tool_call, 'result', None)
-                    })
+            )
+
+            # ACTIVE EVENT LOOP - This is the key difference!
+            # We must execute tools and send results back using asend()
+            try:
+                event = await run_generator.__anext__()  # Get first event
+
+                while True:
+                    print(f"Event from: {getattr(event, 'author', 'unknown')}")
+
+                    # Check if the model wants to call tools
+                    calls = event.get_function_calls() if hasattr(event, 'get_function_calls') else None
+                    if calls:
+                        # Record the tool calls for response metadata
+                        for call in calls:
+                            final_tool_calls.append({
+                                "name": call.name,
+                                "parameters": dict(call.args) if hasattr(call, 'args') else {},
+                            })
+                            print(f"Tool call requested: {call.name}")
+
+                        # CRITICAL: Execute the tools and send results back!
+                        tool_response_content = await _execute_tool_calls(calls)
+
+                        # Send results back to the model using asend()
+                        try:
+                            event = await run_generator.asend(tool_response_content)
+                        except StopAsyncIteration:
+                            break
+                        continue  # Process the new event
+
+                    # Check if this is the final response
+                    if hasattr(event, 'is_final_response') and event.is_final_response():
+                        if event.content and hasattr(event.content, 'parts') and event.content.parts:
+                            response_content = "".join(
+                                part.text for part in event.content.parts
+                                if hasattr(part, 'text') and part.text
+                            )
+                        print(f"Final response captured: {len(response_content)} chars")
+                        break
+
+                    # Get next event
+                    try:
+                        event = await run_generator.__anext__()
+                    except StopAsyncIteration:
+                        break
+
+            except StopAsyncIteration:
+                pass  # Generator exhausted
 
             # Store conversation
             await store_conversation(
@@ -278,19 +361,19 @@ async def chat(
                 project_id=request.project_id,
                 user_message=request.message,
                 agent_response=response_content,
-                tool_calls=tool_calls,
+                tool_calls=final_tool_calls,
                 metadata={"complexity": complexity.value}
             )
 
             return ChatResponse(
                 response=response_content,
-                tool_calls=tool_calls if tool_calls else None,
+                tool_calls=final_tool_calls if final_tool_calls else None,
                 session_id=session_id,
                 metadata={
                     "model": agent.model,
                     "complexity": complexity.value,
                     "complexity_description": complexity_desc,
-                    "tools_used": [tc["name"] for tc in tool_calls],
+                    "tools_used": [tc["name"] for tc in final_tool_calls],
                     "project_id": request.project_id
                 }
             )
@@ -357,9 +440,9 @@ async def chat_stream(
             # Send session info
             yield f"data: {json.dumps({'type': 'session', 'session_id': session_id, 'model': agent.model})}\n\n"
 
-            # Stream agent response
+            # Stream agent response with ACTIVE tool execution
             full_response = ""
-            tool_calls = []
+            final_tool_calls = []
 
             # Create Content object for the message
             user_content = types.Content(
@@ -367,37 +450,72 @@ async def chat_stream(
                 parts=[types.Part(text=request.message)]
             )
 
+            # Get the async generator for active control
+            run_generator = runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=user_content
+            )
+
             try:
-                async for event in runner.run_async(
-                    user_id=user_id,
-                    session_id=session_id,
-                    new_message=user_content
-                ):
-                    # Extract text from event content
-                    if hasattr(event, 'content') and event.content:
-                        text_content = ""
-                        if hasattr(event.content, 'parts') and event.content.parts:
+                event = await run_generator.__anext__()
+
+                while True:
+                    # Check if the model wants to call tools
+                    calls = event.get_function_calls() if hasattr(event, 'get_function_calls') else None
+                    if calls:
+                        # Notify client about tool calls
+                        for call in calls:
+                            tool_info = {
+                                "name": call.name,
+                                "parameters": dict(call.args) if hasattr(call, 'args') else {},
+                                "status": "executing"
+                            }
+                            final_tool_calls.append(tool_info)
+                            yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_info})}\n\n"
+
+                        # CRITICAL: Execute the tools!
+                        tool_response_content = await _execute_tool_calls(calls)
+
+                        # Notify client that tools completed
+                        for call in calls:
+                            yield f"data: {json.dumps({'type': 'tool_result', 'tool': call.name, 'status': 'complete'})}\n\n"
+
+                        # Send results back to model
+                        try:
+                            event = await run_generator.asend(tool_response_content)
+                        except StopAsyncIteration:
+                            break
+                        continue
+
+                    # Stream text from final responses
+                    if hasattr(event, 'is_final_response') and event.is_final_response():
+                        if event.content and hasattr(event.content, 'parts') and event.content.parts:
+                            text_content = "".join(
+                                part.text for part in event.content.parts
+                                if hasattr(part, 'text') and part.text
+                            )
+                            if text_content:
+                                full_response += text_content
+                                yield f"data: {json.dumps({'type': 'token', 'content': text_content})}\n\n"
+                        break
+
+                    # Stream partial text for real-time feedback
+                    if hasattr(event, 'partial') and event.partial:
+                        if event.content and hasattr(event.content, 'parts') and event.content.parts:
                             for part in event.content.parts:
                                 if hasattr(part, 'text') and part.text:
-                                    text_content += part.text
-                        elif isinstance(event.content, str):
-                            text_content = event.content
+                                    full_response += part.text
+                                    yield f"data: {json.dumps({'type': 'token', 'content': part.text})}\n\n"
 
-                        if text_content:
-                            full_response += text_content
-                            yield f"data: {json.dumps({'type': 'token', 'content': text_content})}\n\n"
+                    # Get next event
+                    try:
+                        event = await run_generator.__anext__()
+                    except StopAsyncIteration:
+                        break
 
-                    if hasattr(event, 'tool_call') and event.tool_call:
-                        tool_info = {
-                            "name": event.tool_call.name,
-                            "status": "executing"
-                        }
-                        tool_calls.append(tool_info)
-                        yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_info})}\n\n"
-
-                    if hasattr(event, 'tool_result') and event.tool_result:
-                        yield f"data: {json.dumps({'type': 'tool_result', 'tool': event.tool_result.name, 'status': 'complete'})}\n\n"
-
+            except StopAsyncIteration:
+                pass
             except Exception as e:
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
@@ -409,7 +527,7 @@ async def chat_stream(
                 project_id=request.project_id,
                 user_message=request.message,
                 agent_response=full_response,
-                tool_calls=tool_calls
+                tool_calls=final_tool_calls
             )
 
             # Send completion

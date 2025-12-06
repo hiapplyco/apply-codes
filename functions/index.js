@@ -108,6 +108,7 @@ exports.getEmailAnalytics = getEmailAnalytics;
 exports.firecrawlUrl = firecrawlUrl;
 exports.generateLinkedinAnalysis = generateLinkedinAnalysis;
 exports.createLinkedinPost = createLinkedinPost;
+exports.locationSearch = require('./location-search').locationSearch;
 // exports.generateDashboardMetrics = generateDashboardMetrics; // Temporarily disabled - needs Supabase removal
 exports.analyzeCompensation = analyzeCompensation;
 exports.extractNlpTerms = extractNlpTerms;

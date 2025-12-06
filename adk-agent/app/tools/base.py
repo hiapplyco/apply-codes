@@ -36,26 +36,24 @@ async def call_firebase_function(
     payload: dict,
     timeout: float = 60.0,
     retries: int = 3,
+    is_callable: bool = True,  # Default to True for backward compatibility
 ) -> dict[str, Any]:
     """
-    Call a Firebase Callable Function with authentication and retry logic.
-
-    Firebase Callable Functions expect a specific format:
-    - POST to https://REGION-PROJECT.cloudfunctions.net/FUNCTION_NAME
-    - Body: {"data": YOUR_PAYLOAD}
-    - Response: {"result": RESPONSE_DATA}
+    Call a Firebase Function with authentication and retry logic.
+    
+    Supports both Callable functions (wrapped in {"data": ...}) and 
+    standard HTTP functions (raw payload).
 
     Args:
         function_name: Name of the Firebase function to call
-        payload: JSON payload to send (will be wrapped in {"data": ...})
+        payload: JSON payload to send
         timeout: Request timeout in seconds
         retries: Number of retry attempts
+        is_callable: True if it's a Firebase Callable function (needs data wrapper),
+                    False if it's a standard HTTP function
 
     Returns:
-        JSON response from the function (unwrapped from {"result": ...})
-
-    Raises:
-        httpx.HTTPStatusError: If the request fails after all retries
+        JSON response from the function
     """
     headers = {
         "Content-Type": "application/json"
@@ -68,8 +66,8 @@ async def call_firebase_function(
 
     url = f"{settings.firebase_functions_url}/{function_name}"
 
-    # Wrap payload in "data" for Firebase Callable functions
-    callable_payload = {"data": payload}
+    # Prepare payload based on function type
+    request_json = {"data": payload} if is_callable else payload
 
     last_error = None
     for attempt in range(retries):
@@ -77,15 +75,17 @@ async def call_firebase_function(
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     url,
-                    json=callable_payload,
+                    json=request_json,
                     headers=headers,
                     timeout=timeout
                 )
                 response.raise_for_status()
                 result = response.json()
-                # Unwrap the "result" from Firebase Callable response
-                if isinstance(result, dict) and "result" in result:
+                
+                # Handle Callable response format (unwrap "result")
+                if is_callable and isinstance(result, dict) and "result" in result:
                     return result["result"]
+                
                 return result
 
         except httpx.TimeoutException as e:

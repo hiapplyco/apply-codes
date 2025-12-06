@@ -244,3 +244,33 @@ async def get_contact_info(
         "getContactInfo",
         payload
     )
+
+
+async def search_location(
+    query: str,
+) -> dict:
+    """
+    Search for a geographic location to get precise details.
+
+    This tool validates and retrieves location details including formatted address,
+    coordinates, and place ID. Use this to verify locations before running
+    searches that require precise location data.
+
+    Args:
+        query: Location search query (e.g., "San Francisco", "Austin TX", "90210")
+
+    Returns:
+        A dictionary containing:
+        - locations: List of matching locations with details
+        - success: Boolean indicating if search was successful
+
+    Example:
+        >>> result = await search_location(
+        ...     query="San Francisco Bay Area"
+        ... )
+    """
+    return await call_firebase_function(
+        "locationSearch",
+        {"query": query},
+        is_callable=False  # It's an HTTP function
+    )
