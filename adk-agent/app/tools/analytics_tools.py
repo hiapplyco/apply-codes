@@ -43,20 +43,24 @@ async def analyze_compensation(
         ...     skills=["Python", "Kubernetes", "AWS"]
         ... )
     """
-    payload = {
-        "jobTitle": job_title,
-        "location": location
-    }
+    # Build a content string that the Firebase function expects
+    content_parts = [f"Job Title: {job_title}", f"Location: {location}"]
     if experience_level:
-        payload["experienceLevel"] = experience_level
+        content_parts.append(f"Experience Level: {experience_level}")
     if company_size:
-        payload["companySize"] = company_size
+        content_parts.append(f"Company Size: {company_size}")
     if industry:
-        payload["industry"] = industry
+        content_parts.append(f"Industry: {industry}")
     if skills:
-        payload["skills"] = skills
+        content_parts.append(f"Required Skills: {', '.join(skills)}")
 
-    return await call_firebase_function("analyzeCompensation", payload)
+    content = "\n".join(content_parts)
+
+    return await call_firebase_function(
+        "analyzeCompensation",
+        {"content": content},
+        is_callable=False  # It's an HTTP function
+    )
 async def generate_dashboard_metrics(
     metric_type: str,
     date_range: str = "last_30_days",

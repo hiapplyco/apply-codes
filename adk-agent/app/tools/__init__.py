@@ -8,6 +8,7 @@ from app.tools.search_tools import (
     perplexity_search,
     search_contacts,
     get_contact_info,
+    search_location,
 )
 
 from app.tools.profile_tools import (
@@ -78,6 +79,7 @@ _RAW_TOOLS = [
     perplexity_search,
     search_contacts,
     get_contact_info,
+    search_location,
     # Profile & Candidate
     enrich_profile,
     analyze_candidate,
