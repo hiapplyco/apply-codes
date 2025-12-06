@@ -1,39 +1,46 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.processJobRequirements = functions
-  .https.onCall(async (data, context) => {
+exports.processJobRequirements = onCall(
+  {
+    secrets: [geminiApiKey]
+  },
+  async (request) => {
     console.log('Process job requirements function called');
 
+    const { data, auth } = request;
     const { content, searchType, companyName, userId, source } = data;
 
     // Validate required fields
     if (!content) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Job requirements content is required'
       );
     }
 
     try {
-      // Get Gemini API key from environment
-      const geminiApiKey = functions.config().gemini?.api_key || process.env.GEMINI_API_KEY;
+      // Get Gemini API key from secret
+      const apiKey = geminiApiKey.value();
 
-      if (!geminiApiKey) {
+      if (!apiKey) {
         console.error('GEMINI_API_KEY is not configured');
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'Gemini API key not configured'
         );
       }
 
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       // Generate boolean search string
@@ -73,11 +80,14 @@ Return ONLY the boolean search string, no explanations or formatting.`;
 
       // Store in Firestore if userId is provided
       let jobId = null;
-      if (userId || (context.auth && context.auth.uid)) {
+      // Use userId from data or auth uid
+      const effectiveUserId = userId || (auth && auth.uid);
+
+      if (effectiveUserId) {
         try {
           const db = admin.firestore();
           const jobDoc = await db.collection('jobs').add({
-            user_id: userId || context.auth.uid,
+            user_id: effectiveUserId,
             job_requirements: content,
             generated_search_string: searchString,
             company_name: companyName,
@@ -117,13 +127,13 @@ Return ONLY the boolean search string, no explanations or formatting.`;
       console.error('Error in process-job-requirements function:', error);
 
       if (error.message?.includes('API key')) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'API configuration error. Please check server configuration.'
         );
       }
 
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         error.message || 'Failed to process job requirements',
         {
@@ -132,4 +142,5 @@ Return ONLY the boolean search string, no explanations or formatting.`;
         }
       );
     }
-  });
+  }
+);

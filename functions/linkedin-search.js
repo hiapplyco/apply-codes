@@ -1,7 +1,10 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { logger } = require('firebase-functions');
 const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -32,7 +35,8 @@ const linkedinSearch = onRequest(
   {
     cors: true,
     timeoutSeconds: 120,
-    memory: '256MiB'
+    memory: '256MiB',
+    secrets: [geminiApiKey]
   },
   async (request, response) => {
     // Handle CORS preflight requests
@@ -557,7 +561,7 @@ function calculateMatchScores(profiles, keywords, experienceLevel) {
 
     // Boost for title matches
     if (titleLower.includes('engineer') || titleLower.includes('developer') ||
-        titleLower.includes('architect') || titleLower.includes('manager')) {
+      titleLower.includes('architect') || titleLower.includes('manager')) {
       score += 0.1;
     }
 
@@ -565,7 +569,7 @@ function calculateMatchScores(profiles, keywords, experienceLevel) {
     if (experienceLevel) {
       const expLower = experienceLevel.toLowerCase();
       if ((expLower.includes('senior') && (titleLower.includes('senior') || titleLower.includes('lead'))) ||
-          (expLower.includes('junior') && (titleLower.includes('junior') || titleLower.includes('entry')))) {
+        (expLower.includes('junior') && (titleLower.includes('junior') || titleLower.includes('entry')))) {
         score += 0.1;
       }
     }

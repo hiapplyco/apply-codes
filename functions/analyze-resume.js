@@ -1,8 +1,11 @@
-const functions = require('firebase-functions');
+const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Removed Supabase dependency - now using Firebase Storage and Firestore
 const multer = require('multer');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -24,7 +27,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-exports.analyzeResume = functions.https.onRequest(async (req, res) => {
+exports.analyzeResume = onRequest(
+  {
+    cors: true,
+    timeoutSeconds: 300,
+    memory: '1GiB',
+    secrets: [geminiApiKey]
+  },
+  async (req, res) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
       res.set(corsHeaders);
@@ -72,11 +82,11 @@ exports.analyzeResume = functions.https.onRequest(async (req, res) => {
 
       // Get job description from Firestore
       const jobDoc = await db.collection('jobs').doc(jobId).get();
-      
+
       if (!jobDoc.exists) {
         throw new Error('Job description not found');
       }
-      
+
       const jobData = jobDoc.data();
       if (!jobData?.content) {
         throw new Error('Job description content not found');
@@ -96,13 +106,13 @@ exports.analyzeResume = functions.https.onRequest(async (req, res) => {
       console.log('File uploaded successfully:', filePath);
 
       // Initialize Gemini
-      const geminiApiKey = functions.config().gemini?.api_key || process.env.GEMINI_API_KEY;
+      const apiKey = geminiApiKey.value();
 
-      if (!geminiApiKey) {
+      if (!apiKey) {
         throw new Error('Gemini API key not configured');
       }
 
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       // Convert resume to text and clean it
@@ -230,4 +240,5 @@ Return ONLY the JSON object, no other text.
         timestamp: new Date().toISOString()
       });
     }
-  });
+  }
+);

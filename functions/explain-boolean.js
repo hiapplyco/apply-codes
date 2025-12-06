@@ -1,144 +1,76 @@
-const functions = require('firebase-functions');
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-exports.explainBoolean = functions.https.onRequest(async (req, res) => {
-  console.log('Explain boolean function called:', req.method);
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
-  // Set CORS headers
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).send('');
-    return;
-  }
+exports.explainBoolean = onRequest(
+  {
+    cors: true,
+    timeoutSeconds: 60,
+    memory: '256MiB',
+    secrets: [geminiApiKey]
+  },
+  async (req, res) => {
+    // Set CORS headers
+    res.set(corsHeaders);
 
-  // Only accept POST requests
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method Not Allowed' });
-    return;
-  }
-
-  try {
-    const { booleanString, requirements } = req.body;
-
-    if (!booleanString) {
-      res.status(400).json({ error: 'Boolean string is required' });
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
       return;
     }
 
-    // Get Gemini API key from environment
-    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('Google AI API key not configured');
-      res.status(500).json({ error: 'Google AI API key not configured' });
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
       return;
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const prompt = `You are a Boolean search expert who explains complex search strings in simple, visual terms. Your goal is to help users understand EXACTLY what their search will find.
-
-INPUTS PROVIDED:
-- User's original request: ${requirements || 'Not specified'}
-- Context source: search
-- Generated Boolean string: ${booleanString}
-
-TASK: Create a structured explanation of the Boolean search string that can be rendered with visual hierarchy.
-
-OUTPUT FORMAT (JSON):
-{
-  "summary": "One-sentence plain English explanation of what this search finds",
-  "structure": {
-    "primaryTarget": "The main thing we're searching for",
-    "breakdown": [
-      {
-        "component": "Boolean segment",
-        "operator": "AND|OR|NOT",
-        "meaning": "What this part does",
-        "examples": ["Example matches"],
-        "visual": "primary|secondary|exclude"
-      }
-    ]
-  },
-  "locationLogic": {
-    "areas": ["List of locations"],
-    "explanation": "Why these locations"
-  },
-  "exclusions": {
-    "terms": ["What we're filtering out"],
-    "reason": "Why we exclude these"
-  },
-  "tips": [
-    "Practical tip about the results"
-  ]
-}
-
-VISUAL HIERARCHY RULES:
-- AND components = "primary" (these narrow the search)
-- OR components = "secondary" (these expand options)
-- NOT components = "exclude" (these filter out)
-- Quoted phrases = exact matches (highlight differently)
-- Parentheses = grouped concepts (show as containers)
-
-EXPLANATION STYLE:
-- Use plain English, no jargon
-- Focus on WHAT the search finds, not HOW Boolean works
-- Give concrete examples when possible
-- Keep each explanation under 15 words
-- Make it actionable and practical
-
-Output ONLY the JSON structure. No markdown, no code blocks.`;
-
-    console.log('Generating explanation for:', booleanString.substring(0, 100));
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    console.log('Gemini response length:', text.length);
-    console.log('Response preview:', text.substring(0, 200));
-
-    // Extract JSON from the response
-    let explanation;
     try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        explanation = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch (e) {
-      // Fallback to a basic structure matching our interface
-      explanation = {
-        summary: text.substring(0, 200) || "This search finds candidates based on your criteria",
-        structure: {
-          primaryTarget: "Candidates matching your requirements",
-          breakdown: [{
-            component: booleanString.substring(0, 100),
-            operator: "AND",
-            meaning: "Complete search criteria",
-            examples: ["Matching candidates"],
-            visual: "primary"
-          }]
-        },
-        locationLogic: {
-          areas: [],
-          explanation: "No specific location targeting"
-        },
-        exclusions: {
-          terms: [],
-          reason: "No specific exclusions applied"
-        },
-        tips: ["Review and adjust the search as needed", "Try the explanation again for more details"]
-      };
-    }
+      const { searchString } = req.body;
 
-    res.status(200).json(explanation);
-  } catch (error) {
-    console.error('Error explaining boolean:', error);
-    res.status(500).json({ error: error.message });
+      if (!searchString) {
+        res.status(400).json({ error: 'Search string is required' });
+        return;
+      }
+
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured');
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      const prompt = `Explain the following boolean search string in simple terms. Break down what it's looking for and what it's excluding.
+      
+      Search String:
+      ${searchString}
+      
+      Return a JSON object with:
+      1. "explanation": A simple paragraph explaining the search logic
+      2. "breakdown": An array of objects, each with "segment" (part of the string) and "meaning" (what it does)
+      3. "suggestions": An array of strings with suggestions to improve it (if any)
+      
+      Return ONLY the JSON object.`;
+
+      const result = await model.generateContent(prompt);
+      const response = result.response.text();
+
+      // Clean and parse JSON
+      const cleanJson = response.replace(/```json\n?|\n?```/g, '').trim();
+      const data = JSON.parse(cleanJson);
+
+      res.status(200).json(data);
+
+    } catch (error) {
+      console.error('Error explaining boolean string:', error);
+      res.status(500).json({ error: error.message });
+    }
   }
-});
+);

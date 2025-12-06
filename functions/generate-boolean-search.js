@@ -1,7 +1,10 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -11,8 +14,8 @@ if (!admin.apps.length) {
 exports.generateBooleanSearch = onCall(
   {
     cors: true,
-    maxInstances: 10
-    // Note: GEMINI_API_KEY is loaded from .env file, not Secret Manager
+    maxInstances: 10,
+    secrets: [geminiApiKey]
   },
   async (request) => {
     console.log('Generate boolean search function called');

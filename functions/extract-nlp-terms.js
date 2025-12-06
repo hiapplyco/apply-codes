@@ -1,12 +1,16 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('firebase-functions/logger');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 exports.extractNlpTerms = onRequest(
   {
     cors: true,
     timeoutSeconds: 120,
-    memory: '512MiB'
+    memory: '512MiB',
+    secrets: [geminiApiKey]
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -90,8 +94,8 @@ Text to analyze: ${content}`;
 
         // Validate response structure
         if (!Array.isArray(parsedResponse.skills) ||
-            !Array.isArray(parsedResponse.titles) ||
-            !Array.isArray(parsedResponse.keywords)) {
+          !Array.isArray(parsedResponse.titles) ||
+          !Array.isArray(parsedResponse.keywords)) {
           throw new Error('Invalid response structure');
         }
 

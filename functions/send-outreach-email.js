@@ -1,23 +1,30 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const axios = require('axios');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getSendGridClient } = require('./utils/sendgrid');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.sendOutreachEmail = functions
-  .https.onCall(async (data, context) => {
+exports.sendOutreachEmail = onCall(
+  {
+    secrets: [geminiApiKey]
+  },
+  async (request) => {
     console.log('Send outreach email function called');
 
+    const { data, auth } = request;
     const { projectId, candidateProfileUrl, userCustomText } = data;
 
     // Validate input
     if (!projectId || !candidateProfileUrl || !userCustomText?.trim()) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Project ID, candidate profile URL, and custom text are required'
       );
@@ -33,14 +40,14 @@ exports.sendOutreachEmail = functions
       const candidateData = await enrichCandidateProfile(candidateProfileUrl);
 
       if (!candidateData?.email) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'not-found',
           'Unable to find candidate email address'
         );
       }
 
       // Step 3: Generate email content using Gemini
-      const emailContent = await generateEmailContent(projectData, candidateData, userCustomText);
+      const emailContent = await generateEmailContent(projectData, candidateData, userCustomText, geminiApiKey.value());
 
       // Step 4: Send email via SendGrid
       const emailResult = await sendEmail({
@@ -51,7 +58,7 @@ exports.sendOutreachEmail = functions
       });
 
       // Step 5: Log the outreach activity
-      await logOutreachActivity(projectId, candidateProfileUrl, candidateData.email, 'sent', context);
+      await logOutreachActivity(projectId, candidateProfileUrl, candidateData.email, 'sent', auth);
 
       return {
         success: true,
@@ -69,7 +76,7 @@ exports.sendOutreachEmail = functions
         throw error;
       }
 
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         error.message || 'Failed to send outreach email',
         {
@@ -78,7 +85,8 @@ exports.sendOutreachEmail = functions
         }
       );
     }
-  });
+  }
+);
 
 async function fetchProjectDetails(projectId) {
   const db = admin.firestore();
@@ -87,13 +95,13 @@ async function fetchProjectDetails(projectId) {
     const projectDoc = await db.collection('projects').doc(projectId).get();
 
     if (!projectDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Project not found');
+      throw new HttpsError('not-found', 'Project not found');
     }
 
     return projectDoc.data();
   } catch (error) {
     console.error('Error fetching project:', error);
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'internal',
       `Failed to fetch project details: ${error.message}`
     );
@@ -101,10 +109,11 @@ async function fetchProjectDetails(projectId) {
 }
 
 async function enrichCandidateProfile(profileUrl) {
-  const nymeriaApiKey = functions.config().nymeria?.api_key || process.env.NYMERIA_API_KEY;
+  // Note: Nymeria API key should ideally also be in Secret Manager
+  const nymeriaApiKey = process.env.NYMERIA_API_KEY;
 
   if (!nymeriaApiKey) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'failed-precondition',
       'Missing Nymeria API key configuration'
     );
@@ -136,30 +145,28 @@ async function enrichCandidateProfile(profileUrl) {
 
   } catch (error) {
     if (error.response?.status === 404) {
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'not-found',
         'Candidate profile not found in contact database'
       );
     }
 
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'internal',
       `Failed to enrich candidate profile: ${error.message}`
     );
   }
 }
 
-async function generateEmailContent(projectData, candidateData, userCustomText) {
-  const geminiApiKey = functions.config().gemini?.api_key || process.env.GEMINI_API_KEY;
-
-  if (!geminiApiKey) {
-    throw new functions.https.HttpsError(
+async function generateEmailContent(projectData, candidateData, userCustomText, apiKey) {
+  if (!apiKey) {
+    throw new HttpsError(
       'failed-precondition',
       'Missing Gemini API key configuration'
     );
   }
 
-  const genAI = new GoogleGenerativeAI(geminiApiKey);
+  const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
@@ -239,14 +246,14 @@ async function sendEmail({ to, subject, body, recipientName }) {
       console.error('SendGrid response error:', error.response.body);
     }
 
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'internal',
       `Failed to send email: ${error.message}`
     );
   }
 }
 
-async function logOutreachActivity(projectId, profileUrl, email, status, context) {
+async function logOutreachActivity(projectId, profileUrl, email, status, auth) {
   try {
     const db = admin.firestore();
 
@@ -256,7 +263,7 @@ async function logOutreachActivity(projectId, profileUrl, email, status, context
       profile_url: profileUrl,
       recipient_email: email,
       status: status,
-      user_id: context?.auth?.uid || null,
+      user_id: auth?.uid || null,
       sent_at: admin.firestore.Timestamp.now(),
       created_at: admin.firestore.Timestamp.now()
     });

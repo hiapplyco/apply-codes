@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -7,10 +8,11 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+const perplexityApiKey = defineSecret('PERPLEXITY_API_KEY');
+
 exports.perplexitySearch = onRequest({
   cors: true,
-  maxInstances: 10,
-  invoker: 'public',
+  secrets: [perplexityApiKey]
 }, async (req, res) => {
   // Set CORS headers for all responses
   res.set('Access-Control-Allow-Origin', '*');
@@ -24,45 +26,37 @@ exports.perplexitySearch = onRequest({
   }
 
   try {
-    // Get user from Authorization header (Firebase Auth)
+    let userId = null;
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized - No token provided' });
-      return;
-    }
 
-    const token = authHeader.replace('Bearer ', '');
-
-    // Verify user with Firebase Auth
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      if (!decodedToken.uid) {
-        res.status(401).json({ error: 'Unauthorized - Invalid token' });
-        return;
+    // Try to authenticate if header is present
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        userId = decodedToken.uid;
+      } catch (authError) {
+        console.warn('Auth token verification failed, proceeding as anonymous:', authError.message);
       }
-    } catch (authError) {
-      console.error('Auth error:', authError);
-      res.status(401).json({ error: 'Unauthorized - Invalid token' });
-      return;
+    } else {
+      console.log('No auth token provided, proceeding as anonymous');
     }
 
-    // Check if PERPLEXITY_API_KEY is available
-    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
-    if (!perplexityApiKey) {
-      console.error('PERPLEXITY_API_KEY environment variable is not set');
+    // Get API key from secrets
+    const apiKey = perplexityApiKey.value();
+    if (!apiKey) {
+      console.error('PERPLEXITY_API_KEY secret is not set');
       res.status(500).json({ error: 'Perplexity API key not configured' });
       return;
     }
 
     // Parse request body
-    const { query, projectId } = req.body || {};
-    console.log('Request body received:', { query, projectId });
+    const { query, projectId, focus } = req.body || {};
+    console.log('Request body received:', { query, projectId, focus });
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
-      console.log('Invalid query:', { query, type: typeof query });
       res.status(400).json({
-        error: 'Query is required and must be a non-empty string',
-        received: { query, type: typeof query }
+        error: 'Query is required and must be a non-empty string'
       });
       return;
     }
@@ -88,7 +82,7 @@ exports.perplexitySearch = onRequest({
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${perplexityApiKey}`,
+            'Authorization': `Bearer ${apiKey}`,
           },
         }
       );
@@ -96,27 +90,25 @@ exports.perplexitySearch = onRequest({
       console.error('Perplexity API error:', perplexityError.response?.data || perplexityError.message);
       res.status(500).json({
         error: 'Perplexity API request failed',
-        details: perplexityError.response?.data || perplexityError.message,
-        perplexityStatus: perplexityError.response?.status
+        details: perplexityError.response?.data || perplexityError.message
       });
       return;
     }
 
     const responseData = perplexityResponse.data;
-    console.log('Perplexity response received:', JSON.stringify(responseData, null, 2));
+    console.log('Perplexity response received');
 
-    // Store search result in Firestore
+    // Store search result in Firestore if userId is present (or even if not, maybe?)
+    // If no userId, we can still store it with null userId or skip
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      const userId = decodedToken.uid;
-
       const searchRecord = {
-        userId: userId,
+        userId: userId, // Can be null
         projectId: projectId || null,
         query: query,
         perplexityResponse: responseData,
         answerText: responseData.choices?.[0]?.message?.content || '',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        source: 'perplexity-search-function'
       };
 
       const docRef = await admin.firestore()

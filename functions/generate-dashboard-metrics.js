@@ -1,13 +1,17 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 const logger = require('firebase-functions/logger');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 exports.generateDashboardMetrics = onRequest(
   {
     cors: true,
     timeoutSeconds: 540,
-    memory: '2GiB'
+    memory: '2GiB',
+    secrets: [geminiApiKey]
   },
   async (req, res) => {
     // Handle CORS preflight

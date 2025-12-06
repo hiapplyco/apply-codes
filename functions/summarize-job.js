@@ -1,12 +1,16 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('firebase-functions/logger');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 exports.summarizeJob = onRequest(
   {
     cors: true,
     timeoutSeconds: 120,
-    memory: '512MiB'
+    memory: '512MiB',
+    secrets: [geminiApiKey]
   },
   async (req, res) => {
     // Handle CORS preflight

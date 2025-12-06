@@ -1,19 +1,27 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { defineSecret } = require('firebase-functions/params');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.analyzeCandidate = functions
-  .https.onCall(async (data, context) => {
+exports.analyzeCandidate = onCall(
+  {
+    secrets: [geminiApiKey]
+  },
+  async (request) => {
     console.log('Analyze candidate function called');
 
+    const { data, auth } = request;
+
     // Check authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+    if (!auth) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated to analyze candidates'
       );
@@ -28,25 +36,25 @@ exports.analyzeCandidate = functions
         hasCandidate: !!candidate,
         hasRequirements: !!requirements
       });
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'invalid-argument',
         'Candidate and requirements are required'
       );
     }
 
     try {
-      // Get Gemini API key from environment
-      const geminiApiKey = functions.config().gemini?.api_key || process.env.GEMINI_API_KEY;
+      // Get Gemini API key from secret
+      const apiKey = geminiApiKey.value();
 
-      if (!geminiApiKey) {
+      if (!apiKey) {
         console.error('GEMINI_API_KEY is not configured');
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'Gemini API key not configured'
         );
       }
 
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       const prompt = `You are a technical recruiter. Analyze the candidate profile against the job requirements and return ONLY a JSON object.
@@ -115,7 +123,7 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
         const docRef = await db.collection('candidate_analysis').add({
           candidate_name: candidate.name,
           candidate_profile: candidate.profile,
-          user_id: context.auth.uid,
+          user_id: auth.uid,
           project_id: projectId || null,
           match_score: analysisData.match_score,
           recommendation: analysisData.recommendation,
@@ -144,13 +152,13 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
       console.error('Error in analyze-candidate function:', error);
 
       if (error.message?.includes('API key')) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'failed-precondition',
           'API configuration error. Please check server configuration.'
         );
       }
 
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         error.message || 'Failed to analyze candidate',
         {
@@ -159,4 +167,5 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
         }
       );
     }
-  });
+  }
+);

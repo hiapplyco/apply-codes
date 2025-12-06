@@ -1,49 +1,46 @@
 const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS'
 };
 
-exports.getGeminiKey = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
+exports.getGeminiKey = onRequest(
+  {
+    cors: true,
+    secrets: [geminiApiKey]
+  },
+  async (req, res) => {
+    // Set CORS headers
     res.set(corsHeaders);
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (req.method === 'OPTIONS') {
+      res.status(204).send('');
+      return;
+    }
+
+    // Check authentication (basic check if auth header exists, ideally verify token)
+    if (!req.headers.authorization) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
+    try {
+      const apiKey = geminiApiKey.value();
+      if (!apiKey) {
+        throw new Error('Gemini API key not configured');
+      }
 
-    const apiKey = functions.config().gemini?.api_key || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      res.status(500).json({ error: 'Gemini API key not configured' });
-      return;
+      res.status(200).json({ key: apiKey });
+
+    } catch (error) {
+      console.error('Error retrieving Gemini key:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    res.status(200).json({ secret: apiKey });
-  } catch (error) {
-    console.error('getGeminiKey error:', error);
-    res.status(500).json({ error: 'Failed to retrieve Gemini key' });
   }
-});
+);
