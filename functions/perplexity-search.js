@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -8,11 +8,11 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const perplexityApiKey = defineSecret('PERPLEXITY_API_KEY');
+
 
 exports.perplexitySearch = onRequest({
   cors: true,
-  secrets: [perplexityApiKey]
+  
 }, async (req, res) => {
   // Set CORS headers for all responses
   res.set('Access-Control-Allow-Origin', '*');
@@ -42,10 +42,10 @@ exports.perplexitySearch = onRequest({
       console.log('No auth token provided, proceeding as anonymous');
     }
 
-    // Get API key from secrets
-    const apiKey = perplexityApiKey.value();
+    // Get API key from environment
+    const apiKey = process.env.PERPLEXITY_API_KEY;
     if (!apiKey) {
-      console.error('PERPLEXITY_API_KEY secret is not set');
+      console.error('PERPLEXITY_API_KEY is not set in environment');
       res.status(500).json({ error: 'Perplexity API key not configured' });
       return;
     }

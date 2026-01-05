@@ -1,16 +1,16 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('firebase-functions/logger');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 exports.extractNlpTerms = onRequest(
   {
     cors: true,
     timeoutSeconds: 120,
     memory: '512MiB',
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -51,7 +51,7 @@ exports.extractNlpTerms = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
       const prompt = `Extract and categorize key terms from this job description into specific categories. Format your response EXACTLY as a JSON object with these arrays:
 

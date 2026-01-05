@@ -1,11 +1,11 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Removed Supabase dependency - now using Firebase Storage and Firestore
 const multer = require('multer');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -32,7 +32,7 @@ exports.analyzeResume = onRequest(
     cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -106,14 +106,14 @@ exports.analyzeResume = onRequest(
       console.log('File uploaded successfully:', filePath);
 
       // Initialize Gemini
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
         throw new Error('Gemini API key not configured');
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
       // Convert resume to text and clean it
       let resumeText = file.buffer.toString('utf-8');

@@ -1,9 +1,9 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -12,7 +12,7 @@ if (!admin.apps.length) {
 
 exports.processJobRequirements = onCall(
   {
-    secrets: [geminiApiKey]
+    
   },
   async (request) => {
     console.log('Process job requirements function called');
@@ -30,7 +30,7 @@ exports.processJobRequirements = onCall(
 
     try {
       // Get Gemini API key from secret
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
         console.error('GEMINI_API_KEY is not configured');
@@ -41,7 +41,7 @@ exports.processJobRequirements = onCall(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
       // Generate boolean search string
       const prompt = `You are an expert recruiter creating LinkedIn boolean search strings.

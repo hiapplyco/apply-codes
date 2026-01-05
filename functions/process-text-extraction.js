@@ -1,11 +1,11 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const multer = require('multer');
 const axios = require('axios');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -32,7 +32,7 @@ exports.processTextExtraction = onRequest(
     cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -86,7 +86,7 @@ exports.processTextExtraction = onRequest(
       }
 
       // Initialize Gemini
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('Gemini API key not configured');
       }

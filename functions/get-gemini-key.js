@@ -1,8 +1,8 @@
 const functions = require('firebase-functions');
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +13,7 @@ const corsHeaders = {
 exports.getGeminiKey = onRequest(
   {
     cors: true,
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Set CORS headers
@@ -31,7 +31,7 @@ exports.getGeminiKey = onRequest(
     }
 
     try {
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('Gemini API key not configured');
       }

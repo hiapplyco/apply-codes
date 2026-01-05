@@ -1941,8 +1941,8 @@ This area is for your specific search instructions, filtering criteria, or addit
           >
             <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
               <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+                  <div className="flex items-center gap-4 flex-shrink-0">
                     <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
                       3
                     </div>
@@ -1953,7 +1953,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                       <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                     {/* AI Analysis Button - Moved to top */}
                     {!showAIAnalysis && (
                       <Button
@@ -1961,8 +1961,8 @@ This area is for your specific search instructions, filtering criteria, or addit
                         className="bg-purple-600 hover:bg-purple-700 text-white"
                         size="sm"
                       >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Analyze with AI ({searchResults.length})
+                        <Sparkles className="w-4 h-4 mr-1 lg:mr-2" />
+                        <span className="hidden sm:inline">Analyze</span> AI ({searchResults.length})
                       </Button>
                     )}
 
@@ -1986,14 +1986,14 @@ This area is for your specific search instructions, filtering criteria, or addit
                       </Button>
                     </div>
 
-                    <Badge variant="outline">{selectedProfiles.size} selected</Badge>
+                    <Badge variant="outline" className="whitespace-nowrap">{selectedProfiles.size} selected</Badge>
                     <Button
                       onClick={openEmailDialog}
                       disabled={selectedProfiles.size === 0}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
                     >
-                      Generate Email Templates
+                      <span className="hidden sm:inline">Generate</span> Email<span className="hidden md:inline"> Templates</span>
                     </Button>
                   </div>
                 </div>

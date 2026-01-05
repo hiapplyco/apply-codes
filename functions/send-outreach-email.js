@@ -1,11 +1,11 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const axios = require('axios');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getSendGridClient } = require('./utils/sendgrid');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -14,7 +14,7 @@ if (!admin.apps.length) {
 
 exports.sendOutreachEmail = onCall(
   {
-    secrets: [geminiApiKey]
+    
   },
   async (request) => {
     console.log('Send outreach email function called');
@@ -47,7 +47,7 @@ exports.sendOutreachEmail = onCall(
       }
 
       // Step 3: Generate email content using Gemini
-      const emailContent = await generateEmailContent(projectData, candidateData, userCustomText, geminiApiKey.value());
+      const emailContent = await generateEmailContent(projectData, candidateData, userCustomText, process.env.GEMINI_API_KEY);
 
       // Step 4: Send email via SendGrid
       const emailResult = await sendEmail({
@@ -168,7 +168,7 @@ async function generateEmailContent(projectData, candidateData, userCustomText, 
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 1000,

@@ -11,7 +11,10 @@ import {
   Wrench,
   RefreshCw,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Paperclip,
+  FileText,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebase';
@@ -24,6 +27,8 @@ import { useAgentSession } from '@/hooks/useAgentSession';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { LinkedInCandidateList, LinkedInCandidate } from './LinkedInCandidateCard';
+import { DocumentProcessor } from '@/lib/modernPdfProcessor';
+import { firestoreClient } from '@/lib/firebase-database-bridge';
 
 interface Message {
   id: string;
@@ -42,6 +47,12 @@ interface Message {
 interface EmbeddedChatProps {
   className?: string;
   height?: string;
+}
+
+interface Attachment {
+  name: string;
+  type: string;
+  content: string;
 }
 
 // Helper to parse candidates from message content
@@ -164,6 +175,9 @@ export const EmbeddedChat: React.FC<EmbeddedChatProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { sessionId, setSessionId, setModelInfo, resetSession } = useAgentSession({
     projectId: selectedProjectId
@@ -216,6 +230,83 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
     }
   }, [processContent]);
 
+  // Helper to save context item
+  const saveContextItem = useCallback(async (item: any) => {
+    if (!auth?.currentUser?.uid) return;
+
+    try {
+      await firestoreClient
+        .from('context_items')
+        .insert({
+          ...item,
+          user_id: auth.currentUser.uid,
+          project_id: selectedProject?.id || selectedProjectId || null,
+          created_at: new Date().toISOString()
+        });
+    } catch (error) {
+      console.error('Error saving context item:', error);
+    }
+  }, [selectedProject, selectedProjectId]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!auth?.currentUser?.uid) {
+      toast.error('You must be logged in to upload files');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await DocumentProcessor.processDocument({
+        file,
+        userId: auth.currentUser.uid,
+        onProgress: (status) => {
+          // Only show toast for major status changes to avoid spamming
+          if (!status.includes('complete') && !status.includes('failed')) {
+            toast.info(status, { duration: 1500, id: 'upload-progress' });
+          }
+        },
+        onComplete: async (content) => {
+          toast.success('File processed successfully!', { id: 'upload-progress' });
+
+          await saveContextItem({
+            type: 'file_upload',
+            title: `Uploaded: ${file.name}`,
+            content: content,
+            file_name: file.name,
+            file_type: file.type,
+            summary: content.substring(0, 200) + '...',
+            metadata: {
+              file_name: file.name,
+              file_type: file.type,
+              file_size: file.size,
+              success: true,
+              timestamp: new Date().toISOString()
+            }
+          });
+
+          // Add to attachments instead of immediate context injection
+          setAttachments(prev => [...prev, {
+            name: file.name,
+            type: file.type,
+            content: content
+          }]);
+        },
+        onError: (err) => {
+          toast.error(err, { id: 'upload-progress' });
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to process file');
+    } finally {
+      setIsUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -228,13 +319,25 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input,
+      content: input, // We'll combine content for sending but display the user's filtered input
       timestamp: new Date()
     };
 
+    // If there are attachments, we might want to show them in the chat UI too?
+    // For now, simpler to just treat them as hidden context or part of the message.
+    // Let's indicate attachments in the user message for UI clarity
+    if (attachments.length > 0) {
+      userMessage.content = `${attachments.map(a => `[Attached: ${a.name}]`).join('\n')}\n${input}`;
+    }
+
     setMessages(prev => [...prev, userMessage]);
+
+    // Preparation for sending
     const currentInput = input;
+    const currentAttachments = [...attachments];
+
     setInput('');
+    setAttachments([]); // Clear attachments immediately
     setIsLoading(true);
     setActiveTools([]);
 
@@ -255,10 +358,20 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
         content: m.content
       }));
 
-      // Include context in the message if available
-      const messageWithContext = contextContent
-        ? `[Context: ${contextContent.substring(0, 500)}...]\n\n${currentInput}`
-        : currentInput;
+      // Include context and attachments
+      const attachmentContext = currentAttachments
+        .map(a => `[File Context: ${a.name}]\n${a.content}`)
+        .join('\n\n');
+
+      let combinedContent = currentInput;
+      if (attachmentContext) {
+        combinedContent = `${attachmentContext}\n\n${combinedContent}`;
+      }
+      if (contextContent) {
+        combinedContent = `[Context: ${contextContent.substring(0, 500)}...]\n\n${combinedContent}`;
+      }
+
+      const messageWithContext = combinedContent;
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -630,7 +743,48 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
 
         {/* Input */}
         <form onSubmit={handleSubmit} className="p-3 border-t-2 border-gray-200 bg-gray-50">
+          {/* Attachment Preview */}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {attachments.map((file, idx) => (
+                <div key={idx} className="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-2 py-1 text-xs shadow-sm">
+                  <FileText className="w-3 h-3 text-purple-600" />
+                  <span className="max-w-[150px] truncate font-medium text-gray-700">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-2">
+            <input
+              type="file"
+              ref={fileRef}
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+              onChange={handleFileUpload}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="px-3"
+              disabled={isLoading || isUploading}
+              onClick={() => fileRef.current?.click()}
+              title="Upload document"
+            >
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Paperclip className="w-4 h-4" />
+              )}
+            </Button>
             <Input
               ref={inputRef}
               value={input}

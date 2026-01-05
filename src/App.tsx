@@ -27,6 +27,7 @@ import Chat from "@/pages/Chat";
 import Report from "@/pages/Report";
 import Clarvida from "@/pages/Clarvida";
 import ClarvidaLogin from "@/pages/ClarvidaLogin";
+import ClarvidaSourcing from "@/pages/ClarvidaSourcing";
 import PasswordReset from "@/pages/PasswordReset";
 import ResetPasswordRequest from "@/pages/ResetPasswordRequest";
 import SearchHistory from "@/pages/SearchHistory";
@@ -71,11 +72,16 @@ function App() {
 
                   {/* Firebase migration complete - test routes removed */}
 
-                  {/* Clarvida routes - move these to top level for better visibility */}
+                  {/* Clarvida routes - dedicated Clarvida instance */}
                   <Route path="/clarvida/login" element={<PageTransition><ClarvidaLogin /></PageTransition>} />
                   <Route path="/clarvida" element={
                     <ClarvidaProtectedRoute>
                       <PageTransition><Clarvida /></PageTransition>
+                    </ClarvidaProtectedRoute>
+                  } />
+                  <Route path="/clarvida/sourcing" element={
+                    <ClarvidaProtectedRoute>
+                      <PageTransition><ClarvidaSourcing /></PageTransition>
                     </ClarvidaProtectedRoute>
                   } />
 

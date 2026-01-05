@@ -9,7 +9,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card } from "@/components/ui/card";
-import { ClarvidaHeader } from "@/components/clarvida/ClarvidaHeader";
 
 // Define form schema for validation
 const authSchema = z.object({
@@ -25,7 +24,7 @@ const ClarvidaLogin = () => {
   const { signIn, signUp, isAuthenticated } = useClarvidaAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const from = location.state?.from?.pathname || "/clarvida";
 
   // Initialize form with validation
@@ -49,7 +48,7 @@ const ClarvidaLogin = () => {
 
     try {
       let result;
-      
+
       if (isSignUp) {
         result = await signUp(values.email, values.password);
         if (!result.error) {
@@ -77,48 +76,54 @@ const ClarvidaLogin = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#F1F0FB] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md mx-auto">
-        <ClarvidaHeader />
-        
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Header */}
+      <div className="relative h-48 md:h-64 overflow-hidden">
+        <img
+          src="https://jobs.clarvida.com/system/production/assets/442891/original/pathways-hero.jpg"
+          alt="Clarvida team"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50/90" />
+      </div>
+
+      <div className="max-w-md mx-auto px-4 -mt-20 relative z-10">
+        {/* Logo */}
         <div className="flex flex-col items-center mb-6">
-          <img 
-            src="/lovable-uploads/a36a9030-18dd-4eec-bf47-21de5406f97b.png" 
-            alt="Purple Squirrel" 
-            className="w-40 h-40 object-contain mb-3"
-          />
-          <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-[#8B5CF6] via-[#9B87F5] to-[#A18472] bg-clip-text text-transparent">
-            Find Your <span className="text-[#8B5CF6] font-extrabold">Purple Squirrel</span>
-          </h1>
-          <p className="text-sm text-gray-600 text-center">
-            Powerful recruitment search tools
+          <div className="w-16 h-16 rounded-full bg-[#0B8A8A] flex items-center justify-center shadow-lg mb-4">
+            <span className="text-white font-bold text-2xl">C</span>
+          </div>
+          <h1 className="text-2xl font-bold text-[#0B5B5E]">clarvida</h1>
+          <p className="text-sm text-gray-600 text-center mt-1">
+            Recruitment Tools Platform
           </p>
         </div>
-        
-        <Card className="mt-8 shadow-lg rounded-lg p-8 border border-gray-200">
+
+        <Card className="shadow-lg rounded-xl p-8 border border-gray-200 bg-white">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {isSignUp ? "Create a Clarvida Account" : "Sign in to Clarvida"}
+            <h2 className="text-xl font-bold text-gray-900">
+              {isSignUp ? "Create Account" : "Welcome Back"}
             </h2>
             <p className="text-sm text-gray-600 mt-2">
-              {isSignUp 
-                ? "Fill in your details to create an account" 
-                : "Enter your credentials to access your account"}
+              {isSignUp
+                ? "Fill in your details to get started"
+                : "Sign in to access your recruitment tools"}
             </p>
           </div>
-          
+
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-gray-700">Email</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="you@clarvida.com"
+                        className="border-gray-300 focus:border-[#0B5B5E] focus:ring-[#0B5B5E]"
                         {...field}
                         disabled={isLoading}
                       />
@@ -127,17 +132,18 @@ const ClarvidaLogin = () => {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-gray-700">Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
                         placeholder="••••••••"
+                        className="border-gray-300 focus:border-[#0B5B5E] focus:ring-[#0B5B5E]"
                         {...field}
                         disabled={isLoading}
                       />
@@ -146,29 +152,27 @@ const ClarvidaLogin = () => {
                   </FormItem>
                 )}
               />
-              
+
               <Button
                 type="submit"
-                className="w-full bg-[#8B5CF6] hover:bg-[#7c4ef3]"
+                className="w-full bg-[#D4A03C] hover:bg-[#C4902C] text-white font-semibold py-3 h-auto"
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <>
-                    <span className="mr-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    </span>
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                     {isSignUp ? "Creating Account..." : "Signing In..."}
-                  </>
+                  </span>
                 ) : (
                   isSignUp ? "Create Account" : "Sign In"
                 )}
               </Button>
-              
-              <div className="text-center">
+
+              <div className="text-center pt-2">
                 <button
                   type="button"
                   onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-[#8B5CF6] hover:text-[#7c4ef3] font-medium"
+                  className="text-sm text-[#0B5B5E] hover:text-[#0A4F4F] font-medium"
                 >
                   {isSignUp
                     ? "Already have an account? Sign in"
@@ -178,6 +182,22 @@ const ClarvidaLogin = () => {
             </form>
           </Form>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center mt-8 pb-8">
+          <p className="text-sm text-gray-500">
+            &copy; {new Date().getFullYear()} Clarvida Recruitment Tools
+          </p>
+          <div className="flex justify-center gap-4 mt-2 text-sm text-gray-500">
+            <a href="https://www.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B5B5E]">
+              Clarvida.com
+            </a>
+            <span>|</span>
+            <a href="https://jobs.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B5B5E]">
+              Jobs
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,9 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +16,7 @@ exports.chatAssistant = onRequest(
     cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Set CORS headers
@@ -40,13 +40,13 @@ exports.chatAssistant = onRequest(
         return;
       }
 
-      const apiKey = geminiApiKey.value();
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('Gemini API key not configured');
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
       // Construct chat history for Gemini
       const chatHistory = history ? history.map(msg => ({

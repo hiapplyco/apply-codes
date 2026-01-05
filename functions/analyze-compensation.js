@@ -1,17 +1,17 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('firebase-functions/logger');
 
 // Define secrets
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 exports.analyzeCompensation = onRequest(
   {
     cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    secrets: [geminiApiKey]
+    
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -45,7 +45,7 @@ exports.analyzeCompensation = onRequest(
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         generationConfig: {
           temperature: 0.7,
           topK: 40,
@@ -127,16 +127,21 @@ Provide realistic, data-driven estimates. If specific information is missing, ma
 Return only the JSON object, no additional text or formatting.`;
 
       const result = await model.generateContent(prompt);
-      const response = result.response.text();
+      let responseText = result.response.text();
+
+      // Strip markdown code blocks if present
+      if (responseText.startsWith('```')) {
+        responseText = responseText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
 
       let analysis;
       try {
-        analysis = JSON.parse(response);
+        analysis = JSON.parse(responseText);
       } catch (parseError) {
         logger.error('Failed to parse Gemini response as JSON:', parseError);
         // Fallback: return the text response wrapped in an object
         analysis = {
-          raw_analysis: response,
+          raw_analysis: responseText,
           error: 'Failed to parse structured response'
         };
       }

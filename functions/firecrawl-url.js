@@ -7,7 +7,7 @@ exports.firecrawlUrl = onRequest(
     invoker: 'public',
     timeoutSeconds: 300,
     memory: '1GiB',
-    secrets: ['FIRECRAWL_API_KEY']
+    
   },
   async (req, res) => {
     // Handle CORS preflight
@@ -60,8 +60,8 @@ exports.firecrawlUrl = onRequest(
           blockAds: true,
           removeBase64Images: true,
           timeout: 30000,
-          excludeTags: ['nav', 'header', 'footer', '.advertisement', '.ads'],
-          includeTags: ['main', 'article', '.content', '#content', '.job-description', '.job-details']
+          excludeTags: ['nav', 'header', 'footer', '.advertisement', '.ads', 'script', 'style']
+          // Note: Removed includeTags to allow scraping any page content
         })
       });
 

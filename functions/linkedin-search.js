@@ -1,10 +1,10 @@
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+
 const { logger } = require('firebase-functions');
 const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -36,7 +36,7 @@ const linkedinSearch = onRequest(
     cors: true,
     timeoutSeconds: 120,
     memory: '256MiB',
-    secrets: [geminiApiKey]
+    
   },
   async (request, response) => {
     // Handle CORS preflight requests
@@ -188,7 +188,7 @@ async function generateAIBooleanQuery(keywords, location, experienceLevel) {
   }
 
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
   const locationPrompt = location ? `
 LOCATION TARGETING:

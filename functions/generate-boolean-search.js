@@ -1,10 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -14,8 +11,8 @@ if (!admin.apps.length) {
 exports.generateBooleanSearch = onCall(
   {
     cors: true,
-    maxInstances: 10,
-    secrets: [geminiApiKey]
+    maxInstances: 10
+    // Uses GEMINI_API_KEY from .env instead of Secret Manager
   },
   async (request) => {
     console.log('Generate boolean search function called');
@@ -102,7 +99,7 @@ exports.generateBooleanSearch = onCall(
 
       console.log('Gemini API key found from secret manager');
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
       // Extract location information from context items
       const locationItems = contextItems?.filter(item =>

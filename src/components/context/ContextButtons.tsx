@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Globe, Sparkles, FileText, X, MapPin, Link2 } from 'lucide-react';
+import { Upload, Sparkles, MapPin, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectContext } from '@/context/ProjectContext';
-import { DocumentProcessor } from '@/lib/documentProcessing';
-import { FirecrawlService } from '@/utils/FirecrawlService';
+import { DocumentProcessor } from '@/lib/modernPdfProcessor';
 import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchModal';
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
 import LocationModal from '@/components/LocationModal';
@@ -88,7 +87,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     file_type?: string;
     metadata?: Record<string, any>;
   }) => {
-    if (!user?.uid) {
+    if (!user?.id) {
       console.warn('User not authenticated, skipping context item save');
       return;
     }
@@ -98,7 +97,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
         .from('context_items')
         .insert({
           ...item,
-          user_id: user.uid,
+          user_id: user.id,
           project_id: selectedProject?.id || null,
           tags: [context],
           created_at: new Date().toISOString()
@@ -125,20 +124,18 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     try {
       // Use existing DocumentProcessor for consistent file handling
       const validation = DocumentProcessor.validateFile(file);
-      if (!validation.isValid) {
+      if (!validation.valid) {
         throw new Error(validation.error);
       }
 
-      const content = await DocumentProcessor.processDocument(file);
+      const content = await DocumentProcessor.processDocument({
+        file,
+        userId: user?.id || 'anonymous'
+      });
 
-      // Store in project context if selected
-      if (selectedProject?.id) {
-        await DocumentProcessor.saveToProject(selectedProject.id, {
-          content,
-          filename: file.name,
-          context
-        });
-      }
+      // saveToProject removed as it's not available in modernPdfProcessor
+      // The content is saved to context_items below which associates it with the project
+
 
       // Always save to context_items table
       await saveContextItem({

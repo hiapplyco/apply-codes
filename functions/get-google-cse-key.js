@@ -41,8 +41,8 @@ exports.getGoogleCseKey = functions.https.onRequest(async (req, res) => {
     await admin.auth().verifyIdToken(token);
 
     // Use params which read from .env file
-    const apiKey = googleCseApiKey.value();
-    const engineId = googleCseId.value();
+    const apiKey = process.env.GOOGLE_CSE_API_KEY;
+    const engineId = process.env.GOOGLE_CSE_ID;
 
     if (!apiKey || !engineId) {
       console.error('Missing CSE config:', { hasApiKey: !!apiKey, hasEngineId: !!engineId });

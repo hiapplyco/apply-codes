@@ -258,6 +258,24 @@ class FunctionBridge {
     return this.callHttpFunction("geminiApi", { body: payload });
   }
 
+  async extractJobContext(payload: {
+    content: string;
+    contentType: 'text' | 'file' | 'url' | 'search' | 'location';
+    metadata?: Record<string, any>;
+  }): Promise<{
+    success: boolean;
+    data?: any;
+    extractionMeta?: {
+      confidence: number;
+      fields_extracted: number;
+      fields_inferred: number;
+      source_type: string;
+    };
+    error?: string;
+  }> {
+    return this.callHttpFunction("extractJobContext", { body: payload });
+  }
+
   async summarizeJob(payload: any): Promise<any> {
     return this.callHttpFunction("summarizeJob", { body: payload });
   }
