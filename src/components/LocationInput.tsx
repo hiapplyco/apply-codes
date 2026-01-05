@@ -162,6 +162,15 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
     try {
       console.log('🚀 Initializing Google Places Autocomplete');
 
+      // Check for billing errors by looking at global error state
+      // Google Maps sets this when billing is not enabled
+      if ((window as any).gm_authFailure) {
+        console.error('❌ Google Maps authentication/billing failure detected');
+        setError('Google Maps requires billing to be enabled. You can still type locations manually.');
+        setIsApiLoaded(true); // Allow manual input
+        return;
+      }
+
       // Create autocomplete with optimized configuration
       autocompleteRef.current = new window.google.maps.places.Autocomplete(
         inputRef.current,
@@ -174,6 +183,52 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
 
       console.log('✅ Autocomplete instance created:', autocompleteRef.current);
       console.log('📍 Input element:', inputRef.current);
+
+      // Add optimized CSS for dropdown styling
+      if (!document.getElementById('google-places-styles')) {
+        const style = document.createElement('style');
+        style.id = 'google-places-styles';
+        style.textContent = `
+          .pac-container {
+            z-index: 10000 !important;
+            border-radius: 8px;
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+            background: white !important;
+            font-family: inherit;
+            position: fixed !important;
+          }
+          .pac-item {
+            cursor: pointer !important;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.15s ease;
+            line-height: 1.4;
+            pointer-events: auto !important;
+            user-select: none;
+            position: relative;
+          }
+          .pac-item:hover {
+            background-color: #f3f4f6;
+          }
+          .pac-item:last-child {
+            border-bottom: none;
+          }
+          .pac-item-query {
+            font-weight: 600;
+            color: #374151;
+          }
+          .pac-matched {
+            font-weight: 700;
+            color: #7c3aed;
+            pointer-events: none;
+          }
+          .pac-item * {
+            pointer-events: none;
+          }
+        `;
+        document.head.appendChild(style);
+      }
 
       // Function to position the dropdown correctly
       const positionDropdown = () => {
@@ -329,9 +384,19 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
     const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
     if (!apiKey) {
-      setError('Google Maps API key not configured');
+      setError('Google Maps API key not configured. Enter location manually.');
+      setIsApiLoaded(true); // Allow manual input
       return;
     }
+
+    // Set up global auth failure callback BEFORE loading the script
+    // Google Maps calls this when billing is not enabled or API key is invalid
+    (window as any).gm_authFailure = () => {
+      console.error('❌ Google Maps authentication/billing failure');
+      (window as any).gm_authFailure_triggered = true;
+      setError('Google Maps Places API requires billing. Enter location manually below.');
+      setIsApiLoaded(true); // Allow manual input fallback
+    };
 
     if (isGoogleMapsLoaded()) {
       setIsApiLoaded(true);
@@ -341,128 +406,108 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
 
     // Prevent multiple script loading
     if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+      // Script already exists, wait for it to load
+      const checkLoaded = setInterval(() => {
+        if (isGoogleMapsLoaded()) {
+          clearInterval(checkLoaded);
+          setIsApiLoaded(true);
+          initializeAutocomplete();
+        }
+      }, 100);
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkLoaded);
+        if (!isGoogleMapsLoaded()) {
+          setError('Google Maps failed to load. Enter location manually.');
+          setIsApiLoaded(true);
+        }
+      }, 5000);
       return;
     }
 
     console.log('📡 Loading Google Maps JavaScript API');
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__googleMapsCallback`;
     script.async = true;
     script.defer = true;
 
-    script.onload = () => {
-      console.log('✅ Google Maps API loaded');
+    // Set up callback for when script loads
+    (window as any).__googleMapsCallback = () => {
+      console.log('✅ Google Maps API loaded via callback');
       setIsApiLoaded(true);
 
-      // Add optimized CSS for dropdown
-      const style = document.createElement('style');
-      style.id = 'google-places-styles';
-      style.textContent = `
-        .pac-container {
-          z-index: 10000 !important;
-          border-radius: 8px;
-          border: 2px solid #000;
-          box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
-          background: white !important;
-          font-family: inherit;
-          position: fixed !important;
+      // Check for any pending auth failures
+      setTimeout(() => {
+        if ((window as any).gm_authFailure_triggered) {
+          return; // Auth failure already handled
         }
-        .pac-item {
-          cursor: pointer !important;
-          padding: 12px 16px;
-          border-bottom: 1px solid #e5e7eb;
-          transition: background-color 0.15s ease;
-          line-height: 1.4;
-          pointer-events: auto !important;
-          user-select: none;
-          position: relative;
-        }
-        .pac-item:hover {
-          background-color: #f3f4f6;
-        }
-        .pac-item:last-child {
-          border-bottom: none;
-        }
-        .pac-item-query {
-          font-weight: 600;
-          color: #374151;
-        }
-        .pac-matched {
-          font-weight: 700;
-          color: #7c3aed;
-          pointer-events: none;
-        }
-        .pac-item-query {
-          pointer-events: none;
-        }
-        .pac-item * {
-          pointer-events: none;
-        }
-      `;
+        initializeAutocomplete();
+      }, 100);
+    };
 
-      // Remove existing styles to prevent duplicates
-      const existingStyle = document.getElementById('google-places-styles');
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-
-      document.head.appendChild(style);
-
-      // Initialize autocomplete after a brief delay
-      setTimeout(initializeAutocomplete, 100);
+    script.onload = () => {
+      console.log('✅ Google Maps script loaded');
+      // Callback will handle the rest
     };
 
     script.onerror = () => {
-      console.error('❌ Failed to load Google Maps API');
-      setError('Failed to load Google Maps API');
+      console.error('❌ Failed to load Google Maps script');
+      setError('Failed to load Google Maps. Enter location manually.');
+      setIsApiLoaded(true); // Allow manual input
     };
 
     document.head.appendChild(script);
 
+    // Note: Cleanup is handled in the main useEffect cleanup
+  }, [isGoogleMapsLoaded, initializeAutocomplete]);
+
+  // Separate effect for script loading
+  useEffect(() => {
+    loadGoogleMapsAPI();
+
     // Cleanup function
     return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-      const style = document.getElementById('google-places-styles');
-      if (style) {
-        style.remove();
-      }
-      // Cleanup observer
+      // Clean up global callbacks
+      delete (window as any).gm_authFailure;
+      delete (window as any).__googleMapsCallback;
+      delete (window as any).gm_authFailure_triggered;
+
+      // Clean up observers
       if ((window as any).__pacObserver) {
         (window as any).__pacObserver.disconnect();
         delete (window as any).__pacObserver;
+      }
+      if ((window as any).placesObserver) {
+        (window as any).placesObserver.disconnect();
         delete (window as any).placesObserver;
       }
-      // Cleanup resize observer
       if ((window as any).__pacResizeObserver) {
         (window as any).__pacResizeObserver.disconnect();
         delete (window as any).__pacResizeObserver;
       }
-      // Cleanup reposition handlers
       if ((window as any).__pacRepositionHandlers) {
         const { handleReposition } = (window as any).__pacRepositionHandlers;
         window.removeEventListener('scroll', handleReposition, true);
         window.removeEventListener('resize', handleReposition);
         delete (window as any).__pacRepositionHandlers;
       }
-    };
-  }, [isGoogleMapsLoaded, initializeAutocomplete]);
 
-  // Effect to load API and initialize - run only once
-  useEffect(() => {
-    const cleanup = loadGoogleMapsAPI();
-    return cleanup;
-  }, [loadGoogleMapsAPI]); // Empty dependency array to run only once
+      // Don't remove the script - other components may be using it
+      const style = document.getElementById('google-places-styles');
+      if (style) {
+        style.remove();
+      }
+    };
+  }, [loadGoogleMapsAPI]);
 
   // Re-initialize autocomplete when API loads
   useEffect(() => {
-    if (isApiLoaded && inputRef.current && !isInitialized.current) {
+    if (isApiLoaded && inputRef.current && !isInitialized.current && !error) {
       console.log('🔄 API loaded, initializing autocomplete...');
       initializeAutocomplete();
     }
-  }, [isApiLoaded, initializeAutocomplete]);
+  }, [isApiLoaded, initializeAutocomplete, error]);
 
   // Handle manual input (Enter key)
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -513,31 +558,41 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
     onLocationSelect(null as any);
   }, [onLocationSelect, onInputChange]);
 
-  // Render error state
-  if (error) {
-    return (
-      <div className="location-input-error">
-        <div className="flex items-center gap-2 p-3 bg-red-50 border-2 border-red-200 rounded-lg">
-          <MapPin className="h-4 w-4 text-red-500 flex-shrink-0" />
-          <span className="text-red-700 text-sm">{error}</span>
-        </div>
-      </div>
-    );
-  }
+  // Render with error - show warning but still allow manual input
+  const showWarning = !!error;
+
+  // Determine placeholder based on state
+  const getPlaceholder = () => {
+    if (!isApiLoaded) return "Loading location search...";
+    if (showWarning) return "Type location manually (e.g., San Francisco, CA)...";
+    return placeholder;
+  };
 
   return (
-    <div className="location-input-container relative">
+    <div className="location-input-container relative space-y-2">
+      {/* Warning banner for billing/API issues */}
+      {showWarning && (
+        <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs">
+          <MapPin className="h-3.5 w-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <span className="text-amber-800">
+            {error} <span className="font-medium">Press Enter to confirm.</span>
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            <MapPin className="h-4 w-4 text-gray-400" />
+            <MapPin className={`h-4 w-4 ${showWarning ? 'text-amber-500' : 'text-gray-400'}`} />
           </div>
           <input
             ref={inputRef}
             type="text"
-            placeholder={isApiLoaded ? placeholder : "Loading location search..."}
+            placeholder={getPlaceholder()}
             disabled={!isApiLoaded || isProcessing}
-            className="block w-full pl-10 pr-10 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm disabled:bg-gray-50 disabled:text-gray-500"
+            className={`block w-full pl-10 pr-10 py-2 border-2 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-sm disabled:bg-gray-50 disabled:text-gray-500 ${
+              showWarning ? 'border-amber-300' : 'border-gray-300'
+            }`}
             onKeyDown={handleKeyDown}
             onChange={(e) => onInputChange?.(e.target.value)}
             autoComplete="off"
@@ -561,7 +616,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
       </div>
 
       {!hidePreview && selectedLocation && (
-        <div className="mt-2 p-2 bg-green-50 border-2 border-green-200 rounded-lg">
+        <div className="p-2 bg-green-50 border-2 border-green-200 rounded-lg">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />
             <span className="text-green-800 text-sm font-medium">

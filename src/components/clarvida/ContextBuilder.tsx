@@ -7,10 +7,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Minus, Sparkles, Copy, FileText, ChevronDown, ChevronUp, Brain, Trash2 } from 'lucide-react';
+import { Plus, Minus, Sparkles, Copy, FileText, ChevronDown, ChevronUp, Brain, Trash2, Download, FileType, FileSpreadsheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClarvidaJobTemplate } from '@/types/organization';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { JobDescriptionExporter } from '@/utils/jobDescriptionExport';
 
 // Context Builder components
 import { ContextInputSection } from './ContextBuilder/ContextInputSection';
@@ -227,6 +236,24 @@ ${t.seo_keywords?.length ? `\n---\n\n**Keywords:** ${t.seo_keywords.join(', ')}`
     const description = generateJobDescription();
     navigator.clipboard.writeText(description);
     toast.success('Copied to clipboard!');
+  };
+
+  // Export handlers
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (format: 'docx' | 'pdf' | 'md' | 'txt') => {
+    setIsExporting(true);
+    const toastId = toast.loading(`Exporting to ${format.toUpperCase()}...`);
+
+    try {
+      await JobDescriptionExporter.export(template as ClarvidaJobTemplate, format);
+      toast.success(`Downloaded ${format.toUpperCase()} file!`, { id: toastId });
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error(`Failed to export ${format.toUpperCase()}`, { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Field with AI indicator
@@ -663,6 +690,50 @@ ${t.seo_keywords?.length ? `\n---\n\n**Keywords:** ${t.seo_keywords.join(', ')}`
             <Copy className="w-4 h-4 mr-2" />
             Copy
           </Button>
+
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isExporting} className="border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50">
+                <Download className="w-4 h-4 mr-2" />
+                Export
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Download As</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport('docx')} className="cursor-pointer">
+                <FileType className="w-4 h-4 mr-2 text-blue-600" />
+                <div className="flex flex-col">
+                  <span className="font-medium">Word Document</span>
+                  <span className="text-xs text-gray-500">.docx with formatting</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')} className="cursor-pointer">
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-red-600" />
+                <div className="flex flex-col">
+                  <span className="font-medium">PDF Document</span>
+                  <span className="text-xs text-gray-500">.pdf with Clarvida branding</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport('md')} className="cursor-pointer">
+                <FileText className="w-4 h-4 mr-2 text-purple-600" />
+                <div className="flex flex-col">
+                  <span className="font-medium">Markdown</span>
+                  <span className="text-xs text-gray-500">.md with headers</span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('txt')} className="cursor-pointer">
+                <FileText className="w-4 h-4 mr-2 text-gray-600" />
+                <div className="flex flex-col">
+                  <span className="font-medium">Plain Text</span>
+                  <span className="text-xs text-gray-500">.txt simple format</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardContent>
     </Card>
