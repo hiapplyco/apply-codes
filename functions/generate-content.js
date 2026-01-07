@@ -32,9 +32,22 @@ exports.generateContent = onRequest(
     }
 
     try {
-      const { prompt, type, context } = req.body;
+      // Support both 'prompt' and 'userInput' field names for compatibility
+      const {
+        prompt,
+        userInput,
+        type,
+        contentType,
+        context,
+        systemPrompt: clientSystemPrompt,
+        contextContent,
+        projectContext
+      } = req.body;
 
-      if (!prompt) {
+      // Use prompt or userInput (client sends userInput, some components send prompt)
+      const finalPrompt = prompt || userInput;
+
+      if (!finalPrompt) {
         res.status(400).json({ error: 'Prompt is required' });
         return;
       }
@@ -45,22 +58,35 @@ exports.generateContent = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
+      // Use client-provided systemPrompt if available, otherwise generate based on type
       let systemPrompt = '';
-      if (type === 'email') {
-        systemPrompt = 'You are an expert copywriter specializing in professional emails.';
-      } else if (type === 'job_description') {
-        systemPrompt = 'You are an HR specialist skilled in writing compelling job descriptions.';
+      if (clientSystemPrompt) {
+        systemPrompt = clientSystemPrompt;
       } else {
-        systemPrompt = 'You are a helpful AI assistant.';
+        const effectiveType = type || contentType;
+        if (effectiveType === 'email' || effectiveType === 'Cold Outreach Email') {
+          systemPrompt = 'You are an expert copywriter specializing in professional emails.';
+        } else if (effectiveType === 'job_description' || effectiveType === 'Job Description') {
+          systemPrompt = 'You are an HR specialist skilled in writing compelling job descriptions.';
+        } else {
+          systemPrompt = 'You are a helpful AI assistant.';
+        }
       }
 
+      // Add context if provided
       if (context) {
         systemPrompt += `\nContext: ${JSON.stringify(context)}`;
       }
+      if (contextContent) {
+        systemPrompt += `\nAdditional Context: ${contextContent}`;
+      }
+      if (projectContext) {
+        systemPrompt += `\nProject Context: ${projectContext}`;
+      }
 
-      const result = await model.generateContent(`${systemPrompt}\n\nTask: ${prompt}`);
+      const result = await model.generateContent(`${systemPrompt}\n\nTask: ${finalPrompt}`);
       const content = result.response.text();
 
       res.status(200).json({ content });
