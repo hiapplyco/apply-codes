@@ -58,7 +58,7 @@ exports.generateContent = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       // Use client-provided systemPrompt if available, otherwise generate based on type
       let systemPrompt = '';

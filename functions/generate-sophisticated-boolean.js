@@ -68,7 +68,7 @@ exports.generateSophisticatedBoolean = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       // Build variant-specific instructions
       const variantInstructions = {
