@@ -1,55 +1,71 @@
 import { Card } from '@/components/ui/card';
+import { Zap, Target, Brain } from 'lucide-react';
 
-interface BenefitItem {
+interface FeatureItem {
   title: string;
   description: string;
-  image: string;
+  icon: React.ElementType;
+  gradient: string;
 }
 
-const benefits: BenefitItem[] = [
+const features: FeatureItem[] = [
   {
-    title: 'Benefits',
+    title: 'AI-Powered Sourcing',
     description:
-      'We offer competitive salaries, tuition reimbursement, paid time off, premium health insurance, 401K with company match, employee discounts and more.',
-    image: 'https://jobs.clarvida.com/system/production/assets/448694/original/clarvida-benefits.jpg',
+      'Generate sophisticated boolean search strings in seconds. Our AI understands job requirements and creates recruiter-grade queries that find the exact candidates you need.',
+    icon: Brain,
+    gradient: 'from-purple-500 to-indigo-600',
   },
   {
-    title: 'Professional Development',
+    title: 'Streamlined Workflow',
     description:
-      'We invest in your growth through a variety of personal and professional training programs.',
-    image: 'https://jobs.clarvida.com/system/production/assets/448696/original/clarvida-professional-dev.jpg',
+      'Build job descriptions, generate boolean searches, and analyze candidates all in one place. No more switching between tools or copy-pasting between applications.',
+    icon: Zap,
+    gradient: 'from-teal-500 to-emerald-600',
   },
   {
-    title: 'Career Advancement',
+    title: 'Precision Targeting',
     description:
-      'We unlock opportunities for advancement by helping employees develop career roadmaps and action plans to reach their goals.',
-    image: 'https://jobs.clarvida.com/system/production/assets/448695/original/clarvida-career-advancement.jpg',
+      'Our intelligent matching analyzes skills, experience, and qualifications to surface the most qualified candidates. Spend less time screening, more time hiring.',
+    icon: Target,
+    gradient: 'from-orange-500 to-rose-600',
   },
 ];
 
 export const ClarvidaWhyJoinSection = () => {
   return (
-    <section className="py-12 md:py-16 bg-white">
+    <section className="py-16 md:py-24 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-10">
-          Why join the Clarvida team?
-        </h2>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Why use Apply, Co.?
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            The intelligent recruiting platform that transforms how you find and hire talent
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {benefits.map((benefit) => (
-            <Card key={benefit.title} className="overflow-hidden border-0 shadow-sm">
-              <div className="aspect-video overflow-hidden">
-                <img
-                  src={benefit.image}
-                  alt={benefit.title}
-                  className="w-full h-full object-cover"
-                />
+          {features.map((feature) => (
+            <Card
+              key={feature.title}
+              className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white"
+            >
+              {/* Gradient header with icon */}
+              <div className={`h-32 bg-gradient-to-br ${feature.gradient} flex items-center justify-center`}>
+                <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
+                  <feature.icon className="h-10 w-10 text-white" />
+                </div>
               </div>
+
+              {/* Content */}
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {benefit.title}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
+                <p className="text-gray-600 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             </Card>
           ))}

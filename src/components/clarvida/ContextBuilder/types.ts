@@ -24,9 +24,47 @@ export interface ExtractionState {
   fieldsExtracted: number;
 }
 
+// Image data structure from Gemini image generation
+export interface ImageData {
+  base64Data: string;
+  mimeType: string;
+  dataUrl: string;
+  storageUrl?: string;
+  storagePath?: string;
+}
+
+// Generated content structure for non-job-description content types
+export interface GeneratedContent {
+  type: string;
+  content: string;
+  metadata?: {
+    imageUrl?: string;
+    imageData?: ImageData;
+    imageStorageUrl?: string;
+    imageStoragePath?: string;
+    hashtags?: string[];
+    subject?: string;
+    jobTitle?: string;
+    companyName?: string;
+    senderName?: string;
+    senderEmail?: string;
+    recipientName?: string;
+    recipientEmail?: string;
+  };
+}
+
+// Content type from contentcreationbots.json
+export interface ContentType {
+  content_type: string;
+  emoji: string;
+  tooltip: string;
+  system_prompt: string;
+}
+
 // Props for the ContextBuilder component
 export interface ContextBuilderProps {
   onJobDescriptionGenerated: (description: string, template: ClarvidaJobTemplate) => void;
+  onContentGenerated?: (content: GeneratedContent, contentType: string) => void;
   initialTemplate?: Partial<ClarvidaJobTemplate>;
   initialContextItems?: ContextItem[];
 }

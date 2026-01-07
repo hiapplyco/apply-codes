@@ -14,6 +14,54 @@ interface BooleanSearchResponse {
   error?: string;
 }
 
+/**
+ * Payload for sophisticated boolean search generation with re-roll support
+ */
+interface SophisticatedBooleanPayload {
+  jobContext: {
+    title: string;
+    specialty?: string;
+    location: {
+      city: string;
+      state: string;
+      workArrangement: string;
+    };
+    employmentType: string;
+    level?: string;
+    mustHaveSkills: string[];
+    niceToHaveSkills: string[];
+    technicalSkills: string[];
+    certifications: string[];
+    licensure: string[];
+    keywords: string[];
+    experienceYears?: number;
+    industry?: string;
+  };
+  generatedDescription: string;
+  previousGenerations?: string[];
+  variant?: 'strict' | 'balanced' | 'broad';
+  isReroll?: boolean;
+}
+
+interface BooleanExplanation {
+  components: Array<{
+    type: string;
+    purpose: string;
+    terms: string[];
+  }>;
+  willInclude: string[];
+  willExclude: string[];
+  proTips: string[];
+}
+
+interface SophisticatedBooleanResponse {
+  success: boolean;
+  searchString?: string;
+  explanation?: BooleanExplanation;
+  variant?: string;
+  error?: string;
+}
+
 type Json = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
 const DEFAULT_REGION = import.meta.env.VITE_FIREBASE_REGION || "us-central1";
@@ -190,6 +238,49 @@ class FunctionBridge {
     return result;
   }
 
+  /**
+   * Generate a sophisticated boolean search string with re-roll support
+   *
+   * Features:
+   * - Uses structured jobContext for precise targeting
+   * - Supports 3 variants: strict, balanced, broad
+   * - Re-roll with history-based deduplication
+   * - Returns explanation of boolean components
+   */
+  async generateSophisticatedBoolean(payload: SophisticatedBooleanPayload): Promise<SophisticatedBooleanResponse> {
+    try {
+      const result = await this.callHttpFunction<SophisticatedBooleanResponse>(
+        "generateSophisticatedBoolean",
+        { body: payload }
+      );
+
+      if (!result.success || !result.searchString) {
+        return {
+          success: false,
+          error: result.error || "Failed to generate sophisticated boolean search"
+        };
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error("[function-bridge] generateSophisticatedBoolean failed:", {
+        error,
+        payload: { title: payload.jobContext?.title, variant: payload.variant },
+        timestamp: new Date().toISOString()
+      });
+
+      // PRODUCTION: No fallbacks - return error for proper UI handling
+      return {
+        success: false,
+        error: `Boolean generation failed: ${errorMessage}. Please try again.`
+      };
+    }
+  }
+
+  // REMOVED: Local fallback boolean generation
+  // Per production guidelines: No fallbacks - errors must be handled explicitly in the UI
+
   async enrichProfile(payload: any): Promise<any> {
     return this.callCallable("enrichProfile", payload);
   }
@@ -274,6 +365,57 @@ class FunctionBridge {
     error?: string;
   }> {
     return this.callHttpFunction("extractJobContext", { body: payload });
+  }
+
+  /**
+   * Extract document content using Gemini's native multimodal capabilities
+   * Supports: PDF, DOCX, DOC, TXT, Images (JPG, PNG)
+   * Returns structured job template data directly from Gemini
+   */
+  async extractDocumentGemini(payload: {
+    fileData: string; // Base64 encoded file data
+    mimeType?: string;
+    fileName?: string;
+    additionalContext?: string;
+  }): Promise<{
+    success: boolean;
+    data?: any;
+    metadata?: {
+      confidence: number;
+      documentType: string;
+      rawTextSummary: string | null;
+      fileName: string;
+      mimeType: string;
+      processedAt: string;
+    };
+    error?: string;
+    raw?: string;
+  }> {
+    return this.callHttpFunction("extractDocumentGemini", { body: payload });
+  }
+
+  /**
+   * Optimize job template using Gemini
+   * Deduplicates, enhances, and optimizes all fields after context is added
+   */
+  async optimizeJobTemplate(payload: {
+    currentTemplate: any;
+    newContext?: string | any;
+    contextType?: string;
+    userEditedFields?: string[];
+  }): Promise<{
+    success: boolean;
+    data?: any;
+    summary?: {
+      fields_updated: string[];
+      fields_added: string[];
+      duplicates_removed: number;
+      enhancements_made: string[];
+      confidence: number;
+    };
+    error?: string;
+  }> {
+    return this.callHttpFunction("optimizeJobTemplate", { body: payload });
   }
 
   async summarizeJob(payload: any): Promise<any> {

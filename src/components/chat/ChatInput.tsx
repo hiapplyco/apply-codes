@@ -20,7 +20,7 @@ export const ChatInput = ({ input, setInput, handleSubmit, isLoading, isGenerati
         onChange={(e) => setInput(e.target.value)}
         placeholder="Ask questions about your data..."
         className={cn(
-          "border-2 border-black rounded-lg p-4 resize-none",
+          "border-2 border-black rounded-lg p-4 resize-none max-h-32 overflow-y-auto",
           (isLoading || isGenerating) && "bg-gray-100 text-gray-400"
         )}
         rows={3}

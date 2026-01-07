@@ -36,7 +36,7 @@ exports.getGeminiKey = onRequest(
         throw new Error('Gemini API key not configured');
       }
 
-      res.status(200).json({ key: apiKey });
+      res.status(200).json({ secret: apiKey });
 
     } catch (error) {
       console.error('Error retrieving Gemini key:', error);

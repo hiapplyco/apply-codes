@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useClarvidaAuth } from "@/context/ClarvidaAuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -152,6 +152,17 @@ const ClarvidaLogin = () => {
                   </FormItem>
                 )}
               />
+
+              {!isSignUp && (
+                <div className="text-right">
+                  <Link
+                    to="/reset-password-request"
+                    className="text-sm text-[#0B5B5E] hover:text-[#0A4F4F] hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
 
               <Button
                 type="submit"

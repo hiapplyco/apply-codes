@@ -17,7 +17,7 @@ import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchM
 import LocationModal from '@/components/LocationModal';
 import { toast } from 'sonner';
 import { ContextInputSectionProps } from './types';
-import { DocumentProcessor } from '@/lib/modernPdfProcessor';
+import { functionBridge } from '@/lib/function-bridge';
 
 export function ContextInputSection({ onContextAdded, isExtracting }: ContextInputSectionProps) {
   const [pasteText, setPasteText] = useState('');
@@ -28,13 +28,64 @@ export function ContextInputSection({ onContextAdded, isExtracting }: ContextInp
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file upload with proper document processing
+  // Supported file types for Gemini extraction
+  const SUPPORTED_TYPES = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'text/plain',
+    'image/jpeg',
+    'image/jpg',
+    'image/png'
+  ];
+  const SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.txt', '.jpg', '.jpeg', '.png'];
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
+  // Validate file for Gemini processing
+  const validateFile = (file: File): { valid: boolean; error?: string } => {
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = SUPPORTED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+    const hasValidMimeType = SUPPORTED_TYPES.includes(file.type);
+
+    if (!hasValidExtension && !hasValidMimeType) {
+      return {
+        valid: false,
+        error: `Unsupported file: "${file.name}". Please use: PDF, DOCX, TXT, JPG, or PNG files`
+      };
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        valid: false,
+        error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 20MB.`
+      };
+    }
+
+    return { valid: true };
+  };
+
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle file upload with Gemini-powered extraction
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file using DocumentProcessor
-    const validation = DocumentProcessor.validateFile(file);
+    // Validate file
+    const validation = validateFile(file);
     if (!validation.valid) {
       toast.error(validation.error || 'Invalid file type');
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -42,48 +93,59 @@ export function ContextInputSection({ onContextAdded, isExtracting }: ContextInp
     }
 
     setIsProcessing('file');
-    const toastId = toast.loading(`Processing ${file.name}...`);
+    const toastId = toast.loading(`Uploading ${file.name} to Gemini...`);
 
     try {
-      // Use DocumentProcessor for proper text extraction (PDF.js, mammoth, etc.)
-      const extractedContent = await DocumentProcessor.processDocument({
-        file,
-        userId: 'context-builder', // Not storing to Firebase, just extracting
-        onProgress: (message) => {
-          toast.loading(message, { id: toastId });
-        },
-        onComplete: (content) => {
-          console.log(`Successfully extracted ${content.length} characters from ${file.name}`);
-        },
-        onError: (error) => {
-          console.error('Document processing error:', error);
-        }
+      // Convert file to base64
+      toast.loading('Converting file...', { id: toastId });
+      const base64Data = await fileToBase64(file);
+
+      // Call Gemini extraction API
+      toast.loading('Extracting with Gemini AI...', { id: toastId });
+      console.log(`Sending ${file.name} to Gemini for extraction...`);
+
+      const result = await functionBridge.extractDocumentGemini({
+        fileData: base64Data,
+        mimeType: file.type,
+        fileName: file.name
       });
 
-      // Create a clean summary from the extracted content
-      const cleanContent = extractedContent.trim();
-      const summary = cleanContent
-        .substring(0, 300)
-        .replace(/\s+/g, ' ')
-        .trim() + (cleanContent.length > 300 ? '...' : '');
+      if (!result.success) {
+        throw new Error(result.error || 'Gemini extraction failed');
+      }
 
+      console.log('Gemini extraction successful:', {
+        documentType: result.metadata?.documentType,
+        confidence: result.metadata?.confidence,
+        hasData: !!result.data
+      });
+
+      // Create summary from the raw text summary or extracted data
+      const summary = result.metadata?.rawTextSummary
+        ? result.metadata.rawTextSummary.substring(0, 300) + '...'
+        : `Extracted ${Object.keys(result.data || {}).length} fields from ${file.name}`;
+
+      // Pass the structured data directly - Gemini already extracted job template fields
       await onContextAdded({
         type: 'file_upload',
         title: `File: ${file.name}`,
-        content: cleanContent,
+        content: result.metadata?.rawTextSummary || JSON.stringify(result.data, null, 2),
         summary: summary,
         file_name: file.name,
         file_type: file.type,
         metadata: {
           fileSize: file.size,
           fileType: file.type,
-          extractedLength: cleanContent.length,
-          extractionMethod: file.type === 'application/pdf' ? 'pdf.js' :
-                           file.type.includes('wordprocessingml') ? 'mammoth' : 'native'
+          extractionMethod: 'gemini',
+          documentType: result.metadata?.documentType,
+          confidence: result.metadata?.confidence,
+          processedAt: result.metadata?.processedAt,
+          // Include the structured extraction directly
+          extractedJobData: result.data
         },
       });
 
-      toast.success(`Extracted content from ${file.name}`, { id: toastId });
+      toast.success(`AI extracted content from ${file.name}`, { id: toastId });
     } catch (error) {
       console.error('File upload failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to process file';
@@ -295,7 +357,7 @@ export function ContextInputSection({ onContextAdded, isExtracting }: ContextInp
             onChange={(e) => setPasteText(e.target.value)}
             placeholder="Paste job description text here... This can be from a job posting, email, or any source."
             rows={8}
-            className="resize-none border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+            className="resize-none max-h-64 overflow-y-auto border-gray-300 focus:border-purple-500 focus:ring-purple-500"
           />
           <div className="flex justify-end gap-2">
             <Button

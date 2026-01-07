@@ -92,6 +92,48 @@ Apply combines the power of AI with intuitive workflows to create a seamless rec
    firebase emulators:start
    ```
 
+## ⚠️ Production Error Handling Guidelines
+
+**This is a production application. No fallbacks or mock data are acceptable.**
+
+### Error Handling Standards
+
+1. **No Fallbacks**: Never use fallback values, mock data, or demo mode. If an operation fails, it must fail explicitly.
+
+2. **Console Logging**: All errors must be logged to console with full context:
+   ```typescript
+   console.error('[ComponentName] Operation failed:', {
+     error,
+     context: { userId, operationId },
+     timestamp: new Date().toISOString()
+   });
+   ```
+
+3. **User Notifications**: All errors must show toast notifications with actionable messages:
+   ```typescript
+   toast.error('Failed to generate boolean search. Please try again or contact support.');
+   ```
+
+4. **Graceful Degradation**: Show loading states and error states, never fake success.
+
+5. **Error Boundaries**: Wrap components in error boundaries for crash recovery.
+
+### What NOT to Do
+
+- ❌ Return hardcoded/fallback data on API failure
+- ❌ Silently swallow errors
+- ❌ Show success messages when operations fail
+- ❌ Use `|| defaultValue` patterns to hide failures
+- ❌ Demo modes or mock implementations
+
+### What TO Do
+
+- ✅ Log all errors with context
+- ✅ Show clear error toast notifications
+- ✅ Provide retry mechanisms where appropriate
+- ✅ Return null/undefined and handle in UI
+- ✅ Track errors for debugging (console + monitoring)
+
 ## 🏗️ Architecture
 
 ```

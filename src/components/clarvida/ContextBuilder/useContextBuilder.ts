@@ -4,6 +4,18 @@ import { ContextItem, ExtractionState, mapItemTypeToContentType, DEFAULT_CLARVID
 import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
 
+interface OptimizationState {
+  isOptimizing: boolean;
+  lastOptimizationTime: string | null;
+  totalOptimizations: number;
+  lastSummary: {
+    fields_updated: string[];
+    fields_added: string[];
+    duplicates_removed: number;
+    enhancements_made: string[];
+  } | null;
+}
+
 export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>) {
   // Context items state
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
@@ -22,6 +34,14 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
     userOverrides: new Set(),
     confidence: 0,
     fieldsExtracted: 0,
+  });
+
+  // Optimization tracking state
+  const [optimizationState, setOptimizationState] = useState<OptimizationState>({
+    isOptimizing: false,
+    lastOptimizationTime: null,
+    totalOptimizations: 0,
+    lastSummary: null,
   });
 
   // Track user edits to prevent AI overwriting
@@ -101,7 +121,86 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
     });
   }, [getNestedValue, setNestedValue]);
 
-  // Extract ClarvidaJobTemplate fields from context
+  // Optimize template after context is added
+  const optimizeTemplate = useCallback(async (
+    currentTemplate: Partial<ClarvidaJobTemplate>,
+    newContext: string | any,
+    contextType: string
+  ) => {
+    setOptimizationState(prev => ({ ...prev, isOptimizing: true }));
+
+    try {
+      console.log('Starting template optimization...', {
+        contextType,
+        userEditedFields: Array.from(userEditedFields.current)
+      });
+
+      const result = await functionBridge.optimizeJobTemplate({
+        currentTemplate,
+        newContext,
+        contextType,
+        userEditedFields: Array.from(userEditedFields.current)
+      });
+
+      if (result.success && result.data) {
+        // Update template with optimized data
+        setTemplate(result.data);
+
+        // Track which fields were updated by optimization
+        const newExtractedFields = new Set<string>();
+        if (result.summary?.fields_updated) {
+          result.summary.fields_updated.forEach(f => newExtractedFields.add(f));
+        }
+        if (result.summary?.fields_added) {
+          result.summary.fields_added.forEach(f => newExtractedFields.add(f));
+        }
+
+        setExtractionState(prev => ({
+          ...prev,
+          extractedFields: new Set([...prev.extractedFields, ...newExtractedFields]),
+          confidence: result.summary?.confidence || prev.confidence,
+        }));
+
+        setOptimizationState(prev => ({
+          isOptimizing: false,
+          lastOptimizationTime: new Date().toISOString(),
+          totalOptimizations: prev.totalOptimizations + 1,
+          lastSummary: result.summary ? {
+            fields_updated: result.summary.fields_updated || [],
+            fields_added: result.summary.fields_added || [],
+            duplicates_removed: result.summary.duplicates_removed || 0,
+            enhancements_made: result.summary.enhancements_made || [],
+          } : null,
+        }));
+
+        // Show optimization summary
+        const updatedCount = result.summary?.fields_updated?.length || 0;
+        const addedCount = result.summary?.fields_added?.length || 0;
+        const deduped = result.summary?.duplicates_removed || 0;
+
+        if (updatedCount > 0 || addedCount > 0 || deduped > 0) {
+          const parts = [];
+          if (addedCount > 0) parts.push(`${addedCount} fields added`);
+          if (updatedCount > 0) parts.push(`${updatedCount} enhanced`);
+          if (deduped > 0) parts.push(`${deduped} duplicates removed`);
+          toast.success(`Optimized: ${parts.join(', ')}`);
+        }
+
+        return result.data;
+      } else {
+        console.warn('Optimization returned no data:', result.error);
+        setOptimizationState(prev => ({ ...prev, isOptimizing: false }));
+      }
+    } catch (error) {
+      console.error('Template optimization failed:', error);
+      setOptimizationState(prev => ({ ...prev, isOptimizing: false }));
+      // Don't show error toast - optimization is a nice-to-have enhancement
+    }
+
+    return currentTemplate;
+  }, []);
+
+  // Extract ClarvidaJobTemplate fields from context and then optimize
   const extractFromContext = useCallback(async (item: ContextItem) => {
     setExtractionState(prev => ({
       ...prev,
@@ -109,28 +208,52 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
       lastExtractionSource: item.title,
     }));
 
-    try {
-      const result = await functionBridge.extractJobContext({
-        content: item.content,
-        contentType: mapItemTypeToContentType(item.type),
-        metadata: item.metadata,
-      });
+    let extractedData: any = null;
 
-      if (result.success && result.data) {
-        mergeExtractedData(result.data, {
-          confidence: result.extractionMeta?.confidence || 0.5,
-          fields_extracted: result.extractionMeta?.fields_extracted || 0,
+    try {
+      // Check if this item already has pre-extracted job data from Gemini
+      // This happens when files are processed directly by Gemini multimodal API
+      if (item.metadata?.extractedJobData && Object.keys(item.metadata.extractedJobData).length > 0) {
+        console.log('Using pre-extracted Gemini data:', {
+          source: item.title,
+          fields: Object.keys(item.metadata.extractedJobData).length,
+          confidence: item.metadata?.confidence
         });
 
-        const fieldsCount = result.extractionMeta?.fields_extracted || 0;
+        extractedData = item.metadata.extractedJobData;
+        const fieldsCount = Object.keys(extractedData).filter(k => extractedData[k] !== null).length;
+
+        mergeExtractedData(extractedData, {
+          confidence: item.metadata?.confidence || 0.8,
+          fields_extracted: fieldsCount,
+        });
+
         if (fieldsCount > 0) {
-          toast.success(`Extracted ${fieldsCount} fields from ${item.title}`);
-        } else {
-          toast.info('No new fields extracted from this content');
+          toast.success(`AI extracted ${fieldsCount} fields from ${item.title}`);
         }
-      } else if (result.error) {
-        console.error('Extraction failed:', result.error);
-        toast.error('Failed to extract job details');
+      } else {
+        // Fall back to text-based extraction for other content types
+        const result = await functionBridge.extractJobContext({
+          content: item.content,
+          contentType: mapItemTypeToContentType(item.type),
+          metadata: item.metadata,
+        });
+
+        if (result.success && result.data) {
+          extractedData = result.data;
+          mergeExtractedData(result.data, {
+            confidence: result.extractionMeta?.confidence || 0.5,
+            fields_extracted: result.extractionMeta?.fields_extracted || 0,
+          });
+
+          const fieldsCount = result.extractionMeta?.fields_extracted || 0;
+          if (fieldsCount > 0) {
+            toast.success(`Extracted ${fieldsCount} fields from ${item.title}`);
+          }
+        } else if (result.error) {
+          console.error('Extraction failed:', result.error);
+          toast.error('Failed to extract job details');
+        }
       }
     } catch (error) {
       console.error('Extraction failed:', error);
@@ -138,7 +261,19 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
     } finally {
       setExtractionState(prev => ({ ...prev, isExtracting: false }));
     }
-  }, [mergeExtractedData]);
+
+    // After extraction completes, run optimization pass
+    // Get the current template state after merging
+    setTemplate(currentTemplate => {
+      // Run optimization asynchronously with the updated template
+      optimizeTemplate(
+        currentTemplate,
+        item.content || extractedData,
+        item.type
+      );
+      return currentTemplate; // Return unchanged - optimization will update it
+    });
+  }, [mergeExtractedData, optimizeTemplate]);
 
   // Add context item and trigger extraction
   const addContextItem = useCallback(async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
@@ -160,14 +295,22 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
   }, []);
 
   // Update template field (marks as user-edited)
+  // CRITICAL: Only update extractionState if the field isn't already tracked
+  // Creating a new Set on every keystroke causes re-renders and input focus loss
   const updateTemplate = useCallback((path: string, value: any) => {
-    // Mark this field as user-edited
+    // Mark this field as user-edited (ref doesn't cause re-renders)
     userEditedFields.current.add(path);
 
-    setExtractionState(prev => ({
-      ...prev,
-      userOverrides: new Set([...prev.userOverrides, path]),
-    }));
+    // Only update extraction state if this field isn't already marked as user-overridden
+    // This prevents unnecessary re-renders on every keystroke
+    setExtractionState(prev => {
+      if (prev.userOverrides.has(path)) {
+        return prev; // Return same object reference - no state change, no re-render
+      }
+      const newOverrides = new Set(prev.userOverrides);
+      newOverrides.add(path);
+      return { ...prev, userOverrides: newOverrides };
+    });
 
     setTemplate(prev => setNestedValue(prev, path, value));
   }, [setNestedValue]);
@@ -207,12 +350,14 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
     contextItems,
     template,
     extractionState,
+    optimizationState,
 
     // Actions
     addContextItem,
     removeContextItem,
     updateTemplate,
     setTemplate,
+    optimizeTemplate,
 
     // Utilities
     isFieldExtracted,

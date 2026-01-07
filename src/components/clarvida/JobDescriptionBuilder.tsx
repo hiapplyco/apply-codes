@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Minus, Sparkles, Copy, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Minus, Sparkles, Copy, FileText, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClarvidaJobTemplate } from '@/types/organization';
+import LocationInput from '@/components/LocationInput';
 
 interface JobDescriptionBuilderProps {
   onJobDescriptionGenerated: (description: string, template: ClarvidaJobTemplate) => void;
@@ -156,6 +157,59 @@ export function JobDescriptionBuilder({ onJobDescriptionGenerated, initialTempla
       setKeywordInput('');
     }
   };
+
+  // Handle location selection from Google Places autocomplete
+  const handleLocationSelect = useCallback((locationData: {
+    formatted_address: string;
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: string[];
+    }>;
+  } | null) => {
+    if (!locationData) {
+      updateTemplate('location.city', '');
+      updateTemplate('location.state', '');
+      return;
+    }
+
+    // Extract city and state from address_components
+    let city = '';
+    let state = '';
+
+    for (const component of locationData.address_components) {
+      if (component.types.includes('locality')) {
+        city = component.long_name;
+      } else if (component.types.includes('sublocality_level_1') && !city) {
+        // Fallback for areas without locality (like NYC boroughs)
+        city = component.long_name;
+      }
+      if (component.types.includes('administrative_area_level_1')) {
+        state = component.short_name; // Use short_name for state abbreviation (CO, CA, etc.)
+      }
+    }
+
+    // Fallback: try to parse from formatted_address if components don't have what we need
+    if (!city || !state) {
+      const parts = locationData.formatted_address.split(',').map(p => p.trim());
+      if (parts.length >= 2 && !city) {
+        city = parts[0];
+      }
+      if (parts.length >= 2 && !state) {
+        // Try to extract state from second-to-last part (usually "State ZIP")
+        const stateZipPart = parts[parts.length - 2] || parts[1];
+        const stateMatch = stateZipPart.match(/^([A-Z]{2})\s*\d*$/);
+        if (stateMatch) {
+          state = stateMatch[1];
+        } else {
+          state = stateZipPart.replace(/\d+/g, '').trim();
+        }
+      }
+    }
+
+    updateTemplate('location.city', city);
+    updateTemplate('location.state', state);
+  }, [updateTemplate]);
 
   const removeKeyword = (keyword: string) => {
     updateTemplate('seo_keywords', (template.seo_keywords || []).filter(k => k !== keyword));
@@ -323,23 +377,24 @@ ${t.seo_keywords?.length ? `\n---\n\n**Keywords:** ${t.seo_keywords.join(', ')}`
                   onChange={(e) => updateTemplate('specialty_credential', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  placeholder="e.g., Denver"
-                  value={template.location?.city || ''}
-                  onChange={(e) => updateTemplate('location.city', e.target.value)}
+              <div className="md:col-span-2 space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-purple-600" />
+                  Location *
+                </Label>
+                <LocationInput
+                  onLocationSelect={handleLocationSelect}
+                  placeholder="Search city, state, or zip code..."
+                  hidePreview={false}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
-                  placeholder="e.g., CO"
-                  value={template.location?.state || ''}
-                  onChange={(e) => updateTemplate('location.state', e.target.value)}
-                />
+                {(template.location?.city || template.location?.state) && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className="font-medium">Selected:</span>
+                    <span>
+                      {template.location?.city || '[City]'}, {template.location?.state || '[State]'}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Work Arrangement</Label>

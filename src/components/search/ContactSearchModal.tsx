@@ -243,7 +243,7 @@ export const ContactSearchModal: React.FC<ContactSearchModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Search for Contact Information</DialogTitle>
           <DialogDescription>

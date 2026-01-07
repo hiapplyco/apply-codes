@@ -1,103 +1,107 @@
 import { toast } from "sonner";
 
-// Modern PDF processor using unpdf library
+// Modern PDF processor with robust worker-free extraction
 export class ModernPdfProcessor {
   /**
-   * Extract text from PDF using unpdf (no worker issues)
+   * Extract text from PDF using PDF.js in worker-free mode
+   * This approach is most reliable for browser environments
    */
   static async extractTextFromPDF(file: File): Promise<string> {
     try {
-      console.log('Starting modern PDF extraction with unpdf...');
-      
-      // Dynamic imports to avoid bundling issues
-      const { extractText, getDocumentProxy, definePDFJSModule } = await import('unpdf');
-      
-      // Initialize unpdf with the serverless PDF.js build
-      await definePDFJSModule(() => import('unpdf/pdfjs'));
-      
-      // Convert file to ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Get PDF document proxy
-      const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
-      
-      // Extract text from all pages
-      const result = await extractText(pdf, {
-        mergePages: true // Merge all pages into single text
-      });
-      
-      console.log('PDF extraction successful:', {
-        totalPages: pdf.numPages,
-        textLength: result.text.length
-      });
-      
-      if (!result.text || result.text.trim().length === 0) {
-        throw new Error('No text could be extracted from the PDF. It may be image-based or encrypted.');
-      }
-      
-      return result.text;
-    } catch (error) {
-      console.error('PDF extraction failed:', error);
-      
-      // If unpdf fails, try alternative approach with minimal PDF.js
-      console.log('Trying fallback PDF extraction...');
-      return ModernPdfProcessor.fallbackPdfExtraction(file);
-    }
-  }
+      console.log('Starting PDF extraction (worker-free mode)...');
 
-  /**
-   * Fallback PDF extraction using minimal PDF.js setup
-   */
-  static async fallbackPdfExtraction(file: File): Promise<string> {
-    try {
-      // Dynamic import of PDF.js
+      // Dynamic import to avoid bundling issues
       const pdfjsLib = await import('pdfjs-dist');
-      
-      // Set up worker-less configuration
+
+      // Disable worker completely - run in main thread for maximum compatibility
+      // This is slower but avoids all worker/CDN/CORS issues
       pdfjsLib.GlobalWorkerOptions.workerSrc = '';
-      
+
       const arrayBuffer = await file.arrayBuffer();
-      
-      // Create loading task with inline worker
+
+      console.log('Loading PDF document...', { size: arrayBuffer.byteLength });
+
+      // Load document with worker disabled
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
         disableWorker: true,
-        disableRange: true,
-        disableStream: true,
         isEvalSupported: false,
+        useSystemFonts: true,
+        disableFontFace: false,
         verbosity: 0
       });
-      
+
       const pdf = await loadingTask.promise;
+      console.log('PDF loaded successfully:', { pages: pdf.numPages });
+
       let fullText = '';
-      
-      // Extract text from each page
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const totalPages = pdf.numPages;
+
+      console.log(`Processing ${totalPages} pages from PDF`);
+
+      // Extract text from all pages with enhanced formatting
+      for (let i = 1; i <= totalPages; i++) {
         try {
-          const page = await pdf.getPage(pageNum);
+          const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          
-          // Extract text items
+
+          // Enhanced text extraction with better spacing and structure
           const pageText = textContent.items
-            .map((item: any) => item.str)
-            .join(' ');
-          
-          fullText += pageText + '\n';
+            .map((item: any) => {
+              const text = item.str || '';
+              const hasEOL = item.hasEOL;
+              // Add newline for end-of-line items, space otherwise
+              return text + (hasEOL ? '\n' : ' ');
+            })
+            .join('');
+
+          fullText += pageText;
+
+          if (i % 5 === 0 || i === totalPages) {
+            console.log(`Processed ${i}/${totalPages} pages`);
+          }
         } catch (pageError) {
-          console.warn(`Failed to extract page ${pageNum}:`, pageError);
+          console.warn(`Failed to extract text from page ${i}:`, pageError);
+          fullText += `\n[Page ${i} - extraction failed]\n`;
         }
       }
-      
-      const cleanedText = fullText.trim();
-      
-      if (!cleanedText) {
-        throw new Error('No text could be extracted from the PDF.');
+
+      // Clean up the extracted text - preserve some structure
+      const cleanedText = fullText
+        .replace(/[ \t]+/g, ' ')  // Normalize spaces (but not newlines)
+        .replace(/\n{3,}/g, '\n\n')  // Reduce excessive line breaks
+        .trim();
+
+      console.log('PDF extraction successful:', {
+        totalPages,
+        originalLength: fullText.length,
+        cleanedLength: cleanedText.length,
+        hasContent: cleanedText.length > 0
+      });
+
+      if (cleanedText.length === 0) {
+        throw new Error('PDF contains no extractable text. It may be image-based or encrypted.');
       }
-      
+
       return cleanedText;
     } catch (error) {
-      console.error('Fallback PDF extraction also failed:', error);
-      throw new Error('Unable to extract text from this PDF. Please try converting it to a text file or Word document.');
+      console.error('PDF extraction failed:', error);
+
+      // Provide specific error messages
+      let errorMessage = 'Failed to extract text from PDF.';
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid PDF') || error.message.includes('corrupted') || error.message.includes('Invalid')) {
+          errorMessage = 'PDF file appears to be corrupted or invalid.';
+        } else if (error.message.includes('password') || error.message.includes('encrypted')) {
+          errorMessage = 'PDF is password-protected or encrypted. Please provide an unprotected version.';
+        } else if (error.message.includes('no extractable text') || error.message.includes('image-based')) {
+          errorMessage = 'PDF contains no text (may be image-based). Try using OCR or convert to text-based PDF.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      throw new Error(errorMessage);
     }
   }
   

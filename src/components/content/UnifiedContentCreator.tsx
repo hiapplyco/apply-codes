@@ -317,7 +317,7 @@ export const UnifiedContentCreator = () => {
                 }
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                className="min-h-[150px] border border-gray-300"
+                className="min-h-[150px] max-h-[300px] overflow-y-auto border border-gray-300"
                 disabled={!selectedContentType}
               />
             </div>

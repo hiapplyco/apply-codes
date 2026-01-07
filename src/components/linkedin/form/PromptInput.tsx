@@ -15,7 +15,7 @@ const PromptInput = ({ postContent, onChange }: PromptInputProps) => {
       <div className="space-y-3">
         <Textarea
           id="post-content"
-          className="h-40 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
+          className="h-40 overflow-y-auto border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
           value={postContent}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Enter your post ideas here..."

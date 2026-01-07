@@ -16,7 +16,7 @@ interface ToolItem {
   description: string;
   icon: React.ElementType;
   path: string;
-  image?: string;
+  image: string;
 }
 
 const tools: ToolItem[] = [
@@ -25,56 +25,56 @@ const tools: ToolItem[] = [
     description: 'Create compelling job postings',
     icon: FileText,
     path: '/clarvida/sourcing',
-    image: 'https://jobs.clarvida.com/system/production/assets/448688/original/clarvida-counseling-and-therapy.jpg',
+    image: '/images/tools/job-description-builder.webp',
   },
   {
     title: 'Boolean Search',
     description: 'Generate targeted searches',
     icon: Search,
     path: '/clarvida/sourcing',
-    image: 'https://jobs.clarvida.com/system/production/assets/448686/original/clarvida-autism-services.jpg',
+    image: '/images/tools/boolean-search.webp',
   },
   {
     title: 'Candidate Analysis',
     description: 'AI-powered resume analysis',
     icon: Users,
     path: '/clarvida',
-    image: 'https://jobs.clarvida.com/system/production/assets/448689/original/clarvida-child-and-family-services.jpg',
+    image: '/images/tools/candidate-analysis.webp',
   },
   {
     title: 'Content Creation',
     description: 'Social posts & outreach',
     icon: MessageSquare,
     path: '/clarvida/sourcing',
-    image: 'https://jobs.clarvida.com/system/production/assets/448691/original/clarvida-family-preservation-and-support.jpg',
+    image: '/images/tools/content-creation.webp',
   },
   {
     title: 'Compensation Analysis',
     description: 'Market salary insights',
     icon: BarChart3,
     path: '/clarvida',
-    image: 'https://jobs.clarvida.com/system/production/assets/448690/original/clarvida-foster-care.jpg',
+    image: '/images/tools/compensation-analysis.webp',
   },
   {
     title: 'Interview Questions',
     description: 'Role-specific questions',
     icon: FileSearch,
     path: '/clarvida',
-    image: 'https://jobs.clarvida.com/system/production/assets/448693/original/clarvida-residential.jpg',
+    image: '/images/tools/interview-questions.webp',
   },
   {
     title: 'Skills Matching',
     description: 'Nice-to-have analysis',
     icon: Sparkles,
     path: '/clarvida',
-    image: 'https://jobs.clarvida.com/system/production/assets/448692/original/clarvida-treatment-support-services.jpg',
+    image: '/images/tools/skills-matching.webp',
   },
   {
     title: 'Talent Locations',
     description: 'Where to find candidates',
     icon: Briefcase,
     path: '/clarvida',
-    image: 'https://jobs.clarvida.com/system/production/assets/448687/original/clarvida-assertive-community-treatment.jpg',
+    image: '/images/tools/talent-locations.webp',
   },
 ];
 
