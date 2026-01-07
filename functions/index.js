@@ -6,6 +6,7 @@ admin.initializeApp();
 
 // Import individual function modules
 const { generateBooleanSearch } = require('./generate-boolean-search');
+const { generateSophisticatedBoolean } = require('./generate-sophisticated-boolean');
 const { enrichProfile } = require('./enrich-profile');
 const { analyzeCandidate } = require('./analyze-candidate');
 const { processJobRequirements } = require('./process-job-requirements');
@@ -70,6 +71,7 @@ const { getProjects } = require('./get-projects');
 
 // Export functions
 exports.generateBooleanSearch = generateBooleanSearch;
+exports.generateSophisticatedBoolean = generateSophisticatedBoolean;
 exports.enrichProfile = enrichProfile;
 exports.analyzeCandidate = analyzeCandidate;
 exports.processJobRequirements = processJobRequirements;
