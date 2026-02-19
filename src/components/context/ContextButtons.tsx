@@ -8,7 +8,7 @@ import { PerplexitySearchModal } from '@/components/perplexity/PerplexitySearchM
 import { URLScrapeModal } from '@/components/url-scraper/URLScrapeModal';
 import LocationModal from '@/components/LocationModal';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
-import { useUnifiedAuth } from '@/context/UnifiedAuthContext';
+import { useNewAuth } from '@/context/NewAuthContext';
 import { toast } from 'sonner';
 
 export interface ContextButtonsProps {
@@ -67,7 +67,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
   compact = false
 }) => {
   const { selectedProject } = useProjectContext();
-  const { user } = useUnifiedAuth();
+  const { user } = useNewAuth();
   const [isPerplexityModalOpen, setIsPerplexityModalOpen] = useState(false);
   const [isFirecrawlModalOpen, setIsFirecrawlModalOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
@@ -87,8 +87,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
     file_type?: string;
     metadata?: Record<string, any>;
   }) => {
-    if (!user?.id) {
-      console.warn('User not authenticated, skipping context item save');
+    if (!user?.uid) {
       return;
     }
 
@@ -97,7 +96,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
         .from('context_items')
         .insert({
           ...item,
-          user_id: user.id,
+          user_id: user.uid,
           project_id: selectedProject?.id || null,
           tags: [context],
           created_at: new Date().toISOString()
@@ -130,7 +129,7 @@ export const ContextButtons: React.FC<ContextButtonsProps> = ({
 
       const content = await DocumentProcessor.processDocument({
         file,
-        userId: user?.id || 'anonymous'
+        userId: user?.uid || 'anonymous'
       });
 
       // saveToProject removed as it's not available in modernPdfProcessor

@@ -1,7 +1,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import {
   firebaseSignIn,
   firebaseSignUp,
@@ -17,8 +17,8 @@ interface ClarvidaAuthContextType {
   session: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   // Organization context
   organization: Organization | null;
@@ -59,12 +59,12 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
     try {
       setIsOrgLoading(true);
 
-      // Get Clarvida organization
+      if (!db) return;
       const orgRef = doc(db, 'organizations', CLARVIDA_ORG_ID);
       const orgSnap = await getDoc(orgRef);
 
       if (!orgSnap.exists()) {
-        console.log('Clarvida organization not found - user may need to be added');
+        // Organization not found - user may need to be added
         setOrganization(null);
         setUserRole(null);
         return;
@@ -79,7 +79,7 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
         setUserRole(memberRole);
       } else {
         // User is authenticated but not a Clarvida member
-        console.log('User is not a member of Clarvida organization');
+        // User is not a Clarvida member — still show org for display
         setOrganization(orgData); // Still set org for display purposes
         setUserRole(null);
       }
@@ -117,7 +117,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
       return { error: null };
     } catch (err) {
       const errorMessage = handleFirebaseError(err);
-      console.error("Clarvida signIn error:", err);
       return { error: new Error(errorMessage) };
     }
   };
@@ -128,7 +127,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
       return { error: null };
     } catch (err) {
       const errorMessage = handleFirebaseError(err);
-      console.error("Clarvida signUp error:", err);
       return { error: new Error(errorMessage) };
     }
   };
@@ -140,7 +138,6 @@ export const ClarvidaAuthProvider = ({ children }: { children: React.ReactNode }
       setUserRole(null);
       toast.success("Successfully signed out from Clarvida!");
     } catch (err) {
-      console.error("Error during Clarvida signOut:", err);
       toast.error("Failed to sign out from Clarvida");
     }
   };

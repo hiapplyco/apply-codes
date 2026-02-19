@@ -29,23 +29,12 @@ export default function ResetPasswordRequest() {
     setIsLoading(true);
     
     try {
-      const { error } = await resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      await resetPasswordForEmail(email, `${window.location.origin}/reset-password`);
+      setIsSuccess(true);
+      toast({
+        title: "Success",
+        description: "Check your email for the password reset link",
       });
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to send reset email",
-          variant: "destructive",
-        });
-      } else {
-        setIsSuccess(true);
-        toast({
-          title: "Success",
-          description: "Check your email for the password reset link",
-        });
-      }
     } catch (error) {
       toast({
         title: "Error",

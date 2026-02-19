@@ -20,7 +20,7 @@ AI recruitment platform fighting "Brain Waste" — underutilization of skilled v
 - Backend: Firebase Cloud Functions (Node.js)
 - Database: Firestore (primary), Supabase PostgreSQL (legacy, 3 functions)
 - AI: Google Gemini (gemini-3-pro-preview), Anthropic APIs
-- Auth: Firebase Auth
+- Auth: Firebase Auth (see Auth Architecture below)
 - Storage: Firebase Storage
 
 ## Navigation (Sidebar)
@@ -42,6 +42,20 @@ npm test            # Tests (Vitest)
 cd functions && node -e "require('./index')"  # Validate functions
 cd mcp-server && npm run build                # Build MCP server
 ```
+
+## Auth Architecture
+
+Two auth contexts, one primary:
+
+- **`src/context/NewAuthContext.tsx`** — Primary auth context (34+ consumers). Provides `useAuth()` hook for all main app routes. Uses `useMemo`/`useCallback` for stable references.
+- **`src/context/ClarvidaAuthContext.tsx`** — Clarvida-specific auth (3 routes under `/clarvida/*` only). Do NOT use outside Clarvida.
+
+Supporting files:
+- `src/components/auth/ProtectedRoute.tsx` — Route guard with dev bypass (`VITE_BYPASS_AUTH`)
+- `src/pages/AuthCallback.tsx` — OAuth callback with open-redirect prevention (relative paths only)
+- `src/pages/Login.tsx` — Unified error messages to prevent account enumeration
+
+**Deleted (do not recreate):** `UnifiedAuthContext.tsx`, `FirebaseAuthContext.tsx`, `auth-bridge.ts`, `useFirebaseAuth.ts`
 
 ## Key Directories
 

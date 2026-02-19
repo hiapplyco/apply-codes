@@ -17,7 +17,9 @@ export default function AuthCallback() {
 
     handledRef.current = true;
 
-    const next = decodeURIComponent(searchParams.get('next') || '/dashboard');
+    // Validate redirect target to prevent open redirects (must be relative path)
+    const rawNext = decodeURIComponent(searchParams.get('next') || '/dashboard');
+    const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard';
 
     if (isAuthenticated) {
       toast.success('Successfully signed in!');

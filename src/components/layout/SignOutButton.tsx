@@ -16,12 +16,10 @@ export const SignOutButton = memo(function SignOutButton() {
   
   const handleSignOut = useCallback(async () => {
     try {
-      const { error } = await signOut();
-      if (error) throw error;
+      await signOut();
       toast.success('Successfully signed out!');
       navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Error signing out:', error);
+    } catch {
       toast.error('Failed to sign out');
     }
   }, [navigate, signOut]);

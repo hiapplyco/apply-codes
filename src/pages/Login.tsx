@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useUnifiedAuth } from "@/context/UnifiedAuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useNewAuth } from "@/context/NewAuthContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+interface FirebaseError {
+  code?: string;
+  message?: string;
+}
 
 const Login = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, signIn, signUp, isLoading } = useUnifiedAuth();
+  const location = useLocation();
+  const { user, isAuthenticated, signIn, signUp, signInWithGoogle, isLoading } = useNewAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -18,30 +21,30 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  // Redirect destination: saved location or dashboard
+  const redirectTo = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate('/dashboard');
+      navigate(redirectTo, { replace: true });
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const result = isSignUp
-        ? await signUp(email, password)
-        : await signIn(email, password);
-
-      if (result.error) {
-        // Provide user-friendly error messages
-        const errorMessage = getErrorMessage(result.error.message || result.error.code);
-        toast.error(errorMessage);
+      if (isSignUp) {
+        await signUp(email, password);
+        toast.success('Account created successfully! Starting your free trial...');
       } else {
-        toast.success(isSignUp ? 'Account created successfully! Starting your free trial...' : 'Welcome back!');
+        await signIn(email, password);
+        toast.success('Welcome back!');
       }
-    } catch (error: any) {
-      const errorMessage = getErrorMessage(error?.message || error?.code || 'Unknown error');
+    } catch (error: unknown) {
+      const err = error as FirebaseError;
+      const errorMessage = getErrorMessage(err?.code || err?.message || 'Unknown error');
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -49,23 +52,13 @@ const Login = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) {
-      toast.error('Authentication not initialized');
-      return;
-    }
-
     setIsGoogleLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
-
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle();
       toast.success('Welcome to Apply!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Google sign-in error:', error);
-      if (error.code !== 'auth/popup-closed-by-user') {
+    } catch (error: unknown) {
+      const err = error as FirebaseError;
+      if (err?.code !== 'auth/popup-closed-by-user') {
         toast.error('Failed to sign in with Google. Please try again.');
       }
     } finally {
@@ -74,14 +67,15 @@ const Login = () => {
   };
 
   const getErrorMessage = (errorCode: string): string => {
+    // Unified error messages — generic messages prevent account enumeration
     const errorMessages: Record<string, string> = {
-      'auth/user-not-found': 'No account found with this email. Would you like to sign up?',
-      'auth/wrong-password': 'Incorrect password. Please try again.',
+      'auth/user-not-found': 'Invalid email or password. Please check and try again.',
+      'auth/wrong-password': 'Invalid email or password. Please check and try again.',
+      'auth/invalid-credential': 'Invalid email or password. Please check and try again.',
       'auth/invalid-email': 'Please enter a valid email address.',
       'auth/email-already-in-use': 'An account with this email already exists. Please sign in.',
       'auth/weak-password': 'Password should be at least 6 characters.',
       'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
-      'auth/invalid-credential': 'Invalid email or password. Please check and try again.',
       'auth/network-request-failed': 'Network error. Please check your connection.',
     };
     return errorMessages[errorCode] || 'An error occurred. Please try again.';
@@ -193,12 +187,12 @@ const Login = () => {
 
             {!isSignUp && (
               <div className="text-right">
-                <Link
-                  to="/reset-password-request"
+                <a
+                  href="/reset-password-request"
                   className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
                 >
                   Forgot password?
-                </Link>
+                </a>
               </div>
             )}
 

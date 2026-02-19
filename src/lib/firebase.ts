@@ -85,19 +85,13 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
         if (supported && firebaseConfig.measurementId && services.app) {
           services.analytics = getAnalytics(services.app);
         }
-      }).catch(error => {
-        console.warn('Firebase Analytics initialization failed:', error);
+      }).catch(() => {
+        // Analytics not supported in this environment
       });
-    } else {
-      console.log('Firebase Analytics disabled in development mode');
     }
-
-    console.log('Firebase initialized successfully');
   } catch (error) {
     console.error('Firebase initialization error:', error);
   }
-} else {
-  console.log('Firebase not configured - missing required environment variables');
 }
 
 // Export services
@@ -188,24 +182,3 @@ export const handleFirebaseError = (error: any): string => {
   }
 };
 
-// Migration helper preserved for compatibility - now always Firebase
-export const useFirebaseOrSupabase = (): 'firebase' => {
-  return 'firebase';
-};
-
-// Configuration validation
-export const validateFirebaseConfig = (): { isValid: boolean; missingKeys: string[] } => {
-  const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
-  const missingKeys: string[] = [];
-
-  requiredKeys.forEach(key => {
-    if (!firebaseConfig[key as keyof FirebaseConfig]) {
-      missingKeys.push(`VITE_FIREBASE_${key.toUpperCase()}`);
-    }
-  });
-
-  return {
-    isValid: missingKeys.length === 0,
-    missingKeys
-  };
-};

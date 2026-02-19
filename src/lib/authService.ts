@@ -1,4 +1,3 @@
-
 import {
   getAuth,
   onAuthStateChanged,
@@ -6,12 +5,20 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  updateEmail,
+  updatePassword,
   User as FirebaseUser,
 } from 'firebase/auth';
-import { app } from '@/lib/firebase'; // Assuming firebase.ts exports the initialized app
+import { app } from '@/lib/firebase';
 
 export type AuthUser = FirebaseUser;
 
+if (!app) {
+  throw new Error('Firebase app not initialized. Check environment variables (VITE_FIREBASE_API_KEY, VITE_FIREBASE_PROJECT_ID).');
+}
 const auth = getAuth(app);
 
 /**
@@ -70,39 +77,31 @@ export async function updateUserEmail(newEmail: string): Promise<void> {
   if (!auth.currentUser) {
     throw new Error('Authentication error: No user is currently signed in.');
   }
-  const { updateEmail } = await import('firebase/auth');
   await updateEmail(auth.currentUser, newEmail);
 }
 
 /**
  * Updates the current user's password.
- * @param newPassword - The new password.
  */
 export async function updateUserPassword(newPassword: string): Promise<void> {
   if (!auth.currentUser) {
     throw new Error('Authentication error: No user is currently signed in.');
   }
-  const { updatePassword } = await import('firebase/auth');
   await updatePassword(auth.currentUser, newPassword);
 }
 
 /**
  * Sends a password reset email to the given email address.
- * @param email - The user's email address.
  */
-export async function sendPasswordReset(email: string): Promise<void> {
-  const { sendPasswordResetEmail } = await import('firebase/auth');
-  await sendPasswordResetEmail(auth, email);
+export async function sendPasswordReset(email: string, redirectUrl?: string): Promise<void> {
+  const actionCodeSettings = redirectUrl ? { url: redirectUrl } : undefined;
+  await sendPasswordResetEmail(auth, email, actionCodeSettings);
 }
 
 /**
  * Signs in a user with email and password.
- * @param email - The user's email.
- * @param password - The user's password.
- * @returns The signed-in user.
  */
 export async function signInWithEmail(email: string, password: string): Promise<AuthUser> {
-  const { signInWithEmailAndPassword } = await import('firebase/auth');
   const result = await signInWithEmailAndPassword(auth, email, password);
   if (!result.user) {
     throw new Error('Sign-in failed: No user returned from Firebase.');
@@ -112,12 +111,8 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
 /**
  * Signs up a new user with email and password.
- * @param email - The user's email.
- * @param password - The user's password.
- * @returns The newly created user.
  */
 export async function signUpWithEmail(email: string, password: string): Promise<AuthUser> {
-  const { createUserWithEmailAndPassword } = await import('firebase/auth');
   const result = await createUserWithEmailAndPassword(auth, email, password);
   if (!result.user) {
     throw new Error('Sign-up failed: No user returned from Firebase.');

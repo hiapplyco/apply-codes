@@ -2,7 +2,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { HelmetProvider } from "react-helmet-async";
-import { UnifiedAuthProvider } from "@/context/UnifiedAuthContext";
 import { NewAuthProvider } from "@/context/NewAuthContext";
 import { ClarvidaAuthProvider } from "@/context/ClarvidaAuthContext";
 import { ProjectProvider } from "@/context/ProjectContext";
@@ -44,10 +43,9 @@ import { PageTracker } from "@/components/analytics/PageTracker";
 function App() {
   return (
     <HelmetProvider>
-      <UnifiedAuthProvider>
-        <NewAuthProvider>
-          <ProjectProvider>
-            <ClarvidaAuthProvider>
+      <NewAuthProvider>
+        <ProjectProvider>
+          <ClarvidaAuthProvider>
               <Router>
                 <PageTracker />
                 <Toaster position="top-center" />
@@ -108,10 +106,9 @@ function App() {
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </Router>
-            </ClarvidaAuthProvider>
-          </ProjectProvider>
-        </NewAuthProvider>
-      </UnifiedAuthProvider>
+          </ClarvidaAuthProvider>
+        </ProjectProvider>
+      </NewAuthProvider>
     </HelmetProvider>
   );
 }

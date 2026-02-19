@@ -5,17 +5,15 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Outlet } from "react-router-dom";
 import { memo } from "react";
 
-// Development bypass - set to false in production
-const DEV_BYPASS_AUTH = import.meta.env.VITE_BYPASS_AUTH === 'true';
+// Development bypass - only works in dev builds
+const DEV_BYPASS_AUTH = import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH === 'true';
 
 const ProtectedRouteComponent = () => {
   const { isAuthenticated, isLoading } = useNewAuth();
   const { subscription, loading: subscriptionLoading, isExpired } = useSubscription();
   const location = useLocation();
 
-  // Development bypass
   if (DEV_BYPASS_AUTH) {
-    console.log('🔓 Auth bypassed for development');
     return <Outlet />;
   }
 
