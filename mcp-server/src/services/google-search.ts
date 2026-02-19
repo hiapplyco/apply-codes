@@ -61,7 +61,7 @@ export class GoogleCustomSearch {
         num: Math.min(maxResults, 10), // Google CSE limits to 10 per request
         start: 1,
         safe: 'off',
-        fields: 'items(title,link,snippet,displayLink)'
+        fields: 'items(title,link,snippet,displayLink,pagemap/metatags)'
       });
 
       const items = response.data.items || [];
@@ -104,7 +104,7 @@ export class GoogleCustomSearch {
     const name = this.extractName(title, snippet);
     const jobTitle = this.extractJobTitle(title, snippet);
     const company = this.extractCompany(title, snippet);
-    const location = this.extractLocation(snippet);
+    const location = this.extractLocationFromPagemap(item) || this.extractLocation(snippet);
     const skills = this.extractSkills(snippet);
 
     // Only return profiles where we could extract meaningful information
@@ -210,11 +210,42 @@ export class GoogleCustomSearch {
     return null;
   }
 
+  private extractLocationFromPagemap(item: any): string | null {
+    try {
+      const metatags = item.pagemap?.metatags?.[0];
+      if (!metatags) return null;
+
+      // LinkedIn puts location in geo.placename or og:description
+      if (metatags['geo.placename']) {
+        return metatags['geo.placename'];
+      }
+      if (metatags['geo.region']) {
+        return metatags['geo.region'];
+      }
+
+      // og:description often contains "Location · Company" pattern
+      const ogDesc = metatags['og:description'] || '';
+      const locationMatch = ogDesc.match(/^([^·]+?)(?:\s*·)/);
+      if (locationMatch) {
+        const candidate = locationMatch[1].trim();
+        // Validate it looks like a location (not a job title)
+        if (/[A-Z][a-z]+,\s*[A-Z]/.test(candidate) || /\b(?:Area|Metro|Region)\b/i.test(candidate)) {
+          return candidate;
+        }
+      }
+    } catch {
+      // Pagemap parsing failed, fall through to snippet extraction
+    }
+    return null;
+  }
+
   private extractLocation(snippet: string): string | null {
     const locationPatterns = [
       /(?:located in|based in|from)\s+([A-Z][a-zA-Z\s,]+?)(?:\s|\.|\|)/,
-      /([A-Z][a-z]+,\s*[A-Z]{2})\b/, // City, State
-      /(San Francisco|New York|Austin|Seattle|Boston|Chicago|Los Angeles|Remote)/i,
+      /([A-Z][a-z]+(?:\s[A-Z][a-z]+)?,\s*[A-Z]{2})\b/, // City, State (e.g., "San Francisco, CA")
+      /([A-Z][a-z]+(?:\s[A-Z][a-z]+)?\s+(?:Area|Metropolitan Area|Metro))/i, // "Greater Austin Area"
+      /(Greater\s+[A-Z][a-z]+(?:\s[A-Z][a-z]+)?(?:\s+Area)?)/i, // "Greater Boston"
+      /(San Francisco|New York|Austin|Seattle|Boston|Chicago|Los Angeles|Denver|Dallas|Houston|Atlanta|Miami|Portland|Phoenix|Minneapolis|Charlotte|Nashville|Raleigh|Tampa|Orlando|Salt Lake City|San Diego|San Jose|San Antonio|Indianapolis|Columbus|Jacksonville|Washington|Philadelphia|Pittsburgh|Baltimore|Detroit|Cleveland|St\.\s*Louis|Kansas City|Milwaukee|Sacramento|Richmond|Virginia Beach|Cincinnati|Memphis|Louisville|Oklahoma City|Las Vegas|Albuquerque|Tucson|Boise|Remote)/i,
     ];
 
     for (const pattern of locationPatterns) {
@@ -229,19 +260,24 @@ export class GoogleCustomSearch {
 
   private extractSkills(snippet: string): string[] {
     const skills: string[] = [];
-    
-    // Common technical skills
+
     const skillPatterns = [
       /\b(JavaScript|Python|Java|TypeScript|React|Angular|Vue|Node\.js|AWS|GCP|Azure|Docker|Kubernetes)\b/gi,
-      /\b(Machine Learning|AI|Data Science|BigQuery|Vertex AI|TensorFlow|PyTorch)\b/gi,
+      /\b(Machine Learning|AI|Data Science|BigQuery|Vertex AI|TensorFlow|PyTorch|LLM|GenAI|NLP)\b/gi,
+      /\b(C\+\+|C#|Go|Rust|Scala|Kotlin|Swift|Ruby|PHP|R|MATLAB|Dart|Flutter)\b/gi,
+      /\b(PostgreSQL|MySQL|MongoDB|Redis|DynamoDB|Elasticsearch|Cassandra|Neo4j|Snowflake|Databricks)\b/gi,
+      /\b(Terraform|Ansible|Jenkins|GitLab|CircleCI|Spark|Kafka|Airflow|dbt|Tableau|Power BI|Figma|Sketch)\b/gi,
+      /\b(Spring Boot|Django|FastAPI|Express|Next\.js|Nuxt|Svelte|GraphQL|REST API|gRPC|Microservices)\b/gi,
+      /\b(Salesforce|SAP|Oracle|ServiceNow|Workday|HubSpot|Marketo|Jira|Confluence)\b/gi,
     ];
 
     for (const pattern of skillPatterns) {
       const matches = snippet.match(pattern);
       if (matches) {
         matches.forEach(skill => {
-          if (!skills.includes(skill)) {
-            skills.push(skill);
+          const normalized = skill.trim();
+          if (!skills.some(s => s.toLowerCase() === normalized.toLowerCase())) {
+            skills.push(normalized);
           }
         });
       }

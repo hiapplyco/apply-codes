@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,7 @@ const ClarvidaSourcing = () => {
     rerollBoolean,
     setBooleanVariant,
     restoreFromHistory,
+    restoreFromSavedWorkflow,
     canGenerateBoolean,
     _rawState: workflowState,
   } = useWorkflowRun({ autoGenerateBoolean: true });
@@ -115,15 +116,55 @@ const ClarvidaSourcing = () => {
   };
 
   const handleRestoreWorkflow = (item: WorkflowHistoryItem) => {
-    // Start a new run and populate with saved data
-    startNewRun();
+    restoreFromSavedWorkflow({
+      runId: item.runId,
+      jobTitle: item.jobTitle,
+      jobDepartment: item.jobDepartment,
+      jobLocation: item.jobLocation,
+      generatedDescription: item.generatedDescription,
+      booleanSearchString: item.booleanSearchString,
+      booleanVariant: item.booleanVariant,
+      booleanExplanation: item.booleanExplanation,
+      booleanHistory: item.booleanHistory,
+    });
     setHistoryOpen(false);
-    toast.success(`Loaded workflow: ${item.jobTitle}`);
-    // Note: Full restoration would require updating the workflow state
-    // For now, we just copy the boolean to clipboard for use
-    navigator.clipboard.writeText(item.booleanSearchString);
-    toast.info('Boolean search copied to clipboard');
+    // If boolean exists, switch to search tab so user can immediately search
+    if (item.booleanSearchString) {
+      setActiveTab('search');
+    }
   };
+
+  // Auto-save with debounce: saves 10 seconds after last change when workflow has required data
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoSaveRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Only auto-save when we have both description and boolean
+    if (!workflowState.generatedDescription || !workflowState.booleanState.current) return;
+    if (!user?.uid || !organization?.id) return;
+    if (workflowState.booleanState.isGenerating) return;
+
+    // Skip if nothing changed since last auto-save
+    const stateHash = `${workflowState.runId}:${workflowState.booleanState.current}:${workflowState.booleanState.history.length}`;
+    if (stateHash === lastAutoSaveRef.current) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await saveWorkflow(workflowState);
+        lastAutoSaveRef.current = stateHash;
+      } catch {
+        // Silent failure for auto-save — user can still manual save
+      }
+    }, 10000); // 10 second debounce
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [workflowState.generatedDescription, workflowState.booleanState.current, workflowState.booleanState.history.length, workflowState.runId, user?.uid, organization?.id, saveWorkflow, workflowState]);
 
   const handleExport = async (format: 'docx' | 'pdf' | 'md' | 'txt') => {
     if (!currentTemplate) {
@@ -522,6 +563,9 @@ const ClarvidaSourcing = () => {
               <MinimalSearchForm
                 userId={session?.uid || null}
                 selectedProjectId={null}
+                isClarvidaMode={true}
+                initialBooleanString={booleanState.current || undefined}
+                initialJobTitle={currentTemplate?.job_title || undefined}
               />
             </div>
           )}

@@ -41,7 +41,7 @@ exports.processJobRequirements = onCall(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       // Generate boolean search string
       const prompt = `You are an expert recruiter creating LinkedIn boolean search strings.

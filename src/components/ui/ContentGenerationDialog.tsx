@@ -32,6 +32,18 @@ export const ContentGenerationDialog: React.FC<ContentGenerationDialogProps> = (
 
     // Customize based on content type
     switch (contentType) {
+      case 'Job Description':
+        return {
+          title: 'Creating Job Description',
+          subtitle: `Generating comprehensive posting for ${projectName}`,
+          steps: [
+            { title: 'Analyzing Context', description: 'Processing uploaded documents and form data...' },
+            { title: 'Synthesizing Information', description: 'Combining context items with template fields...' },
+            { title: 'Generating Description', description: 'Creating compelling job description with Gemini AI...' },
+            { title: 'Finalizing', description: 'Formatting and optimizing for job boards...' }
+          ] as LoadingStep[]
+        };
+
       case 'LinkedIn Job Post':
         return {
           title: 'Creating LinkedIn Post',

@@ -188,7 +188,7 @@ async function generateAIBooleanQuery(keywords, location, experienceLevel) {
   }
 
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
   const locationPrompt = location ? `
 LOCATION TARGETING:
@@ -392,7 +392,8 @@ async function executeLinkedInSearch(booleanQuery, maxResults, page) {
     q: linkedinQuery,
     num: Math.min(maxResults, 10), // Google CSE max is 10 per request
     start: startIndex,
-    safe: 'off'
+    safe: 'off',
+    fields: 'items(title,link,snippet,displayLink,pagemap/metatags)'
   };
 
   try {
@@ -443,20 +444,21 @@ async function executeLinkedInSearch(booleanQuery, maxResults, page) {
  */
 function formatLinkedInResults(searchResults, keywords) {
   return searchResults.map((item, index) => {
-    // Extract LinkedIn profile information from search result
     const profileUrl = item.link;
     const title = item.title || '';
     const snippet = item.snippet || '';
 
-    // Parse LinkedIn profile data from title and snippet
     const { name, jobTitle, company, location } = parseLinkedInProfile(title, snippet);
+
+    // Try pagemap metatags for better location data
+    const pagemapLocation = extractLocationFromPagemap(item);
 
     return {
       id: `linkedin-${Date.now()}-${index}`,
       name: name || 'Name not available',
       title: jobTitle || 'Title not specified',
       company: company || 'Company not specified',
-      location: location || 'Location not specified',
+      location: pagemapLocation || location || 'Location not specified',
       profileUrl,
       source: 'LinkedIn',
       summary: snippet,
@@ -465,6 +467,33 @@ function formatLinkedInResults(searchResults, keywords) {
       searchRank: index + 1
     };
   });
+}
+
+/**
+ * Extract location from Google CSE pagemap metatags
+ * LinkedIn pages include geo.placename and og:description with location info
+ */
+function extractLocationFromPagemap(item) {
+  try {
+    const metatags = item.pagemap?.metatags?.[0];
+    if (!metatags) return null;
+
+    if (metatags['geo.placename']) return metatags['geo.placename'];
+    if (metatags['geo.region']) return metatags['geo.region'];
+
+    // og:description often has "Location · Company" pattern
+    const ogDesc = metatags['og:description'] || '';
+    const match = ogDesc.match(/^([^·]+?)(?:\s*·)/);
+    if (match) {
+      const candidate = match[1].trim();
+      if (/[A-Z][a-z]+,\s*[A-Z]/.test(candidate) || /\b(?:Area|Metro|Region)\b/i.test(candidate)) {
+        return candidate;
+      }
+    }
+  } catch {
+    // Fall through
+  }
+  return null;
 }
 
 /**

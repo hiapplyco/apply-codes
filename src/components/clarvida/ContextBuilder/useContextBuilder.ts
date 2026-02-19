@@ -1,20 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
 import { ClarvidaJobTemplate } from '@/types/organization';
-import { ContextItem, ExtractionState, mapItemTypeToContentType, DEFAULT_CLARVIDA_TEMPLATE } from './types';
+import {
+  ContextItem,
+  ExtractionState,
+  OptimizationState,
+  ItemExtractionResult,
+  ExtractedFieldInfo,
+  mapItemTypeToContentType,
+  DEFAULT_CLARVIDA_TEMPLATE
+} from './types';
 import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
-
-interface OptimizationState {
-  isOptimizing: boolean;
-  lastOptimizationTime: string | null;
-  totalOptimizations: number;
-  lastSummary: {
-    fields_updated: string[];
-    fields_added: string[];
-    duplicates_removed: number;
-    enhancements_made: string[];
-  } | null;
-}
 
 export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>) {
   // Context items state
@@ -34,6 +30,11 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
     userOverrides: new Set(),
     confidence: 0,
     fieldsExtracted: 0,
+    // Per-item tracking
+    itemResults: new Map(),
+    extractionQueue: [],
+    currentlyExtracting: null,
+    fieldSourceMap: new Map(),
   });
 
   // Optimization tracking state
@@ -71,11 +72,13 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
   // Merge extracted data without overwriting user edits
   const mergeExtractedData = useCallback((
     extractedData: Partial<ClarvidaJobTemplate>,
-    meta: { confidence: number; fields_extracted: number }
+    meta: { confidence: number; fields_extracted: number },
+    sourceItem?: ContextItem
   ) => {
     setTemplate(prev => {
       let merged = { ...prev };
       const newExtractedFields = new Set<string>();
+      const newFieldSources = new Map<string, ExtractedFieldInfo>();
 
       // Flatten and merge extracted data
       const flattenAndMerge = (data: any, prefix = '') => {
@@ -102,6 +105,18 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
             if (isEmpty || !userEditedFields.current.has(fieldPath)) {
               merged = setNestedValue(merged, fieldPath, value);
               newExtractedFields.add(fieldPath);
+
+              // Track field source if we have source item info
+              if (sourceItem) {
+                newFieldSources.set(fieldPath, {
+                  path: fieldPath,
+                  value,
+                  source: sourceItem.title,
+                  sourceId: sourceItem.id,
+                  confidence: meta.confidence,
+                  extractedAt: new Date().toISOString(),
+                });
+              }
             }
           }
         }
@@ -110,12 +125,20 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
       flattenAndMerge(extractedData);
 
       // Update extraction state
-      setExtractionState(prev => ({
-        ...prev,
-        extractedFields: new Set([...prev.extractedFields, ...newExtractedFields]),
-        confidence: meta.confidence,
-        fieldsExtracted: meta.fields_extracted,
-      }));
+      setExtractionState(prev => {
+        const updatedFieldSourceMap = new Map(prev.fieldSourceMap);
+        newFieldSources.forEach((info, path) => {
+          updatedFieldSourceMap.set(path, info);
+        });
+
+        return {
+          ...prev,
+          extractedFields: new Set([...prev.extractedFields, ...newExtractedFields]),
+          confidence: meta.confidence,
+          fieldsExtracted: meta.fields_extracted,
+          fieldSourceMap: updatedFieldSourceMap,
+        };
+      });
 
       return merged;
     });
@@ -202,13 +225,28 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
 
   // Extract ClarvidaJobTemplate fields from context and then optimize
   const extractFromContext = useCallback(async (item: ContextItem) => {
-    setExtractionState(prev => ({
-      ...prev,
-      isExtracting: true,
-      lastExtractionSource: item.title,
-    }));
+    // Mark item as extracting
+    setExtractionState(prev => {
+      const newItemResults = new Map(prev.itemResults);
+      newItemResults.set(item.id, {
+        itemId: item.id,
+        status: 'extracting',
+        fieldsExtracted: 0,
+        confidence: 0,
+        startedAt: new Date().toISOString(),
+      });
+      return {
+        ...prev,
+        isExtracting: true,
+        lastExtractionSource: item.title,
+        currentlyExtracting: item.id,
+        itemResults: newItemResults,
+      };
+    });
 
     let extractedData: any = null;
+    let fieldsCount = 0;
+    let confidence = 0;
 
     try {
       // Check if this item already has pre-extracted job data from Gemini
@@ -221,12 +259,13 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
         });
 
         extractedData = item.metadata.extractedJobData;
-        const fieldsCount = Object.keys(extractedData).filter(k => extractedData[k] !== null).length;
+        fieldsCount = Object.keys(extractedData).filter(k => extractedData[k] !== null).length;
+        confidence = item.metadata?.confidence || 0.8;
 
         mergeExtractedData(extractedData, {
-          confidence: item.metadata?.confidence || 0.8,
+          confidence,
           fields_extracted: fieldsCount,
-        });
+        }, item);
 
         if (fieldsCount > 0) {
           toast.success(`AI extracted ${fieldsCount} fields from ${item.title}`);
@@ -241,25 +280,83 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
 
         if (result.success && result.data) {
           extractedData = result.data;
-          mergeExtractedData(result.data, {
-            confidence: result.extractionMeta?.confidence || 0.5,
-            fields_extracted: result.extractionMeta?.fields_extracted || 0,
-          });
+          fieldsCount = result.extractionMeta?.fields_extracted || 0;
+          confidence = result.extractionMeta?.confidence || 0.5;
 
-          const fieldsCount = result.extractionMeta?.fields_extracted || 0;
+          mergeExtractedData(result.data, {
+            confidence,
+            fields_extracted: fieldsCount,
+          }, item);
+
           if (fieldsCount > 0) {
             toast.success(`Extracted ${fieldsCount} fields from ${item.title}`);
           }
         } else if (result.error) {
           console.error('Extraction failed:', result.error);
           toast.error('Failed to extract job details');
+          // Mark item as failed
+          setExtractionState(prev => {
+            const newItemResults = new Map(prev.itemResults);
+            newItemResults.set(item.id, {
+              itemId: item.id,
+              status: 'failed',
+              fieldsExtracted: 0,
+              confidence: 0,
+              error: result.error,
+              completedAt: new Date().toISOString(),
+            });
+            return {
+              ...prev,
+              isExtracting: false,
+              currentlyExtracting: null,
+              itemResults: newItemResults,
+            };
+          });
+          return;
         }
       }
+
+      // Mark item as complete
+      setExtractionState(prev => {
+        const newItemResults = new Map(prev.itemResults);
+        newItemResults.set(item.id, {
+          itemId: item.id,
+          status: 'complete',
+          fieldsExtracted: fieldsCount,
+          confidence,
+          completedAt: new Date().toISOString(),
+        });
+        return {
+          ...prev,
+          isExtracting: false,
+          currentlyExtracting: null,
+          itemResults: newItemResults,
+        };
+      });
+
     } catch (error) {
       console.error('Extraction failed:', error);
       toast.error('Failed to extract job details from context');
-    } finally {
-      setExtractionState(prev => ({ ...prev, isExtracting: false }));
+
+      // Mark item as failed
+      setExtractionState(prev => {
+        const newItemResults = new Map(prev.itemResults);
+        newItemResults.set(item.id, {
+          itemId: item.id,
+          status: 'failed',
+          fieldsExtracted: 0,
+          confidence: 0,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          completedAt: new Date().toISOString(),
+        });
+        return {
+          ...prev,
+          isExtracting: false,
+          currentlyExtracting: null,
+          itemResults: newItemResults,
+        };
+      });
+      return;
     }
 
     // After extraction completes, run optimization pass
@@ -321,6 +418,16 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
            !extractionState.userOverrides.has(fieldPath);
   }, [extractionState]);
 
+  // Get source info for a field (for tooltip display)
+  const getFieldSourceInfo = useCallback((fieldPath: string): { source: string; confidence: number } | undefined => {
+    const fieldInfo = extractionState.fieldSourceMap.get(fieldPath);
+    if (!fieldInfo) return undefined;
+    return {
+      source: fieldInfo.source,
+      confidence: fieldInfo.confidence,
+    };
+  }, [extractionState.fieldSourceMap]);
+
   // Reset user edits for a field (allow AI to fill again)
   const resetFieldOverride = useCallback((fieldPath: string) => {
     userEditedFields.current.delete(fieldPath);
@@ -342,6 +449,10 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
       userOverrides: new Set(),
       confidence: 0,
       fieldsExtracted: 0,
+      itemResults: new Map(),
+      extractionQueue: [],
+      currentlyExtracting: null,
+      fieldSourceMap: new Map(),
     });
   }, []);
 
@@ -361,6 +472,7 @@ export function useContextBuilder(initialTemplate?: Partial<ClarvidaJobTemplate>
 
     // Utilities
     isFieldExtracted,
+    getFieldSourceInfo,
     resetFieldOverride,
     clearAllContext,
     getNestedValue,

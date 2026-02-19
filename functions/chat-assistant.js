@@ -46,7 +46,7 @@ exports.chatAssistant = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       // Construct chat history for Gemini
       const chatHistory = history ? history.map(msg => ({

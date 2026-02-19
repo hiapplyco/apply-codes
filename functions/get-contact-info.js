@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -46,7 +47,7 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
     }
 
     const requestData = req.body || {};
-    console.log("Get Contact Info request:", JSON.stringify(requestData).substring(0, 200));
+    logger.info("Get Contact Info request", { url: (requestData.linkedin_url || requestData.profileUrl || '').substring(0, 100) });
 
     // Validate input
     const { linkedin_url, profileUrl } = requestData;
@@ -111,14 +112,14 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
       errorResponse.suggestion = 'Please configure NYMERIA_API_KEY in Cloud Functions environment variables';
     }
 
-    console.error('Detailed error:', errorResponse);
+    logger.error('Detailed error', errorResponse);
 
     res.status(500).json(errorResponse);
   }
 });
 
 async function getContactFromNymeria(profileUrl) {
-  console.log(`Getting contact info for: ${profileUrl}`);
+  logger.info('Getting contact info', { profileUrl: profileUrl.substring(0, 80) });
 
   const apiKey = process.env.NYMERIA_API_KEY;
   if (!apiKey) {
@@ -127,7 +128,7 @@ async function getContactFromNymeria(profileUrl) {
   }
 
   const nymeriaUrl = `https://www.nymeria.io/api/v4/person/enrich?profile=${encodeURIComponent(profileUrl)}`;
-  console.log('Calling Nymeria API:', nymeriaUrl);
+  logger.info('Calling Nymeria API');
 
   try {
     const nymeriaResponse = await axios.get(nymeriaUrl, {
@@ -137,7 +138,7 @@ async function getContactFromNymeria(profileUrl) {
     });
 
     const enrichedData = nymeriaResponse.data;
-    console.log('Nymeria contact data retrieved:', Object.keys(enrichedData));
+    logger.info('Nymeria contact data retrieved', { keys: Object.keys(enrichedData) });
 
     // Return the raw data for processing
     return enrichedData.data || enrichedData;
@@ -151,7 +152,7 @@ async function getContactFromNymeria(profileUrl) {
 
       // Handle 404 - Profile not found (return null, not an error)
       if (status === 404) {
-        console.log('Profile not found in Nymeria database');
+        logger.info('Profile not found in Nymeria database');
         return null;
       }
 

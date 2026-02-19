@@ -31,17 +31,7 @@ exports.generateBooleanSearch = onCall(
 
     const { description, jobTitle, userId, contextItems, projectContext } = data;
 
-    console.log('🔍 RAW DATA RECEIVED:', {
-      hasDescription: !!description,
-      descriptionType: typeof description,
-      descriptionValue: description,
-      hasContextItems: !!contextItems,
-      contextItemsType: typeof contextItems,
-      contextItemsIsArray: Array.isArray(contextItems),
-      contextItemsLength: contextItems?.length,
-      jobTitle,
-      projectContext: projectContext ? 'present' : 'absent'
-    });
+    // Debug logging removed for production
 
     // Validate required fields - either description OR context items must be provided
     const hasDescription = description !== undefined &&
@@ -54,14 +44,7 @@ exports.generateBooleanSearch = onCall(
       Array.isArray(contextItems) &&
       contextItems.length > 0;
 
-    console.log('✅ VALIDATION RESULTS:', {
-      hasDescription,
-      hasContextItems,
-      willProceed: hasDescription || hasContextItems
-    });
-
     if (!hasDescription && !hasContextItems) {
-      console.error('❌ VALIDATION FAILED - Neither description nor context items provided');
       throw new HttpsError(
         'invalid-argument',
         'Either description or context items must be provided',
@@ -78,13 +61,6 @@ exports.generateBooleanSearch = onCall(
       );
     }
 
-    console.log('🎯 BOOLEAN GENERATION - Full Context Received:');
-    console.log('  - Job Title:', jobTitle || 'Not provided');
-    console.log('  - Description:', hasDescription ? `${description.length} chars` : 'Not provided');
-    console.log('  - Context Items:', contextItems?.length || 0);
-    console.log('  - Project Context:', projectContext ? `${projectContext.name} (${projectContext.id})` : 'Not provided');
-    console.log('  - Context Item Types:', contextItems?.map(item => item.type).join(', ') || 'None');
-
     try {
       // Get Gemini API key from secret (injected by Firebase)
       const apiKey = process.env.GEMINI_API_KEY;
@@ -97,9 +73,8 @@ exports.generateBooleanSearch = onCall(
         );
       }
 
-      console.log('Gemini API key found from secret manager');
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       // Extract location information from context items
       const locationItems = contextItems?.filter(item =>
@@ -108,24 +83,9 @@ exports.generateBooleanSearch = onCall(
         (item.type === 'manual_input' && item.title?.includes('Location:'))
       ) || [];
 
-      console.log('🎯 CLOUD FUNCTION LOCATION PROCESSING:');
-      console.log('1. Total context items received:', contextItems?.length || 0);
-      console.log('2. Location items found:', locationItems.length);
-      console.log('3. Location items details:', locationItems.map(item => ({
-        type: item.type,
-        title: item.title,
-        hasMetadata: !!item.metadata,
-        hasParsedLocation: !!item.metadata?.parsedLocation,
-        metadata: item.metadata
-      })));
-
       const locationInfo = locationItems.map(item => {
         if (item.metadata?.parsedLocation) {
           const loc = item.metadata.parsedLocation;
-          console.log('   ✅ Processing location with parsed data:', {
-            formatted_address: item.metadata.formatted_address,
-            parsedLocation: loc
-          });
           return {
             formatted_address: item.metadata.formatted_address,
             city: loc.city,
@@ -135,18 +95,9 @@ exports.generateBooleanSearch = onCall(
             country: loc.country,
             zipCode: loc.zipCode
           };
-        } else {
-          console.log('   ⚠️ Location item missing parsed data:', {
-            type: item.type,
-            title: item.title,
-            hasMetadata: !!item.metadata,
-            metadata: item.metadata
-          });
         }
         return null;
       }).filter(Boolean);
-
-      console.log('4. Final location info for prompt:', locationInfo);
 
       // Organize context items by type for better prompt structure
       const perplexityItems = contextItems?.filter(item => item.type === 'perplexity' || item.type === 'perplexity_search') || [];
@@ -277,19 +228,8 @@ Output a single, production-ready boolean search string that:
 
 Return ONLY the boolean search string with no explanation, markdown, or formatting.`;
 
-      console.log('5. Generating content with Gemini using FULL CONTEXT:');
-      console.log('   - Project Context:', projectContext ? 'YES' : 'NO');
-      console.log('   - Location count:', locationInfo.length);
-      console.log('   - Perplexity items:', perplexityItems.length);
-      console.log('   - Firecrawl items:', firecrawlItems.length);
-      console.log('   - Document items:', documentItems.length);
-      console.log('   - Manual context items:', manualItems.length);
-      console.log('   - Total context sources:', (perplexityItems.length + firecrawlItems.length + documentItems.length + manualItems.length + (projectContext ? 1 : 0) + locationInfo.length));
-      console.log('   - Prompt length:', prompt.length, 'chars');
-
       const result = await model.generateContent(prompt);
       const searchString = result.response.text().trim();
-      console.log('6. Generated search string:', searchString);
 
       if (!searchString) {
         console.error('Empty search string generated');

@@ -44,7 +44,7 @@ exports.summarizeJob = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       const prompt = `As a senior Talent Acquisition professional, create a compelling and comprehensive summary of this job description using clear markdown formatting. Focus on the key aspects that would most interest potential candidates:
 

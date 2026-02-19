@@ -51,7 +51,7 @@ exports.generateEmailTemplates = onRequest(
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-3-flash-preview",
+        model: "gemini-3-pro-preview",
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 2000,

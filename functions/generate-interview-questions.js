@@ -45,7 +45,7 @@ exports.generateInterviewQuestions = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       const prompt = `Generate interview questions based on the following:
       

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,8 @@ import { auth } from '@/lib/firebase';
 // Context Builder components
 import { ContextInputSection } from './ContextBuilder/ContextInputSection';
 import { ContextItemsDisplay } from './ContextBuilder/ContextItemsDisplay';
+import { ExtractionProgressPanel } from './ContextBuilder/ExtractionProgressPanel';
+import { GenerationReadyCard } from './ContextBuilder/GenerationReadyCard';
 import { useContextBuilder } from './ContextBuilder/useContextBuilder';
 import { ContextBuilderProps, ContentType, GeneratedContent } from './ContextBuilder/types';
 
@@ -57,6 +59,88 @@ const BENEFIT_LABELS: Record<keyof typeof DEFAULT_BENEFITS, string> = {
   perks_program: 'Perks @ Clarvida - Verizon discounts, entertainment deals & more',
 };
 
+/**
+ * AIField - Memoized input field with AI extraction indicator
+ * CRITICAL: This component MUST be defined outside of ContextBuilder to prevent
+ * it from being recreated on every parent render, which causes focus loss.
+ */
+interface AIFieldProps {
+  path: string;
+  label: string;
+  placeholder: string;
+  type?: string;
+  value: any;
+  isExtracted: boolean;
+  sourceInfo?: {
+    source: string;
+    confidence: number;
+  };
+  onUpdate: (path: string, value: any) => void;
+}
+
+const AIField = memo(function AIField({
+  path,
+  label,
+  placeholder,
+  type = 'text',
+  value,
+  isExtracted,
+  sourceInfo,
+  onUpdate,
+}: AIFieldProps) {
+  const confidenceColor = sourceInfo?.confidence
+    ? sourceInfo.confidence >= 0.8 ? 'text-green-600'
+    : sourceInfo.confidence >= 0.5 ? 'text-yellow-600'
+    : 'text-red-600'
+    : '';
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center gap-2">
+        {label}
+        {isExtracted && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-purple-100 text-purple-700 border-purple-200 cursor-help"
+                >
+                  <Brain className="w-3 h-3 mr-1" />
+                  AI
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="text-sm">
+                  {sourceInfo ? (
+                    <>
+                      <p className="font-medium">Extracted from: {sourceInfo.source}</p>
+                      <p className={cn("text-xs mt-0.5", confidenceColor)}>
+                        {Math.round(sourceInfo.confidence * 100)}% confidence
+                      </p>
+                    </>
+                  ) : (
+                    <p>AI extracted field</p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </Label>
+      <Input
+        type={type}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onUpdate(path, type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
+        className={cn(
+          isExtracted && 'border-purple-300 bg-purple-50/50 focus:border-purple-500'
+        )}
+      />
+    </div>
+  );
+});
+
 export function ContextBuilder({ onJobDescriptionGenerated, onContentGenerated, initialTemplate }: ContextBuilderProps) {
   // Use the custom hook for context and template management
   const {
@@ -68,6 +152,7 @@ export function ContextBuilder({ onJobDescriptionGenerated, onContentGenerated, 
     removeContextItem,
     updateTemplate,
     isFieldExtracted,
+    getFieldSourceInfo,
     clearAllContext,
     getNestedValue,
   } = useContextBuilder(initialTemplate);
@@ -106,6 +191,9 @@ export function ContextBuilder({ onJobDescriptionGenerated, onContentGenerated, 
     benefits: false,
     keywords: false,
   });
+
+  // Extraction panel expansion state
+  const [isExtractionPanelExpanded, setIsExtractionPanelExpanded] = useState(true);
 
   // Show generation dialog for AI content
   const [showGenerationDialog, setShowGenerationDialog] = useState(false);
@@ -336,25 +424,43 @@ Company: Clarvida - Behavioral health and human services provider
       // Allow generation to proceed with warning, but show what's missing
     }
 
-    // For Job Description, use the existing template-based generation (fast, no dialog needed)
-    if (selectedContentType === 'Job Description') {
-      const description = generateJobDescription();
-      onJobDescriptionGenerated(description, template as ClarvidaJobTemplate);
-      toast.success('Job description generated!');
-      return;
-    }
-
-    // For other content types, use AI generation via function-bridge
-    const selectedType = contentTypes.find(t => t.content_type === selectedContentType);
-    if (!selectedType) {
-      toast.error('Please select a content type');
-      return;
-    }
-
     // Show sophisticated loading dialog for AI content
     setIsGenerating(true);
     setShowGenerationDialog(true);
+
     try {
+      // For Job Description, use Gemini-powered generation
+      if (selectedContentType === 'Job Description') {
+        console.log('[ContextBuilder] Generating AI-powered job description:', {
+          hasTemplate: !!template,
+          contextItemsCount: contextItems.length,
+        });
+
+        const response = await functionBridge.generateJobDescription({
+          template: template,
+          contextItems: contextItems,
+          config: {
+            tone: 'professional',
+            format: 'markdown',
+          },
+        });
+
+        if (response?.success && response.description) {
+          onJobDescriptionGenerated(response.description, template as ClarvidaJobTemplate);
+          toast.success('Job description generated with AI!');
+        } else {
+          throw new Error(response?.error || 'Failed to generate job description');
+        }
+        return;
+      }
+
+      // For other content types, use AI generation via function-bridge
+      const selectedType = contentTypes.find(t => t.content_type === selectedContentType);
+      if (!selectedType) {
+        toast.error('Please select a content type');
+        return;
+      }
+
       const contextString = buildContextFromTemplate();
 
       console.log('[ContextBuilder] Generating content:', {
@@ -444,48 +550,6 @@ Company: Clarvida - Behavioral health and human services provider
     const description = generateJobDescription();
     navigator.clipboard.writeText(description);
     toast.success('Copied to clipboard!');
-  };
-
-  // Field with AI indicator
-  const AIField = ({
-    path,
-    label,
-    placeholder,
-    type = 'text',
-    ...props
-  }: {
-    path: string;
-    label: string;
-    placeholder: string;
-    type?: string;
-    [key: string]: any;
-  }) => {
-    const extracted = isFieldExtracted(path);
-    const value = getNestedValue(template, path);
-
-    return (
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          {label}
-          {extracted && (
-            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 border-purple-200">
-              <Brain className="w-3 h-3 mr-1" />
-              AI
-            </Badge>
-          )}
-        </Label>
-        <Input
-          type={type}
-          placeholder={placeholder}
-          value={value || ''}
-          onChange={(e) => updateTemplate(path, type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
-          className={cn(
-            extracted && 'border-purple-300 bg-purple-50/50 focus:border-purple-500'
-          )}
-          {...props}
-        />
-      </div>
-    );
   };
 
   const SectionHeader = ({
@@ -599,31 +663,29 @@ Company: Clarvida - Behavioral health and human services provider
                 onRemove={removeContextItem}
               />
 
-              {/* Extraction Status */}
-              {extractionState.fieldsExtracted > 0 && (
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <div className="flex items-center gap-2 text-sm text-purple-700">
-                    <Brain className="w-4 h-4" />
-                    <span>
-                      AI extracted <strong>{extractionState.fieldsExtracted}</strong> fields
-                      {extractionState.confidence > 0 && (
-                        <span className="text-purple-500 ml-1">
-                          ({Math.round(extractionState.confidence * 100)}% confidence)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  {contextItems.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearAllContext}
-                      className="text-purple-600 hover:text-purple-800 hover:bg-purple-100"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Clear
-                    </Button>
-                  )}
+              {/* Extraction Progress Panel - shows per-item status */}
+              {contextItems.length > 0 && (
+                <ExtractionProgressPanel
+                  contextItems={contextItems}
+                  extractionState={extractionState}
+                  optimizationState={optimizationState}
+                  isExpanded={isExtractionPanelExpanded}
+                  onToggleExpand={() => setIsExtractionPanelExpanded(!isExtractionPanelExpanded)}
+                />
+              )}
+
+              {/* Clear context button */}
+              {contextItems.length > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllContext}
+                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Clear All Context
+                  </Button>
                 </div>
               )}
             </div>
@@ -635,10 +697,10 @@ Company: Clarvida - Behavioral health and human services provider
           <SectionHeader title="Basic Information" section="basic" icon={FileText} instruction={sectionInstructions.basic} />
           {expandedSections.basic && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-4">
-              <AIField path="job_title" label="Job Title *" placeholder="e.g., Licensed Clinical Social Worker" />
-              <AIField path="specialty_credential" label="Specialty / Credential" placeholder="e.g., LCSW, LPC, RN" />
-              <AIField path="location.city" label="City *" placeholder="e.g., Denver" />
-              <AIField path="location.state" label="State *" placeholder="e.g., CO" />
+              <AIField path="job_title" label="Job Title *" placeholder="e.g., Licensed Clinical Social Worker" value={getNestedValue(template, 'job_title')} isExtracted={isFieldExtracted('job_title')} sourceInfo={getFieldSourceInfo('job_title')} onUpdate={updateTemplate} />
+              <AIField path="specialty_credential" label="Specialty / Credential" placeholder="e.g., LCSW, LPC, RN" value={getNestedValue(template, 'specialty_credential')} isExtracted={isFieldExtracted('specialty_credential')} sourceInfo={getFieldSourceInfo('specialty_credential')} onUpdate={updateTemplate} />
+              <AIField path="location.city" label="City *" placeholder="e.g., Denver" value={getNestedValue(template, 'location.city')} isExtracted={isFieldExtracted('location.city')} sourceInfo={getFieldSourceInfo('location.city')} onUpdate={updateTemplate} />
+              <AIField path="location.state" label="State *" placeholder="e.g., CO" value={getNestedValue(template, 'location.state')} isExtracted={isFieldExtracted('location.state')} sourceInfo={getFieldSourceInfo('location.state')} onUpdate={updateTemplate} />
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -711,12 +773,20 @@ Company: Clarvida - Behavioral health and human services provider
                   label={`Min ${template.salary?.type === 'hourly' ? '$/hr' : '$/yr'}`}
                   placeholder="0"
                   type="number"
+                  value={getNestedValue(template, 'salary.min')}
+                  isExtracted={isFieldExtracted('salary.min')}
+                  sourceInfo={getFieldSourceInfo('salary.min')}
+                  onUpdate={updateTemplate}
                 />
                 <AIField
                   path="salary.max"
                   label={`Max ${template.salary?.type === 'hourly' ? '$/hr' : '$/yr'}`}
                   placeholder="0"
                   type="number"
+                  value={getNestedValue(template, 'salary.max')}
+                  isExtracted={isFieldExtracted('salary.max')}
+                  sourceInfo={getFieldSourceInfo('salary.max')}
+                  onUpdate={updateTemplate}
                 />
               </div>
             </div>
@@ -728,7 +798,7 @@ Company: Clarvida - Behavioral health and human services provider
           <SectionHeader title="About the Role" section="about" icon={FileText} instruction={sectionInstructions.about} />
           {expandedSections.about && (
             <div className="space-y-4 pl-4">
-              <AIField path="about_role.team_name" label="Team / Program Name" placeholder="e.g., Outpatient Mental Health Services" />
+              <AIField path="about_role.team_name" label="Team / Program Name" placeholder="e.g., Outpatient Mental Health Services" value={getNestedValue(template, 'about_role.team_name')} isExtracted={isFieldExtracted('about_role.team_name')} sourceInfo={getFieldSourceInfo('about_role.team_name')} onUpdate={updateTemplate} />
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -766,7 +836,7 @@ Company: Clarvida - Behavioral health and human services provider
                 />
               </div>
 
-              <AIField path="about_role.population_served" label="Population Served" placeholder="e.g., adults with mental health needs, children and families" />
+              <AIField path="about_role.population_served" label="Population Served" placeholder="e.g., adults with mental health needs, children and families" value={getNestedValue(template, 'about_role.population_served')} isExtracted={isFieldExtracted('about_role.population_served')} sourceInfo={getFieldSourceInfo('about_role.population_served')} onUpdate={updateTemplate} />
             </div>
           )}
         </div>
@@ -806,7 +876,7 @@ Company: Clarvida - Behavioral health and human services provider
           <SectionHeader title="Required Qualifications" section="qualifications" icon={FileText} instruction={sectionInstructions.qualifications} />
           {expandedSections.qualifications && (
             <div className="space-y-4 pl-4">
-              <AIField path="required_qualifications.education" label="Education" placeholder="e.g., Master's degree in Social Work, Psychology, or related field" />
+              <AIField path="required_qualifications.education" label="Education" placeholder="e.g., Master's degree in Social Work, Psychology, or related field" value={getNestedValue(template, 'required_qualifications.education')} isExtracted={isFieldExtracted('required_qualifications.education')} sourceInfo={getFieldSourceInfo('required_qualifications.education')} onUpdate={updateTemplate} />
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -839,7 +909,7 @@ Company: Clarvida - Behavioral health and human services provider
                 </Button>
               </div>
 
-              <AIField path="required_qualifications.experience_years" label="Years of Experience" placeholder="0" type="number" />
+              <AIField path="required_qualifications.experience_years" label="Years of Experience" placeholder="0" type="number" value={getNestedValue(template, 'required_qualifications.experience_years')} isExtracted={isFieldExtracted('required_qualifications.experience_years')} sourceInfo={getFieldSourceInfo('required_qualifications.experience_years')} onUpdate={updateTemplate} />
 
               <div className="space-y-2">
                 <Label>Technical / Clinical Skills</Label>
@@ -913,103 +983,18 @@ Company: Clarvida - Behavioral health and human services provider
           )}
         </div>
 
-        {/* Content Type & Actions */}
-        <div className="space-y-4 pt-4 border-t">
-          {/* Content Type Selector */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              Content Type
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-xs">
-                    <p className="text-sm">
-                      <strong>Step 4:</strong> Select what you want to create. Job Description uses your form data directly. Other options use AI to generate content.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </Label>
-            <Select value={selectedContentType} onValueChange={setSelectedContentType}>
-              <SelectTrigger className="w-full border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                <SelectValue placeholder="Select content type..." />
-              </SelectTrigger>
-              <SelectContent className="border-2 border-black">
-                {contentTypes.map((type) => (
-                  <SelectItem key={type.content_type} value={type.content_type}>
-                    <span className="flex items-center gap-2">
-                      <span>{type.emoji}</span>
-                      <span>{type.content_type}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedContentType && selectedContentType !== 'Job Description' && (
-              <p className="text-xs text-gray-500">
-                {contentTypes.find(t => t.content_type === selectedContentType)?.tooltip}
-              </p>
-            )}
-          </div>
-
-          {/* Validation Feedback */}
-          {!formValidation.isValid && formValidation.missingFields.length > 0 && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-800">Recommended fields missing:</p>
-                <p className="text-amber-700">{formValidation.missingFields.join(', ')}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Generate Button */}
-          <div className="flex gap-3">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex-1">
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={isGenerating || !formValidation.hasMinimumData}
-                      className={cn(
-                        "w-full border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]",
-                        formValidation.hasMinimumData
-                          ? "bg-purple-600 hover:bg-purple-700"
-                          : "bg-gray-400 cursor-not-allowed"
-                      )}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Generate {selectedContentType}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                {!formValidation.hasMinimumData && (
-                  <TooltipContent>
-                    <p>Fill out at least one field or add context to enable generation</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-            {selectedContentType === 'Job Description' && (
-              <Button variant="outline" onClick={copyToClipboard} className="border-2 border-black">
-                <Copy className="w-4 h-4 mr-2" />
-                Copy
-              </Button>
-            )}
-          </div>
+        {/* Generation Ready Card - Clear CTA for content generation */}
+        <div className="pt-4 border-t">
+          <GenerationReadyCard
+            template={template}
+            contextItemsCount={contextItems.length}
+            contentTypes={contentTypes}
+            selectedContentType={selectedContentType}
+            onContentTypeChange={setSelectedContentType}
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+            isExtracting={extractionState.isExtracting}
+          />
         </div>
       </CardContent>
 

@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
-
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 
@@ -15,7 +15,7 @@ exports.analyzeCandidate = onCall(
     
   },
   async (request) => {
-    console.log('Analyze candidate function called');
+    logger.info('Analyze candidate function called');
 
     const { data, auth } = request;
 
@@ -28,7 +28,7 @@ exports.analyzeCandidate = onCall(
     }
 
     const { candidate, requirements, projectId } = data;
-    console.log('Received analysis request for:', candidate?.name || 'Unknown candidate', 'projectId:', projectId);
+    logger.info('Received analysis request', { candidate: candidate?.name, projectId });
 
     // Validate input
     if (!candidate || !requirements) {
@@ -55,7 +55,7 @@ exports.analyzeCandidate = onCall(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       const prompt = `You are a technical recruiter. Analyze the candidate profile against the job requirements and return ONLY a JSON object.
 
@@ -78,11 +78,11 @@ Analysis rules:
 
 IMPORTANT: Return only the JSON object, no explanations, no markdown, no other text.`;
 
-      console.log('Sending request to Gemini with candidate:', candidate.name);
+      logger.info('Sending request to Gemini', { candidate: candidate.name });
       const result = await model.generateContent(prompt);
       const responseText = result.response.text().trim();
 
-      console.log('Gemini raw response:', responseText);
+      logger.info('Gemini response received', { length: responseText?.length });
 
       // Try to parse as JSON
       let analysisData;
@@ -92,10 +92,10 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
           .replace(/```json\n?/g, '')
           .replace(/```\n?/g, '')
           .trim();
-        console.log('Cleaned response for parsing:', cleanedResponse);
+        logger.info('Cleaned response for parsing', { length: cleanedResponse?.length });
 
         analysisData = JSON.parse(cleanedResponse);
-        console.log('Successfully parsed JSON:', analysisData);
+        logger.info('Successfully parsed analysis JSON');
       } catch (e) {
         console.error('JSON parsing failed:', e);
         console.error('Failed to parse response:', responseText);
@@ -135,7 +135,7 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
           source: 'extension'
         });
         analysisId = docRef.id;
-        console.log('Analysis saved to Firestore with ID:', analysisId);
+        logger.info('Analysis saved to Firestore', { analysisId });
       } catch (logError) {
         console.error('Error saving analysis:', logError);
         // Don't fail the main operation

@@ -34,7 +34,7 @@ const { pdlSearch } = require('./pdl-search');
 const { sendEmail, sendBulkEmails, sendTemplatedEmail } = require('./send-email');
 const { sendCampaignEmail, manageSubscriberList, handleUnsubscribe, getCampaignAnalytics } = require('./send-campaign-email');
 const { scheduleInterview } = require('./schedule-interview');
-// const { processTextExtraction } = require('./process-text-extraction'); // Temporarily disabled - needs Supabase removal
+const { processTextExtraction } = require('./process-text-extraction');
 const { prepareInterview } = require('./prepare-interview');
 const { processEmailWebhook, getEmailEvents, getEmailAnalytics } = require('./process-email-webhook');
 
@@ -57,6 +57,7 @@ const { getGeminiKey } = require('./get-gemini-key');
 const { getGoogleCseKey } = require('./get-google-cse-key');
 const { generateClarvidaReport } = require('./generate-clarvida-report');
 const { generateClarvidaMarketingImage } = require('./generate-clarvida-marketing-image');
+const { generateJobDescription } = require('./generate-job-description');
 const { processJobRequirementsV2 } = require('./process-job-requirements-v2');
 const { testOrchestration } = require('./test-orchestration');
 const { initializeDailyBot } = require('./initialize-daily-bot');
@@ -104,7 +105,7 @@ exports.manageSubscriberList = manageSubscriberList;
 exports.handleUnsubscribe = handleUnsubscribe;
 exports.getCampaignAnalytics = getCampaignAnalytics;
 exports.scheduleInterview = scheduleInterview;
-// exports.processTextExtraction = processTextExtraction; // Temporarily disabled - needs Supabase removal
+exports.processTextExtraction = processTextExtraction;
 exports.prepareInterview = prepareInterview;
 exports.processEmailWebhook = processEmailWebhook;
 exports.getEmailEvents = getEmailEvents;
@@ -130,6 +131,7 @@ exports.getGeminiKey = getGeminiKey;
 exports.getGoogleCseKey = getGoogleCseKey;
 exports.generateClarvidaReport = generateClarvidaReport;
 exports.generateClarvidaMarketingImage = generateClarvidaMarketingImage;
+exports.generateJobDescription = generateJobDescription;
 exports.processJobRequirementsV2 = processJobRequirementsV2;
 exports.testOrchestration = testOrchestration;
 exports.initializeDailyBot = initializeDailyBot;
@@ -150,7 +152,7 @@ exports.grantProAccess = grantProAccess;
 // Extension API functions
 exports.getProjects = getProjects;
 
-// Example: Health check function
+// Health check
 exports.healthCheck = functions.https.onRequest((req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -158,15 +160,3 @@ exports.healthCheck = functions.https.onRequest((req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Example: Scheduled function (runs every 24 hours)
-// Note: Requires firebase-functions v2 for scheduled functions
-// For now, commenting out to avoid deployment errors
-// exports.dailyCleanup = functions.pubsub
-//   .schedule('every 24 hours')
-//   .timeZone('America/New_York')
-//   .onRun(async (context) => {
-//     console.log('Running daily cleanup...');
-//     // Add cleanup logic here
-//     return null;
-//   });

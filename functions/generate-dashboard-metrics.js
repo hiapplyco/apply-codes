@@ -134,7 +134,7 @@ exports.generateDashboardMetrics = onRequest(
 
 async function generateMetricsWithGemini(agentOutputs, jobId, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
   // Compile all analysis data
   const analysisData = {

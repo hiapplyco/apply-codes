@@ -79,6 +79,7 @@ export interface BooleanState {
   lastGeneratedAt: string | null;
   variant: 'strict' | 'balanced' | 'broad';
   explanation?: BooleanExplanation;
+  error?: string | null;
 }
 
 export interface BooleanHistoryEntry {
@@ -137,6 +138,7 @@ export interface WorkflowRunState {
 export interface GenerateBooleanPayload {
   jobContext: JobContext;
   generatedDescription: string;
+  contextItems?: ContextItem[];
   previousGenerations?: string[];
   variant?: 'strict' | 'balanced' | 'broad';
   isReroll?: boolean;
@@ -185,6 +187,7 @@ export function createDefaultBooleanState(): BooleanState {
     isGenerating: false,
     lastGeneratedAt: null,
     variant: 'balanced',
+    error: null,
   };
 }
 

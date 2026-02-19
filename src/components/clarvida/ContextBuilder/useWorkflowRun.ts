@@ -11,7 +11,7 @@
  * - Clean reset when starting new workflow
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   WorkflowRunState,
   BooleanState,
@@ -41,6 +41,10 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
 
   // Track the current run ID for cleanup
   const currentRunIdRef = useRef<string>(workflowState.runId);
+
+  // Ref to avoid stale closures for contextItems in setTimeout callbacks
+  const contextItemsRef = useRef(workflowState.contextItems);
+  contextItemsRef.current = workflowState.contextItems;
 
   /**
    * Start a completely new workflow run
@@ -90,15 +94,19 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
       // Small delay to ensure state is updated
       setTimeout(async () => {
         try {
-          // Set generating state
+          // Set generating state and clear previous error
           setWorkflowState(prev => ({
             ...prev,
-            booleanState: { ...prev.booleanState, isGenerating: true },
+            booleanState: { ...prev.booleanState, isGenerating: true, error: null },
           }));
+
+          // Get current context items from ref (avoids stale closure)
+          const currentContextItems = contextItemsRef.current;
 
           const payload: GenerateBooleanPayload = {
             jobContext,
             generatedDescription: description,
+            contextItems: currentContextItems.length > 0 ? currentContextItems : undefined,
             previousGenerations: [],
             variant: 'balanced',
             isReroll: false,
@@ -124,6 +132,7 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
                 lastGeneratedAt: historyEntry.generatedAt,
                 variant: 'balanced',
                 explanation: result.explanation,
+                error: null,
               },
               currentStep: 'boolean',
             }));
@@ -133,9 +142,10 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
           }
         } catch (error) {
           console.error('Auto boolean generation failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Generation failed';
           setWorkflowState(prev => ({
             ...prev,
-            booleanState: { ...prev.booleanState, isGenerating: false },
+            booleanState: { ...prev.booleanState, isGenerating: false, error: errorMessage },
           }));
           toast.error('Boolean generation failed - you can try re-rolling');
         }
@@ -170,7 +180,8 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
    */
   const generateBoolean = useCallback(async (
     variant: 'strict' | 'balanced' | 'broad' = 'balanced',
-    isReroll: boolean = false
+    isReroll: boolean = false,
+    _retryDepth: number = 0
   ): Promise<string | null> => {
     const state = workflowState;
 
@@ -186,20 +197,22 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
       return null;
     }
 
-    // Start generation
+    // Start generation - clear previous error
     setWorkflowState(prev => ({
       ...prev,
       booleanState: {
         ...prev.booleanState,
         isGenerating: true,
+        error: null,
       },
     }));
 
     try {
-      // Prepare payload with history for deduplication
+      // Prepare payload with history for deduplication and context items
       const payload: GenerateBooleanPayload = {
         jobContext: state.jobContext,
         generatedDescription: state.generatedDescription,
+        contextItems: state.contextItems.length > 0 ? state.contextItems : undefined,
         previousGenerations: isReroll ? state.booleanState.history.map(h => h.searchString) : [],
         variant,
         isReroll,
@@ -217,11 +230,10 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
         h => normalizeBoolean(h.searchString) === normalizeBoolean(result.searchString!)
       );
 
-      if (isDuplicate && isReroll) {
+      if (isDuplicate && isReroll && _retryDepth < 2) {
         toast.warning('Generated similar boolean, trying different variation...');
-        // Recursively try again with a different variant
         const nextVariant = variant === 'balanced' ? 'broad' : variant === 'broad' ? 'strict' : 'balanced';
-        return generateBoolean(nextVariant, true);
+        return generateBoolean(nextVariant, true, _retryDepth + 1);
       }
 
       // Create history entry
@@ -233,7 +245,7 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
         isReroll,
       };
 
-      // Update state with new boolean
+      // Update state with new boolean (clear any previous error)
       setWorkflowState(prev => ({
         ...prev,
         booleanState: {
@@ -243,6 +255,7 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
           lastGeneratedAt: historyEntry.generatedAt,
           variant,
           explanation: result.explanation,
+          error: null,
         },
         currentStep: 'boolean',
       }));
@@ -253,14 +266,16 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
       return result.searchString;
     } catch (error) {
       console.error('Boolean generation failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate boolean search';
       setWorkflowState(prev => ({
         ...prev,
         booleanState: {
           ...prev.booleanState,
           isGenerating: false,
+          error: errorMessage,
         },
       }));
-      toast.error(error instanceof Error ? error.message : 'Failed to generate boolean search');
+      toast.error(errorMessage);
       return null;
     }
   }, [workflowState]);
@@ -312,6 +327,66 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
   }, [workflowState.booleanState.history]);
 
   /**
+   * Restore full workflow state from a saved history item
+   */
+  const restoreFromSavedWorkflow = useCallback((saved: {
+    runId?: string;
+    jobTitle?: string;
+    jobDepartment?: string;
+    jobLocation?: string;
+    generatedDescription?: string;
+    booleanSearchString?: string;
+    booleanVariant?: 'strict' | 'balanced' | 'broad';
+    booleanExplanation?: any;
+    booleanHistory?: BooleanHistoryEntry[];
+  }) => {
+    // Parse location from "City, State" format
+    const locationParts = (saved.jobLocation || '').split(',').map(s => s.trim());
+
+    const restoredState: WorkflowRunState = {
+      runId: saved.runId || crypto.randomUUID(),
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      currentStep: saved.booleanSearchString ? 'boolean' : saved.generatedDescription ? 'description' : 'context',
+      contextItems: [],
+      jobContext: saved.jobTitle ? {
+        title: saved.jobTitle,
+        department: saved.jobDepartment || undefined,
+        location: {
+          city: locationParts[0] || '',
+          state: locationParts[1] || '',
+          workArrangement: 'on-site',
+        },
+        employmentType: 'full-time',
+        responsibilities: [],
+        mustHaveSkills: [],
+        niceToHaveSkills: [],
+        technicalSkills: [],
+        certifications: [],
+        licensure: [],
+        keywords: [],
+      } : null,
+      generatedDescription: saved.generatedDescription || null,
+      jobTemplate: null,
+      booleanState: {
+        current: saved.booleanSearchString || null,
+        history: saved.booleanHistory || [],
+        isGenerating: false,
+        lastGeneratedAt: null,
+        variant: saved.booleanVariant || 'balanced',
+        explanation: saved.booleanExplanation || undefined,
+        error: null,
+      },
+      isDirty: false,
+      hasUnsavedChanges: false,
+    };
+
+    currentRunIdRef.current = restoredState.runId;
+    setWorkflowState(restoredState);
+    toast.success(`Restored workflow: ${saved.jobTitle || 'Untitled'}`);
+  }, []);
+
+  /**
    * Mark workflow as complete
    */
   const completeWorkflow = useCallback(() => {
@@ -351,6 +426,7 @@ export function useWorkflowRun(options: UseWorkflowRunOptions = {}) {
     // Workflow control
     startNewRun,
     completeWorkflow,
+    restoreFromSavedWorkflow,
 
     // Context management
     addContextItem,

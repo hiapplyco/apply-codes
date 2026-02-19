@@ -28,6 +28,9 @@ export const TrialExpirationModal = () => {
     // Don't show on pricing page - let them browse pricing
     if (location.pathname === '/pricing') return;
 
+    // Don't show for Clarvida routes - Clarvida users have enterprise access
+    if (location.pathname.startsWith('/clarvida')) return;
+
     // Check if trial is expired
     if (trialFullyExpired) {
       setIsOpen(true);
@@ -165,8 +168,12 @@ export const TrialExpirationModal = () => {
 // Trial Warning Banner for when trial is ending soon
 export const TrialWarningBanner = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { subscription, loading } = useSubscription();
   const [dismissed, setDismissed] = useState(false);
+
+  // Don't show for Clarvida routes - Clarvida users have enterprise access
+  if (location.pathname.startsWith('/clarvida')) return null;
 
   if (loading || dismissed) return null;
   if (!subscription || subscription.tier !== 'free_trial') return null;

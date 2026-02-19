@@ -41,6 +41,7 @@ import {
   Minimize2,
   Info,
   Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BooleanState, BooleanHistoryEntry, BooleanExplanation } from './ContextBuilder/workflowTypes';
@@ -112,6 +113,36 @@ export function BooleanSearchPanel({
                 Analyzing job context and creating recruiter-grade search string
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (booleanState.error && !booleanState.current) {
+    return (
+      <Card className={cn("border-2 border-red-200 bg-red-50/30", className)}>
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <AlertTriangle className="w-10 h-10 text-red-500" />
+            <div className="text-center">
+              <p className="font-medium text-red-900">Boolean Generation Failed</p>
+              <p className="text-sm text-red-600 mt-1 max-w-md">
+                {booleanState.error}
+              </p>
+            </div>
+            {canGenerate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onReroll()}
+                className="border-red-300 text-red-700 hover:bg-red-100"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

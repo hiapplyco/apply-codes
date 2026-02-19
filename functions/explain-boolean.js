@@ -45,7 +45,7 @@ exports.explainBoolean = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       const prompt = `Explain the following boolean search string in simple terms. Break down what it's looking for and what it's excluding.
       

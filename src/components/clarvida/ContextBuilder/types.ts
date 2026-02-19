@@ -14,6 +14,30 @@ export interface ContextItem {
   created_at: string;
 }
 
+// Per-item extraction status
+export type ItemExtractionStatus = 'pending' | 'extracting' | 'complete' | 'failed';
+
+// Information about an extracted field
+export interface ExtractedFieldInfo {
+  path: string;
+  value: any;
+  source: string;        // Context item title
+  sourceId: string;      // Context item ID
+  confidence: number;
+  extractedAt: string;
+}
+
+// Per-context-item extraction result
+export interface ItemExtractionResult {
+  itemId: string;
+  status: ItemExtractionStatus;
+  fieldsExtracted: number;
+  confidence: number;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 // Extraction state for tracking AI-populated fields
 export interface ExtractionState {
   isExtracting: boolean;
@@ -22,6 +46,44 @@ export interface ExtractionState {
   userOverrides: Set<string>;
   confidence: number;
   fieldsExtracted: number;
+  // New: per-item tracking
+  itemResults: Map<string, ItemExtractionResult>;
+  extractionQueue: string[];  // Item IDs pending extraction
+  currentlyExtracting: string | null;  // Item ID being extracted
+  // New: field-level source tracking
+  fieldSourceMap: Map<string, ExtractedFieldInfo>;
+}
+
+// Optimization state for tracking template refinement
+export interface OptimizationState {
+  isOptimizing: boolean;
+  lastOptimizationTime: string | null;
+  totalOptimizations: number;
+  lastSummary: {
+    fields_updated: string[];
+    fields_added: string[];
+    duplicates_removed: number;
+    enhancements_made: string[];
+  } | null;
+}
+
+// Form field requirements for validation
+export interface FormFieldRequirement {
+  path: string;
+  label: string;
+  required: boolean;
+  category: 'basic' | 'about' | 'qualifications' | 'other';
+}
+
+// Form completeness summary
+export interface FormCompleteness {
+  requiredFilled: number;
+  requiredTotal: number;
+  optionalFilled: number;
+  optionalTotal: number;
+  missingRequired: string[];
+  filledFields: string[];
+  isReadyToGenerate: boolean;
 }
 
 // Image data structure from Gemini image generation

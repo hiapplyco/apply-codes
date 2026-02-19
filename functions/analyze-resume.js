@@ -113,7 +113,7 @@ exports.analyzeResume = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       // Convert resume to text and clean it
       let resumeText = file.buffer.toString('utf-8');

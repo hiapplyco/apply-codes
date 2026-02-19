@@ -54,43 +54,88 @@ export const CompactCandidateAnalysis: React.FC<CompactCandidateAnalysisProps> =
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedTab, setSelectedTab] = useState('top');
 
-  // Analyze and rank candidates
+  // Extract keywords from job description for matching
+  const jobKeywords = useMemo(() => {
+    if (!jobDescription) return { titles: [] as string[], skills: [] as string[], locations: [] as string[] };
+    const text = jobDescription.toLowerCase();
+
+    // Extract skill-like terms (capitalized words, tech terms)
+    const skillPatterns = [
+      'javascript', 'python', 'java', 'typescript', 'react', 'angular', 'vue', 'node',
+      'aws', 'gcp', 'azure', 'docker', 'kubernetes', 'sql', 'postgresql', 'mongodb',
+      'machine learning', 'ai', 'data science', 'tensorflow', 'pytorch', 'go', 'rust',
+      'c++', 'c#', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'r', 'spark', 'kafka',
+      'terraform', 'jenkins', 'graphql', 'rest', 'microservices', 'agile', 'scrum',
+      'figma', 'tableau', 'power bi', 'salesforce', 'sap', 'excel', 'project management',
+      'leadership', 'communication', 'analytical', 'problem solving', 'strategic',
+    ];
+    const matchedSkills = skillPatterns.filter(s => text.includes(s));
+
+    // Extract title keywords from first lines (often contain job title)
+    const firstLine = text.split('\n')[0] || '';
+    const titleWords = firstLine.split(/\s+/).filter(w => w.length > 3);
+
+    return { titles: titleWords, skills: matchedSkills, locations: [] as string[] };
+  }, [jobDescription]);
+
+  // Analyze and rank candidates using job description context
   const analyzedCandidates = useMemo(() => {
     if (!candidates.length) return [];
 
-    return candidates.map((candidate, index) => {
-      // Calculate scores based on available data
+    return candidates.map((candidate) => {
+      const candidateText = `${candidate.title || ''} ${candidate.snippet || ''}`.toLowerCase();
       const experienceYears = parseInt(candidate.snippet?.match(/(\d+)\+?\s*years?/i)?.[1] || '0');
-      const hasRelevantTitle = candidate.title?.toLowerCase().includes('executive assistant') ||
-                              candidate.title?.toLowerCase().includes('ea') ||
-                              candidate.title?.toLowerCase().includes('admin');
-      
+
+      // Skills score: how many job skills appear in candidate profile
+      let skillMatches = 0;
+      for (const skill of jobKeywords.skills) {
+        if (candidateText.includes(skill)) skillMatches++;
+      }
+      const skillScore = jobKeywords.skills.length > 0
+        ? Math.min(Math.round((skillMatches / jobKeywords.skills.length) * 100), 100)
+        : 70; // Default when no job description
+
+      // Experience score based on years
+      const experienceScore = Math.min(experienceYears * 12, 100);
+
+      // Title relevance: check if job title keywords appear in candidate title
+      const titleText = (candidate.title || '').toLowerCase();
+      let titleMatches = 0;
+      for (const word of jobKeywords.titles) {
+        if (titleText.includes(word)) titleMatches++;
+      }
+      const titleRelevance = jobKeywords.titles.length > 0
+        ? Math.min(Math.round((titleMatches / Math.min(jobKeywords.titles.length, 5)) * 100), 100)
+        : 70;
+
       const score: CandidateScore = {
-        skills: hasRelevantTitle ? 85 : 65,
-        experience: Math.min(experienceYears * 10, 100),
-        location: candidate.snippet?.toLowerCase().includes('philippines') ? 95 : 70,
-        availability: 80, // Default since we don't have real availability data
+        skills: skillScore,
+        experience: experienceScore,
+        location: 70, // Default - would need enrichment for accurate location scoring
+        availability: 75,
         overall: 0
       };
 
-      // Calculate overall score
       score.overall = Math.round(
-        (score.skills * 0.35) + 
-        (score.experience * 0.25) + 
-        (score.location * 0.20) + 
-        (score.availability * 0.20)
+        (score.skills * 0.35) +
+        (score.experience * 0.20) +
+        (titleRelevance * 0.25) +
+        (score.location * 0.10) +
+        (score.availability * 0.10)
       );
 
-      // Identify strengths and gaps
       const strengths: string[] = [];
       const gaps: string[] = [];
 
-      if (score.skills > 80) strengths.push('Strong skills match');
-      if (score.experience > 70) strengths.push(`${experienceYears}+ years`);
-      if (score.location > 90) strengths.push('Ideal location');
-      
-      if (score.skills < 70) gaps.push('Skills gap');
-      if (score.experience < 50) gaps.push('Limited experience');
+      if (skillMatches >= 3) strengths.push(`${skillMatches} skill matches`);
+      else if (skillMatches > 0) strengths.push(`${skillMatches} skill match${skillMatches > 1 ? 'es' : ''}`);
+      if (experienceYears >= 5) strengths.push(`${experienceYears}+ years`);
+      else if (experienceYears >= 2) strengths.push(`${experienceYears} years exp`);
+      if (titleRelevance >= 60) strengths.push('Title match');
+
+      if (skillScore < 50 && jobKeywords.skills.length > 0) gaps.push('Skills gap');
+      if (experienceScore < 30) gaps.push('Limited experience');
+      if (titleRelevance < 30 && jobKeywords.titles.length > 0) gaps.push('Title mismatch');
 
       return {
         ...candidate,
@@ -102,7 +147,7 @@ export const CompactCandidateAnalysis: React.FC<CompactCandidateAnalysisProps> =
     })
     .sort((a, b) => b.score.overall - a.score.overall)
     .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
-  }, [candidates]);
+  }, [candidates, jobKeywords]);
 
   const topCandidates = analyzedCandidates.slice(0, 5);
   const goodMatches = analyzedCandidates.filter(c => c.score.overall >= 70 && c.score.overall < 85);

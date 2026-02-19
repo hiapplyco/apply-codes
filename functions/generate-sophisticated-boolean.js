@@ -41,6 +41,7 @@ exports.generateSophisticatedBoolean = onRequest(
       const {
         jobContext,
         generatedDescription,
+        contextItems = [],
         previousGenerations = [],
         variant = 'balanced',
         isReroll = false
@@ -50,7 +51,8 @@ exports.generateSophisticatedBoolean = onRequest(
         hasJobContext: !!jobContext,
         variant,
         isReroll,
-        previousCount: previousGenerations.length
+        previousCount: previousGenerations.length,
+        contextItemCount: contextItems.length
       });
 
       // Validate required fields
@@ -68,7 +70,7 @@ exports.generateSophisticatedBoolean = onRequest(
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       // Build variant-specific instructions
       const variantInstructions = {
@@ -116,6 +118,18 @@ ${jobContext.keywords?.length ? `**Keywords:** ${jobContext.keywords.join(', ')}
 
 ${generatedDescription ? `## Job Description Summary
 ${generatedDescription.substring(0, 1000)}${generatedDescription.length > 1000 ? '...' : ''}` : ''}
+
+${contextItems.length > 0 ? `## Additional Context (${contextItems.length} sources)
+${contextItems.map((item, i) => {
+  const label = item.type === 'perplexity_search' || item.type === 'perplexity' ? 'Research' :
+    item.type === 'url_scrape' ? 'Web Content' :
+    item.type === 'file_upload' || item.type === 'document_upload' ? 'Document' :
+    item.type === 'location_input' ? 'Location' : 'Note';
+  return `### ${label}: ${item.title || 'Untitled'}
+${(item.summary || item.content || '').substring(0, 500)}${(item.summary || item.content || '').length > 500 ? '...' : ''}`;
+}).join('\n\n')}
+
+**Use insights from ALL context sources above to create more targeted boolean searches.**` : ''}
 
 ## Search Strategy
 ${variantInstructions[variant] || variantInstructions.balanced}

@@ -111,7 +111,7 @@ exports.processTextExtraction = onRequest(
         // Use Gemini for all other supported types
         console.log('Processing document with Gemini...');
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
         const prompt = `Extract all text from this document.
         Options:
@@ -136,7 +136,7 @@ exports.processTextExtraction = onRequest(
           text: text,
           metadata: {
             originalFormat: file.mimetype,
-            extractionMethod: 'gemini-1.5-flash'
+            extractionMethod: 'gemini-3-pro-preview'
           }
         };
       }

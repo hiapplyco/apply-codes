@@ -130,7 +130,7 @@ exports.extractJobContext = onRequest(
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3-pro-preview',
         generationConfig: {
           temperature: 0.3, // Lower temperature for more consistent extraction
           maxOutputTokens: 4096,

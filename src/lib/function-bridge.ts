@@ -38,6 +38,15 @@ interface SophisticatedBooleanPayload {
     industry?: string;
   };
   generatedDescription: string;
+  contextItems?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    content: string;
+    summary?: string;
+    source_url?: string;
+    metadata?: Record<string, any>;
+  }>;
   previousGenerations?: string[];
   variant?: 'strict' | 'balanced' | 'broad';
   isReroll?: boolean;
@@ -91,14 +100,10 @@ class FunctionBridge {
   }
 
   enableFirebase(): boolean {
-    console.info("[function-bridge] Firebase is the only available backend now; enableFirebase is a no-op.");
     return this.isUsingFirebase();
   }
 
   disableFirebase(): boolean {
-    console.warn(
-      "[function-bridge] Supabase fallback has been removed. disableFirebase is a no-op and Firebase will remain active."
-    );
     return this.isUsingFirebase();
   }
 
@@ -151,8 +156,9 @@ class FunctionBridge {
     body?: Json | FormData | Blob | ArrayBufferView | ArrayBuffer;
     headers?: Record<string, string>;
     isFormData?: boolean;
+    timeoutMs?: number;
   } = {}): Promise<TResponse> {
-    const { method = "POST", body, headers = {}, isFormData = false } = options;
+    const { method = "POST", body, headers = {}, isFormData = false, timeoutMs = 60000 } = options;
 
     const baseUrl = this.ensureHttpBaseUrl();
     const token = await this.getIdToken();
@@ -179,23 +185,37 @@ class FunctionBridge {
             ? body
             : JSON.stringify(body);
 
-    const response = await fetch(`${baseUrl}/${name}`, {
-      method,
-      headers: requestHeaders,
-      body: requestBody
-    });
+    // Add timeout via AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => response.statusText);
-      throw new Error(`HTTP error ${response.status}: ${errorText}`);
+    try {
+      const response = await fetch(`${baseUrl}/${name}`, {
+        method,
+        headers: requestHeaders,
+        body: requestBody,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`HTTP error ${response.status}: ${errorText}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        return response.json() as Promise<TResponse>;
+      }
+
+      return (await response.text()) as unknown as TResponse;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error(`Request to ${name} timed out after ${timeoutMs / 1000}s`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      return response.json() as Promise<TResponse>;
-    }
-
-    return (await response.text()) as unknown as TResponse;
   }
 
   async invokeCallable<TRequest = unknown, TResponse = unknown>(
@@ -343,6 +363,30 @@ class FunctionBridge {
 
   async generateContent(payload: any): Promise<any> {
     return this.callHttpFunction("generateContent", { body: payload });
+  }
+
+  /**
+   * Generate a comprehensive job description using Gemini AI
+   * Synthesizes form template data with uploaded context items
+   */
+  async generateJobDescription(payload: {
+    template: any;
+    contextItems?: any[];
+    config?: {
+      tone?: string;
+      format?: string;
+    };
+  }): Promise<{
+    success: boolean;
+    description?: string;
+    metadata?: {
+      generatedAt: string;
+      contextItemsUsed: number;
+      model: string;
+    };
+    error?: string;
+  }> {
+    return this.callHttpFunction("generateJobDescription", { body: payload });
   }
 
   async geminiApi(payload: any): Promise<any> {
@@ -628,10 +672,4 @@ export const enableFirebaseFunctions = () => functionBridge.enableFirebase();
 export const disableFirebaseFunctions = () => functionBridge.disableFirebase();
 export const isUsingFirebaseFunctions = () => functionBridge.isUsingFirebase();
 
-if (typeof window !== "undefined") {
-  console.log("✅ Function Bridge Migration Status:", {
-    phase: "DIRECT_FIREBASE",
-    usingFirebaseOnly: true,
-    httpBaseUrl: resolveHttpFunctionBaseUrl()
-  });
-}
+// Function Bridge initialized - Direct Firebase mode

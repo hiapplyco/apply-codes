@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
 import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
@@ -28,10 +28,18 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useClarvidaUsageLimit } from '@/hooks/useClarvidaUsageLimit';
+import { useClarvidaSubscription } from '@/hooks/useClarvidaSubscription';
 
 interface MinimalSearchFormProps {
   userId: string | null;
   selectedProjectId?: string | null;
+  /** When true, bypasses all subscription limits (for Clarvida enterprise users) */
+  isClarvidaMode?: boolean;
+  /** Pre-populated boolean search string from workflow pipeline */
+  initialBooleanString?: string;
+  /** Pre-populated job title from workflow pipeline */
+  initialJobTitle?: string;
 }
 
 interface SearchResult {
@@ -101,21 +109,41 @@ const extractLocationFromSnippet = (snippet: string): string | undefined => {
   return undefined;
 };
 
-export default function MinimalSearchForm({ userId, selectedProjectId }: MinimalSearchFormProps) {
-  // Debug version to help with cache issues
-  console.log('MinimalSearchForm v3.1 loaded', { userId, selectedProjectId });
+export default function MinimalSearchForm({ userId, selectedProjectId, isClarvidaMode = false, initialBooleanString, initialJobTitle }: MinimalSearchFormProps) {
 
   // Get project context
   const { selectedProject } = useProjectContext();
 
-  // Usage limit hook for subscription enforcement
-  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = useUsageLimit();
-  // Get incrementUsage directly for manual usage tracking
-  const { incrementUsage } = useSubscription();
+  // Use Clarvida hooks (unlimited) or standard hooks based on mode
+  const standardUsageLimit = useUsageLimit();
+  const clarvidaUsageLimit = useClarvidaUsageLimit();
+  const standardSubscription = useSubscription();
+  const clarvidaSubscription = useClarvidaSubscription();
+
+  // Select appropriate hooks based on mode
+  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = isClarvidaMode
+    ? clarvidaUsageLimit
+    : standardUsageLimit;
+  const { incrementUsage } = isClarvidaMode
+    ? clarvidaSubscription
+    : standardSubscription;
   const [jobDescription, setJobDescription] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [booleanString, setBooleanString] = useState('');
+  const [jobTitle, setJobTitle] = useState(initialJobTitle || '');
+  const [booleanString, setBooleanString] = useState(initialBooleanString || '');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+
+  // Sync initial values from workflow pipeline when they change
+  useEffect(() => {
+    if (initialBooleanString) {
+      setBooleanString(initialBooleanString);
+    }
+  }, [initialBooleanString]);
+
+  useEffect(() => {
+    if (initialJobTitle) {
+      setJobTitle(initialJobTitle);
+    }
+  }, [initialJobTitle]);
   const [searchPage, setSearchPage] = useState(1);
   const [totalSearchResults, setTotalSearchResults] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -957,6 +985,52 @@ export default function MinimalSearchForm({ userId, selectedProjectId }: Minimal
       newSelected.add(index);
     }
     setSelectedProfiles(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProfiles.size === searchResults.length) {
+      setSelectedProfiles(new Set());
+    } else {
+      setSelectedProfiles(new Set(searchResults.map((_, i) => i)));
+    }
+  };
+
+  const exportSelectedToCSV = () => {
+    const selected = searchResults.filter((_, i) => selectedProfiles.has(i));
+    if (selected.length === 0) {
+      toast.error('Select candidates to export');
+      return;
+    }
+
+    const headers = ['Name', 'Title/Role', 'Company', 'Location', 'Profile URL', 'Snippet', 'Email', 'Phone'];
+    const rows = selected.map((r, idx) => {
+      const originalIdx = searchResults.indexOf(r);
+      const contact = contactInfo[originalIdx];
+      const nameParts = r.title?.split(' | ') || r.title?.split(' - ') || [r.title];
+      const name = nameParts[0] || '';
+      const role = nameParts[1] || '';
+      const location = r.location || extractLocationFromSnippet(r.snippet) || '';
+      return [
+        name,
+        role,
+        '', // Company not always parsed separately
+        location,
+        r.link,
+        r.snippet?.replace(/"/g, '""').substring(0, 200) || '',
+        contact?.email || '',
+        contact?.phone || '',
+      ].map(field => `"${field}"`).join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `candidates-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${selected.length} candidates to CSV`);
   };
 
   const toggleProfileExpansion = (index: number) => {
@@ -1986,7 +2060,29 @@ This area is for your specific search instructions, filtering criteria, or addit
                       </Button>
                     </div>
 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleSelectAll}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {selectedProfiles.size === searchResults.length ? (
+                        <><CheckSquare className="w-4 h-4 mr-1" /> Deselect All</>
+                      ) : (
+                        <><Square className="w-4 h-4 mr-1" /> Select All</>
+                      )}
+                    </Button>
                     <Badge variant="outline" className="whitespace-nowrap">{selectedProfiles.size} selected</Badge>
+                    <Button
+                      onClick={exportSelectedToCSV}
+                      disabled={selectedProfiles.size === 0}
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">CSV</span>
+                    </Button>
                     <Button
                       onClick={openEmailDialog}
                       disabled={selectedProfiles.size === 0}
