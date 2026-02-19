@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
 import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square, ArrowUpDown, Filter, Send, Users } from 'lucide-react';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
@@ -180,6 +180,15 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
   const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
   const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter/Sort states
+  const [sortBy, setSortBy] = useState<'default' | 'score' | 'location'>('default');
+  const [filterBy, setFilterBy] = useState<'all' | 'analyzed' | 'enriched' | 'not-analyzed'>('all');
+
+  // Batch operation states
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [isBatchEnriching, setIsBatchEnriching] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
 
   // Collapse states for progressive focus
   const [requirementsCollapsed, setRequirementsCollapsed] = useState(false);
@@ -1031,6 +1040,122 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     link.click();
     URL.revokeObjectURL(url);
     toast.success(`Exported ${selected.length} candidates to CSV`);
+  };
+
+  // Filtered & sorted results (derived state)
+  const filteredResults = searchResults.map((result, index) => ({ result, index })).filter(({ index }) => {
+    if (filterBy === 'analyzed') return !!analysisResults[index];
+    if (filterBy === 'enriched') return !!contactInfo[index];
+    if (filterBy === 'not-analyzed') return !analysisResults[index];
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'score') {
+      const scoreA = analysisResults[a.index]?.match_score ?? -1;
+      const scoreB = analysisResults[b.index]?.match_score ?? -1;
+      return scoreB - scoreA;
+    }
+    if (sortBy === 'location') {
+      const locA = a.result.location || '';
+      const locB = b.result.location || '';
+      return locA.localeCompare(locB);
+    }
+    return 0;
+  });
+
+  // Batch analyze selected candidates
+  const batchAnalyze = async () => {
+    const selected = Array.from(selectedProfiles).filter(i => !analysisResults[i]);
+    if (selected.length === 0) {
+      toast.info('All selected candidates are already analyzed');
+      return;
+    }
+    if (!jobDescription.trim()) {
+      toast.error('Please enter a job description first');
+      return;
+    }
+
+    setIsBatchAnalyzing(true);
+    setBatchProgress({ done: 0, total: selected.length });
+
+    // Process in batches of 5 concurrent requests
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < selected.length; i += BATCH_SIZE) {
+      const batch = selected.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (idx) => {
+        try {
+          setLoadingAnalysis(prev => new Set([...prev, idx]));
+          const data = await functionBridge.analyzeCandidate({
+            candidate: {
+              name: searchResults[idx].title,
+              profile: searchResults[idx].snippet,
+              linkedin_url: searchResults[idx].link
+            },
+            requirements: jobDescription
+          });
+          setAnalysisResults(prev => ({ ...prev, [idx]: data }));
+        } catch (error) {
+          console.error(`Batch analysis failed for index ${idx}:`, error);
+        } finally {
+          setLoadingAnalysis(prev => { const s = new Set(prev); s.delete(idx); return s; });
+          setBatchProgress(prev => ({ ...prev, done: prev.done + 1 }));
+        }
+      }));
+    }
+
+    setIsBatchAnalyzing(false);
+    toast.success(`Analyzed ${selected.length} candidates`);
+  };
+
+  // Batch enrich selected candidates
+  const batchEnrich = async () => {
+    const selected = Array.from(selectedProfiles).filter(i => !contactInfo[i]);
+    if (selected.length === 0) {
+      toast.info('All selected candidates are already enriched');
+      return;
+    }
+
+    setIsBatchEnriching(true);
+    setBatchProgress({ done: 0, total: selected.length });
+
+    const BATCH_SIZE = 3; // Lower concurrency for rate-limited API
+    for (let i = 0; i < selected.length; i += BATCH_SIZE) {
+      const batch = selected.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async (idx) => {
+        try {
+          setLoadingContact(prev => new Set([...prev, idx]));
+          const contactData = await enrichProfile(searchResults[idx].link);
+          if (contactData) {
+            setContactInfo(prev => ({ ...prev, [idx]: contactData }));
+            incrementUsage('candidates_enriched').catch(() => {});
+          }
+        } catch (error) {
+          console.error(`Batch enrichment failed for index ${idx}:`, error);
+        } finally {
+          setLoadingContact(prev => { const s = new Set(prev); s.delete(idx); return s; });
+          setBatchProgress(prev => ({ ...prev, done: prev.done + 1 }));
+        }
+      }));
+    }
+
+    setIsBatchEnriching(false);
+    toast.success(`Enriched ${selected.length} candidates`);
+  };
+
+  // Send outreach email for a candidate
+  const sendOutreach = async (candidateEmail: { candidate: string; subject: string; body: string; profileUrl: string }, emailIdx: number) => {
+    try {
+      const result = await functionBridge.sendOutreachEmail({
+        profileUrl: candidateEmail.profileUrl,
+        projectId: selectedProjectId || undefined,
+        customText: candidateEmail.body
+      });
+      toast.success(`Email sent to ${candidateEmail.candidate}`);
+      return result;
+    } catch (error) {
+      console.error('Send outreach failed:', error);
+      toast.error(`Failed to send email to ${candidateEmail.candidate}`);
+      throw error;
+    }
   };
 
   const toggleProfileExpansion = (index: number) => {
@@ -2015,82 +2140,152 @@ This area is for your specific search instructions, filtering criteria, or addit
           >
             <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
               <div className="p-6">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
-                      3
+                <div className="flex flex-col gap-4 mb-6">
+                  {/* Row 1: Title + View Controls */}
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
+                        3
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Search Results ({filteredResults.length}{filteredResults.length !== searchResults.length ? ` of ${searchResults.length}` : ''})
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Search Results ({searchResults.length})
-                      </h2>
-                      <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
+                    <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+                      {/* AI Analysis Button */}
+                      {!showAIAnalysis && (
+                        <Button
+                          onClick={() => setShowAIAnalysis(true)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          size="sm"
+                        >
+                          <Sparkles className="w-4 h-4 mr-1 lg:mr-2" />
+                          <span className="hidden sm:inline">Analyze</span> AI ({searchResults.length})
+                        </Button>
+                      )}
+
+                      {/* View Mode Toggle */}
+                      <div className="flex items-center border rounded-lg p-1">
+                        <Button
+                          variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('grid')}
+                          className="h-7 px-2"
+                        >
+                          <Grid3X3 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant={viewMode === 'list' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setViewMode('list')}
+                          className="h-7 px-2"
+                        >
+                          <List className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={toggleSelectAll}
+                        className="h-7 px-2 text-xs"
+                      >
+                        {selectedProfiles.size === searchResults.length ? (
+                          <><CheckSquare className="w-4 h-4 mr-1" /> Deselect All</>
+                        ) : (
+                          <><Square className="w-4 h-4 mr-1" /> Select All</>
+                        )}
+                      </Button>
+                      <Badge variant="outline" className="whitespace-nowrap">{selectedProfiles.size} selected</Badge>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                    {/* AI Analysis Button - Moved to top */}
-                    {!showAIAnalysis && (
-                      <Button
-                        onClick={() => setShowAIAnalysis(true)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                        size="sm"
-                      >
-                        <Sparkles className="w-4 h-4 mr-1 lg:mr-2" />
-                        <span className="hidden sm:inline">Analyze</span> AI ({searchResults.length})
-                      </Button>
-                    )}
 
-                    {/* View Mode Toggle */}
-                    <div className="flex items-center border rounded-lg p-1">
-                      <Button
-                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('grid')}
-                        className="h-7 px-2"
-                      >
-                        <Grid3X3 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant={viewMode === 'list' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setViewMode('list')}
-                        className="h-7 px-2"
-                      >
-                        <List className="w-4 h-4" />
-                      </Button>
+                  {/* Row 2: Filter/Sort + Batch Actions */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-t border-gray-100 pt-3">
+                    {/* Filter & Sort */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Filter className="w-3.5 h-3.5" />
+                        <select
+                          value={filterBy}
+                          onChange={(e) => setFilterBy(e.target.value as typeof filterBy)}
+                          className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500"
+                        >
+                          <option value="all">All Results</option>
+                          <option value="analyzed">Analyzed</option>
+                          <option value="not-analyzed">Not Analyzed</option>
+                          <option value="enriched">Has Contact</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <ArrowUpDown className="w-3.5 h-3.5" />
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                          className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500"
+                        >
+                          <option value="default">Default Order</option>
+                          <option value="score">Match Score</option>
+                          <option value="location">Location (A-Z)</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleSelectAll}
-                      className="h-7 px-2 text-xs"
-                    >
-                      {selectedProfiles.size === searchResults.length ? (
-                        <><CheckSquare className="w-4 h-4 mr-1" /> Deselect All</>
-                      ) : (
-                        <><Square className="w-4 h-4 mr-1" /> Select All</>
-                      )}
-                    </Button>
-                    <Badge variant="outline" className="whitespace-nowrap">{selectedProfiles.size} selected</Badge>
-                    <Button
-                      onClick={exportSelectedToCSV}
-                      disabled={selectedProfiles.size === 0}
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 whitespace-nowrap"
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">CSV</span>
-                    </Button>
-                    <Button
-                      onClick={openEmailDialog}
-                      disabled={selectedProfiles.size === 0}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
-                    >
-                      <span className="hidden sm:inline">Generate</span> Email<span className="hidden md:inline"> Templates</span>
-                    </Button>
+                    {/* Batch Actions */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Batch Analyze */}
+                      <Button
+                        onClick={batchAnalyze}
+                        disabled={selectedProfiles.size === 0 || isBatchAnalyzing}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs whitespace-nowrap"
+                      >
+                        {isBatchAnalyzing ? (
+                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {batchProgress.done}/{batchProgress.total}</>
+                        ) : (
+                          <><Sparkles className="w-3.5 h-3.5 mr-1" /> Analyze Selected</>
+                        )}
+                      </Button>
+                      {/* Batch Enrich */}
+                      <Button
+                        onClick={batchEnrich}
+                        disabled={selectedProfiles.size === 0 || isBatchEnriching}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs whitespace-nowrap"
+                      >
+                        {isBatchEnriching ? (
+                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {batchProgress.done}/{batchProgress.total}</>
+                        ) : (
+                          <><Users className="w-3.5 h-3.5 mr-1" /> Enrich Selected</>
+                        )}
+                      </Button>
+                      {/* CSV Export */}
+                      <Button
+                        onClick={exportSelectedToCSV}
+                        disabled={selectedProfiles.size === 0}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs whitespace-nowrap"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1" />
+                        <span className="hidden sm:inline">CSV</span>
+                      </Button>
+                      {/* Email Templates */}
+                      <Button
+                        onClick={openEmailDialog}
+                        disabled={selectedProfiles.size === 0}
+                        size="sm"
+                        className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 whitespace-nowrap"
+                      >
+                        <Mail className="w-3.5 h-3.5 mr-1" />
+                        <span className="hidden sm:inline">Email</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -2099,7 +2294,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                   className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'}
                   style={{ maxHeight: viewMode === 'grid' ? '800px' : 'none', overflowY: viewMode === 'grid' ? 'auto' : 'visible' }}
                 >
-                  {searchResults.map((result, index) => {
+                  {filteredResults.map(({ result, index }) => {
                     const isExpanded = expandedProfiles.has(index);
                     const analysis = analysisResults[index];
                     const contact = contactInfo[index];
@@ -2546,15 +2741,30 @@ This area is for your specific search instructions, filtering criteria, or addit
                           <ExternalLink className="w-3 h-3 mr-1" />
                           View LinkedIn Profile
                         </a>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
-                        >
-                          <Copy className="w-3 h-3 mr-1" />
-                          Copy Complete
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={() => sendOutreach({
+                              candidate: email.candidateName,
+                              subject: email.subject,
+                              body: email.body,
+                              profileUrl: email.profileUrl
+                            }, index)}
+                          >
+                            <Send className="w-3 h-3 mr-1" />
+                            Send
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
