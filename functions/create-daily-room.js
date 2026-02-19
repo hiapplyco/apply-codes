@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -77,7 +78,7 @@ exports.createDailyRoom = functions.https.onRequest(async (req, res) => {
       room: dailyResponse.data
     });
   } catch (error) {
-    console.error('createDailyRoom error:', error.response?.data || error.message);
+    logger.error('createDailyRoom error:', error.response?.data || error.message);
     res.status(500).json({
       success: false,
       error: error.response?.data || error.message || 'Failed to create Daily room'

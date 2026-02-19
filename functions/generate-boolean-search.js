@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -15,7 +16,7 @@ exports.generateBooleanSearch = onCall(
     // Uses GEMINI_API_KEY from .env instead of Secret Manager
   },
   async (request) => {
-    console.log('Generate boolean search function called');
+    logger.info('Generate boolean search function called');
 
     // In v2, data and auth are on the request object
     const data = request.data;
@@ -66,7 +67,7 @@ exports.generateBooleanSearch = onCall(
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
-        console.error('GEMINI_API_KEY is not configured');
+        logger.error('GEMINI_API_KEY is not configured');
         throw new HttpsError(
           'failed-precondition',
           'GEMINI_API_KEY is not configured'
@@ -232,7 +233,7 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
       const searchString = result.response.text().trim();
 
       if (!searchString) {
-        console.error('Empty search string generated');
+        logger.error('Empty search string generated');
         throw new Error('Failed to generate boolean search string');
       }
 
@@ -251,9 +252,9 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
             },
             created_at: new Date()
           });
-          console.log('Search history saved to Firestore');
+          logger.info('Search history saved to Firestore');
         } catch (dbError) {
-          console.error('Failed to save search history:', dbError);
+          logger.error('Failed to save search history:', dbError);
           // Don't fail the request if saving history fails
         }
       }
@@ -265,7 +266,7 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
       };
 
     } catch (error) {
-      console.error('Error generating boolean search:', error);
+      logger.error('Error generating boolean search:', error);
 
       if (error.message?.includes('API key')) {
         throw new HttpsError(

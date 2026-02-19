@@ -1,4 +1,5 @@
 const admin = require('firebase-admin');
+const { logger } = require("firebase-functions/v2");
 const path = require('path');
 
 // Initialize admin with service account
@@ -14,20 +15,20 @@ const db = admin.firestore();
 const auth = admin.auth();
 
 async function setupClarvidaUser(email, password, role = 'owner') {
-  console.log(`Setting up Clarvida user: ${email} as ${role}`);
+  logger.info(`Setting up Clarvida user: ${email} as ${role}`);
 
   try {
     // Step 1: Create or get the user in Firebase Auth
     let userRecord;
     try {
       userRecord = await auth.getUserByEmail(email);
-      console.log(`User already exists with UID: ${userRecord.uid}`);
+      logger.info(`User already exists with UID: ${userRecord.uid}`);
       // Update password for existing user
       await auth.updateUser(userRecord.uid, {
         password: password,
         emailVerified: true,
       });
-      console.log(`Updated password for existing user`);
+      logger.info(`Updated password for existing user`);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
         // Create the user
@@ -36,7 +37,7 @@ async function setupClarvidaUser(email, password, role = 'owner') {
           password: password,
           emailVerified: true,
         });
-        console.log(`Created new user with UID: ${userRecord.uid}`);
+        logger.info(`Created new user with UID: ${userRecord.uid}`);
       } else {
         throw error;
       }
@@ -72,7 +73,7 @@ async function setupClarvidaUser(email, password, role = 'owner') {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
-      console.log('Created Clarvida organization');
+      logger.info('Created Clarvida organization');
     } else {
       // Add user to existing organization
       const existingData = orgSnap.data();
@@ -83,18 +84,18 @@ async function setupClarvidaUser(email, password, role = 'owner') {
         members: members,
         updated_at: new Date().toISOString(),
       });
-      console.log(`Added user to Clarvida organization as ${role}`);
+      logger.info(`Added user to Clarvida organization as ${role}`);
     }
 
-    console.log('\n✅ Setup complete!');
-    console.log(`   Email: ${email}`);
-    console.log(`   UID: ${userId}`);
-    console.log(`   Role: ${role}`);
-    console.log(`\n   Login URL: https://applycodes-2683f.web.app/clarvida/login`);
+    logger.info('\n✅ Setup complete!');
+    logger.info(`   Email: ${email}`);
+    logger.info(`   UID: ${userId}`);
+    logger.info(`   Role: ${role}`);
+    logger.info(`\n   Login URL: https://applycodes-2683f.web.app/clarvida/login`);
 
     return { userId, email, role };
   } catch (error) {
-    console.error('Error setting up user:', error);
+    logger.error('Error setting up user:', error);
     throw error;
   }
 }
@@ -110,8 +111,8 @@ if (args.length >= 2) {
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 } else {
-  console.log('Usage: node setup-clarvida-user.js <email> <password> [role]');
-  console.log('Example: node setup-clarvida-user.js james@hiapply.co MyPassword123 owner');
+  logger.info('Usage: node setup-clarvida-user.js <email> <password> [role]');
+  logger.info('Example: node setup-clarvida-user.js james@hiapply.co MyPassword123 owner');
 }
 
 module.exports = { setupClarvidaUser };

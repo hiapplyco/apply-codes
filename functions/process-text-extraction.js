@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -74,7 +75,7 @@ exports.processTextExtraction = onRequest(
         return;
       }
 
-      console.log('Processing file:', file.originalname, 'of type:', file.mimetype, 'size:', file.size);
+      logger.info('Processing file:', file.originalname, 'of type:', file.mimetype, 'size:', file.size);
 
       // Validate file size
       if (file.size > 20 * 1024 * 1024) {
@@ -95,7 +96,7 @@ exports.processTextExtraction = onRequest(
       let extractionResult;
 
       if (file.mimetype === 'text/plain') {
-        console.log('Processing plain text file directly');
+        logger.info('Processing plain text file directly');
         const text = file.buffer.toString('utf-8');
         extractionResult = {
           text: text,
@@ -109,7 +110,7 @@ exports.processTextExtraction = onRequest(
         };
       } else {
         // Use Gemini for all other supported types
-        console.log('Processing document with Gemini...');
+        logger.info('Processing document with Gemini...');
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
@@ -164,7 +165,7 @@ exports.processTextExtraction = onRequest(
       res.status(200).json(response);
 
     } catch (error) {
-      console.error('Error processing text extraction:', error);
+      logger.error('Error processing text extraction:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to process file'

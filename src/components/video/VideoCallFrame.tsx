@@ -39,10 +39,8 @@ export const VideoCallFrame = ({
     }
   };
 
-  console.log("VideoCallFrame rendering with room URL:", finalRoomUrl);
-
   return (
-    <div className="absolute inset-0" style={{ minHeight: '600px' }}>
+    <div className="absolute inset-0 min-h-[50dvh] sm:min-h-[400px] lg:min-h-[600px]">
       <VideoPreview 
         onCallFrameReady={handleFrameReady} 
         roomUrl={finalRoomUrl}

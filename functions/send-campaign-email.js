@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getSendGridClient } = require('./utils/sendgrid');
@@ -9,7 +10,7 @@ if (!admin.apps.length) {
 }
 
 exports.sendCampaignEmail = functions.https.onCall(async (data, context) => {
-    console.log('Send campaign email function called');
+    logger.info('Send campaign email function called');
 
     const {
       campaignId,
@@ -49,7 +50,7 @@ exports.sendCampaignEmail = functions.https.onCall(async (data, context) => {
       );
     }
 
-    console.log(`Processing campaign: ${campaignId}`);
+    logger.info(`Processing campaign: ${campaignId}`);
 
     try {
       // Get campaign details from database
@@ -131,7 +132,7 @@ exports.sendCampaignEmail = functions.https.onCall(async (data, context) => {
       };
 
     } catch (error) {
-      console.error('Error in send-campaign-email:', error);
+      logger.error('Error in send-campaign-email:', error);
 
       // Log campaign failure
       await logCampaignActivity({
@@ -170,7 +171,7 @@ async function getCampaignDetails(campaignId) {
 
     return campaignDoc.data();
   } catch (error) {
-    console.error('Error fetching campaign details:', error);
+    logger.error('Error fetching campaign details:', error);
     throw error;
   }
 }
@@ -223,10 +224,10 @@ async function getSubscribers(subscriberLists, segmentFilters) {
       });
     });
 
-    console.log(`Found ${subscribers.length} subscribers`);
+    logger.info(`Found ${subscribers.length} subscribers`);
     return subscribers;
   } catch (error) {
-    console.error('Error fetching subscribers:', error);
+    logger.error('Error fetching subscribers:', error);
     throw error;
   }
 }
@@ -288,7 +289,7 @@ async function setupABTest(subscribers, abTestConfig, baseTemplateData) {
     created_at: admin.firestore.Timestamp.now()
   });
 
-  console.log(`A/B test configured with ${emailVariants.length} variants`);
+  logger.info(`A/B test configured with ${emailVariants.length} variants`);
   return emailVariants;
 }
 
@@ -311,7 +312,7 @@ async function scheduleCompaignSend(campaignData) {
       scheduledFor: campaignData.scheduledSendTime
     };
   } catch (error) {
-    console.error('Error scheduling campaign:', error);
+    logger.error('Error scheduling campaign:', error);
     throw error;
   }
 }
@@ -334,7 +335,7 @@ async function sendCampaignEmails({
   const batchSize = 100; // SendGrid batch limit
 
   for (const variant of emailVariants) {
-    console.log(`Sending variant: ${variant.variant} to ${variant.subscribers.length} recipients`);
+    logger.info(`Sending variant: ${variant.variant} to ${variant.subscribers.length} recipients`);
 
     // Process subscribers in batches
     for (let i = 0; i < variant.subscribers.length; i += batchSize) {
@@ -364,7 +365,7 @@ async function sendCampaignEmails({
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
-        console.error(`Error sending batch for variant ${variant.variant}:`, error);
+        logger.error(`Error sending batch for variant ${variant.variant}:`, error);
         totalFailed += batch.length;
       }
     }
@@ -460,7 +461,7 @@ async function sendEmailBatch({
       failed: 0
     };
   } catch (error) {
-    console.error('SendGrid batch error:', error);
+    logger.error('SendGrid batch error:', error);
 
     // Log failed sends
     await logBatchSends(subscribers, campaignId, variant, 'failed', error.message);
@@ -492,7 +493,7 @@ async function logBatchSends(subscribers, campaignId, variant, status, errorMess
 
     await batch.commit();
   } catch (error) {
-    console.error('Error logging batch sends:', error);
+    logger.error('Error logging batch sends:', error);
     // Don't throw error to avoid failing the main operation
   }
 }
@@ -526,9 +527,9 @@ async function logCampaignActivity({
     }
 
     await db.collection('campaign_logs').add(logData);
-    console.log('Campaign activity logged successfully');
+    logger.info('Campaign activity logged successfully');
   } catch (error) {
-    console.error('Error logging campaign activity:', error);
+    logger.error('Error logging campaign activity:', error);
     // Don't throw error to avoid failing the main operation
   }
 }
@@ -536,7 +537,7 @@ async function logCampaignActivity({
 // Helper function to manage subscriber lists
 exports.manageSubscriberList = functions
   .https.onCall(async (data, context) => {
-    console.log('Manage subscriber list function called');
+    logger.info('Manage subscriber list function called');
 
     const { action, listId, listName, subscribers, segmentCriteria } = data;
 
@@ -670,7 +671,7 @@ exports.manageSubscriberList = functions
           throw new functions.https.HttpsError('invalid-argument', 'Invalid action');
       }
     } catch (error) {
-      console.error('Error managing subscriber list:', error);
+      logger.error('Error managing subscriber list:', error);
 
       if (error.code) {
         throw error;
@@ -754,7 +755,7 @@ exports.handleUnsubscribe = functions
       });
 
     } catch (error) {
-      console.error('Error handling unsubscribe:', error);
+      logger.error('Error handling unsubscribe:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to process unsubscribe request'
@@ -765,7 +766,7 @@ exports.handleUnsubscribe = functions
 // Function to get campaign analytics
 exports.getCampaignAnalytics = functions
   .https.onCall(async (data, context) => {
-    console.log('Get campaign analytics function called');
+    logger.info('Get campaign analytics function called');
 
     const { campaignId, timeRange = '30d' } = data;
 
@@ -844,7 +845,7 @@ exports.getCampaignAnalytics = functions
       return analytics;
 
     } catch (error) {
-      console.error('Error getting campaign analytics:', error);
+      logger.error('Error getting campaign analytics:', error);
 
       if (error.code) {
         throw error;

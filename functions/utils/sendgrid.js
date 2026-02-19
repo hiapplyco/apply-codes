@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const sgMail = require('@sendgrid/mail');
 
 let isConfigured = false;
@@ -16,14 +17,14 @@ const configureSendGridClient = () => {
   const apiKey = resolveSendGridApiKey();
 
   if (!apiKey) {
-    console.warn('[sendgrid] No API key configured; skipping SendGrid initialization.');
+    logger.warn('[sendgrid] No API key configured; skipping SendGrid initialization.');
     cachedKey = null;
     isConfigured = false;
     return null;
   }
 
   if (!apiKey.startsWith('SG.')) {
-    console.warn('[sendgrid] API key present but invalid (expected to start with "SG."); skipping SendGrid initialization.');
+    logger.warn('[sendgrid] API key present but invalid (expected to start with "SG."); skipping SendGrid initialization.');
     cachedKey = null;
     isConfigured = false;
     return null;

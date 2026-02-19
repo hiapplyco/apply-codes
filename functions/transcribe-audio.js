@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 const FormData = require('form-data');
 
@@ -6,11 +7,11 @@ const FormData = require('form-data');
 const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || '';
 
 exports.transcribeAudio = functions.https.onCall(async (data, context) => {
-  console.log('Transcribing audio with OpenAI Whisper');
+  logger.info('Transcribing audio with OpenAI Whisper');
 
   // Check for API key
   if (!openaiApiKey) {
-    console.error('Missing OPENAI_API_KEY environment variable');
+    logger.error('Missing OPENAI_API_KEY environment variable');
     throw new functions.https.HttpsError(
       'failed-precondition',
       'OpenAI API key not configured'
@@ -29,7 +30,7 @@ exports.transcribeAudio = functions.https.onCall(async (data, context) => {
   try {
     // Convert base64 audio to Buffer
     const audioBuffer = Buffer.from(audio, 'base64');
-    console.log('Audio buffer size:', audioBuffer.length);
+    logger.info('Audio buffer size:', audioBuffer.length);
 
     // Create form data
     const formData = new FormData();
@@ -40,7 +41,7 @@ exports.transcribeAudio = functions.https.onCall(async (data, context) => {
     formData.append('model', 'whisper-1');
 
     // Send to OpenAI Whisper API
-    console.log('Sending to OpenAI Whisper API...');
+    logger.info('Sending to OpenAI Whisper API...');
     const response = await axios.post(
       'https://api.openai.com/v1/audio/transcriptions',
       formData,
@@ -54,14 +55,14 @@ exports.transcribeAudio = functions.https.onCall(async (data, context) => {
       }
     );
 
-    console.log('Transcription successful');
+    logger.info('Transcription successful');
     return {
       success: true,
       text: response.data.text
     };
 
   } catch (error) {
-    console.error('Error transcribing audio:', error.response?.data || error.message);
+    logger.error('Error transcribing audio:', error.response?.data || error.message);
 
     if (error.response?.status === 401) {
       throw new functions.https.HttpsError(

@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -43,7 +44,7 @@ exports.getDailyKey = functions.https.onRequest(async (req, res) => {
 
     res.status(200).json({ secret: apiKey });
   } catch (error) {
-    console.error('getDailyKey error:', error);
+    logger.error('getDailyKey error:', error);
     res.status(500).json({ error: 'Failed to retrieve Daily key' });
   }
 });

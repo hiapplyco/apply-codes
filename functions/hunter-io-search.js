@@ -21,6 +21,7 @@
  */
 
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 
 const corsHeaders = {
@@ -41,7 +42,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
   try {
     const { searchType, domain, company, fullName, firstName, lastName, limit = 10, offset = 0 } = req.body || {};
 
-    console.log("Hunter.io search params:", { searchType, domain, company, fullName, firstName, lastName, limit, offset });
+    logger.info("Hunter.io search params:", { searchType, domain, company, fullName, firstName, lastName, limit, offset });
 
     // Validate search type
     const validSearchTypes = ['domain', 'email_finder', 'email_verifier'];
@@ -57,7 +58,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
     // Get API key
     const apiKey = process.env.HUNTER_IO_API_KEY;
     if (!apiKey) {
-      console.error('HUNTER_IO_API_KEY is not set');
+      logger.error('HUNTER_IO_API_KEY is not set');
       res.status(500).json({
         error: 'API configuration error: Missing Hunter.io API key',
         type: 'ConfigurationError',
@@ -131,7 +132,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
         return;
     }
 
-    console.log('Calling Hunter.io API:', hunterUrl.replace(apiKey, '[REDACTED]'));
+    logger.info('Calling Hunter.io API:', hunterUrl.replace(apiKey, '[REDACTED]'));
 
     // Call Hunter.io API
     let hunterResponse;
@@ -146,7 +147,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
       const status = hunterError.response?.status;
       const errorData = hunterError.response?.data;
 
-      console.error('Hunter.io API error:', status, errorData);
+      logger.error('Hunter.io API error:', status, errorData);
 
       if (status === 401) {
         res.status(401).json({
@@ -187,7 +188,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
     }
 
     const responseData = hunterResponse.data;
-    console.log(`Hunter.io API response received for ${searchType}`);
+    logger.info(`Hunter.io API response received for ${searchType}`);
 
     // Transform response based on search type
     let transformedData;
@@ -301,7 +302,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
     res.status(200).json(finalResponse);
 
   } catch (error) {
-    console.error('Error processing Hunter.io request:', error);
+    logger.error('Error processing Hunter.io request:', error);
 
     const errorMessage = error.message || 'Unknown error';
     const errorDetails = {

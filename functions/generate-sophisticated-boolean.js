@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const corsHeaders = {
@@ -47,7 +48,7 @@ exports.generateSophisticatedBoolean = onRequest(
         isReroll = false
       } = req.body;
 
-      console.log('[generateSophisticatedBoolean] Request received:', {
+      logger.info('[generateSophisticatedBoolean] Request received:', {
         hasJobContext: !!jobContext,
         variant,
         isReroll,
@@ -155,7 +156,7 @@ Create a meaningfully different approach:
 
 Return ONLY the boolean search string with no explanation, markdown, or formatting.`;
 
-      console.log('[generateSophisticatedBoolean] Generating with variant:', variant);
+      logger.info('[generateSophisticatedBoolean] Generating with variant:', variant);
 
       const result = await model.generateContent(prompt);
       const searchString = result.response.text().trim();
@@ -167,7 +168,7 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
       // Generate explanation of the boolean components
       const explanation = generateExplanation(searchString, jobContext, variant);
 
-      console.log('[generateSophisticatedBoolean] Generated:', {
+      logger.info('[generateSophisticatedBoolean] Generated:', {
         length: searchString.length,
         variant,
         hasExplanation: !!explanation
@@ -182,7 +183,7 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
       });
 
     } catch (error) {
-      console.error('[generateSophisticatedBoolean] Error:', error);
+      logger.error('[generateSophisticatedBoolean] Error:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to generate boolean search'

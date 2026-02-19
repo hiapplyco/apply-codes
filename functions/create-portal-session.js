@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
 
@@ -17,7 +18,7 @@ const stripe = stripeApiKey !== 'sk_test_placeholder'
 const db = admin.firestore();
 
 exports.createPortalSession = functions.https.onCall(async (data, context) => {
-    console.log('Creating portal session with data:', {
+    logger.info('Creating portal session with data:', {
         returnUrl: data.returnUrl,
         userId: context.auth?.uid
     });
@@ -33,7 +34,7 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
     const { returnUrl } = data;
 
     if (!stripe || stripeApiKey === 'sk_test_placeholder') {
-        console.error('Missing STRIPE_SECRET_KEY environment variable');
+        logger.error('Missing STRIPE_SECRET_KEY environment variable');
         throw new functions.https.HttpsError(
             'failed-precondition',
             'Stripe configuration error'
@@ -53,11 +54,11 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
                 const subscription = doc.data();
                 if (subscription.stripeCustomerId) {
                     customerId = subscription.stripeCustomerId;
-                    console.log('Found existing Stripe customer:', customerId);
+                    logger.info('Found existing Stripe customer:', customerId);
                 }
             }
         } catch (dbError) {
-            console.error('Error fetching from Firestore:', dbError);
+            logger.error('Error fetching from Firestore:', dbError);
         }
 
         if (!customerId) {
@@ -68,13 +69,13 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
         }
 
         // Create portal session
-        console.log('Creating Stripe portal session...');
+        logger.info('Creating Stripe portal session...');
         const session = await stripe.billingPortal.sessions.create({
             customer: customerId,
             return_url: returnUrl || 'https://apply.codes/account',
         });
 
-        console.log('Portal session created:', session.id);
+        logger.info('Portal session created:', session.id);
 
         return {
             success: true,
@@ -82,7 +83,7 @@ exports.createPortalSession = functions.https.onCall(async (data, context) => {
         };
 
     } catch (error) {
-        console.error('Error creating portal session:', error);
+        logger.error('Error creating portal session:', error);
         throw new functions.https.HttpsError(
             'internal',
             error.message || 'Failed to create portal session'

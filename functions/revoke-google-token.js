@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -52,14 +53,14 @@ exports.revokeGoogleToken = functions.https.onRequest(async (req, res) => {
 
     if (!revokeResponse.ok) {
       const errorText = await revokeResponse.text();
-      console.error('Google token revoke failed:', errorText);
+      logger.error('Google token revoke failed:', errorText);
       res.status(revokeResponse.status).json({ error: 'Failed to revoke token' });
       return;
     }
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error('revokeGoogleToken error:', error);
+    logger.error('revokeGoogleToken error:', error);
     res.status(500).json({ error: 'Failed to revoke Google token' });
   }
 });

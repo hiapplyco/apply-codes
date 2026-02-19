@@ -157,8 +157,7 @@ Return only the JSON object, no additional text or formatting.`;
       if (error.message.includes('rate limit') || error.message.includes('429')) status = 429;
 
       res.status(status).json({
-        error: error.message,
-        details: error.stack
+        error: error.message
       });
     }
   }

@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 
 const corsHeaders = {
@@ -21,7 +22,7 @@ exports.pdlSearch = functions.https.onRequest(async (req, res) => {
 
   try {
     const { searchType, searchParams, pagination } = req.body || {};
-    console.log("PDL Search request:", { searchType, searchParams, pagination });
+    logger.info("PDL Search request:", { searchType, searchParams, pagination });
 
     // Validate search type
     if (!searchType || !['person', 'company', 'person_search', 'company_search', 'person_enrich', 'company_enrich'].includes(searchType)) {
@@ -36,7 +37,7 @@ exports.pdlSearch = functions.https.onRequest(async (req, res) => {
     // Get API key
     const apiKey = process.env.PDL_API_KEY || process.env.PEOPLE_DATA_LABS_API_KEY;
     if (!apiKey) {
-      console.error('PDL_API_KEY is not set');
+      logger.error('PDL_API_KEY is not set');
       res.status(500).json({
         error: 'API configuration error: Missing People Data Labs API key',
         type: 'ConfigurationError',
@@ -74,7 +75,7 @@ exports.pdlSearch = functions.https.onRequest(async (req, res) => {
     res.status(200).json(result);
 
   } catch (error) {
-    console.error('Error processing PDL search request:', error);
+    logger.error('Error processing PDL search request:', error);
 
     const errorMessage = error.message || 'Unknown error';
     const errorDetails = {
@@ -120,7 +121,7 @@ async function personEnrich(apiKey, searchParams) {
   });
 
   const url = `${PDL_API_BASE}/person/enrich?${queryParams.toString()}`;
-  console.log('Calling PDL Person Enrich API:', url);
+  logger.info('Calling PDL Person Enrich API:', url);
 
   try {
     const response = await axios.get(url, {
@@ -177,7 +178,7 @@ async function companyEnrich(apiKey, searchParams) {
   });
 
   const url = `${PDL_API_BASE}/company/enrich?${queryParams.toString()}`;
-  console.log('Calling PDL Company Enrich API:', url);
+  logger.info('Calling PDL Company Enrich API:', url);
 
   try {
     const response = await axios.get(url, {
@@ -234,7 +235,7 @@ async function personSearch(apiKey, searchParams, pagination = {}) {
   }
 
   const url = `${PDL_API_BASE}/person/search`;
-  console.log('Calling PDL Person Search API:', url);
+  logger.info('Calling PDL Person Search API:', url);
 
   try {
     const response = await axios.post(url, requestBody, {
@@ -298,7 +299,7 @@ async function companySearch(apiKey, searchParams, pagination = {}) {
   }
 
   const url = `${PDL_API_BASE}/company/search`;
-  console.log('Calling PDL Company Search API:', url);
+  logger.info('Calling PDL Company Search API:', url);
 
   try {
     const response = await axios.post(url, requestBody, {

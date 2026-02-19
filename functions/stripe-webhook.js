@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
 
@@ -21,7 +22,7 @@ const stripe = stripeApiKey !== 'sk_test_placeholder'
 const db = admin.firestore();
 
 exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
-  console.log('Stripe webhook received:', req.method);
+  logger.info('Stripe webhook received:', req.method);
 
   // Set CORS headers
   res.set('Access-Control-Allow-Origin', '*');
@@ -41,13 +42,13 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
   const signature = req.headers['stripe-signature'];
   if (!signature) {
-    console.error('Missing stripe-signature header');
+    logger.error('Missing stripe-signature header');
     res.status(400).send('Missing signature');
     return;
   }
 
   if (!stripe || stripeApiKey === 'sk_test_placeholder') {
-    console.error('Missing STRIPE_SECRET_KEY');
+    logger.error('Missing STRIPE_SECRET_KEY');
     res.status(500).send('Server configuration error');
     return;
   }
@@ -60,9 +61,9 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
       signature,
       stripeWebhookSecret
     );
-    console.log('Webhook verified for event:', event.type);
+    logger.info('Webhook verified for event:', event.type);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
+    logger.error('Webhook signature verification failed:', err.message);
     res.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
@@ -72,7 +73,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     switch (event.type) {
       case 'customer.created': {
         const customer = event.data.object;
-        console.log('Customer created:', customer.id);
+        logger.info('Customer created:', customer.id);
 
         if (customer.metadata?.user_id) {
           // Update subscription in Firestore
@@ -87,7 +88,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
       case 'checkout.session.completed': {
         const session = event.data.object;
-        console.log('Checkout session completed:', session.id);
+        logger.info('Checkout session completed:', session.id);
 
         if (session.subscription && session.customer && session.metadata?.user_id) {
           // Retrieve the subscription details
@@ -119,10 +120,10 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                 'subscriptionCreated',
                 { tier }
               );
-              console.log(`Welcome email sent to ${userRecord.email}`);
+              logger.info(`Welcome email sent to ${userRecord.email}`);
             }
           } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
+            logger.error('Failed to send welcome email:', emailError);
             // Don't fail the webhook for email errors
           }
         }
@@ -132,7 +133,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-        console.log('Subscription updated:', subscription.id);
+        logger.info('Subscription updated:', subscription.id);
 
         // Get user_id from customer metadata
         const customer = await stripe.customers.retrieve(subscription.customer);
@@ -164,7 +165,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
-        console.log('Subscription deleted:', subscription.id);
+        logger.info('Subscription deleted:', subscription.id);
 
         // Get user_id from customer metadata
         const customer = await stripe.customers.retrieve(subscription.customer);
@@ -199,10 +200,10 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                   reactivateUrl: 'https://hiapply.co/pricing'
                 }
               );
-              console.log(`Subscription canceled email sent to ${userRecord.email}`);
+              logger.info(`Subscription canceled email sent to ${userRecord.email}`);
             }
           } catch (emailError) {
-            console.error('Failed to send subscription canceled email:', emailError);
+            logger.error('Failed to send subscription canceled email:', emailError);
           }
         }
         break;
@@ -210,7 +211,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
       case 'invoice.paid': {
         const invoice = event.data.object;
-        console.log('Invoice paid:', invoice.id);
+        logger.info('Invoice paid:', invoice.id);
 
         // Get user_id from customer metadata
         const customer = await stripe.customers.retrieve(invoice.customer);
@@ -237,7 +238,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
-        console.log('Invoice payment failed:', invoice.id);
+        logger.info('Invoice payment failed:', invoice.id);
 
         // Get user_id from customer metadata
         const customer = await stripe.customers.retrieve(invoice.customer);
@@ -272,24 +273,24 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                 'paymentFailed',
                 { updatePaymentUrl: 'https://hiapply.co/profile' }
               );
-              console.log(`Payment failed email sent to ${userRecord.email}`);
+              logger.info(`Payment failed email sent to ${userRecord.email}`);
             }
           } catch (emailError) {
-            console.error('Failed to send payment failed email:', emailError);
+            logger.error('Failed to send payment failed email:', emailError);
           }
         }
         break;
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        logger.info(`Unhandled event type: ${event.type}`);
     }
 
     // Return success response
     res.status(200).json({ received: true });
 
   } catch (error) {
-    console.error('Error processing webhook event:', error);
+    logger.error('Error processing webhook event:', error);
     res.status(500).json({
       error: 'Failed to process webhook',
       message: error.message

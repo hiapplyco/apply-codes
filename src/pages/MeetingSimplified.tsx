@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { VideoCallFrame } from '@/components/video/VideoCallFrame';
-import { ProjectSelector } from '@/components/project/ProjectSelector';
 import { useProjectContext } from '@/context/ProjectContext';
 import { useNewAuth } from '@/context/NewAuthContext';
 import { createDailyRoom } from '@/lib/firebase/functions/createDailyRoom';
@@ -8,7 +7,6 @@ import { toast } from 'sonner';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { ContextBar } from '@/components/context/ContextBar';
 import { useContextIntegration } from '@/hooks/useContextIntegration';
-import { useNavigate } from 'react-router-dom';
 import { InterviewContext } from '@/types/interview';
 import { dailySingleton } from '@/lib/dailySingleton';
 import { trackVideoMeeting, trackEvent } from '@/lib/analytics';
@@ -17,7 +15,6 @@ import {
   Users,
   MessageSquare,
   Loader2,
-  ChevronRight,
   Phone,
   PhoneOff,
   Mic,
@@ -25,9 +22,6 @@ import {
   VideoIcon,
   VideoOff,
   FileText,
-  Link,
-  Plus,
-  AlertCircle,
   Sparkles,
   CheckCircle,
   ArrowRight,
@@ -49,14 +43,9 @@ interface Participant {
 }
 
 export default function MeetingSimplified() {
-  console.log('MeetingSimplified component rendering...');
-  
-  const navigate = useNavigate();
   const { user } = useNewAuth();
   const { selectedProjectId, selectedProject } = useProjectContext();
-  
-  console.log('MeetingSimplified state:', { user: user?.uid, selectedProjectId });
-  
+
   // Meeting state
   const [meetingStep, setMeetingStep] = useState<'welcome' | 'setup' | 'meeting'>('welcome');
   const [meetingPurpose, setMeetingPurpose] = useState<'interview' | 'kickoff' | 'other'>('interview');
@@ -66,14 +55,11 @@ export default function MeetingSimplified() {
   useEffect(() => {
     return () => {
       if (meetingStep === 'meeting') {
-        console.log('MeetingSimplified unmounting, cleaning up Daily instance');
         dailySingleton.destroyCallFrame();
       }
     };
   }, [meetingStep]);
   
-  console.log('Current meeting step:', meetingStep);
-  console.log('Current meeting purpose:', meetingPurpose);
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -123,9 +109,7 @@ export default function MeetingSimplified() {
       await DocumentProcessor.processDocument({
         file,
         userId: user.uid,
-        onProgress: (status) => {
-          console.log('Processing status:', status);
-        },
+        onProgress: () => {},
         onComplete: (content) => {
           setResumeFile(file);
           toast.success('Resume uploaded and processed successfully!');
@@ -149,13 +133,6 @@ export default function MeetingSimplified() {
   };
 
   const startMeeting = async () => {
-    console.log('startMeeting called with:', {
-      selectedProjectId,
-      meetingPurpose,
-      jobTitle,
-      user: user?.uid
-    });
-
     if (meetingPurpose === 'interview' && !jobTitle.trim()) {
       toast.error('Please enter a job title');
       return;
@@ -164,14 +141,6 @@ export default function MeetingSimplified() {
     setIsLoading(true);
     
     try {
-      // Create Daily room for the meeting
-      console.log('Invoking create-daily-room with:', {
-        projectId: selectedProjectId,
-        meetingType: meetingPurpose,
-        title: jobTitle || 'Meeting',
-        userId: user?.id
-      });
-
       const response = await createDailyRoom({
         projectId: selectedProjectId || null,
         meetingType: meetingPurpose,
@@ -179,12 +148,9 @@ export default function MeetingSimplified() {
         userId: user?.uid
       });
 
-      console.log('create-daily-room response:', response);
-
       const dailyUrl = response?.room?.url || response?.url;
 
       if (dailyUrl) {
-        console.log('Daily room created successfully:', dailyUrl);
         setRoomUrl(dailyUrl);
         setMeetingStep('meeting');
         toast.success('Meeting room created successfully!');
@@ -260,13 +226,13 @@ export default function MeetingSimplified() {
   if (meetingStep === 'welcome') {
     return (
       <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
-        <div className="max-w-4xl mx-auto p-8 w-full">
-          <div className="text-center mb-12">
+        <div className="max-w-4xl mx-auto p-4 sm:p-8 w-full">
+          <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
               <Video className="w-8 h-8 text-purple-600" />
             </div>
-            <h1 className="text-4xl font-bold mb-4">Welcome to Meeting Room</h1>
-            <p className="text-xl text-gray-600">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-4">Welcome to Meeting Room</h1>
+            <p className="text-base sm:text-xl text-gray-600">
               AI-powered meetings that help you make better hiring decisions
             </p>
           </div>
@@ -343,7 +309,7 @@ export default function MeetingSimplified() {
             <Button
               onClick={() => setMeetingStep('setup')}
               size="lg"
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-6 text-lg font-semibold 
+              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold 
                        border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
                        hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] 
                        hover:translate-y-[2px] transition-all"
@@ -450,10 +416,7 @@ export default function MeetingSimplified() {
                     </label>
                     <Input
                       value={jobTitle}
-                      onChange={(e) => {
-                        console.log('Job title changing to:', e.target.value);
-                        setJobTitle(e.target.value);
-                      }}
+                      onChange={(e) => setJobTitle(e.target.value)}
                       placeholder="e.g., Senior Software Engineer"
                       className="border border-gray-300"
                     />
@@ -531,10 +494,7 @@ export default function MeetingSimplified() {
               </Alert>
 
               <Button
-                onClick={(e) => {
-                  console.log('Start Meeting button clicked!');
-                  startMeeting();
-                }}
+                onClick={() => startMeeting()}
                 disabled={(meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 font-medium disabled:opacity-50"
               >
@@ -571,7 +531,7 @@ export default function MeetingSimplified() {
 
   // Meeting View
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 rounded-lg overflow-hidden relative h-screen">
+    <div className="flex-1 flex flex-col bg-gray-900 rounded-lg overflow-hidden relative min-h-[100dvh] lg:min-h-0 lg:h-full">
       {/* Video Area */}
       <VideoCallFrame
         roomUrl={roomUrl}
@@ -582,20 +542,16 @@ export default function MeetingSimplified() {
         onParticipantLeft={(p) => {
           setParticipants(prev => prev.filter(participant => participant.id !== p.id));
         }}
-        onLeaveMeeting={() => {
-          console.log('Left meeting');
-        }}
-        onRecordingStarted={(recordingId) => {
-          console.log('Recording started:', recordingId);
-        }}
+        onLeaveMeeting={() => {}}
+        onRecordingStarted={() => {}}
         onCallFrameReady={setCallFrame}
       />
 
       {/* Meeting Controls */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 
-                    bg-white rounded-full border-2 border-black 
-                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2">
-        <div className="flex items-center gap-2">
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2
+                    bg-white rounded-full border-2 border-black
+                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-1.5 sm:p-2 max-w-[95vw]">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
             onClick={toggleMute}
             variant={isMuted ? "destructive" : "default"}
@@ -636,8 +592,8 @@ export default function MeetingSimplified() {
 
       {/* Participants List */}
       {participants.length > 0 && (
-        <div className="absolute top-4 right-4 bg-white rounded-lg border-2 border-black 
-                      shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3">
+        <div className="absolute top-16 right-2 sm:top-4 sm:right-4 bg-white rounded-lg border-2 border-black
+                      shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4" />
             <span className="font-medium text-sm">Participants ({participants.length})</span>
@@ -653,8 +609,8 @@ export default function MeetingSimplified() {
       )}
 
       {/* Meeting Info */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg border-2 border-black 
-                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-3">
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white rounded-lg border-2 border-black
+                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
         <div className="text-sm font-medium">
           {meetingPurpose === 'interview' ? `Interview: ${jobTitle}` : jobTitle || 'Meeting'}
         </div>

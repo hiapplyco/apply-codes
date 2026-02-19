@@ -652,7 +652,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
       console.log('Perplexity response:', { data, error });
 
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error('Cloud Function error:', error);
         throw error;
       }
 
@@ -777,7 +777,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
         customInstructionsLength: jobDescription.length
       });
 
-      // Use function bridge to support both Firebase and Supabase
+      // Use function bridge for Cloud Function calls
       // Only send description if it has content (don't send empty string)
       const payload: any = {
         contextItems: contextData,
@@ -887,7 +887,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     }
 
     try {
-      // Get the API key from Supabase edge function (same as original implementation)
+      // Get the API key from Cloud Function
       const keyData = await functionBridge.getGoogleCseKey();
 
       if (!keyData?.secret || !keyData.engineId) {

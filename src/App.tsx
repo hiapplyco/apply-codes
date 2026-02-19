@@ -12,9 +12,6 @@ import MainLayout from "@/components/layout/MainLayout";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { TrialExpirationModal } from "@/components/subscription/TrialExpirationModal";
 
-// Import test utility for debugging
-import "./utils/testNymeria";
-
 // Import components directly to avoid any potential lazy loading issues
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
@@ -30,7 +27,6 @@ import ClarvidaLogin from "@/pages/ClarvidaLogin";
 import ClarvidaSourcing from "@/pages/ClarvidaSourcing";
 import PasswordReset from "@/pages/PasswordReset";
 import ResetPasswordRequest from "@/pages/ResetPasswordRequest";
-import SearchHistory from "@/pages/SearchHistory";
 import ProjectDetail from "@/pages/ProjectDetail";
 import Profile from "@/pages/Profile";
 import MarketingIntegrations from "@/pages/MarketingIntegrations";
@@ -46,8 +42,6 @@ import { PageTracker } from "@/components/analytics/PageTracker";
 // Firebase test pages removed - migration complete
 
 function App() {
-  console.log('App component rendering...');
-  // Remove the basename configuration to let React Router handle paths naturally
   return (
     <HelmetProvider>
       <UnifiedAuthProvider>

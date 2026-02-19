@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -85,7 +86,7 @@ exports.processJobRequirementsV2 = functions.https.onRequest(async (req, res) =>
       }
     });
   } catch (error) {
-    console.error('processJobRequirementsV2 error:', error);
+    logger.error('processJobRequirementsV2 error:', error);
     res.status(500).json({ success: false, error: 'Failed to process job requirements' });
   }
 });

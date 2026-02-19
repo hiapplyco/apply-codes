@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 const admin = require('firebase-admin');
 
@@ -38,12 +39,12 @@ const clearbitEnrichment = functions.https.onRequest(async (req, res) => {
 
   try {
     const requestData = req.body;
-    console.log("Clearbit enrichment request:", JSON.stringify(requestData).substring(0, 200));
+    logger.info("Clearbit enrichment request:", JSON.stringify(requestData).substring(0, 200));
 
     // Validate Clearbit API key
     const clearbitApiKey = process.env.CLEARBIT_API_KEY;
     if (!clearbitApiKey) {
-      console.error('CLEARBIT_API_KEY is not set');
+      logger.error('CLEARBIT_API_KEY is not set');
       throw new Error('API configuration error: Missing Clearbit API key');
     }
 
@@ -74,7 +75,7 @@ const clearbitEnrichment = functions.https.onRequest(async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error processing Clearbit enrichment request:', error);
+    logger.error('Error processing Clearbit enrichment request:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorDetails = {
@@ -88,7 +89,7 @@ const clearbitEnrichment = functions.https.onRequest(async (req, res) => {
       errorDetails.suggestion = 'Please configure CLEARBIT_API_KEY in Firebase Functions environment variables';
     }
 
-    console.error('Detailed error:', errorDetails);
+    logger.error('Detailed error:', errorDetails);
 
     return res.status(500).json(errorDetails);
   }
@@ -104,7 +105,7 @@ async function handleEnrichment(requestData, apiKey, res) {
   try {
     // Person enrichment (if email provided)
     if (email) {
-      console.log(`Enriching person data for email: ${email}`);
+      logger.info(`Enriching person data for email: ${email}`);
       const personData = await enrichPerson(email, apiKey);
       results.person = personData;
     }
@@ -112,7 +113,7 @@ async function handleEnrichment(requestData, apiKey, res) {
     // Company enrichment (if domain provided or extracted from email)
     const companyDomain = domain || (email ? email.split('@')[1] : null);
     if (companyDomain) {
-      console.log(`Enriching company data for domain: ${companyDomain}`);
+      logger.info(`Enriching company data for domain: ${companyDomain}`);
       const companyData = await enrichCompany(companyDomain, apiKey);
       results.company = companyData;
     }
@@ -128,7 +129,7 @@ async function handleEnrichment(requestData, apiKey, res) {
     });
 
   } catch (error) {
-    console.error('Enrichment error:', error);
+    logger.error('Enrichment error:', error);
 
     // Handle Clearbit-specific errors
     if (error.response) {
@@ -137,7 +138,7 @@ async function handleEnrichment(requestData, apiKey, res) {
 
       // Handle 404 - Not found (normal case)
       if (status === 404) {
-        console.log('Profile/company not found in Clearbit database');
+        logger.info('Profile/company not found in Clearbit database');
         return res.status(200).json({
           success: true,
           data: null,
@@ -183,7 +184,7 @@ async function handleProspectorSearch(requestData, apiKey, res) {
   }
 
   try {
-    console.log(`Running Clearbit Prospector search for domain: ${domain}`);
+    logger.info(`Running Clearbit Prospector search for domain: ${domain}`);
 
     const prospectorData = await searchProspector({
       domain,
@@ -204,7 +205,7 @@ async function handleProspectorSearch(requestData, apiKey, res) {
     });
 
   } catch (error) {
-    console.error('Prospector search error:', error);
+    logger.error('Prospector search error:', error);
     throw error;
   }
 }
@@ -226,7 +227,7 @@ async function enrichPerson(email, apiKey) {
 
     return response.data;
   } catch (error) {
-    console.error('Person enrichment failed:', error.response?.status, error.response?.data);
+    logger.error('Person enrichment failed:', error.response?.status, error.response?.data);
     throw error;
   }
 }
@@ -248,7 +249,7 @@ async function enrichCompany(domain, apiKey) {
 
     return response.data;
   } catch (error) {
-    console.error('Company enrichment failed:', error.response?.status, error.response?.data);
+    logger.error('Company enrichment failed:', error.response?.status, error.response?.data);
     throw error;
   }
 }
@@ -281,7 +282,7 @@ async function searchProspector(params, apiKey) {
 
     return response.data;
   } catch (error) {
-    console.error('Prospector search failed:', error.response?.status, error.response?.data);
+    logger.error('Prospector search failed:', error.response?.status, error.response?.data);
     throw error;
   }
 }
@@ -301,14 +302,14 @@ async function logEnrichmentAction(actionType, email, domain) {
       service: 'clearbit'
     };
 
-    console.log('Enrichment action logged:', JSON.stringify(logData));
+    logger.info('Enrichment action logged:', JSON.stringify(logData));
 
     // TODO: Implement Firestore logging when database migration is complete
     // const db = admin.firestore();
     // await db.collection('enrichment_logs').add(logData);
 
   } catch (error) {
-    console.error('Error logging enrichment action:', error);
+    logger.error('Error logging enrichment action:', error);
     // Don't throw error to avoid failing the main operation
   }
 }

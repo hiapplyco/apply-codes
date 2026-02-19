@@ -600,7 +600,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
               variant="ghost"
               size="sm"
               onClick={handleReset}
-              className="w-8 h-8 p-0 hover:bg-purple-100"
+              className="w-10 h-10 p-0 hover:bg-purple-100"
               title="Reset conversation"
             >
               <RefreshCw className="w-4 h-4" />
@@ -609,7 +609,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-8 h-8 p-0 hover:bg-purple-100"
+              className="w-10 h-10 p-0 hover:bg-purple-100"
               title={isExpanded ? "Minimize" : "Expand"}
             >
               {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

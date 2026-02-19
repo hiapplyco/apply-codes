@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-
+const { logger } = require("firebase-functions/v2");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 
@@ -92,7 +92,7 @@ exports.generateContent = onRequest(
       res.status(200).json({ content });
 
     } catch (error) {
-      console.error('Error generating content:', error);
+      logger.error('Error generating content:', error);
       res.status(500).json({ error: error.message });
     }
   }

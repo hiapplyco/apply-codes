@@ -12,6 +12,7 @@
  */
 
 const admin = require('firebase-admin');
+const { logger } = require("firebase-functions/v2");
 const path = require('path');
 
 // Initialize Firebase Admin
@@ -42,13 +43,13 @@ const CLARVIDA_ORG_CONFIG = {
 };
 
 async function createClarvidaOrganization(ownerId) {
-  console.log('Creating Clarvida organization...');
+  logger.info('Creating Clarvida organization...');
 
   const orgRef = db.collection('organizations').doc(CLARVIDA_ORG_ID);
   const existingOrg = await orgRef.get();
 
   if (existingOrg.exists) {
-    console.log('Clarvida organization already exists');
+    logger.info('Clarvida organization already exists');
     return existingOrg.data();
   }
 
@@ -64,12 +65,12 @@ async function createClarvidaOrganization(ownerId) {
   };
 
   await orgRef.set(orgData);
-  console.log('Clarvida organization created successfully');
+  logger.info('Clarvida organization created successfully');
   return orgData;
 }
 
 async function addUserToOrganization(userId, role = 'member') {
-  console.log(`Adding user ${userId} to Clarvida with role: ${role}`);
+  logger.info(`Adding user ${userId} to Clarvida with role: ${role}`);
 
   const orgRef = db.collection('organizations').doc(CLARVIDA_ORG_ID);
   const orgSnap = await orgRef.get();
@@ -82,7 +83,7 @@ async function addUserToOrganization(userId, role = 'member') {
 
   // Don't overwrite if user already has a role
   if (orgData.members && orgData.members[userId]) {
-    console.log(`User ${userId} already has role: ${orgData.members[userId]}`);
+    logger.info(`User ${userId} already has role: ${orgData.members[userId]}`);
     return;
   }
 
@@ -99,17 +100,17 @@ async function addUserToOrganization(userId, role = 'member') {
     joined_at: new Date().toISOString()
   });
 
-  console.log(`User ${userId} added to Clarvida`);
+  logger.info(`User ${userId} added to Clarvida`);
 }
 
 async function migrateJobs() {
-  console.log('\nMigrating jobs with source: clarvida...');
+  logger.info('\nMigrating jobs with source: clarvida...');
 
   const jobsRef = db.collection('jobs');
   const clarvidaJobs = await jobsRef.where('source', '==', 'clarvida').get();
 
   if (clarvidaJobs.empty) {
-    console.log('No Clarvida jobs found');
+    logger.info('No Clarvida jobs found');
     return { count: 0, userIds: new Set() };
   }
 
@@ -148,14 +149,14 @@ async function migrateJobs() {
     await batch.commit();
   }
 
-  console.log(`Migrated ${migratedCount} jobs, skipped ${skippedCount} (already migrated)`);
-  console.log(`Found ${userIds.size} unique users`);
+  logger.info(`Migrated ${migratedCount} jobs, skipped ${skippedCount} (already migrated)`);
+  logger.info(`Found ${userIds.size} unique users`);
 
   return { count: migratedCount, userIds };
 }
 
 async function migrateProjects(userIds) {
-  console.log('\nMigrating projects for Clarvida users...');
+  logger.info('\nMigrating projects for Clarvida users...');
 
   let migratedCount = 0;
   let skippedCount = 0;
@@ -188,12 +189,12 @@ async function migrateProjects(userIds) {
     await batch.commit();
   }
 
-  console.log(`Migrated ${migratedCount} projects, skipped ${skippedCount}`);
+  logger.info(`Migrated ${migratedCount} projects, skipped ${skippedCount}`);
   return migratedCount;
 }
 
 async function migrateContextItems(userIds) {
-  console.log('\nMigrating context items for Clarvida users...');
+  logger.info('\nMigrating context items for Clarvida users...');
 
   let migratedCount = 0;
 
@@ -220,12 +221,12 @@ async function migrateContextItems(userIds) {
     await batch.commit();
   }
 
-  console.log(`Migrated ${migratedCount} context items`);
+  logger.info(`Migrated ${migratedCount} context items`);
   return migratedCount;
 }
 
 async function migrateSearchHistory(userIds) {
-  console.log('\nMigrating search history for Clarvida users...');
+  logger.info('\nMigrating search history for Clarvida users...');
 
   let migratedCount = 0;
 
@@ -252,22 +253,22 @@ async function migrateSearchHistory(userIds) {
     await batch.commit();
   }
 
-  console.log(`Migrated ${migratedCount} search history records`);
+  logger.info(`Migrated ${migratedCount} search history records`);
   return migratedCount;
 }
 
 async function runMigration() {
-  console.log('='.repeat(60));
-  console.log('CLARVIDA DATA MIGRATION');
-  console.log('='.repeat(60));
-  console.log(`Started at: ${new Date().toISOString()}\n`);
+  logger.info('='.repeat(60));
+  logger.info('CLARVIDA DATA MIGRATION');
+  logger.info('='.repeat(60));
+  logger.info(`Started at: ${new Date().toISOString()}\n`);
 
   try {
     // Step 1: Migrate jobs and collect user IDs
     const { userIds } = await migrateJobs();
 
     if (userIds.size === 0) {
-      console.log('\nNo users found to migrate. Checking for existing Clarvida org...');
+      logger.info('\nNo users found to migrate. Checking for existing Clarvida org...');
     }
 
     // Step 2: Create organization if needed (use first user as owner, or a placeholder)
@@ -276,7 +277,7 @@ async function runMigration() {
     await createClarvidaOrganization(ownerId);
 
     // Step 3: Add all users to organization
-    console.log('\nAdding users to Clarvida organization...');
+    logger.info('\nAdding users to Clarvida organization...');
     for (let i = 0; i < userIdsArray.length; i++) {
       const userId = userIdsArray[i];
       // First user becomes owner, rest are members
@@ -289,13 +290,13 @@ async function runMigration() {
     await migrateContextItems(userIds);
     await migrateSearchHistory(userIds);
 
-    console.log('\n' + '='.repeat(60));
-    console.log('MIGRATION COMPLETE');
-    console.log('='.repeat(60));
-    console.log(`Finished at: ${new Date().toISOString()}`);
+    logger.info('\n' + '='.repeat(60));
+    logger.info('MIGRATION COMPLETE');
+    logger.info('='.repeat(60));
+    logger.info(`Finished at: ${new Date().toISOString()}`);
 
   } catch (error) {
-    console.error('\nMIGRATION ERROR:', error);
+    logger.error('\nMIGRATION ERROR:', error);
     process.exit(1);
   }
 

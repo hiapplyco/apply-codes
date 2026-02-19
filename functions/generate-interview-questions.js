@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-
+const { logger } = require("firebase-functions/v2");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 
@@ -73,7 +73,7 @@ exports.generateInterviewQuestions = onRequest(
       res.status(200).json(data);
 
     } catch (error) {
-      console.error('Error generating interview questions:', error);
+      logger.error('Error generating interview questions:', error);
       res.status(500).json({ error: error.message });
     }
   }

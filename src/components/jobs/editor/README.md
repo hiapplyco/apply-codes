@@ -211,7 +211,7 @@ The enhanced editor uses these additional Tiptap extensions:
 
 1. **Auto-save not working**: Ensure `onAutoSave` prop is provided and returns a Promise
 2. **Images not uploading**: Check file size limits and supported formats
-3. **Collaboration not connecting**: Verify Supabase configuration and user authentication
+3. **Collaboration not connecting**: Verify Firebase configuration and user authentication
 4. **Table editing issues**: Ensure proper table cell selection
 
 ### Performance Tips

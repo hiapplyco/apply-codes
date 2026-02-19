@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -48,7 +49,7 @@ exports.processRecording = functions.https.onRequest(async (req, res) => {
       message: 'Video processing placeholder implementation'
     });
   } catch (error) {
-    console.error('processRecording error:', error);
+    logger.error('processRecording error:', error);
     res.status(500).json({ error: 'Failed to process recording' });
   }
 });

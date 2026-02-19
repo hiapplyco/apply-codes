@@ -1,5 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { logger } = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -32,7 +32,7 @@ exports.analyzeCandidate = onCall(
 
     // Validate input
     if (!candidate || !requirements) {
-      console.error('Missing required fields:', {
+      logger.error('Missing required fields:', {
         hasCandidate: !!candidate,
         hasRequirements: !!requirements
       });
@@ -47,7 +47,7 @@ exports.analyzeCandidate = onCall(
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
-        console.error('GEMINI_API_KEY is not configured');
+        logger.error('GEMINI_API_KEY is not configured');
         throw new HttpsError(
           'failed-precondition',
           'Gemini API key not configured'
@@ -97,8 +97,8 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
         analysisData = JSON.parse(cleanedResponse);
         logger.info('Successfully parsed analysis JSON');
       } catch (e) {
-        console.error('JSON parsing failed:', e);
-        console.error('Failed to parse response:', responseText);
+        logger.error('JSON parsing failed:', e);
+        logger.error('Failed to parse response:', responseText);
 
         // If JSON parsing fails, create a fallback structure
         analysisData = {
@@ -137,7 +137,7 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
         analysisId = docRef.id;
         logger.info('Analysis saved to Firestore', { analysisId });
       } catch (logError) {
-        console.error('Error saving analysis:', logError);
+        logger.error('Error saving analysis:', logError);
         // Don't fail the main operation
       }
 
@@ -149,7 +149,7 @@ IMPORTANT: Return only the JSON object, no explanations, no markdown, no other t
       };
 
     } catch (error) {
-      console.error('Error in analyze-candidate function:', error);
+      logger.error('Error in analyze-candidate function:', error);
 
       if (error.message?.includes('API key')) {
         throw new HttpsError(

@@ -63,7 +63,7 @@ export const useProfileEnrichment = () => {
       // Show loading toast with ID so we can dismiss it properly
       const toastId = toast.loading("Fetching contact information...");
       
-      // Call Supabase Edge Function
+      // Call Cloud Function
       const data = await functionBridge.getContactInfo({ profileUrl });
 
       console.log('Firebase function response:', data);
@@ -144,7 +144,7 @@ export const useProfileEnrichment = () => {
       // Show loading toast
       toast.loading("Searching for contact information...");
       
-      // Call Supabase Edge Function
+      // Call Cloud Function
       const response = await functionBridge.enrichProfile({ searchParams: params });
 
       // Dismiss loading toast

@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
 
@@ -17,7 +18,7 @@ const stripe = stripeApiKey !== 'sk_test_placeholder'
 const db = admin.firestore();
 
 exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
-  console.log('Creating checkout session with data:', {
+  logger.info('Creating checkout session with data:', {
     priceId: data.priceId,
     hasSuccessUrl: !!data.successUrl,
     hasCancelUrl: !!data.cancelUrl,
@@ -42,7 +43,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
   }
 
   if (!stripe || stripeApiKey === 'sk_test_placeholder') {
-    console.error('Missing STRIPE_SECRET_KEY environment variable');
+    logger.error('Missing STRIPE_SECRET_KEY environment variable');
     throw new functions.https.HttpsError(
       'failed-precondition',
       'Stripe configuration error'
@@ -65,16 +66,16 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         const subscription = doc.data();
         if (subscription.stripeCustomerId) {
           customerId = subscription.stripeCustomerId;
-          console.log('Found existing Stripe customer:', customerId);
+          logger.info('Found existing Stripe customer:', customerId);
         }
       }
     } catch (dbError) {
-      console.error('Error fetching from Firestore:', dbError);
+      logger.error('Error fetching from Firestore:', dbError);
     }
 
     // If no customer found, create a new one
     if (!customerId) {
-      console.log('Creating new Stripe customer for:', userEmail);
+      logger.info('Creating new Stripe customer for:', userEmail);
       const customer = await stripe.customers.create({
         email: userEmail,
         metadata: {
@@ -83,7 +84,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         }
       });
       customerId = customer.id;
-      console.log('Created new Stripe customer:', customerId);
+      logger.info('Created new Stripe customer:', customerId);
 
       // Try to update Firestore with the new customer ID
       try {
@@ -97,7 +98,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         }, { merge: true });
 
       } catch (dbError) {
-        console.error('Error updating Firestore:', dbError);
+        logger.error('Error updating Firestore:', dbError);
         // Continue anyway - Stripe is more important
       }
     }
@@ -110,12 +111,12 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     ];
 
     if (!validPriceIds.includes(priceId)) {
-      console.warn('Unknown price ID:', priceId, '- proceeding anyway');
+      logger.warn('Unknown price ID:', priceId, '- proceeding anyway');
     }
 
     // Create checkout session
     // Note: No trial_period_days since users already get 7-day free trial before upgrading
-    console.log('Creating Stripe checkout session...');
+    logger.info('Creating Stripe checkout session...');
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -143,7 +144,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
       }
     });
 
-    console.log('Checkout session created:', session.id);
+    logger.info('Checkout session created:', session.id);
 
     return {
       success: true,
@@ -152,7 +153,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     };
 
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    logger.error('Error creating checkout session:', error);
 
     // Handle Stripe-specific errors
     if (error.type === 'StripeCardError') {

@@ -1,5 +1,5 @@
 const functions = require('firebase-functions');
-const { logger } = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -41,7 +41,7 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
         return;
       }
     } catch (authError) {
-      console.error('Auth error:', authError);
+      logger.error('Auth error:', authError);
       res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return;
     }
@@ -98,7 +98,7 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
     res.status(200).json(formattedResponse);
 
   } catch (error) {
-    console.error('Error in get-contact-info function:', error);
+    logger.error('Error in get-contact-info function:', error);
 
     const errorMessage = error.message || 'Unknown error';
     const errorResponse = {
@@ -123,7 +123,7 @@ async function getContactFromNymeria(profileUrl) {
 
   const apiKey = process.env.NYMERIA_API_KEY;
   if (!apiKey) {
-    console.error('NYMERIA_API_KEY is not set');
+    logger.error('NYMERIA_API_KEY is not set');
     throw new Error('API configuration error: Missing Nymeria API key');
   }
 
@@ -148,7 +148,7 @@ async function getContactFromNymeria(profileUrl) {
       const status = error.response.status;
       const errorText = error.response.data;
 
-      console.error('Nymeria API error:', status, errorText);
+      logger.error('Nymeria API error:', status, errorText);
 
       // Handle 404 - Profile not found (return null, not an error)
       if (status === 404) {
@@ -166,7 +166,7 @@ async function getContactFromNymeria(profileUrl) {
       throw new Error(`Nymeria API error: ${status} - ${errorText}`);
     }
 
-    console.error('Error calling Nymeria API:', error);
+    logger.error('Error calling Nymeria API:', error);
     throw error;
   }
 }

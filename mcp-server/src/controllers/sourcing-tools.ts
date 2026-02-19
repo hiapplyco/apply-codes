@@ -1293,11 +1293,9 @@ export class GetMarketIntelligenceTool extends BaseMCPTool {
 // Import the boolean search tool
 import { booleanSearchTool } from './boolean-search-tool.js';
 
-// Export all sourcing tools
+// Export active sourcing tools (deprecated tools removed: generate_boolean_query, search_candidates)
 export const sourcingTools = [
-  new GenerateBooleanQueryTool(),
-  new SearchCandidatesTool(),
   new AnalyzeJobRequirementsTool(),
   new GetMarketIntelligenceTool(),
-  booleanSearchTool, // Add the new two-step boolean search tool
+  booleanSearchTool,
 ];

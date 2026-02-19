@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -17,7 +18,7 @@ exports.sendOutreachEmail = onCall(
     
   },
   async (request) => {
-    console.log('Send outreach email function called');
+    logger.info('Send outreach email function called');
 
     const { data, auth } = request;
     const { projectId, candidateProfileUrl, userCustomText } = data;
@@ -30,7 +31,7 @@ exports.sendOutreachEmail = onCall(
       );
     }
 
-    console.log(`Processing outreach email for project: ${projectId}`);
+    logger.info(`Processing outreach email for project: ${projectId}`);
 
     try {
       // Step 1: Fetch project details
@@ -69,7 +70,7 @@ exports.sendOutreachEmail = onCall(
       };
 
     } catch (error) {
-      console.error('Error in send-outreach-email:', error);
+      logger.error('Error in send-outreach-email:', error);
 
       if (error.code) {
         // Already a Firebase HttpsError
@@ -100,7 +101,7 @@ async function fetchProjectDetails(projectId) {
 
     return projectDoc.data();
   } catch (error) {
-    console.error('Error fetching project:', error);
+    logger.error('Error fetching project:', error);
     throw new HttpsError(
       'internal',
       `Failed to fetch project details: ${error.message}`
@@ -212,7 +213,7 @@ Format your response as JSON with "subject" and "body" fields.`;
 
     return JSON.parse(cleanedResponse);
   } catch (error) {
-    console.warn('Failed to parse Gemini response as JSON, using fallback:', error);
+    logger.warn('Failed to parse Gemini response as JSON, using fallback:', error);
 
     // Fallback if JSON parsing fails
     return {
@@ -240,10 +241,10 @@ async function sendEmail({ to, subject, body, recipientName }) {
     await sendgridClient.send(msg);
     return { success: true };
   } catch (error) {
-    console.error('SendGrid error:', error);
+    logger.error('SendGrid error:', error);
 
     if (error.response) {
-      console.error('SendGrid response error:', error.response.body);
+      logger.error('SendGrid response error:', error.response.body);
     }
 
     throw new HttpsError(
@@ -268,9 +269,9 @@ async function logOutreachActivity(projectId, profileUrl, email, status, auth) {
       created_at: admin.firestore.Timestamp.now()
     });
 
-    console.log('Outreach activity logged successfully');
+    logger.info('Outreach activity logged successfully');
   } catch (error) {
-    console.error('Error logging outreach activity:', error);
+    logger.error('Error logging outreach activity:', error);
     // Don't throw error to avoid failing the main operation
   }
 }

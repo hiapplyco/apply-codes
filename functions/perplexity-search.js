@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -36,23 +36,23 @@ exports.perplexitySearch = onRequest({
         const decodedToken = await admin.auth().verifyIdToken(token);
         userId = decodedToken.uid;
       } catch (authError) {
-        console.warn('Auth token verification failed, proceeding as anonymous:', authError.message);
+        logger.warn('Auth token verification failed, proceeding as anonymous:', authError.message);
       }
     } else {
-      console.log('No auth token provided, proceeding as anonymous');
+      logger.info('No auth token provided, proceeding as anonymous');
     }
 
     // Get API key from environment
     const apiKey = process.env.PERPLEXITY_API_KEY;
     if (!apiKey) {
-      console.error('PERPLEXITY_API_KEY is not set in environment');
+      logger.error('PERPLEXITY_API_KEY is not set in environment');
       res.status(500).json({ error: 'Perplexity API key not configured' });
       return;
     }
 
     // Parse request body
     const { query, projectId, focus } = req.body || {};
-    console.log('Request body received:', { query, projectId, focus });
+    logger.info('Request body received:', { query, projectId, focus });
 
     if (!query || typeof query !== 'string' || query.trim() === '') {
       res.status(400).json({
@@ -70,7 +70,7 @@ exports.perplexitySearch = onRequest({
       ],
     };
 
-    console.log('Sending request to Perplexity:', perplexityRequestBody);
+    logger.info('Sending request to Perplexity:', perplexityRequestBody);
 
     // Call Perplexity API
     let perplexityResponse;
@@ -87,7 +87,7 @@ exports.perplexitySearch = onRequest({
         }
       );
     } catch (perplexityError) {
-      console.error('Perplexity API error:', perplexityError.response?.data || perplexityError.message);
+      logger.error('Perplexity API error:', perplexityError.response?.data || perplexityError.message);
       res.status(500).json({
         error: 'Perplexity API request failed',
         details: perplexityError.response?.data || perplexityError.message
@@ -96,7 +96,7 @@ exports.perplexitySearch = onRequest({
     }
 
     const responseData = perplexityResponse.data;
-    console.log('Perplexity response received');
+    logger.info('Perplexity response received');
 
     // Store search result in Firestore if userId is present (or even if not, maybe?)
     // If no userId, we can still store it with null userId or skip
@@ -115,7 +115,7 @@ exports.perplexitySearch = onRequest({
         .collection('searches')
         .add(searchRecord);
 
-      console.log('Search record saved with ID:', docRef.id);
+      logger.info('Search record saved with ID:', docRef.id);
 
       // Return response with search record ID for reference
       res.status(200).json({
@@ -123,13 +123,13 @@ exports.perplexitySearch = onRequest({
         searchId: docRef.id
       });
     } catch (dbError) {
-      console.error('Firestore error:', dbError);
+      logger.error('Firestore error:', dbError);
       // Return original response even if DB insert fails
       res.status(200).json(responseData);
     }
 
   } catch (error) {
-    console.error('Error in perplexity-search function:', error);
+    logger.error('Error in perplexity-search function:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       details: error.message

@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-
+const { logger } = require("firebase-functions/v2");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 
@@ -72,7 +72,7 @@ exports.chatAssistant = onRequest(
       res.status(200).json({ response });
 
     } catch (error) {
-      console.error('Error in chat assistant:', error);
+      logger.error('Error in chat assistant:', error);
       res.status(500).json({ error: error.message });
     }
   }

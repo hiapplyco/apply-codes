@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { getSendGridClient } = require('./utils/sendgrid');
 
@@ -290,7 +291,7 @@ async function sendSubscriptionEmail(to, userName, templateName, templateData) {
 
   try {
     await sendgridClient.send(msg);
-    console.log(`Sent ${templateName} email to ${to}`);
+    logger.info(`Sent ${templateName} email to ${to}`);
 
     // Log the email
     await db.collection('subscription_email_logs').add({
@@ -302,7 +303,7 @@ async function sendSubscriptionEmail(to, userName, templateName, templateData) {
 
     return true;
   } catch (error) {
-    console.error(`Failed to send ${templateName} email to ${to}:`, error);
+    logger.error(`Failed to send ${templateName} email to ${to}:`, error);
 
     await db.collection('subscription_email_logs').add({
       recipient_email: to,
@@ -320,7 +321,7 @@ async function sendSubscriptionEmail(to, userName, templateName, templateData) {
 // Can be triggered by Cloud Scheduler or called manually
 // To set up Cloud Scheduler: gcloud scheduler jobs create http checkTrialExpirations --schedule="0 9 * * *" --uri="https://checktrialexpirations-aaesxdhooq-uc.a.run.app" --http-method=POST --oidc-service-account-email=applycodes-2683f@appspot.gserviceaccount.com
 exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
-    console.log('Running trial expiration check...');
+    logger.info('Running trial expiration check...');
 
     const now = new Date();
     const threeDaysFromNow = new Date(now);
@@ -385,7 +386,7 @@ exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
               );
             }
           } catch (authError) {
-            console.error(`Failed to get user ${userId}:`, authError);
+            logger.error(`Failed to get user ${userId}:`, authError);
           }
         }
       }
@@ -420,7 +421,7 @@ exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
               );
             }
           } catch (authError) {
-            console.error(`Failed to get user ${userId}:`, authError);
+            logger.error(`Failed to get user ${userId}:`, authError);
           }
         }
       }
@@ -460,7 +461,7 @@ exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
               );
             }
           } catch (authError) {
-            console.error(`Failed to get user ${userId}:`, authError);
+            logger.error(`Failed to get user ${userId}:`, authError);
           }
         }
       }
@@ -468,7 +469,7 @@ exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
       await Promise.allSettled(emailPromises);
 
       const processedCount = threeDaySnapshot.size + oneDaySnapshot.size + expiredSnapshot.size;
-      console.log(`Trial expiration check complete. Processed ${processedCount} users.`);
+      logger.info(`Trial expiration check complete. Processed ${processedCount} users.`);
 
       res.status(200).json({
         success: true,
@@ -481,7 +482,7 @@ exports.checkTrialExpirations = functions.https.onRequest(async (req, res) => {
       });
 
     } catch (error) {
-      console.error('Error in trial expiration check:', error);
+      logger.error('Error in trial expiration check:', error);
       res.status(500).json({
         success: false,
         error: error.message

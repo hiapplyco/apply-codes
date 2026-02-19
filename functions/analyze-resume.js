@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -74,7 +75,7 @@ exports.analyzeResume = onRequest(
         return;
       }
 
-      console.log('Analyzing resume for user:', userId, 'job:', jobId);
+      logger.info('Analyzing resume for user:', userId, 'job:', jobId);
 
       // Initialize Firebase services
       const db = admin.firestore();
@@ -103,7 +104,7 @@ exports.analyzeResume = onRequest(
         }
       });
 
-      console.log('File uploaded successfully:', filePath);
+      logger.info('File uploaded successfully:', filePath);
 
       // Initialize Gemini
       const apiKey = process.env.GEMINI_API_KEY;
@@ -125,7 +126,7 @@ exports.analyzeResume = onRequest(
         .replace(/[^\x20-\x7E\x0A\x0D\u00A0-\u024F\u1E00-\u1EFF]/g, '') // Keep basic Latin, Latin-1 Supplement, and Latin Extended
         .trim();
 
-      console.log('Resume text length after cleaning:', resumeText.length);
+      logger.info('Resume text length after cleaning:', resumeText.length);
 
       // Analyze with Gemini
       const prompt = `You are a resume analyzer. Compare this resume against the job description and return a JSON object (do not include markdown backticks) with the following fields:
@@ -144,21 +145,21 @@ ${resumeText}
 Return ONLY the JSON object, no other text.
 `;
 
-      console.log('Sending analysis request to Gemini');
+      logger.info('Sending analysis request to Gemini');
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
 
       // Remove any markdown formatting if present
       const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
 
-      console.log('Received response from Gemini, parsing JSON');
+      logger.info('Received response from Gemini, parsing JSON');
 
       let analysis;
       try {
         analysis = JSON.parse(cleanJson);
       } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
-        console.error('Raw response:', responseText);
+        logger.error('Error parsing JSON:', parseError);
+        logger.error('Raw response:', responseText);
 
         // Fallback analysis structure
         analysis = {
@@ -192,7 +193,7 @@ Return ONLY the JSON object, no other text.
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      console.log('Analysis completed successfully for user:', userId);
+      logger.info('Analysis completed successfully for user:', userId);
 
       // Log to Firestore for additional tracking
       try {
@@ -206,7 +207,7 @@ Return ONLY the JSON object, no other text.
           success: true
         });
       } catch (logError) {
-        console.error('Error logging to Firestore:', logError);
+        logger.error('Error logging to Firestore:', logError);
         // Don't fail the main operation
       }
 
@@ -219,7 +220,7 @@ Return ONLY the JSON object, no other text.
       });
 
     } catch (error) {
-      console.error('Error in analyze-resume function:', error);
+      logger.error('Error in analyze-resume function:', error);
 
       // Log error to Firestore
       try {
@@ -232,7 +233,7 @@ Return ONLY the JSON object, no other text.
           success: false
         });
       } catch (logError) {
-        console.error('Error logging error to Firestore:', logError);
+        logger.error('Error logging error to Firestore:', logError);
       }
 
       res.status(500).json({

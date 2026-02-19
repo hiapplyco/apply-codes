@@ -52,7 +52,7 @@ const MainLayoutComponent = () => {
       )}
 
       {/* Mobile Drawer */}
-      <div className={`lg:hidden fixed left-0 top-0 h-full w-80 bg-white shadow-2xl transform transition-transform duration-300 z-50 ${mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+      <div className={`lg:hidden fixed left-0 top-0 h-full w-[85vw] sm:w-80 bg-white shadow-2xl transform transition-transform duration-300 z-50 ${mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
         <SidebarNew
           isOpen={true}
@@ -70,12 +70,14 @@ const MainLayoutComponent = () => {
         sidebarOpen && "lg:pl-[20rem]" // Expanded width when open
       )}>
         <div className="w-full h-full overflow-x-hidden">
-          <div className="p-4 lg:p-6 h-screen flex flex-col">
+          <div className="p-4 lg:p-6 min-h-[100dvh] flex flex-col">
             <div className="flex flex-col gap-4 h-full">
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <button
                   onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
-                  className="lg:hidden h-10 w-10 rounded-md border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 flex items-center justify-center shadow-sm"
+                  aria-label={mobileDrawerOpen ? "Close menu" : "Open menu"}
+                  aria-expanded={mobileDrawerOpen}
+                  className="lg:hidden h-11 w-11 rounded-md border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 flex items-center justify-center shadow-sm"
                 >
                   {mobileDrawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </button>

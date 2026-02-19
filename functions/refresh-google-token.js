@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -63,7 +64,7 @@ exports.refreshGoogleToken = functions.https.onRequest(async (req, res) => {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('Google token refresh failed:', errorText);
+      logger.error('Google token refresh failed:', errorText);
       res.status(tokenResponse.status).json({ error: 'Failed to refresh token' });
       return;
     }
@@ -79,7 +80,7 @@ exports.refreshGoogleToken = functions.https.onRequest(async (req, res) => {
       expires_at: expiresAt
     });
   } catch (error) {
-    console.error('refreshGoogleToken error:', error);
+    logger.error('refreshGoogleToken error:', error);
     res.status(500).json({ error: 'Failed to refresh Google token' });
   }
 });

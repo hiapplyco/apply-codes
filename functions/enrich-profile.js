@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 
@@ -9,7 +10,7 @@ if (!admin.apps.length) {
 
 exports.enrichProfile = functions
   .https.onCall(async (data, context) => {
-    console.log('Enrich profile function called');
+    logger.info('Enrich profile function called');
 
     try {
       // Check if this is a profile enrichment or a person search request
@@ -26,7 +27,7 @@ exports.enrichProfile = functions
         );
       }
     } catch (error) {
-      console.error('Error processing request:', error);
+      logger.error('Error processing request:', error);
 
       // Special handling for missing API key
       if (error.message?.includes('API key')) {
@@ -54,20 +55,20 @@ async function handleProfileEnrichment(requestData, context) {
     throw new Error('Either profileUrl or profileId is required for profile enrichment');
   }
 
-  console.log(`Enriching profile: ${profileUrl || profileId}`);
+  logger.info(`Enriching profile: ${profileUrl || profileId}`);
 
   // Get Nymeria API key from environment
   const apiKey = functions.config().nymeria?.api_key || process.env.NYMERIA_API_KEY;
 
   if (!apiKey) {
-    console.error('NYMERIA_API_KEY is not configured');
+    logger.error('NYMERIA_API_KEY is not configured');
     throw new Error('API configuration error: Missing Nymeria API key');
   }
 
   const nymeriaUrl = `https://www.nymeria.io/api/v4/person/enrich?${
     profileUrl ? `profile=${encodeURIComponent(profileUrl)}` : `lid=${profileId}`
   }`;
-  console.log('Calling Nymeria API:', nymeriaUrl);
+  logger.info('Calling Nymeria API:', nymeriaUrl);
 
   try {
     // Call Nymeria Person Enrich API
@@ -78,7 +79,7 @@ async function handleProfileEnrichment(requestData, context) {
     });
 
     const enrichedData = nymeriaResponse.data;
-    console.log('Nymeria API returned data:', JSON.stringify(enrichedData).substring(0, 500) + '...');
+    logger.info('Nymeria API returned data:', JSON.stringify(enrichedData).substring(0, 500) + '...');
 
     // Optionally log to Firestore
     if (context && context.auth) {
@@ -92,7 +93,7 @@ async function handleProfileEnrichment(requestData, context) {
           created_at: admin.firestore.Timestamp.now()
         });
       } catch (logError) {
-        console.error('Error logging enrichment action:', logError);
+        logger.error('Error logging enrichment action:', logError);
         // Don't fail the main operation
       }
     }
@@ -109,11 +110,11 @@ async function handleProfileEnrichment(requestData, context) {
     if (error.response) {
       const status = error.response.status;
       const errorText = error.response.data;
-      console.error('Nymeria API error:', status, errorText);
+      logger.error('Nymeria API error:', status, errorText);
 
       // Handle 404 - Profile not found (this is normal, not an error)
       if (status === 404) {
-        console.log('Profile not found in Nymeria database - returning no data response');
+        logger.info('Profile not found in Nymeria database - returning no data response');
         return {
           success: true,
           data: null,
@@ -137,7 +138,7 @@ async function handleProfileEnrichment(requestData, context) {
 }
 
 async function handlePersonSearch(searchParams, context) {
-  console.log(`Searching for person with params:`, searchParams);
+  logger.info(`Searching for person with params:`, searchParams);
 
   // Get Nymeria API key from environment
   const apiKey = functions.config().nymeria?.api_key || process.env.NYMERIA_API_KEY;
@@ -168,7 +169,7 @@ async function handlePersonSearch(searchParams, context) {
   }
 
   const nymeriaSearchUrl = `https://www.nymeria.io/api/v4/person/search?${queryParams.toString()}`;
-  console.log(`Making request to: ${nymeriaSearchUrl}`);
+  logger.info(`Making request to: ${nymeriaSearchUrl}`);
 
   try {
     // Call Nymeria Person Search API
@@ -192,7 +193,7 @@ async function handlePersonSearch(searchParams, context) {
     if (error.response) {
       const status = error.response.status;
       const errorText = error.response.data;
-      console.error('Nymeria API error:', errorText);
+      logger.error('Nymeria API error:', errorText);
 
       if (status === 401) {
         throw new Error('Invalid Nymeria API key');

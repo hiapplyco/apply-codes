@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 // Initialize admin if not already done
@@ -97,7 +98,7 @@ exports.adminGrantPro = functions.https.onCall(async (data, context) => {
     };
 
   } catch (error) {
-    console.error('Error granting Pro access:', error);
+    logger.error('Error granting Pro access:', error);
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
@@ -117,7 +118,11 @@ exports.grantProAccess = functions.https.onRequest(async (req, res) => {
   }
 
   // Simple admin key protection (set this in Firebase config)
-  const adminKey = process.env.ADMIN_SECRET_KEY || 'apply-admin-2024';
+  const adminKey = process.env.ADMIN_SECRET_KEY;
+  if (!adminKey) {
+    res.status(500).json({ error: 'Admin key not configured' });
+    return;
+  }
   const providedKey = req.headers['x-admin-key'] || req.body?.adminKey;
 
   if (providedKey !== adminKey) {
@@ -184,7 +189,7 @@ exports.grantProAccess = functions.https.onRequest(async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error granting Pro access:', error);
+    logger.error('Error granting Pro access:', error);
     res.status(500).json({ error: error.message });
   }
 });

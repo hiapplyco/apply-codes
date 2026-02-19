@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -15,7 +16,7 @@ exports.processJobRequirements = onCall(
     
   },
   async (request) => {
-    console.log('Process job requirements function called');
+    logger.info('Process job requirements function called');
 
     const { data, auth } = request;
     const { content, searchType, companyName, userId, source } = data;
@@ -33,7 +34,7 @@ exports.processJobRequirements = onCall(
       const apiKey = process.env.GEMINI_API_KEY;
 
       if (!apiKey) {
-        console.error('GEMINI_API_KEY is not configured');
+        logger.error('GEMINI_API_KEY is not configured');
         throw new HttpsError(
           'failed-precondition',
           'Gemini API key not configured'
@@ -68,11 +69,11 @@ Use proper boolean operators:
 
 Return ONLY the boolean search string, no explanations or formatting.`;
 
-      console.log('Generating boolean search for job requirements');
+      logger.info('Generating boolean search for job requirements');
       const result = await model.generateContent(prompt);
       const searchString = result.response.text().trim();
 
-      console.log('Generated search string:', searchString);
+      logger.info('Generated search string:', searchString);
 
       if (!searchString) {
         throw new Error('Failed to generate boolean search string');
@@ -96,9 +97,9 @@ Return ONLY the boolean search string, no explanations or formatting.`;
             created_at: admin.firestore.Timestamp.now()
           });
           jobId = jobDoc.id;
-          console.log('Job requirements saved with ID:', jobId);
+          logger.info('Job requirements saved with ID:', jobId);
         } catch (dbError) {
-          console.error('Error saving to Firestore:', dbError);
+          logger.error('Error saving to Firestore:', dbError);
           // Don't fail the main operation
         }
       }
@@ -124,7 +125,7 @@ Return ONLY the boolean search string, no explanations or formatting.`;
       };
 
     } catch (error) {
-      console.error('Error in process-job-requirements function:', error);
+      logger.error('Error in process-job-requirements function:', error);
 
       if (error.message?.includes('API key')) {
         throw new HttpsError(

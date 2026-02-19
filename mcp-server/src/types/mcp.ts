@@ -113,22 +113,6 @@ export type Document = z.infer<typeof DocumentSchema>;
 export type InterviewPlan = z.infer<typeof InterviewPlanSchema>;
 export type WorkflowExecution = z.infer<typeof WorkflowExecutionSchema>;
 
-// MCP Server Configuration
-export interface MCPServerConfig {
-  name: string;
-  version: string;
-  description: string;
-  capabilities: {
-    tools: boolean;
-    resources: boolean;
-    prompts: boolean;
-  };
-  authentication?: {
-    required: boolean;
-    methods: string[];
-  };
-}
-
 // Session Management
 export interface MCPSession {
   id: string;

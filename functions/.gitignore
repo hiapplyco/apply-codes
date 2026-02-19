@@ -1,4 +1,5 @@
 node_modules/
 .env
 .env.local
-*.logfirebase-service-account.json
+*.log
+firebase-service-account.json

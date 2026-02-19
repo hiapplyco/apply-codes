@@ -1,4 +1,3 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -11,7 +10,6 @@ interface CachedSecrets {
 
 export class SecretsManager {
   private secrets: Record<string, string> = {};
-  private supabase: SupabaseClient | null = null;
   private cacheFile: string;
   private cacheTTL: number = 3600000; // 1 hour in milliseconds
   private initialized: boolean = false;
@@ -25,62 +23,26 @@ export class SecretsManager {
 
     // First try to load from cache
     const cached = this.loadFromCache();
-    if (cached) {
+    if (cached && !this.isCacheExpired(cached)) {
       this.secrets = cached.secrets;
       console.error('Loaded secrets from cache');
-    }
-
-    // If no cache or cache is expired, load from Supabase
-    if (!cached || this.isCacheExpired(cached)) {
-      await this.loadFromSupabase();
+    } else {
+      // Load from environment variables
+      this.loadFromEnvironment();
     }
 
     this.initialized = true;
   }
 
-  private async loadFromSupabase(): Promise<void> {
-    try {
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseKey) {
-        console.warn('Supabase credentials not found, falling back to environment variables');
-        this.loadFromEnvironment();
-        return;
-      }
-
-      // Fetch secrets from Edge Function
-      const response = await fetch(`${supabaseUrl}/functions/v1/get-mcp-secrets`, {
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch secrets: ${response.statusText}`);
-      }
-
-      this.secrets = await response.json() as Record<string, string>;
-      
-      // Cache the secrets
-      this.saveToCache(this.secrets);
-      console.error('Loaded secrets from Supabase');
-    } catch (error) {
-      console.error('Failed to load secrets from Supabase:', error);
-      // Fall back to environment variables
-      this.loadFromEnvironment();
-    }
-  }
-
   private loadFromEnvironment(): void {
-    // Load from environment variables as fallback
     const envKeys = [
       'GOOGLE_CSE_API_KEY',
       'GOOGLE_CSE_ID',
+      'GEMINI_API_KEY',
       'PERPLEXITY_API_KEY',
       'OPENAI_API_KEY',
-      'ANTHROPIC_API_KEY'
+      'ANTHROPIC_API_KEY',
+      'NYMERIA_API_KEY',
     ];
 
     envKeys.forEach(key => {
@@ -90,7 +52,12 @@ export class SecretsManager {
       }
     });
 
-    console.error('Loaded secrets from environment variables');
+    // Cache the loaded secrets
+    if (Object.keys(this.secrets).length > 0) {
+      this.saveToCache(this.secrets);
+    }
+
+    console.error(`Loaded ${Object.keys(this.secrets).length} secrets from environment`);
   }
 
   private loadFromCache(): CachedSecrets | null {
@@ -128,7 +95,6 @@ export class SecretsManager {
   }
 
   private encrypt(text: string): string {
-    // Use machine-specific key for encryption
     const key = crypto.scryptSync(
       process.env.USER || 'default',
       'mcp-secrets-salt',
@@ -136,10 +102,10 @@ export class SecretsManager {
     );
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     return iv.toString('hex') + ':' + encrypted;
   }
 
@@ -152,10 +118,10 @@ export class SecretsManager {
     );
     const iv = Buffer.from(ivHex, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-    
+
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   }
 
@@ -173,7 +139,7 @@ export class SecretsManager {
   }
 
   async refresh(): Promise<void> {
-    await this.loadFromSupabase();
+    this.loadFromEnvironment();
   }
 
   clearCache(): void {

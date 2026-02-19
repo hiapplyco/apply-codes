@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 
@@ -9,7 +10,7 @@ if (!admin.apps.length) {
 
 exports.processEmailWebhook = functions
   .https.onRequest(async (req, res) => {
-    console.log('Email webhook function called');
+    logger.info('Email webhook function called');
 
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
@@ -22,7 +23,7 @@ exports.processEmailWebhook = functions
 
     // Only allow POST requests
     if (req.method !== 'POST') {
-      console.error('Invalid method:', req.method);
+      logger.error('Invalid method:', req.method);
       res.status(405).json({ error: 'Method not allowed' });
       return;
     }
@@ -31,7 +32,7 @@ exports.processEmailWebhook = functions
       // Verify webhook signature for security
       const isValidSignature = await verifyWebhookSignature(req);
       if (!isValidSignature) {
-        console.error('Invalid webhook signature');
+        logger.error('Invalid webhook signature');
         res.status(401).json({ error: 'Unauthorized: Invalid signature' });
         return;
       }
@@ -40,12 +41,12 @@ exports.processEmailWebhook = functions
       const events = req.body;
 
       if (!Array.isArray(events)) {
-        console.error('Invalid webhook payload: expected array of events');
+        logger.error('Invalid webhook payload: expected array of events');
         res.status(400).json({ error: 'Invalid payload format' });
         return;
       }
 
-      console.log(`Processing ${events.length} email events`);
+      logger.info(`Processing ${events.length} email events`);
 
       // Process each event
       for (const event of events) {
@@ -60,7 +61,7 @@ exports.processEmailWebhook = functions
       });
 
     } catch (error) {
-      console.error('Error processing email webhook:', error);
+      logger.error('Error processing email webhook:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: error.message,
@@ -75,7 +76,7 @@ async function verifyWebhookSignature(req) {
     const timestamp = req.get('X-Event-Webhook-Timestamp');
 
     if (!signature || !timestamp) {
-      console.warn('Missing webhook signature or timestamp');
+      logger.warn('Missing webhook signature or timestamp');
       return false;
     }
 
@@ -83,7 +84,7 @@ async function verifyWebhookSignature(req) {
     const webhookSecret = functions.config().sendgrid?.webhook_secret || process.env.SENDGRID_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
-      console.warn('No webhook secret configured - skipping signature verification');
+      logger.warn('No webhook secret configured - skipping signature verification');
       return true; // Allow requests when no secret is configured (for development)
     }
 
@@ -102,14 +103,14 @@ async function verifyWebhookSignature(req) {
       Buffer.from(actualSignature, 'base64')
     );
   } catch (error) {
-    console.error('Error verifying webhook signature:', error);
+    logger.error('Error verifying webhook signature:', error);
     return false;
   }
 }
 
 async function processEmailEvent(event) {
   try {
-    console.log(`Processing email event: ${event.event} for ${event.email}`);
+    logger.info(`Processing email event: ${event.event} for ${event.email}`);
 
     const eventData = {
       event_id: event.sg_event_id || generateEventId(),
@@ -174,12 +175,12 @@ async function processEmailEvent(event) {
         await handleGroupResubscribeEvent(event);
         break;
       default:
-        console.log(`Unhandled event type: ${event.event}`);
+        logger.info(`Unhandled event type: ${event.event}`);
     }
 
-    console.log(`Successfully processed ${event.event} event for ${event.email}`);
+    logger.info(`Successfully processed ${event.event} event for ${event.email}`);
   } catch (error) {
-    console.error('Error processing email event:', error);
+    logger.error('Error processing email event:', error);
     throw error; // Re-throw to ensure webhook returns error status
   }
 }
@@ -367,7 +368,7 @@ async function updateEmailStatus(email, status, additionalData = {}) {
       });
     }
   } catch (error) {
-    console.error('Error updating email status:', error);
+    logger.error('Error updating email status:', error);
     // Don't throw error to avoid failing webhook processing
   }
 }
@@ -399,7 +400,7 @@ async function updateEmailAnalytics(email, metric, value) {
       }
     });
   } catch (error) {
-    console.error('Error updating email analytics:', error);
+    logger.error('Error updating email analytics:', error);
     // Don't throw error to avoid failing webhook processing
   }
 }
@@ -424,12 +425,12 @@ async function addToSuppressionList(email, reason, description) {
         created_at: admin.firestore.Timestamp.now()
       });
 
-      console.log(`Added ${email} to suppression list for: ${reason}`);
+      logger.info(`Added ${email} to suppression list for: ${reason}`);
     } else {
-      console.log(`Email ${email} already in suppression list`);
+      logger.info(`Email ${email} already in suppression list`);
     }
   } catch (error) {
-    console.error('Error adding to suppression list:', error);
+    logger.error('Error adding to suppression list:', error);
     // Don't throw error to avoid failing webhook processing
   }
 }
@@ -471,7 +472,7 @@ exports.getEmailEvents = functions
         count: events.length
       };
     } catch (error) {
-      console.error('Error fetching email events:', error);
+      logger.error('Error fetching email events:', error);
       throw new functions.https.HttpsError('internal', error.message);
     }
   });
@@ -507,7 +508,7 @@ exports.getEmailAnalytics = functions
         analytics: analytics
       };
     } catch (error) {
-      console.error('Error fetching email analytics:', error);
+      logger.error('Error fetching email analytics:', error);
       throw new functions.https.HttpsError('internal', error.message);
     }
   });

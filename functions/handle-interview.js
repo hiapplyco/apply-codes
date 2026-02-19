@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -92,7 +93,7 @@ const generateInterviewResponse = async (message, context = [], interviewType = 
 
     return selectedResponse;
   } catch (error) {
-    console.error('Error generating interview response:', error);
+    logger.error('Error generating interview response:', error);
     return getDefaultResponse(message);
   }
 };
@@ -131,7 +132,7 @@ const processInterviewFeedback = async (interviewData) => {
 
     return feedbackStructure;
   } catch (error) {
-    console.error('Error processing interview feedback:', error);
+    logger.error('Error processing interview feedback:', error);
     throw error;
   }
 };
@@ -159,7 +160,7 @@ const handleInterviewScheduling = async (schedulingData) => {
 
     return schedulingResponse;
   } catch (error) {
-    console.error('Error handling interview scheduling:', error);
+    logger.error('Error handling interview scheduling:', error);
     throw error;
   }
 };
@@ -185,7 +186,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
       schedulingData
     } = req.body;
 
-    console.log('Interview function called with action:', action);
+    logger.info('Interview function called with action:', action);
 
     // Route based on action type
     switch (action) {
@@ -199,9 +200,9 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
           return;
         }
 
-        console.log('Interview message received:', message);
-        console.log('Context:', context);
-        console.log('Interview type:', interviewType);
+        logger.info('Interview message received:', message);
+        logger.info('Context:', context);
+        logger.info('Interview type:', interviewType);
 
         try {
           const response = await generateInterviewResponse(message, context, interviewType);
@@ -220,7 +221,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
                   created_at: new Date().toISOString()
                 });
             } catch (dbError) {
-              console.warn('Failed to save conversation to database:', dbError);
+              logger.warn('Failed to save conversation to database:', dbError);
               // Don't fail the request if database save fails
             }
           }
@@ -233,7 +234,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
           });
 
         } catch (error) {
-          console.error('Error in interview chat processing:', error);
+          logger.error('Error in interview chat processing:', error);
 
           // Return a fallback response rather than an error
           const fallbackResponse = getDefaultResponse(message);
@@ -267,7 +268,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
           });
 
         } catch (error) {
-          console.error('Error processing interview feedback:', error);
+          logger.error('Error processing interview feedback:', error);
           res.status(500).json({
             error: 'Failed to process interview feedback',
             success: false
@@ -295,7 +296,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
           });
 
         } catch (error) {
-          console.error('Error handling interview scheduling:', error);
+          logger.error('Error handling interview scheduling:', error);
           res.status(500).json({
             error: 'Failed to schedule interview',
             success: false
@@ -311,7 +312,7 @@ exports.handleInterview = functions.https.onRequest(async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error handling interview request:', error);
+    logger.error('Error handling interview request:', error);
 
     res.status(500).json({
       error: 'Internal server error',

@@ -466,7 +466,7 @@ export interface DocumentUploadOptions {
 }
 
 /**
- * Uploads a document to Supabase Storage and monitors processing status
+ * Uploads a document to Firebase Storage and monitors processing status
  */
 export class DocumentProcessor {
   private static readonly SUPPORTED_TYPES = [

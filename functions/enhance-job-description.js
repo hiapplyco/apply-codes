@@ -1,5 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
-
+const { logger } = require("firebase-functions/v2");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 
@@ -64,7 +64,7 @@ exports.enhanceJobDescription = onRequest(
       res.status(200).json({ enhancedDescription });
 
     } catch (error) {
-      console.error('Error enhancing job description:', error);
+      logger.error('Error enhancing job description:', error);
       res.status(500).json({ error: error.message });
     }
   }

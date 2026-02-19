@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 // Initialize admin if not already done
@@ -45,7 +46,7 @@ exports.getProjects = onRequest({
         return;
       }
     } catch (authError) {
-      console.error('Auth error:', authError);
+      logger.error('Auth error:', authError);
       res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return;
     }
@@ -73,7 +74,7 @@ exports.getProjects = onRequest({
     });
 
   } catch (error) {
-    console.error('Error in get-projects function:', error);
+    logger.error('Error in get-projects function:', error);
     res.status(500).json({
       error: 'Internal Server Error',
       details: error.message

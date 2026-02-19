@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -40,13 +41,13 @@ exports.githubProfile = functions.https.onRequest(async (req, res) => {
     // Verify user with Supabase Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      logger.error('Auth error:', authError);
       res.status(401).json({ error: 'Unauthorized - Invalid token' });
       return;
     }
 
     const requestData = req.body || {};
-    console.log("GitHub Profile request:", JSON.stringify(requestData).substring(0, 200));
+    logger.info("GitHub Profile request:", JSON.stringify(requestData).substring(0, 200));
 
     // Validate input
     const { github_url, username } = requestData;
@@ -86,7 +87,7 @@ exports.githubProfile = functions.https.onRequest(async (req, res) => {
     res.status(200).json(profileAnalysis);
 
   } catch (error) {
-    console.error('Error in github-profile function:', error);
+    logger.error('Error in github-profile function:', error);
 
     const errorMessage = error.message || 'Unknown error';
     const errorResponse = {
@@ -102,14 +103,14 @@ exports.githubProfile = functions.https.onRequest(async (req, res) => {
       errorResponse.suggestion = 'Please configure GITHUB_TOKEN in Cloud Functions environment variables';
     }
 
-    console.error('Detailed error:', errorResponse);
+    logger.error('Detailed error:', errorResponse);
 
     res.status(500).json(errorResponse);
   }
 });
 
 async function analyzeGitHubProfile(username) {
-  console.log(`Analyzing GitHub profile for: ${username}`);
+  logger.info(`Analyzing GitHub profile for: ${username}`);
 
   const githubToken = process.env.GITHUB_TOKEN;
   const headers = {
@@ -173,11 +174,11 @@ async function analyzeGitHubProfile(username) {
       const status = error.response.status;
       const errorData = error.response.data;
 
-      console.error('GitHub API error:', status, errorData);
+      logger.error('GitHub API error:', status, errorData);
 
       // Handle specific GitHub API errors
       if (status === 404) {
-        console.log('GitHub user not found');
+        logger.info('GitHub user not found');
         return null;
       } else if (status === 403) {
         if (errorData.message && errorData.message.includes('rate limit')) {
@@ -191,7 +192,7 @@ async function analyzeGitHubProfile(username) {
       throw new Error(`GitHub API error: ${status} - ${errorData.message || 'Unknown error'}`);
     }
 
-    console.error('Error calling GitHub API:', error);
+    logger.error('Error calling GitHub API:', error);
     throw error;
   }
 }

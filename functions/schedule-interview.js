@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
 const { google } = require('googleapis');
@@ -291,7 +292,7 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
               meetingLink = calendarEvent.conferenceData.entryPoints[0].uri;
             }
           } catch (calendarError) {
-            console.error('Calendar integration error:', calendarError);
+            logger.error('Calendar integration error:', calendarError);
             // Continue without calendar integration
           }
         }
@@ -338,7 +339,7 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
             interviewType
           });
         } catch (emailError) {
-          console.error('Email sending error:', emailError);
+          logger.error('Email sending error:', emailError);
           // Continue even if email fails
         }
 
@@ -420,7 +421,7 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Error in schedule-interview function:', error);
+    logger.error('Error in schedule-interview function:', error);
 
     let errorMessage = 'Internal server error';
     let statusCode = 500;

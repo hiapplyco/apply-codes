@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -65,7 +66,7 @@ exports.generateClarvidaReport = functions.https.onRequest(async (req, res) => {
     const report = defaultReport(content);
     res.status(200).json(report);
   } catch (error) {
-    console.error('generateClarvidaReport error:', error);
+    logger.error('generateClarvidaReport error:', error);
     res.status(500).json({ success: false, error: 'Failed to generate Clarvida report' });
   }
 });

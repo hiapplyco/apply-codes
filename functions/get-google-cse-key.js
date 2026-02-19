@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { defineString } = require('firebase-functions/params');
 
@@ -45,7 +46,7 @@ exports.getGoogleCseKey = functions.https.onRequest(async (req, res) => {
     const engineId = process.env.GOOGLE_CSE_ID;
 
     if (!apiKey || !engineId) {
-      console.error('Missing CSE config:', { hasApiKey: !!apiKey, hasEngineId: !!engineId });
+      logger.error('Missing CSE config:', { hasApiKey: !!apiKey, hasEngineId: !!engineId });
       res.status(500).json({ error: 'Google CSE configuration missing' });
       return;
     }
@@ -55,7 +56,7 @@ exports.getGoogleCseKey = functions.https.onRequest(async (req, res) => {
       engineId
     });
   } catch (error) {
-    console.error('getGoogleCseKey error:', error);
+    logger.error('getGoogleCseKey error:', error);
     res.status(500).json({ error: 'Failed to retrieve Google CSE configuration' });
   }
 });

@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const { getSendGridClient } = require('./utils/sendgrid');
 
@@ -9,7 +10,7 @@ if (!admin.apps.length) {
 
 exports.sendEmail = functions
   .https.onCall(async (data, context) => {
-    console.log('Send email function called');
+    logger.info('Send email function called');
 
     const {
       to,
@@ -40,7 +41,7 @@ exports.sendEmail = functions
       );
     }
 
-    console.log(`Sending email to: ${to}`);
+    logger.info(`Sending email to: ${to}`);
 
     try {
       // Send the email
@@ -78,7 +79,7 @@ exports.sendEmail = functions
       };
 
     } catch (error) {
-      console.error('Error in send-email:', error);
+      logger.error('Error in send-email:', error);
 
       // Log the failed email attempt
       await logEmailActivity({
@@ -202,17 +203,17 @@ async function sendEmailWithSendGrid({
 
   try {
     const response = await sendgridClient.send(msg);
-    console.log('Email sent successfully');
+    logger.info('Email sent successfully');
 
     return {
       success: true,
       messageId: response[0]?.headers?.['x-message-id'] || null
     };
   } catch (error) {
-    console.error('SendGrid error:', error);
+    logger.error('SendGrid error:', error);
 
     if (error.response) {
-      console.error('SendGrid response error:', error.response.body);
+      logger.error('SendGrid response error:', error.response.body);
     }
 
     // Handle specific SendGrid errors
@@ -272,9 +273,9 @@ async function logEmailActivity({
     }
 
     await db.collection('email_logs').add(logData);
-    console.log('Email activity logged successfully');
+    logger.info('Email activity logged successfully');
   } catch (error) {
-    console.error('Error logging email activity:', error);
+    logger.error('Error logging email activity:', error);
     // Don't throw error to avoid failing the main operation
   }
 }
@@ -282,7 +283,7 @@ async function logEmailActivity({
 // Helper function for bulk email sending
 exports.sendBulkEmails = functions
   .https.onCall(async (data, context) => {
-    console.log('Send bulk emails function called');
+    logger.info('Send bulk emails function called');
 
     const { emails, batchSize = 10 } = data;
 
@@ -293,7 +294,7 @@ exports.sendBulkEmails = functions
       );
     }
 
-    console.log(`Sending ${emails.length} emails in batches of ${batchSize}`);
+    logger.info(`Sending ${emails.length} emails in batches of ${batchSize}`);
 
     const results = [];
     const errors = [];
@@ -312,7 +313,7 @@ exports.sendBulkEmails = functions
             messageId: result.messageId
           };
         } catch (error) {
-          console.error(`Failed to send email to ${emailData.to}:`, error);
+          logger.error(`Failed to send email to ${emailData.to}:`, error);
           return {
             index: i + index,
             recipient: emailData.to,
@@ -349,7 +350,7 @@ exports.sendBulkEmails = functions
         created_at: admin.firestore.Timestamp.now()
       });
     } catch (logError) {
-      console.error('Error logging bulk email activity:', logError);
+      logger.error('Error logging bulk email activity:', logError);
     }
 
     return {
@@ -366,7 +367,7 @@ exports.sendBulkEmails = functions
 // Helper function for sending templated emails
 exports.sendTemplatedEmail = functions
   .https.onCall(async (data, context) => {
-    console.log('Send templated email function called');
+    logger.info('Send templated email function called');
 
     const {
       to,
@@ -415,7 +416,7 @@ exports.sendTemplatedEmail = functions
       };
 
     } catch (error) {
-      console.error('Error in send-templated-email:', error);
+      logger.error('Error in send-templated-email:', error);
 
       await logEmailActivity({
         to,

@@ -1,4 +1,5 @@
 const { onRequest } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 
 exports.locationSearch = onRequest({ cors: true }, async (req, res) => {
@@ -13,11 +14,11 @@ exports.locationSearch = onRequest({ cors: true }, async (req, res) => {
         const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
 
         if (!apiKey) {
-            console.error('Google Maps API key not configured');
+            logger.error('Google Maps API key not configured');
             return res.status(500).json({ error: 'Server configuration error' });
         }
 
-        console.log(`🔍 Searching for location: ${query}`);
+        logger.info(`🔍 Searching for location: ${query}`);
 
         // Use Google Places Text Search API (New) or Text Search (Old)
         // Using the newer Text Search (Basic)
@@ -33,7 +34,7 @@ exports.locationSearch = onRequest({ cors: true }, async (req, res) => {
         );
 
         if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-            console.error('Google Maps API error:', response.data);
+            logger.error('Google Maps API error:', response.data);
             return res.status(500).json({ error: 'Failed to search location', details: response.data.status });
         }
 
@@ -45,7 +46,7 @@ exports.locationSearch = onRequest({ cors: true }, async (req, res) => {
             types: place.types
         }));
 
-        console.log(`✅ Found ${results.length} locations`);
+        logger.info(`✅ Found ${results.length} locations`);
 
         return res.json({
             success: true,
@@ -53,7 +54,7 @@ exports.locationSearch = onRequest({ cors: true }, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in location search:', error);
+        logger.error('Error in location search:', error);
         return res.status(500).json({
             error: 'Internal server error',
             message: error.message
