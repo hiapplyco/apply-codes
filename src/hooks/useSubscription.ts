@@ -252,48 +252,9 @@ export const useSubscription = () => {
     }
   };
 
-  const canUseFeature = (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'): boolean => {
-    if (!subscription) return false;
-
-    const limitKey = (usageType.replace('_', '') + 'Limit') as keyof typeof subscription.limits;
-    const usageKey = (usageType.replace('_', '') + 'Count') as keyof typeof subscription.usage; // Fixed usage key mapping
-
-    // Handle legacy usage keys if needed, but for now assuming strict mapping
-    // Actually, let's look at the interface:
-    // limits: searches, candidatesEnriched, aiCalls, videoInterviews
-    // usage: searches, candidatesEnriched, aiCalls, videoInterviews
-    // The usageType is 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'
-
-    // Map usageType to interface keys
-    let limitProp: keyof typeof subscription.limits;
-    let usageProp: keyof typeof subscription.usage;
-
-    switch (usageType) {
-      case 'searches':
-        limitProp = 'searches';
-        usageProp = 'searches';
-        break;
-      case 'candidates_enriched':
-        limitProp = 'candidatesEnriched';
-        usageProp = 'candidatesEnriched';
-        break;
-      case 'ai_calls':
-        limitProp = 'aiCalls';
-        usageProp = 'aiCalls';
-        break;
-      case 'video_interviews':
-        limitProp = 'videoInterviews';
-        usageProp = 'videoInterviews';
-        break;
-    }
-
-    const limit = subscription.limits[limitProp];
-    const usage = subscription.usage[usageProp];
-
-    // Null limit means unlimited
-    if (limit === null) return true;
-
-    return usage < limit;
+  const canUseFeature = (_usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews'): boolean => {
+    // All features are currently unlimited — no paywall enforcement
+    return true;
   };
 
   const checkUsageLimit = async (usageType: 'searches' | 'candidates_enriched' | 'ai_calls' | 'video_interviews') => {
@@ -344,19 +305,8 @@ export const useSubscription = () => {
     return featureMap[feature] || false;
   };
 
-  // Check if trial/subscription is expired
+  // Trials never expire — no paywall enforcement
   const isExpired = (): boolean => {
-    if (!subscription) return false;
-
-    // Explicit expired status
-    if (subscription.status === 'expired') return true;
-
-    // Trial ended (time ran out)
-    if (subscription.status === 'trialing' && subscription.tier === 'free_trial') {
-      const { days, hours, minutes } = subscription.timeRemaining;
-      if (days === 0 && hours === 0 && minutes === 0) return true;
-    }
-
     return false;
   };
 

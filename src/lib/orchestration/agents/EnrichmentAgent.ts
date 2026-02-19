@@ -1,7 +1,7 @@
 import { BaseAgent } from './BaseAgent';
 import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
-import NymeriaService from '@/services/nymeriaService';
+import { functionBridge } from '@/lib/function-bridge';
 
 interface EnrichmentTaskInput {
   candidates: Array<{
@@ -49,11 +49,8 @@ interface EnrichedCandidate {
 }
 
 export class EnrichmentAgent extends BaseAgent {
-  private nymeriaService: NymeriaService;
-
   constructor(context: any) {
     super('enrichment', context);
-    this.nymeriaService = new NymeriaService();
   }
 
   protected initialize(): void {
@@ -202,22 +199,43 @@ export class EnrichmentAgent extends BaseAgent {
 
   private async enrichContactInfo(candidate: any): Promise<any> {
     try {
-      // Use Nymeria for contact discovery
-      const person = await this.nymeriaService.findPerson({
-        name: candidate.name,
-        company: candidate.company || '',
-        domain: candidate.company ? this.extractDomain(candidate.company) : undefined
-      });
+      // Use function bridge to call enrichment Cloud Functions
+      if (candidate.profileUrl) {
+        const data = await functionBridge.getContactInfo({ profileUrl: candidate.profileUrl });
+        if (data?.enriched || data?.work_email || data?.mobile_phone) {
+          return {
+            email: data.work_email || data.email,
+            phone: data.mobile_phone || data.phone
+          };
+        }
+      }
 
-      if (person && person.id) {
-        const details = await this.nymeriaService.getPersonDetails(person.id);
-        return {
-          email: details.email,
-          phone: details.phone_numbers?.[0]
-        };
+      // Try enrichProfile with name/email search
+      const searchParams: Record<string, string> = {};
+      if (candidate.email) searchParams.email = candidate.email;
+      if (candidate.name) {
+        const parts = candidate.name.split(' ');
+        if (parts.length >= 2) {
+          searchParams.first_name = parts[0];
+          searchParams.last_name = parts.slice(1).join(' ');
+        }
+      }
+      if (candidate.company) searchParams.company = candidate.company;
+
+      if (Object.keys(searchParams).length > 0) {
+        const result = await functionBridge.enrichProfile({ searchParams });
+        if (result?.success && result?.data) {
+          const profile = Array.isArray(result.data) ? result.data[0] : result.data;
+          if (profile) {
+            return {
+              email: profile.work_email || profile.emails?.[0],
+              phone: profile.mobile_phone || profile.phone_numbers?.[0]
+            };
+          }
+        }
       }
     } catch (error) {
-      console.error('Nymeria enrichment failed:', error);
+      console.error('Contact enrichment failed:', error);
     }
 
     // Fallback to Gemini-based enrichment

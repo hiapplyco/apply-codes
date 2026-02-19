@@ -13,6 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Clock, Zap, AlertTriangle, Crown, Lock } from 'lucide-react';
 
 export const TrialExpirationModal = () => {
+  // Paywalls disabled — all features are currently unlimited
+  return null;
+
+  // Original implementation preserved below (unreachable)
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useNewAuth();
@@ -167,6 +171,10 @@ export const TrialExpirationModal = () => {
 
 // Trial Warning Banner for when trial is ending soon
 export const TrialWarningBanner = () => {
+  // Paywalls disabled — all features are currently unlimited
+  return null;
+
+  // Original implementation preserved below (unreachable)
   const navigate = useNavigate();
   const location = useLocation();
   const { subscription, loading } = useSubscription();

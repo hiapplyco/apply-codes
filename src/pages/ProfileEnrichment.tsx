@@ -43,6 +43,7 @@ const ProfileEnrichment = memo(() => {
     isLoading,
     error,
     history,
+    UsageLimitModalComponent,
     clearHistory,
     resetResult
   } = useEnrichment();
@@ -108,6 +109,9 @@ const ProfileEnrichment = memo(() => {
 
   return (
     <div className="container max-w-5xl py-6 space-y-6">
+      {/* Usage Limit Modal */}
+      <UsageLimitModalComponent />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

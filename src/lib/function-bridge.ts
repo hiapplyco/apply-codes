@@ -512,6 +512,10 @@ class FunctionBridge {
     return this.callHttpFunction("clearbitEnrichment", { body: payload });
   }
 
+  async waterfallEnrich(payload: any): Promise<any> {
+    return this.callHttpFunction("waterfallEnrich", { body: payload });
+  }
+
   async pdlSearch(payload: any): Promise<any> {
     return this.callHttpFunction("pdlSearch", { body: payload });
   }

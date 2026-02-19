@@ -69,12 +69,15 @@ export const useUsageLimit = (): UseUsageLimitReturn => {
     // Execute the action
     const result = await action();
 
-    // Increment usage after successful action
-    try {
-      await incrementUsage(usageType);
-    } catch (error) {
-      console.error('Failed to increment usage:', error);
-      // Don't fail the action if usage increment fails
+    // Only increment usage if the action returned a truthy result
+    // (don't charge credits when enrichment finds no data)
+    if (result) {
+      try {
+        await incrementUsage(usageType);
+      } catch (error) {
+        console.error('Failed to increment usage:', error);
+        // Don't fail the action if usage increment fails
+      }
     }
 
     return result;

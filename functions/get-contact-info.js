@@ -121,6 +121,24 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
 async function getContactFromNymeria(profileUrl) {
   logger.info('Getting contact info', { profileUrl: profileUrl.substring(0, 80) });
 
+  // Check cache first
+  const db = admin.firestore();
+  try {
+    const cacheQuery = await db.collection('enrichment_cache')
+      .where('cache_key', '==', profileUrl)
+      .where('created_at', '>', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // 30-day cache
+      .limit(1)
+      .get();
+
+    if (!cacheQuery.empty) {
+      const cached = cacheQuery.docs[0].data();
+      logger.info('Returning cached contact data for:', profileUrl.substring(0, 80));
+      return cached.data;
+    }
+  } catch (cacheErr) {
+    logger.error('Cache lookup failed, proceeding with API call:', cacheErr);
+  }
+
   const apiKey = process.env.NYMERIA_API_KEY;
   if (!apiKey) {
     logger.error('NYMERIA_API_KEY is not set');
@@ -134,14 +152,28 @@ async function getContactFromNymeria(profileUrl) {
     const nymeriaResponse = await axios.get(nymeriaUrl, {
       headers: {
         'X-Api-Key': apiKey
-      }
+      },
+      timeout: 30000 // 30 second timeout
     });
 
     const enrichedData = nymeriaResponse.data;
     logger.info('Nymeria contact data retrieved', { keys: Object.keys(enrichedData) });
 
-    // Return the raw data for processing
-    return enrichedData.data || enrichedData;
+    const resultData = enrichedData.data || enrichedData;
+
+    // Cache the result
+    try {
+      await db.collection('enrichment_cache').add({
+        cache_key: profileUrl,
+        data: resultData,
+        provider: 'nymeria',
+        created_at: admin.firestore.Timestamp.now()
+      });
+    } catch (cacheErr) {
+      logger.error('Failed to cache enrichment result:', cacheErr);
+    }
+
+    return resultData;
 
   } catch (error) {
     if (error.response) {
@@ -159,11 +191,18 @@ async function getContactFromNymeria(profileUrl) {
       // Handle other errors
       if (status === 401) {
         throw new Error('Invalid Nymeria API key');
+      } else if (status === 402) {
+        throw new Error('Nymeria API credits exhausted. Please check your plan.');
       } else if (status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
 
       throw new Error(`Nymeria API error: ${status} - ${errorText}`);
+    }
+
+    // Handle timeout
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Nymeria API request timed out. Please try again.');
     }
 
     logger.error('Error calling Nymeria API:', error);

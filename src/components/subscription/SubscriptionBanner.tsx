@@ -14,6 +14,10 @@ import {
 } from 'lucide-react';
 
 export const SubscriptionBanner = () => {
+  // Paywalls disabled — all features are currently unlimited
+  return null;
+
+  // Original implementation preserved below (unreachable)
   const navigate = useNavigate();
   const { subscription, loading } = useSubscription();
   const [showBanner, setShowBanner] = useState(false);

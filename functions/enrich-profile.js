@@ -12,6 +12,14 @@ exports.enrichProfile = functions
   .https.onCall(async (data, context) => {
     logger.info('Enrich profile function called');
 
+    // Require authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required to use enrichment'
+      );
+    }
+
     try {
       // Check if this is a profile enrichment or a person search request
       if (data.profileUrl || data.profileId) {
@@ -68,32 +76,67 @@ async function handleProfileEnrichment(requestData, context) {
   const nymeriaUrl = `https://www.nymeria.io/api/v4/person/enrich?${
     profileUrl ? `profile=${encodeURIComponent(profileUrl)}` : `lid=${profileId}`
   }`;
-  logger.info('Calling Nymeria API:', nymeriaUrl);
+  logger.info('Calling Nymeria API for profile enrichment');
+
+  // Check cache first (avoid duplicate API calls)
+  const cacheKey = profileUrl || profileId;
+  const db = admin.firestore();
+  try {
+    const cacheQuery = await db.collection('enrichment_cache')
+      .where('cache_key', '==', cacheKey)
+      .where('created_at', '>', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) // 30-day cache
+      .limit(1)
+      .get();
+
+    if (!cacheQuery.empty) {
+      const cached = cacheQuery.docs[0].data();
+      logger.info('Returning cached enrichment data for:', cacheKey);
+      return {
+        success: true,
+        data: cached.data,
+        message: 'Profile enriched successfully (cached)',
+        cached: true
+      };
+    }
+  } catch (cacheErr) {
+    logger.error('Cache lookup failed, proceeding with API call:', cacheErr);
+  }
 
   try {
     // Call Nymeria Person Enrich API
     const nymeriaResponse = await axios.get(nymeriaUrl, {
       headers: {
         'X-Api-Key': apiKey
-      }
+      },
+      timeout: 30000 // 30 second timeout
     });
 
     const enrichedData = nymeriaResponse.data;
-    logger.info('Nymeria API returned data:', JSON.stringify(enrichedData).substring(0, 500) + '...');
+    logger.info('Nymeria API returned data', { keys: Object.keys(enrichedData) });
 
-    // Optionally log to Firestore
+    // Log to Firestore and cache result
     if (context && context.auth) {
       try {
-        const db = admin.firestore();
+        const now = admin.firestore.Timestamp.now();
+        // Log the enrichment action
         await db.collection('enrichment_logs').add({
           action_type: 'profile_enrichment',
-          profile_url: profileUrl || profileId,
+          profile_url: cacheKey,
           user_id: context.auth.uid,
           status: 'success',
+          provider: 'nymeria',
+          created_at: now
+        });
+        // Cache the result for future lookups
+        await db.collection('enrichment_cache').add({
+          cache_key: cacheKey,
+          data: enrichedData,
+          provider: 'nymeria',
+          user_id: context.auth.uid,
           created_at: admin.firestore.Timestamp.now()
         });
       } catch (logError) {
-        logger.error('Error logging enrichment action:', logError);
+        logger.error('Error logging/caching enrichment action:', logError);
         // Don't fail the main operation
       }
     }
@@ -169,14 +212,15 @@ async function handlePersonSearch(searchParams, context) {
   }
 
   const nymeriaSearchUrl = `https://www.nymeria.io/api/v4/person/search?${queryParams.toString()}`;
-  logger.info(`Making request to: ${nymeriaSearchUrl}`);
+  logger.info('Making Nymeria person search request');
 
   try {
     // Call Nymeria Person Search API
     const nymeriaResponse = await axios.get(nymeriaSearchUrl, {
       headers: {
         'X-Api-Key': apiKey
-      }
+      },
+      timeout: 30000 // 30 second timeout
     });
 
     const searchData = nymeriaResponse.data;

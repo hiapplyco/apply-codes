@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from "sonner";
 import { functionBridge } from "@/lib/function-bridge";
+import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { EnrichedProfileData } from "../types";
 
 // Types for search parameters
@@ -42,6 +43,9 @@ interface EnrichmentResponse {
 }
 
 export const useProfileEnrichment = () => {
+  // Usage limit gating
+  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = useUsageLimit();
+
   // State management
   const [enrichedData, setEnrichedData] = useState<EnrichedProfileData | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -51,136 +55,107 @@ export const useProfileEnrichment = () => {
 
   /**
    * Enriches a single LinkedIn profile using the profile URL
-   * @param profileUrl The LinkedIn profile URL to enrich
-   * @returns The enriched profile data or null if an error occurs
+   * Gated by usage limits — each successful enrichment consumes 1 credit
    */
   const enrichProfile = async (profileUrl: string): Promise<EnrichedProfileData | null> => {
-    try {
-      // Reset states
-      setIsLoading(true);
-      setError(null);
-      
-      // Show loading toast with ID so we can dismiss it properly
-      const toastId = toast.loading("Fetching contact information...");
-      
-      // Call Cloud Function
-      const data = await functionBridge.getContactInfo({ profileUrl });
+    const result = await checkAndExecute('candidates_enriched', async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-      console.log('Firebase function response:', data);
+        const toastId = toast.loading("Fetching contact information...");
+        const data = await functionBridge.getContactInfo({ profileUrl });
+        toast.dismiss(toastId);
 
-      // Dismiss the specific loading toast
-      toast.dismiss(toastId);
+        if (data?.error && !data?.success) {
+          const errorMsg = data.suggestion
+            ? `${data.error}. ${data.suggestion}`
+            : data.error;
+          throw new Error(errorMsg);
+        }
 
-      // Handle successful response from updated edge function
-      console.log('Nymeria API Response:', data);
-      
-      // Check if the response contains an error (old format compatibility)
-      if (data?.error && !data?.success) {
-        console.error('API returned error:', data);
-        const errorMsg = data.suggestion 
-          ? `${data.error}. ${data.suggestion}`
-          : data.error;
-        throw new Error(errorMsg);
-      }
-      
-      // Handle new structured response format
-      if ((data as EnrichmentResponse)?.success !== undefined) {
-        const enrichmentResponse = data as EnrichmentResponse;
-        
-        if (enrichmentResponse.success && enrichmentResponse.data) {
-          // Profile found and enriched
-          // Extract the actual profile data from the nested structure
-          const profileData = enrichmentResponse.data.data || enrichmentResponse.data;
-          console.log('Setting enriched data:', profileData);
+        if ((data as EnrichmentResponse)?.success !== undefined) {
+          const enrichmentResponse = data as EnrichmentResponse;
+
+          if (enrichmentResponse.success && enrichmentResponse.data) {
+            const profileData = enrichmentResponse.data.data || enrichmentResponse.data;
+            setEnrichedData(profileData);
+            toast.success('Contact information retrieved');
+            return profileData;
+          } else if (enrichmentResponse.success && !enrichmentResponse.data) {
+            toast.info("No contact information available for this profile");
+            setEnrichedData(null);
+            return null;
+          }
+        }
+
+        if (data) {
+          const profileData = (data as any).data || data;
           setEnrichedData(profileData);
           toast.success('Contact information retrieved');
           return profileData;
-        } else if (enrichmentResponse.success && !enrichmentResponse.data) {
-          // Profile not found in Nymeria (404 case)
-          console.log('Profile not found in contact database');
+        } else {
           toast.info("No contact information available for this profile");
-          setEnrichedData(null);
           return null;
         }
-      }
-      
-      // Fallback for old response format
-      if (data) {
-        const profileData = (data as any).data || data;
-        console.log('Setting enriched data (fallback):', profileData);
-        setEnrichedData(profileData);
-        toast.success('Contact information retrieved');
-        return profileData;
-      } else {
-        // No data returned
-        toast.info("No contact information available for this profile");
+      } catch (err) {
+        console.error('Error enriching profile:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Could not retrieve contact information';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return null;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      // Log and handle errors
-      console.error('Error enriching profile:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Could not retrieve contact information';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return null;
-    } finally {
-      // Always reset loading state
-      setIsLoading(false);
-    }
+    });
+    return result;
   };
 
   /**
    * Searches for persons matching the provided search parameters
-   * @param params The search parameters to use
-   * @returns An array of search results or an empty array if an error occurs
+   * Gated by usage limits — each successful search consumes 1 credit
    */
   const searchPerson = async (params: PersonSearchParams): Promise<SearchResult[]> => {
-    try {
-      // Reset states
-      setIsLoading(true);
-      setError(null);
-      setSearchResults([]);
-      
-      // Show loading toast
-      toast.loading("Searching for contact information...");
-      
-      // Call Cloud Function
-      const response = await functionBridge.enrichProfile({ searchParams: params });
+    const result = await checkAndExecute('candidates_enriched', async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        setSearchResults([]);
 
-      // Dismiss loading toast
-      toast.dismiss();
+        toast.loading("Searching for contact information...");
+        const response = await functionBridge.enrichProfile({ searchParams: params });
+        toast.dismiss();
 
-      // Handle successful response
-      if (response?.data && response.data.length > 0) {
-        setSearchResults(response.data);
-        setTotalResults(response.total || response.data.length);
-        return response.data;
-      } else {
-        // No results found
-        toast.error("No contacts found matching your search criteria");
+        if (response?.data && response.data.length > 0) {
+          setSearchResults(response.data);
+          setTotalResults(response.total || response.data.length);
+          return response.data;
+        } else {
+          toast.error("No contacts found matching your search criteria");
+          return [];
+        }
+      } catch (err) {
+        console.error('Error searching for contacts:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Could not search for contacts';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return [];
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      // Log and handle errors
-      console.error('Error searching for contacts:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Could not search for contacts';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return [];
-    } finally {
-      // Always reset loading state
-      setIsLoading(false);
-    }
+    });
+    return result ?? [];
   };
 
-  // Return the hook interface
-  return { 
-    enrichProfile, 
-    searchPerson, 
-    enrichedData, 
-    searchResults, 
-    isLoading, 
+  return {
+    enrichProfile,
+    searchPerson,
+    enrichedData,
+    searchResults,
+    isLoading,
     error,
-    totalResults
+    totalResults,
+    UsageLimitModalComponent,
+    isLimitReached,
   };
 };
