@@ -22,6 +22,13 @@
     ],
     "rewrites": [
       {
+        "source": "/api/mcp-chat/**",
+        "function": {
+          "functionId": "mcpChatStream",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/**",
         "run": {
           "serviceId": "adk-agent",

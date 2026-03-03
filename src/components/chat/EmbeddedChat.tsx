@@ -14,7 +14,8 @@ import {
   Minimize2,
   Paperclip,
   FileText,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { auth } from '@/lib/firebase';
@@ -29,6 +30,12 @@ import { useContextIntegration } from '@/hooks/useContextIntegration';
 import { LinkedInCandidateList, LinkedInCandidate } from './LinkedInCandidateCard';
 import { DocumentProcessor } from '@/lib/modernPdfProcessor';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
+import { ToolResultRenderer } from './ToolResultRenderer';
+import { ToolConfirmationDialog } from './ToolConfirmationDialog';
+import { useMCPChat } from '@/hooks/useMCPChat';
+import type { MCPToolResultEntry, PendingConfirmation } from '@/types/mcp-chat';
+
+const MCP_CHAT_ENABLED = import.meta.env.VITE_ENABLE_MCP_CHAT === 'true';
 
 interface Message {
   id: string;
@@ -36,6 +43,8 @@ interface Message {
   content: string;
   timestamp: Date;
   isStreaming?: boolean;
+  toolResults?: MCPToolResultEntry[];
+  pendingConfirmation?: PendingConfirmation;
   metadata?: {
     toolCalls?: Array<{ name: string; status: string }>;
     model?: string;
@@ -179,8 +188,21 @@ export const EmbeddedChat: React.FC<EmbeddedChatProps> = ({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [mcpMode, setMcpMode] = useState(MCP_CHAT_ENABLED);
+  const [confirmationState, setConfirmationState] = useState<{
+    open: boolean;
+    pending: PendingConfirmation | null;
+  }>({ open: false, pending: null });
+
   const { sessionId, setSessionId, setModelInfo, resetSession } = useAgentSession({
     projectId: selectedProjectId
+  });
+
+  const mcpChat = useMCPChat({
+    sessionId,
+    projectId: selectedProjectId,
+    onSessionId: setSessionId,
+    onModelInfo: (model: string) => setModelInfo(model, null),
   });
 
   // Context integration for chat
@@ -190,21 +212,27 @@ export const EmbeddedChat: React.FC<EmbeddedChatProps> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, mcpChat.messages]);
 
   useEffect(() => {
-    if (messages.length === 0) {
+    if (mcpMode && mcpChat.messages.length === 0) {
+      mcpChat.setMessages([{
+        id: 'welcome',
+        role: 'assistant',
+        content: `Hi! I'm your AI recruitment assistant with MCP tools. I can search for candidates, analyze documents, generate interview guides, create recruitment plans, and more.\n\nTry asking me to find candidates, analyze a job description, or create a recruitment plan.`,
+        timestamp: new Date(),
+      }]);
+    }
+    if (!mcpMode && messages.length === 0) {
       const welcomeMessage: Message = {
         id: 'welcome',
         role: 'assistant',
-        content: `👋 Hi! I'm your AI recruitment assistant. I can help you with candidate sourcing, job analysis, market insights, and more. 
-
-Feel free to upload documents, scrape websites, or ask me questions about your recruitment needs!`,
+        content: `Hi! I'm your AI recruitment assistant. I can help you with candidate sourcing, job analysis, market insights, and more.\n\nFeel free to upload documents, scrape websites, or ask me questions about your recruitment needs!`,
         timestamp: new Date()
       };
       setMessages([welcomeMessage]);
     }
-  }, [messages.length]);
+  }, [messages.length, mcpMode, mcpChat.messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -514,7 +542,83 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
     }
   };
 
+  const handleMCPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || mcpChat.isLoading) return;
+
+    if (isLimitReached('ai_calls')) {
+      await checkAndExecute('ai_calls', async () => null);
+      return;
+    }
+
+    const currentInput = input;
+    const currentAttachments = [...attachments];
+
+    let displayContent = currentInput;
+    if (currentAttachments.length > 0) {
+      displayContent = `${currentAttachments.map(a => `[Attached: ${a.name}]`).join('\n')}\n${currentInput}`;
+    }
+
+    mcpChat.addUserMessage(displayContent);
+
+    setInput('');
+    setAttachments([]);
+
+    const attachmentContext = currentAttachments
+      .map(a => `[File Context: ${a.name}]\n${a.content}`)
+      .join('\n\n');
+
+    let combinedContent = currentInput;
+    if (attachmentContext) {
+      combinedContent = `${attachmentContext}\n\n${combinedContent}`;
+    }
+    if (contextContent) {
+      combinedContent = `[Context: ${contextContent.substring(0, 500)}...]\n\n${combinedContent}`;
+    }
+
+    await mcpChat.sendMessage(combinedContent, {
+      attachments: currentAttachments.map(a => ({ name: a.name, content: a.content })),
+    });
+
+    incrementUsage('ai_calls').catch(err => console.error('Failed to increment AI calls usage:', err));
+  };
+
+  const handleConfirmTool = async (approved: boolean) => {
+    const pending = confirmationState.pending;
+    if (!pending) return;
+
+    setConfirmationState({ open: false, pending: null });
+
+    const confirmMessage = approved
+      ? `Confirmed: ${pending.tool.replace(/_/g, ' ')}`
+      : `Cancelled: ${pending.tool.replace(/_/g, ' ')}`;
+
+    mcpChat.addUserMessage(confirmMessage);
+
+    await mcpChat.sendMessage(
+      approved ? `Execute ${pending.tool}` : `I cancelled ${pending.tool}`,
+      {
+        confirmation: { pending, approved },
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (!mcpMode) return;
+    const lastMsg = mcpChat.messages[mcpChat.messages.length - 1];
+    if (lastMsg?.pendingConfirmation && !lastMsg.isStreaming) {
+      setConfirmationState({
+        open: true,
+        pending: lastMsg.pendingConfirmation,
+      });
+    }
+  }, [mcpMode, mcpChat.messages]);
+
   const handleCancel = () => {
+    if (mcpMode) {
+      mcpChat.cancel();
+      return;
+    }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setIsLoading(false);
@@ -526,26 +630,50 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
     setMessages([]);
     setContextContent('');
     resetSession();
+    if (mcpMode) {
+      mcpChat.reset();
+    }
     toast.success('Conversation reset');
   };
 
-  // Render message content with candidate cards if present
+  const handleToolAction = useCallback((action: string, payload?: unknown) => {
+    if (action === 'save') {
+      const candidate = payload as LinkedInCandidate;
+      toast.success(`Saved ${candidate?.name || 'candidate'} to project`);
+    } else if (action === 'get_contact') {
+      const candidate = payload as LinkedInCandidate;
+      toast.info(`Getting contact info for ${candidate?.name || 'candidate'}...`);
+      if (candidate?.profileUrl) {
+        setInput(`Get contact info for ${candidate.name} (${candidate.profileUrl})`);
+      }
+    }
+  }, []);
+
+  const renderMCPToolResults = (toolResults: MCPToolResultEntry[]) => (
+    <div className="space-y-2 mt-2">
+      {toolResults.map((tr, idx) => (
+        <ToolResultRenderer
+          key={`${tr.tool}-${idx}`}
+          toolName={tr.tool}
+          result={tr.result}
+          status={tr.status}
+          onAction={handleToolAction}
+        />
+      ))}
+    </div>
+  );
+
   const renderMessageContent = (message: Message) => {
     const candidates = message.metadata?.candidates;
+    const toolResults = message.toolResults;
 
-    // Remove JSON data from display text if we have parsed candidates
     let displayText = message.content;
     if (candidates && candidates.length > 0) {
-      // Clean up the text by removing the raw JSON and code blocks
       displayText = displayText
-        // Remove entire ```json ... ``` code blocks (greedy)
         .replace(/```json[\s\S]*```/g, '')
-        // Remove raw JSON with profiles array (greedy)
         .replace(/\{\s*"profiles"\s*:\s*\[[\s\S]*\]\s*\}/g, '')
-        // Also remove the text list format to avoid duplication
         .replace(/\* .*? - .*? - .*? - https:\/\/www\.linkedin\.com\/in\/.*/g, '')
         .replace(/\* .*? - .*? - https:\/\/www\.linkedin\.com\/in\/.*/g, '')
-        // Clean up multiple newlines and whitespace
         .replace(/\n{3,}/g, '\n\n')
         .trim();
     }
@@ -555,18 +683,16 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
         {displayText && (
           <p className="whitespace-pre-wrap">{displayText}</p>
         )}
-        {candidates && candidates.length > 0 && (
+        {toolResults && toolResults.length > 0 && renderMCPToolResults(toolResults)}
+        {candidates && candidates.length > 0 && !toolResults?.length && (
           <LinkedInCandidateList
             candidates={candidates}
             onSave={(candidate) => {
               toast.success(`Saved ${candidate.name} to project`);
-              // Here we would call an API to save the candidate
             }}
             onGetContact={(candidate) => {
               toast.info(`Getting contact info for ${candidate.name}...`);
-              // Trigger a new message to the agent to get contact info
               setInput(`Get contact info for ${candidate.name} (${candidate.profileUrl})`);
-              // We can't auto-submit from here easily without refactoring, but pre-filling helps
             }}
           />
         )}
@@ -574,9 +700,33 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
     );
   };
 
+  const displayMessages: Message[] = mcpMode
+    ? mcpChat.messages.map(m => ({
+        ...m,
+        metadata: m.metadata ? {
+          ...m.metadata,
+          complexity: undefined,
+          candidates: undefined,
+        } : undefined,
+      }))
+    : messages;
+
+  const displayIsLoading = mcpMode ? mcpChat.isLoading : isLoading;
+  const displayActiveTools = mcpMode ? mcpChat.activeTools : activeTools;
+
   return (
     <>
       <UsageLimitModalComponent />
+      {confirmationState.open && confirmationState.pending && (
+        <ToolConfirmationDialog
+          open={confirmationState.open}
+          tool={confirmationState.pending.tool}
+          description={confirmationState.pending.description}
+          parameters={confirmationState.pending.args as Record<string, unknown>}
+          onConfirm={() => handleConfirmTool(true)}
+          onCancel={() => handleConfirmTool(false)}
+        />
+      )}
       <div className={cn(
         'flex flex-col bg-white rounded-xl border-2 border-gray-200 shadow-sm overflow-hidden',
         height,
@@ -596,6 +746,23 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {MCP_CHAT_ENABLED && (
+              <Button
+                variant={mcpMode ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setMcpMode(!mcpMode)}
+                className={cn(
+                  'h-8 px-2 text-xs gap-1',
+                  mcpMode
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'hover:bg-purple-100 text-gray-600'
+                )}
+                title={mcpMode ? 'MCP Tools active' : 'Enable MCP Tools'}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                MCP
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -638,7 +805,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
         {/* Messages */}
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            {messages.map((message) => (
+            {displayMessages.map((message) => (
               <div
                 key={message.id}
                 className={cn(
@@ -685,7 +852,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
                 )}
               </div>
             ))}
-            {isLoading && (
+            {displayIsLoading && (
               <div className="flex gap-3 justify-start">
                 <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-purple-600" />
@@ -694,12 +861,12 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
                     <span className="text-xs text-gray-500">
-                      {activeTools.length > 0 ? 'Processing...' : 'Thinking...'}
+                      {displayActiveTools.length > 0 ? 'Processing...' : 'Thinking...'}
                     </span>
                   </div>
-                  {activeTools.length > 0 && (
+                  {displayActiveTools.length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {activeTools.map((tool, idx) => (
+                      {displayActiveTools.map((tool, idx) => (
                         <Badge key={idx} variant="outline" className="text-xs flex items-center gap-1">
                           <Wrench className="w-3 h-3" />
                           {tool.replace(/_/g, ' ')}
@@ -723,7 +890,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
         </ScrollArea>
 
         {/* Quick Actions */}
-        {messages.length <= 1 && (
+        {displayMessages.length <= 1 && (
           <div className="px-4 py-2 border-t border-gray-100 flex gap-2 overflow-x-auto">
             {[
               'Find AWS SageMaker architects',
@@ -742,7 +909,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
         )}
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="p-3 border-t-2 border-gray-200 bg-gray-50">
+        <form onSubmit={mcpMode ? handleMCPSubmit : handleSubmit} className="p-3 border-t-2 border-gray-200 bg-gray-50">
           {/* Attachment Preview */}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
@@ -775,7 +942,7 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
               variant="outline"
               size="sm"
               className="px-3"
-              disabled={isLoading || isUploading}
+              disabled={displayIsLoading || isUploading}
               onClick={() => fileRef.current?.click()}
               title="Upload document"
             >
@@ -789,17 +956,17 @@ Feel free to upload documents, scrape websites, or ask me questions about your r
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything about recruitment..."
+              placeholder={mcpMode ? 'Ask with MCP tools...' : 'Ask me anything about recruitment...'}
               className="flex-1 text-sm bg-white border-gray-300 focus:border-purple-400"
-              disabled={isLoading}
+              disabled={displayIsLoading}
             />
             <Button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || displayIsLoading}
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 px-4"
             >
-              {isLoading ? (
+              {displayIsLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />
