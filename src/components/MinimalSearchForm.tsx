@@ -1545,44 +1545,44 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
         <Collapsible open={!requirementsCollapsed} onOpenChange={(open) => setRequirementsCollapsed(!open)}>
           <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
             <CollapsibleTrigger asChild>
-              <div className="p-6 cursor-pointer group">
+              <div className="p-5 cursor-pointer group">
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 bg-purple-100 text-purple-700 rounded-full font-bold text-lg">
-                      1
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-4 w-4 text-purple-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                      <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
                         Custom Instructions & Context
                       </h2>
-                      <p className="text-sm text-gray-500 mt-1">Add requirements and context to improve search accuracy</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Add requirements and context to improve search accuracy</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
+                  <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
                     {requirementsCollapsed ? (
-                      <EyeOff className="w-5 h-5" />
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <Eye className="w-5 h-5" />
+                      <Eye className="w-4 h-4" />
                     )}
                   </div>
                 </div>
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-                {/* Action Buttons - Neo-brutalist Design */}
-                <div className="flex flex-wrap gap-3 mb-6">
-                  {/* URL Scraper Button - Blue */}
+              <div className="px-5 pb-5 pt-2 border-t border-gray-100">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {/* URL Scraper Button */}
                   <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
+                            className="flex items-center gap-2 h-9 px-3.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-colors"
                           >
-                            <Link className="w-4 h-4" />
-                            <span className="text-sm font-medium">Scrape</span>
+                            <Link className="w-3.5 h-3.5" />
+                            <span className="text-sm">Scrape</span>
                           </Button>
                         </DialogTrigger>
                       </TooltipTrigger>
@@ -1631,18 +1631,18 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                     </DialogContent>
                   </Dialog>
 
-                  {/* File Upload Button - Green */}
+                  {/* File Upload Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                        className="flex items-center gap-2 h-9 px-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 rounded-lg transition-colors disabled:opacity-50"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploadingFile}
                       >
                         <ButtonLoading isLoading={isUploadingFile}>
-                          <Upload className="w-4 h-4" />
-                          <span className="text-sm font-medium">Upload</span>
+                          <Upload className="w-3.5 h-3.5" />
+                          <span className="text-sm">Upload</span>
                         </ButtonLoading>
                       </Button>
                     </TooltipTrigger>
@@ -1659,17 +1659,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                     onChange={handleFileUpload}
                   />
 
-                  {/* Perplexity Search Button - Purple */}
+                  {/* Perplexity Search Button */}
                   <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
+                            className="flex items-center gap-2 h-9 px-3.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-300 rounded-lg transition-colors"
                           >
-                            <Sparkles className="w-4 h-4" />
-                            <span className="text-sm font-medium">Search</span>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span className="text-sm">Search</span>
                           </Button>
                         </DialogTrigger>
                       </TooltipTrigger>
@@ -1718,16 +1718,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                     </DialogContent>
                   </Dialog>
 
-                  {/* Location Button - Amber */}
+                  {/* Location Button */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
-                        className="flex items-center gap-2 h-10 px-4 border-2 border-gray-900 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-900 font-medium rounded-lg transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.9)] active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.9)]"
+                        className="flex items-center gap-2 h-9 px-3.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 rounded-lg transition-colors"
                         onClick={() => setShowLocationDialog(true)}
                       >
-                        <MapPin className="w-4 h-4" />
-                        <span className="text-sm font-medium">Location</span>
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span className="text-sm">Location</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -1738,17 +1738,16 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                 </div>
 
                 {/* Job Title Input */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label htmlFor="job-title" className="block text-sm font-medium text-gray-700">
                     Job Title <span className="text-gray-400 text-xs">(optional but recommended)</span>
                   </label>
-                  <input
+                  <Input
                     id="job-title"
                     type="text"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     placeholder="e.g., Senior Software Engineer, Product Manager, Data Scientist..."
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                   />
                   <p className="text-xs text-gray-500">
                     Providing a job title helps generate more accurate boolean search strings
@@ -1761,22 +1760,17 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                   placeholder="Enter custom instructions or requirements (optional)...
 
 This area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
-                  className="min-h-[120px] mb-4"
+                  className="min-h-[100px] mb-4"
                 />
 
                 {/* Context Items - Enhanced Design */}
                 {contextItems.length > 0 && (
                   <div className="mt-6">
                     {/* Section Header */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg shadow-md">
-                          <Sparkles className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">Context Engine</h3>
-                          <p className="text-xs text-gray-500">{contextItems.length} item{contextItems.length !== 1 ? 's' : ''} loaded</p>
-                        </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Context</h3>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{contextItems.length}</Badge>
                       </div>
                       <Button
                         variant="ghost"
@@ -1800,32 +1794,29 @@ This area is for your specific search instructions, filtering criteria, or addit
                         const isLocationInput = item.type === 'location_input';
 
                         const cardColors = isPerplexity
-                          ? { header: 'bg-gradient-to-r from-purple-500 to-purple-600', icon: 'bg-purple-100 text-purple-600', border: 'border-purple-200', bg: 'from-purple-50/50 to-white' }
+                          ? { icon: 'bg-purple-100 text-purple-600', border: 'border-gray-100' }
                           : isUrlScrape
-                          ? { header: 'bg-gradient-to-r from-blue-500 to-blue-600', icon: 'bg-blue-100 text-blue-600', border: 'border-blue-200', bg: 'from-blue-50/50 to-white' }
+                          ? { icon: 'bg-blue-100 text-blue-600', border: 'border-gray-100' }
                           : isFileUpload
-                          ? { header: 'bg-gradient-to-r from-emerald-500 to-emerald-600', icon: 'bg-emerald-100 text-emerald-600', border: 'border-emerald-200', bg: 'from-emerald-50/50 to-white' }
+                          ? { icon: 'bg-emerald-100 text-emerald-600', border: 'border-gray-100' }
                           : (isLocation || isLocationInput)
-                          ? { header: 'bg-gradient-to-r from-amber-500 to-orange-500', icon: 'bg-amber-100 text-amber-600', border: 'border-amber-200', bg: 'from-amber-50/50 to-white' }
-                          : { header: 'bg-gradient-to-r from-gray-400 to-gray-500', icon: 'bg-gray-100 text-gray-600', border: 'border-gray-200', bg: 'from-gray-50/50 to-white' };
+                          ? { icon: 'bg-amber-100 text-amber-600', border: 'border-gray-100' }
+                          : { icon: 'bg-gray-100 text-gray-600', border: 'border-gray-100' };
 
                         const typeLabel = isPerplexity ? 'AI Research' : isUrlScrape ? 'Web Scrape' : isFileUpload ? 'Document' : (isLocation || isLocationInput) ? 'Location' : 'Note';
 
                         return (
                           <div
                             key={item.id}
-                            className={`group relative overflow-hidden rounded-xl border-2 ${cardColors.border} bg-gradient-to-br ${cardColors.bg}
-                              hover:shadow-lg hover:scale-[1.01] transition-all duration-200`}
+                            className={`group relative overflow-hidden rounded-lg border ${cardColors.border} bg-white shadow-sm
+                              hover:shadow-md transition-all duration-200`}
                           >
-                            {/* Colored Header Bar */}
-                            <div className={`h-1.5 ${cardColors.header}`} />
-
-                            <div className="p-4">
+                            <div className="p-3.5">
                               {/* Header Row */}
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                   {/* Icon Badge */}
-                                  <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${cardColors.icon} flex-shrink-0 shadow-sm`}>
+                                  <div className={`flex items-center justify-center w-7 h-7 rounded-md ${cardColors.icon} flex-shrink-0`}>
                                     {isUrlScrape && <Globe className="w-4 h-4" />}
                                     {isFileUpload && <FileText className="w-4 h-4" />}
                                     {isPerplexity && <Sparkles className="w-4 h-4" />}
@@ -1954,11 +1945,11 @@ This area is for your specific search instructions, filtering criteria, or addit
                   </div>
                 )}
 
-                <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
+                <div className="flex justify-end pt-4 border-t border-gray-100 mt-5">
                   <Button
                     onClick={generateBooleanSearch}
                     disabled={(!jobDescription.trim() && contextItems.length === 0) || isGenerating}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 px-6 py-2.5"
+                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-5 py-2"
                   >
                     <ButtonLoading
                       isLoading={isGenerating && !showBooleanAnimation}
@@ -1979,31 +1970,31 @@ This area is for your specific search instructions, filtering criteria, or addit
           <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <CollapsibleTrigger asChild>
-                <div className="p-6 cursor-pointer group">
+                <div className="p-5 cursor-pointer group">
                   <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full font-bold text-lg shadow-md">
-                        2
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <Code className="h-4 w-4 text-purple-600" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
+                        <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
                           Boolean Search String
                         </h2>
-                        <p className="text-sm text-gray-600 mt-1">Edit and refine your generated search query</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Edit and refine your generated search query</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
+                    <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
                       {booleanCollapsed ? (
-                        <EyeOff className="w-5 h-5" />
+                        <EyeOff className="w-4 h-4" />
                       ) : (
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4" />
                       )}
                     </div>
                   </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="px-6 pb-6 pt-2 border-t border-purple-100">
+                <div className="px-5 pb-5 pt-2 border-t border-gray-100">
                   <div className="space-y-4">
                     <Textarea
                       value={booleanString}
@@ -2040,7 +2031,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                       <Button
                         onClick={() => searchGoogle()}
                         disabled={isSearching}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200 sm:ml-auto"
+                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 sm:ml-auto"
                       >
                         <ButtonLoading
                           isLoading={isSearching}
@@ -2130,15 +2121,15 @@ This area is for your specific search instructions, filtering criteria, or addit
                 <div className="flex flex-col gap-4 mb-6">
                   {/* Row 1: Title + View Controls */}
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full font-bold text-lg shadow-md">
-                        3
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <Search className="h-4 w-4 text-green-600" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-gray-900">
+                        <h2 className="text-base font-semibold text-gray-900">
                           Search Results ({filteredResults.length}{filteredResults.length !== searchResults.length ? ` of ${searchResults.length}` : ''})
                         </h2>
-                        <p className="text-sm text-gray-600 mt-1">Select profiles to enrich and save</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Select profiles to enrich and save</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:gap-3">
@@ -2447,7 +2438,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                         {/* Contact Info Section */}
                         {contact && (
                           <div className={`
-                            bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-4
+                            bg-white border border-gray-100 rounded-xl p-4 shadow-sm
                             ${viewMode === 'list' ? 'w-72 flex-shrink-0' : 'mt-4'}
                           `}>
                             <h4 className="font-semibold text-sm text-emerald-900 flex items-center gap-2 mb-3">
@@ -2505,7 +2496,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                         {/* Analysis Results Overlay/Section */}
                         {analysis && (
                           <div className={`
-                            bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-xl p-4
+                            bg-white border border-gray-100 rounded-xl p-4 shadow-sm
                             ${viewMode === 'list' ? 'w-80 flex-shrink-0' : 'mt-4'}
                           `}>
                             <div className="flex items-center justify-between mb-3">
@@ -2594,7 +2585,7 @@ This area is for your specific search instructions, filtering criteria, or addit
 
         {
           searchResults.length === 0 && booleanString && (
-            <Card className="p-6 border-2 border-gray-300">
+            <Card className="p-6 border-0 shadow-sm">
               <p className="text-center text-gray-500">
                 Click "Search LinkedIn Profiles" to find candidates
               </p>
@@ -2663,9 +2654,15 @@ This area is for your specific search instructions, filtering criteria, or addit
         {/* Generated Email Templates */}
         {
           generatedEmails.length > 0 && (
-            <Card className="p-6 border-2 border-blue-400">
+            <Card className="p-6 border-0 shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">4. Generated Email Templates ({generatedEmails.length})</h2>
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <Mail className="h-3.5 w-3.5 text-blue-600" />
+                  </div>
+                  Email Templates
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{generatedEmails.length}</Badge>
+                </h2>
                 <Button
                   onClick={() => setGeneratedEmails([])}
                   variant="outline"
