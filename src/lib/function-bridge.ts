@@ -591,8 +591,8 @@ class FunctionBridge {
     return this.callCallable("createDailyRoom", payload);
   }
 
-  async getDailyKey(): Promise<{ secret: string }> {
-    return this.callCallable("getDailyKey", {});
+  async getDailyKey(payload: { roomName: string; userName?: string; expiresIn?: number } = { roomName: '' }): Promise<{ token: string }> {
+    return this.callCallable("getDailyKey", payload);
   }
 
   async getGeminiKey(): Promise<{ secret: string }> {
@@ -649,8 +649,8 @@ class FunctionBridge {
 
 
 
-  async initializeDailyBot(): Promise<{ websocket_url: string }> {
-    return this.callCallable("initializeDailyBot", {});
+  async initializeDailyBot(payload: { roomUrl?: string; roomName?: string; agentType?: string; services?: Record<string, string> } = {}): Promise<{ websocket_url: string | null; agent_id?: string; status: string; room_url?: string; message?: string }> {
+    return this.callCallable("initializeDailyBot", payload);
   }
 
   async initializeInterviewGuidance(): Promise<{ websocket_url: string }> {

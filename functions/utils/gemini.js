@@ -2,7 +2,7 @@
  * Shared Gemini AI initialization utility.
  *
  * Lazy-init singleton following the sendgrid.js pattern.
- * Default model: gemini-3-pro-preview
+ * Default model: gemini-3.1-pro-preview
  *
  * Usage:
  *   const { getModel, getJsonModel, generateContent } = require('./utils/gemini');
@@ -16,7 +16,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 let _genAI = null;
 let _cachedKey = null;
 
-const DEFAULT_MODEL = "gemini-3-pro-preview";
+const DEFAULT_MODEL = "gemini-3.1-pro-preview";
 
 /**
  * Resolve the Gemini API key from environment variables.
@@ -50,7 +50,7 @@ const getGenAI = () => {
 /**
  * Get a Gemini GenerativeModel instance.
  *
- * @param {string} [modelName] - Model name (default: gemini-3-pro-preview)
+ * @param {string} [modelName] - Model name (default: gemini-3.1-pro-preview)
  * @param {object} [generationConfig] - Optional generation config overrides
  * @returns {import('@google/generative-ai').GenerativeModel|null}
  */
@@ -67,7 +67,7 @@ const getModel = (modelName, generationConfig) => {
 /**
  * Get a Gemini model configured for JSON output.
  *
- * @param {string} [modelName] - Model name (default: gemini-3-pro-preview)
+ * @param {string} [modelName] - Model name (default: gemini-3.1-pro-preview)
  * @param {object} [extraConfig] - Additional generation config
  * @returns {import('@google/generative-ai').GenerativeModel|null}
  */

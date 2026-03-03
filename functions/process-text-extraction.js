@@ -132,7 +132,7 @@ exports.processTextExtraction = onRequest(
           text: text,
           metadata: {
             originalFormat: file.mimetype,
-            extractionMethod: 'gemini-3-pro-preview'
+            extractionMethod: 'gemini-3.1-pro-preview'
           }
         };
       }

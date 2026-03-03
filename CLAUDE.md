@@ -39,11 +39,12 @@ Lazy-init singletons following the `sendgrid.js` pattern. Import from `./utils/<
 
 | File | Exports | Purpose |
 |------|---------|---------|
-| `gemini.js` | `getModel`, `getJsonModel`, `generateContent` | Gemini AI singleton (default: `gemini-3-pro-preview`) |
+| `gemini.js` | `getModel`, `getJsonModel`, `generateContent` | Gemini AI singleton (default: `gemini-3.1-pro-preview`) |
 | `nymeria.js` | `enrichPerson`, `searchPerson` | Nymeria API client (30s timeout) |
 | `enrichment-service.js` | `enrichContact` | Waterfall enrichment with Firestore cache |
 | `auth-cors.js` | `corsHeaders`, `handlePreflight`, `verifyAuth`, `withAuth` | CORS + Firebase Auth for onRequest handlers |
 | `sendgrid.js` | `getSendGrid` | SendGrid email client |
+| `daily.js` | `DAILY_API_BASE`, `getDailyHeaders`, `generateMeetingToken`, `sanitizeRoomProperties`, `resolveDailyApiKey`, `resolvePipecatApiKey` | Daily.co API helpers, token generation, key resolution |
 
 ## onCall Migration
 
@@ -80,6 +81,14 @@ SSE-streaming `onRequest` function that bridges Gemini function-calling with MCP
 Waterfall: Nymeria → Hunter.io → PDL (first success wins). Cached in `enrichment_cache` Firestore (30-day TTL). Usage gated via `checkAndExecute('candidates_enriched', ...)`. All Nymeria calls have 30s timeout.
 
 **Deprecated (do not resurrect):** `clearbit-enrichment.js` (410 Gone), `nymeriaService.ts`
+
+## Video Meetings (Daily.co)
+
+- **Meeting tokens** replace raw API key exposure — scoped per room, time-limited via `generateMeetingToken()`
+- **Rooms auto-enable** recording data outputs: `event-json`, `transcript-webvtt`, `chat-webvtt`
+- **Pipecat Cloud** replaces deprecated Daily Bots for AI interview coaching (requires `PIPECAT_API_KEY` env var)
+- **Recording analyses** stored in `recording_analyses` Firestore collection (recordingId, accessLink, transcript, duration)
+- **Shared utility:** `functions/utils/daily.js` — all Daily API calls route through this module
 
 ## Sidebar Navigation
 

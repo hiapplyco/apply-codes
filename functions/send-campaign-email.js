@@ -9,6 +9,10 @@ if (!admin.apps.length) {
 }
 
 exports.sendCampaignEmail = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Send campaign email function called');
 
     const {
@@ -536,6 +540,10 @@ async function logCampaignActivity({
 // Helper function to manage subscriber lists
 exports.manageSubscriberList = functions
   .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Manage subscriber list function called');
 
     const { action, listId, listName, subscribers, segmentCriteria } = data;
@@ -765,6 +773,10 @@ exports.handleUnsubscribe = functions
 // Function to get campaign analytics
 exports.getCampaignAnalytics = functions
   .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Get campaign analytics function called');
 
     const { campaignId, timeRange = '30d' } = data;

@@ -143,7 +143,7 @@ async function enrichCandidateProfile(profileUrl) {
 }
 
 async function generateEmailContent(projectData, candidateData, userCustomText, apiKey) {
-  const model = getModel('gemini-3-pro-preview', {
+  const model = getModel('gemini-3.1-pro-preview', {
     temperature: 0.7,
     maxOutputTokens: 1000,
   });

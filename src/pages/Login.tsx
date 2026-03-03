@@ -89,7 +89,7 @@ const Login = () => {
         {/* Logo and Header */}
         <div className="flex flex-col items-center mb-8">
           <img
-            src="/lovable-uploads/a36a9030-18dd-4eec-bf47-21de5406f97b.png"
+            src="/assets/apply-logo-gradient.png"
             alt="Apply Logo"
             className="w-24 h-24 object-contain mb-4"
           />

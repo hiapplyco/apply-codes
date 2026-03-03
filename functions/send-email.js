@@ -10,6 +10,10 @@ if (!admin.apps.length) {
 
 exports.sendEmail = functions
   .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Send email function called');
 
     const {
@@ -283,6 +287,10 @@ async function logEmailActivity({
 // Helper function for bulk email sending
 exports.sendBulkEmails = functions
   .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Send bulk emails function called');
 
     const { emails, batchSize = 10 } = data;
@@ -367,6 +375,10 @@ exports.sendBulkEmails = functions
 // Helper function for sending templated emails
 exports.sendTemplatedEmail = functions
   .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
     logger.info('Send templated email function called');
 
     const {

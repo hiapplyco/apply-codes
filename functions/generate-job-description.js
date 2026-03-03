@@ -148,7 +148,7 @@ Return ONLY the complete job description in Markdown format. No explanations, no
         metadata: {
           generatedAt: new Date().toISOString(),
           contextItemsUsed: contextItems.length,
-          model: 'gemini-3-pro-preview'
+          model: 'gemini-3.1-pro-preview'
         }
       };
 

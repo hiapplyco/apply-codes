@@ -10,7 +10,7 @@ export interface TranscriptionResult {
 }
 
 export class TranscriptionService {
-  private model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  private model = genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview' });
 
   async transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
     try {

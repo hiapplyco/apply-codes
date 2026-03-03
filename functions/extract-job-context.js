@@ -106,7 +106,7 @@ exports.extractJobContext = onCall(
         throw new HttpsError('invalid-argument', 'Content is required and must be a string');
       }
 
-      const model = getJsonModel('gemini-3-pro-preview', {
+      const model = getJsonModel('gemini-3.1-pro-preview', {
         temperature: 0.3,
       });
 

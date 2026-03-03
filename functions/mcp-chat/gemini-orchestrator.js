@@ -54,7 +54,7 @@ async function orchestrate(message, history, sendEvent, options = {}) {
 
   sendEvent(StreamEventType.SESSION, {
     session_id: sessionId,
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-3.1-pro-preview',
   });
 
   let currentMessage = message;

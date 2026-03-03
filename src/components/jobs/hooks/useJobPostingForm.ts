@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { generateBooleanSearch as generateBooleanSearchFunction } from "@/lib/firebase/functions/generateBooleanSearch";
+import { functionBridge } from "@/lib/function-bridge";
 import { db } from "@/lib/firebase";
 import { collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
@@ -152,7 +152,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
   const generateBooleanSearch = async (newJobId: string, jobTitle?: string) => {
     console.log("Generating boolean search...");
     try {
-      const response = await generateBooleanSearchFunction({
+      const response = await functionBridge.generateBooleanSearch({
         description: formState.content,
         jobTitle,
         userId: user?.uid

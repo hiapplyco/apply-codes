@@ -188,7 +188,7 @@ exports.optimizeJobTemplate = onCall(
         userEditedFieldsCount: userEditedFields.length
       });
 
-      const model = getJsonModel('gemini-3-pro-preview', {
+      const model = getJsonModel('gemini-3.1-pro-preview', {
         temperature: 0.3,
         maxOutputTokens: 8192,
       });

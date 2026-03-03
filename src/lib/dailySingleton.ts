@@ -109,12 +109,18 @@ class DailySingleton {
         // Automatically join the meeting after loading
         console.log("Joining meeting...");
         try {
+          // Build join options — include meeting token if provided via options
+          const joinOptions: Record<string, unknown> = {};
+          if (options?.token) {
+            joinOptions.token = options.token;
+          }
+
           // Set a longer timeout for joining (30 seconds)
-          const joinPromise = frame.join();
-          const timeoutPromise = new Promise((_, reject) => 
+          const joinPromise = frame.join(joinOptions);
+          const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Join timeout after 30 seconds")), 30000)
           );
-          
+
           await Promise.race([joinPromise, timeoutPromise]);
           console.log("Successfully joined meeting");
         } catch (joinError) {

@@ -21,7 +21,7 @@ exports.generateLinkedinAnalysis = onCall(
         throw new HttpsError('invalid-argument', 'Content is required');
       }
 
-      const model = getModel('gemini-3-pro-preview', {
+      const model = getModel('gemini-3.1-pro-preview', {
         temperature: 1,
         topK: 40,
         topP: 0.95,

@@ -13,9 +13,9 @@ export const TranscriptionProcessor = () => {
       // Start the video processing pipeline
       const processingData = await functionBridge.processRecording({ recordingId });
 
-      if (processingData?.analysis) {
+      if (processingData?.success) {
         toast.success('Recording processed successfully');
-        return processingData.analysis;
+        return processingData.analysis || '';
       }
 
       return '';

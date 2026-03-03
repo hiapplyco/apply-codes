@@ -7,6 +7,10 @@ const FormData = require('form-data');
 const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || '';
 
 exports.transcribeAudio = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
   logger.info('Transcribing audio with OpenAI Whisper');
 
   // Check for API key

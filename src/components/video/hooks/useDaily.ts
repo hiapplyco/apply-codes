@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { functionBridge } from "@/lib/function-bridge";
 import { toast } from "sonner";
 
@@ -12,53 +12,57 @@ export const useDaily = (
   onParticipantLeft?: (participant: any) => void,
   onRecordingStarted?: (recordingId: string) => void,
   onLeaveMeeting?: () => void,
-  skipRoomCreation?: boolean // Add option to skip room creation
+  skipRoomCreation?: boolean
 ) => {
   const [ROOM_URL, setRoomUrl] = useState<string>("");
+  const [meetingToken, setMeetingToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [usingFallback, setUsingFallback] = useState(false);
+  const meetingTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Skip room creation if requested
     if (skipRoomCreation) {
       setIsLoading(false);
       return;
     }
-    
-    // Prevent duplicate effect calls
+
     let cancelled = false;
-    
+
     const createRoom = async () => {
       if (cancelled) return;
       try {
         setIsLoading(true);
-        const response = await functionBridge.createDailyRoom();
+        const response = await functionBridge.createDailyRoom({
+          enableTranscription: true,
+        });
 
         const roomUrl = response?.room?.url || response?.url;
+        const token = response?.meetingToken || null;
 
         if (roomUrl) {
           console.log("Successfully created Daily room:", roomUrl);
           setRoomUrl(roomUrl);
+          setMeetingToken(token);
+          meetingTokenRef.current = token;
           setUsingFallback(false);
+          if (token) {
+            console.log("Meeting token received (scoped to room)");
+          }
         } else {
           throw new Error('No room URL returned from API');
         }
       } catch (err) {
         console.error('Error creating Daily.co room:', err);
         setError(err instanceof Error ? err : new Error('Unknown error occurred'));
-        
-        // Retry if we haven't reached max retries
+
         if (retryCount < 2) {
           console.log(`Retrying room creation (attempt ${retryCount + 2}/3)...`);
           setRetryCount(prev => prev + 1);
-          setTimeout(() => createRoom(), 2000); // Retry after 2 seconds
+          setTimeout(() => createRoom(), 2000);
         } else {
-          // Only show error if all retries fail
           toast.error('Failed to create video room after multiple attempts');
-          
-          // Use fallback room if all retries fail
           console.log("Using fallback demo room:", DEMO_ROOM_URL);
           setRoomUrl(DEMO_ROOM_URL);
           setUsingFallback(true);
@@ -71,7 +75,6 @@ export const useDaily = (
 
     createRoom();
 
-    // Cleanup function
     return () => {
       cancelled = true;
     };
@@ -79,10 +82,14 @@ export const useDaily = (
 
   const handleCallFrameReady = useCallback((callFrame: any) => {
     if (!callFrame) return;
-    
-    // Only attempt to join if we have a valid room URL
+
     if (ROOM_URL) {
-      callFrame.join();
+      // Join with meeting token if available (scoped auth, no raw API key needed)
+      const joinOptions: Record<string, unknown> = {};
+      if (meetingTokenRef.current) {
+        joinOptions.token = meetingTokenRef.current;
+      }
+      callFrame.join(joinOptions);
 
       callFrame.on('joined-meeting', (event: any) => {
         console.log('Successfully joined meeting', event);
@@ -115,6 +122,7 @@ export const useDaily = (
 
   return {
     ROOM_URL,
+    meetingToken,
     isLoading,
     error,
     usingFallback,

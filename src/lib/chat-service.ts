@@ -10,9 +10,9 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(API_KEY || '');
-// Using gemini-2.5-flash as requested by the user.
+// Using gemini-3.1-pro-preview for all AI capabilities.
 const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.1-pro-preview",
     systemInstruction: `You are the "AI Trainer" for Apply, Co. 
   
   YOUR MISSION:

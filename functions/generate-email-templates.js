@@ -27,7 +27,7 @@ exports.generateEmailTemplates = onCall(
 
       logger.info(`Generating email templates for ${candidates.length} candidate(s)`);
 
-      const model = getModel('gemini-3-pro-preview', {
+      const model = getModel('gemini-3.1-pro-preview', {
         temperature: 0.7,
         maxOutputTokens: 2000,
       });

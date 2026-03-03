@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { VideoCallFrame } from '@/components/video/VideoCallFrame';
 import { useProjectContext } from '@/context/ProjectContext';
 import { useNewAuth } from '@/context/NewAuthContext';
-import { createDailyRoom } from '@/lib/firebase/functions/createDailyRoom';
+import { functionBridge } from '@/lib/function-bridge';
 import { toast } from 'sonner';
 import { DocumentProcessor } from '@/lib/documentProcessing';
 import { ContextBar } from '@/components/context/ContextBar';
@@ -141,7 +141,7 @@ export default function MeetingSimplified() {
     setIsLoading(true);
     
     try {
-      const response = await createDailyRoom({
+      const response = await functionBridge.createDailyRoom({
         projectId: selectedProjectId || null,
         meetingType: meetingPurpose,
         title: jobTitle || 'Meeting',

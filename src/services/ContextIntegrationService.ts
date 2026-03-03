@@ -8,8 +8,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { analyzeCandidate } from '@/lib/firebase/functions/analyzeCandidate';
-import { handleInterview } from '@/lib/firebase/functions/handleInterview';
+import { functionBridge } from '@/lib/function-bridge';
 
 export interface ContextContent {
   type: 'upload' | 'firecrawl' | 'perplexity' | 'location';
@@ -84,7 +83,7 @@ export class ContextIntegrationService {
     config: AgentOrchestrationConfig
   ): Promise<any> {
     try {
-      const data = await analyzeCandidate({
+      const data = await functionBridge.analyzeCandidate({
         content: content.text,
         context: {
           ...pipecatContext,
@@ -251,14 +250,14 @@ export class ContextIntegrationService {
     }
 
     try {
-      const connectionData = await handleInterview({ sessionId });
-      const error = null;
+      const connectionData = await functionBridge.initializeInterviewGuidance();
+      const wsUrl = connectionData?.websocket_url || (connectionData as any)?.websocketUrl;
 
-      if (error || !connectionData?.websocketUrl) {
+      if (!wsUrl) {
         throw new Error('Failed to get WebSocket URL');
       }
 
-      const ws = new WebSocket(connectionData.websocketUrl);
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log('WebSocket connected for session:', sessionId);
