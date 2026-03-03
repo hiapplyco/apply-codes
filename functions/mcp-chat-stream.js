@@ -2,22 +2,19 @@
 
 const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions/v2');
-const { defineSecret } = require('firebase-functions/params');
 const { withAuth } = require('./utils/auth-cors');
 const { initSSE, createEventSender, startKeepalive } = require('./mcp-chat/sse-transport');
 const { orchestrate } = require('./mcp-chat/gemini-orchestrator');
 const { validateSecrets } = require('./mcp-chat/secrets-bridge');
 const { StreamEventType } = require('./mcp-chat/types');
 
-// Only declare secrets that exist in Secret Manager
-// Optional secrets (GOOGLE_CSE_*, NYMERIA_*) are read from process.env at runtime
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+// All API keys are provided via process.env from functions/.env
+// No defineSecret needed — avoids Cloud Run overlap with .env vars
 
 exports.mcpChatStream = onRequest(
   {
     timeoutSeconds: 540,
     memory: '1GiB',
-    secrets: [geminiApiKey],
     cors: false,
   },
   async (req, res) => {
