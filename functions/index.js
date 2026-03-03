@@ -1,164 +1,117 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin
 admin.initializeApp();
 
-// Import individual function modules
-const { generateBooleanSearch } = require('./generate-boolean-search');
-const { generateSophisticatedBoolean } = require('./generate-sophisticated-boolean');
-const { enrichProfile } = require('./enrich-profile');
-const { analyzeCandidate } = require('./analyze-candidate');
-const { processJobRequirements } = require('./process-job-requirements');
-const { sendOutreachEmail } = require('./send-outreach-email');
-const { createCheckoutSession } = require('./create-checkout-session');
-const { createPortalSession } = require('./create-portal-session');
-const { stripeWebhook } = require('./stripe-webhook');
-const { transcribeAudio } = require('./transcribe-audio');
-const { perplexitySearch } = require('./perplexity-search');
-const { parseDocument } = require('./parse-document');
-const { searchContacts } = require('./search-contacts');
-const { getContactInfo } = require('./get-contact-info');
-const { explainBoolean } = require('./explain-boolean');
-const { generateContent } = require('./generate-content');
-const { enhanceJobDescription } = require('./enhance-job-description');
-const { chatAssistant } = require('./chat-assistant');
-const { analyzeResume } = require('./analyze-resume');
-// const { handleInterview } = require('./handle-interview'); // Temporarily disabled - needs Supabase removal
-const { generateInterviewQuestions } = require('./generate-interview-questions');
-const { clearbitEnrichment } = require('./clearbit-enrichment');
-const { hunterIoSearch } = require('./hunter-io-search');
-// const { githubProfile } = require('./github-profile'); // Temporarily disabled - needs Supabase removal
-const { linkedinSearch } = require('./linkedin-search');
-const { pdlSearch } = require('./pdl-search');
-const { waterfallEnrich } = require('./waterfall-enrich');
-const { sendEmail, sendBulkEmails, sendTemplatedEmail } = require('./send-email');
-const { sendCampaignEmail, manageSubscriberList, handleUnsubscribe, getCampaignAnalytics } = require('./send-campaign-email');
-const { scheduleInterview } = require('./schedule-interview');
-const { processTextExtraction } = require('./process-text-extraction');
-const { prepareInterview } = require('./prepare-interview');
-const { processEmailWebhook, getEmailEvents, getEmailAnalytics } = require('./process-email-webhook');
-
-// Import newly migrated functions
-const { firecrawlUrl } = require('./firecrawl-url');
-const { generateLinkedinAnalysis } = require('./generate-linkedin-analysis');
-const { createLinkedinPost } = require('./create-linkedin-post');
-// const { generateDashboardMetrics } = require('./generate-dashboard-metrics'); // Temporarily disabled - needs Supabase removal
-const { analyzeCompensation } = require('./analyze-compensation');
-const { extractNlpTerms } = require('./extract-nlp-terms');
-const { summarizeJob } = require('./summarize-job');
-const { generateEmailTemplates } = require('./generate-email-templates');
-const { geminiApi } = require('./gemini-api');
-const { extractJobContext } = require('./extract-job-context');
-const { extractDocumentGemini } = require('./extract-document-gemini');
-const { optimizeJobTemplate } = require('./optimize-job-template');
-const { createDailyRoom } = require('./create-daily-room');
-const { getDailyKey } = require('./get-daily-key');
-const { getGeminiKey } = require('./get-gemini-key');
-const { getGoogleCseKey } = require('./get-google-cse-key');
-const { generateClarvidaReport } = require('./generate-clarvida-report');
-const { generateClarvidaMarketingImage } = require('./generate-clarvida-marketing-image');
-const { generateJobDescription } = require('./generate-job-description');
-const { processJobRequirementsV2 } = require('./process-job-requirements-v2');
-const { testOrchestration } = require('./test-orchestration');
-const { initializeDailyBot } = require('./initialize-daily-bot');
-const { interviewGuidanceWs } = require('./interview-guidance-ws');
-const { exchangeGoogleToken } = require('./exchange-google-token');
-const { refreshGoogleToken } = require('./refresh-google-token');
-const { revokeGoogleToken } = require('./revoke-google-token');
-const { processRecording } = require('./process-recording');
-const { checkTrialExpirations, sendSubscriptionNotification } = require('./subscription-emails');
-const { adminGrantPro, grantProAccess } = require('./admin-grant-pro');
-const { getProjects } = require('./get-projects');
-const { mcpChatStream } = require('./mcp-chat-stream');
-
-// Export functions
-exports.generateBooleanSearch = generateBooleanSearch;
-exports.generateSophisticatedBoolean = generateSophisticatedBoolean;
-exports.enrichProfile = enrichProfile;
-exports.analyzeCandidate = analyzeCandidate;
-exports.processJobRequirements = processJobRequirements;
-exports.sendOutreachEmail = sendOutreachEmail;
-exports.createCheckoutSession = createCheckoutSession;
-exports.createPortalSession = createPortalSession;
-exports.stripeWebhook = stripeWebhook;
-exports.transcribeAudio = transcribeAudio;
-exports.perplexitySearch = perplexitySearch;
-exports.parseDocument = parseDocument;
-exports.searchContacts = searchContacts;
-exports.getContactInfo = getContactInfo;
-exports.explainBoolean = explainBoolean;
-exports.generateContent = generateContent;
-exports.enhanceJobDescription = enhanceJobDescription;
-exports.chatAssistant = chatAssistant;
-exports.analyzeResume = analyzeResume;
-// exports.handleInterview = handleInterview; // Temporarily disabled - needs Supabase removal
-exports.generateInterviewQuestions = generateInterviewQuestions;
-exports.clearbitEnrichment = clearbitEnrichment;
-exports.hunterIoSearch = hunterIoSearch;
-// exports.githubProfile = githubProfile; // Temporarily disabled - needs Supabase removal
-exports.linkedinSearch = linkedinSearch;
-exports.pdlSearch = pdlSearch;
-exports.waterfallEnrich = waterfallEnrich;
-exports.sendEmail = sendEmail;
-exports.sendBulkEmails = sendBulkEmails;
-exports.sendTemplatedEmail = sendTemplatedEmail;
-exports.sendCampaignEmail = sendCampaignEmail;
-exports.manageSubscriberList = manageSubscriberList;
-exports.handleUnsubscribe = handleUnsubscribe;
-exports.getCampaignAnalytics = getCampaignAnalytics;
-exports.scheduleInterview = scheduleInterview;
-exports.processTextExtraction = processTextExtraction;
-exports.prepareInterview = prepareInterview;
-exports.processEmailWebhook = processEmailWebhook;
-exports.getEmailEvents = getEmailEvents;
-exports.getEmailAnalytics = getEmailAnalytics;
-
-// Export newly migrated functions
-exports.firecrawlUrl = firecrawlUrl;
-exports.generateLinkedinAnalysis = generateLinkedinAnalysis;
-exports.createLinkedinPost = createLinkedinPost;
+// ─── Search & Boolean ────────────────────────────────────────────────────────
+exports.generateBooleanSearch = require('./generate-boolean-search').generateBooleanSearch;
+exports.generateSophisticatedBoolean = require('./generate-sophisticated-boolean').generateSophisticatedBoolean;
+exports.explainBoolean = require('./explain-boolean').explainBoolean;
+exports.linkedinSearch = require('./linkedin-search').linkedinSearch;
 exports.locationSearch = require('./location-search').locationSearch;
-// exports.generateDashboardMetrics = generateDashboardMetrics; // Temporarily disabled - needs Supabase removal
-exports.analyzeCompensation = analyzeCompensation;
-exports.extractNlpTerms = extractNlpTerms;
-exports.summarizeJob = summarizeJob;
-exports.generateEmailTemplates = generateEmailTemplates;
-exports.geminiApi = geminiApi;
-exports.extractJobContext = extractJobContext;
-exports.extractDocumentGemini = extractDocumentGemini;
-exports.optimizeJobTemplate = optimizeJobTemplate;
-exports.createDailyRoom = createDailyRoom;
-exports.getDailyKey = getDailyKey;
-exports.getGeminiKey = getGeminiKey;
-exports.getGoogleCseKey = getGoogleCseKey;
-exports.generateClarvidaReport = generateClarvidaReport;
-exports.generateClarvidaMarketingImage = generateClarvidaMarketingImage;
-exports.generateJobDescription = generateJobDescription;
-exports.processJobRequirementsV2 = processJobRequirementsV2;
-exports.testOrchestration = testOrchestration;
-exports.initializeDailyBot = initializeDailyBot;
-exports.interviewGuidanceWs = interviewGuidanceWs;
-exports.exchangeGoogleToken = exchangeGoogleToken;
-exports.refreshGoogleToken = refreshGoogleToken;
-exports.revokeGoogleToken = revokeGoogleToken;
-exports.processRecording = processRecording;
+exports.perplexitySearch = require('./perplexity-search').perplexitySearch;
 
-// Subscription email notifications
-exports.checkTrialExpirations = checkTrialExpirations;
-exports.sendSubscriptionNotification = sendSubscriptionNotification;
+// ─── Enrichment ──────────────────────────────────────────────────────────────
+exports.enrichProfile = require('./enrich-profile').enrichProfile;
+exports.searchContacts = require('./search-contacts').searchContacts;
+exports.getContactInfo = require('./get-contact-info').getContactInfo;
+exports.clearbitEnrichment = require('./clearbit-enrichment').clearbitEnrichment;
+exports.hunterIoSearch = require('./hunter-io-search').hunterIoSearch;
+exports.pdlSearch = require('./pdl-search').pdlSearch;
+exports.waterfallEnrich = require('./waterfall-enrich').waterfallEnrich;
 
-// Admin functions
-exports.adminGrantPro = adminGrantPro;
-exports.grantProAccess = grantProAccess;
+// ─── AI & Analysis ───────────────────────────────────────────────────────────
+exports.analyzeCandidate = require('./analyze-candidate').analyzeCandidate;
+exports.analyzeResume = require('./analyze-resume').analyzeResume;
+exports.analyzeCompensation = require('./analyze-compensation').analyzeCompensation;
+exports.extractNlpTerms = require('./extract-nlp-terms').extractNlpTerms;
+exports.geminiApi = require('./gemini-api').geminiApi;
+exports.chatAssistant = require('./chat-assistant').chatAssistant;
 
-// Extension API functions
-exports.getProjects = getProjects;
+// ─── Document Processing ─────────────────────────────────────────────────────
+exports.parseDocument = require('./parse-document').parseDocument;
+exports.processTextExtraction = require('./process-text-extraction').processTextExtraction;
+exports.extractDocumentGemini = require('./extract-document-gemini').extractDocumentGemini;
+exports.firecrawlUrl = require('./firecrawl-url').firecrawlUrl;
+exports.transcribeAudio = require('./transcribe-audio').transcribeAudio;
 
-// MCP Chat Integration
-exports.mcpChatStream = mcpChatStream;
+// ─── Job Description ─────────────────────────────────────────────────────────
+exports.processJobRequirements = require('./process-job-requirements').processJobRequirements;
+exports.processJobRequirementsV2 = require('./process-job-requirements-v2').processJobRequirementsV2;
+exports.enhanceJobDescription = require('./enhance-job-description').enhanceJobDescription;
+exports.generateJobDescription = require('./generate-job-description').generateJobDescription;
+exports.extractJobContext = require('./extract-job-context').extractJobContext;
+exports.optimizeJobTemplate = require('./optimize-job-template').optimizeJobTemplate;
+exports.summarizeJob = require('./summarize-job').summarizeJob;
 
-// Health check
+// ─── Content & LinkedIn ──────────────────────────────────────────────────────
+exports.generateContent = require('./generate-content').generateContent;
+exports.generateLinkedinAnalysis = require('./generate-linkedin-analysis').generateLinkedinAnalysis;
+exports.createLinkedinPost = require('./create-linkedin-post').createLinkedinPost;
+
+// ─── Email ───────────────────────────────────────────────────────────────────
+const sendEmailModule = require('./send-email');
+exports.sendEmail = sendEmailModule.sendEmail;
+exports.sendBulkEmails = sendEmailModule.sendBulkEmails;
+exports.sendTemplatedEmail = sendEmailModule.sendTemplatedEmail;
+
+const campaignModule = require('./send-campaign-email');
+exports.sendCampaignEmail = campaignModule.sendCampaignEmail;
+exports.manageSubscriberList = campaignModule.manageSubscriberList;
+exports.handleUnsubscribe = campaignModule.handleUnsubscribe;
+exports.getCampaignAnalytics = campaignModule.getCampaignAnalytics;
+
+exports.sendOutreachEmail = require('./send-outreach-email').sendOutreachEmail;
+exports.generateEmailTemplates = require('./generate-email-templates').generateEmailTemplates;
+
+const emailWebhookModule = require('./process-email-webhook');
+exports.processEmailWebhook = emailWebhookModule.processEmailWebhook;
+exports.getEmailEvents = emailWebhookModule.getEmailEvents;
+exports.getEmailAnalytics = emailWebhookModule.getEmailAnalytics;
+
+// ─── Interviews & Meetings ───────────────────────────────────────────────────
+exports.generateInterviewQuestions = require('./generate-interview-questions').generateInterviewQuestions;
+exports.scheduleInterview = require('./schedule-interview').scheduleInterview;
+exports.prepareInterview = require('./prepare-interview').prepareInterview;
+exports.createDailyRoom = require('./create-daily-room').createDailyRoom;
+exports.initializeDailyBot = require('./initialize-daily-bot').initializeDailyBot;
+exports.interviewGuidanceWs = require('./interview-guidance-ws').interviewGuidanceWs;
+exports.processRecording = require('./process-recording').processRecording;
+
+// ─── Billing & Subscriptions ─────────────────────────────────────────────────
+exports.createCheckoutSession = require('./create-checkout-session').createCheckoutSession;
+exports.createPortalSession = require('./create-portal-session').createPortalSession;
+exports.stripeWebhook = require('./stripe-webhook').stripeWebhook;
+
+const subscriptionModule = require('./subscription-emails');
+exports.checkTrialExpirations = subscriptionModule.checkTrialExpirations;
+exports.sendSubscriptionNotification = subscriptionModule.sendSubscriptionNotification;
+
+// ─── Auth & Tokens ───────────────────────────────────────────────────────────
+exports.exchangeGoogleToken = require('./exchange-google-token').exchangeGoogleToken;
+exports.refreshGoogleToken = require('./refresh-google-token').refreshGoogleToken;
+exports.revokeGoogleToken = require('./revoke-google-token').revokeGoogleToken;
+
+// ─── API Keys ────────────────────────────────────────────────────────────────
+exports.getDailyKey = require('./get-daily-key').getDailyKey;
+exports.getGeminiKey = require('./get-gemini-key').getGeminiKey;
+exports.getGoogleCseKey = require('./get-google-cse-key').getGoogleCseKey;
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+const adminModule = require('./admin-grant-pro');
+exports.adminGrantPro = adminModule.adminGrantPro;
+exports.grantProAccess = adminModule.grantProAccess;
+
+// ─── Clarvida ────────────────────────────────────────────────────────────────
+exports.generateClarvidaReport = require('./generate-clarvida-report').generateClarvidaReport;
+exports.generateClarvidaMarketingImage = require('./generate-clarvida-marketing-image').generateClarvidaMarketingImage;
+
+// ─── Extension API & MCP ─────────────────────────────────────────────────────
+exports.getProjects = require('./get-projects').getProjects;
+exports.mcpChatStream = require('./mcp-chat-stream').mcpChatStream;
+exports.testOrchestration = require('./test-orchestration').testOrchestration;
+
+// ─── Health Check ────────────────────────────────────────────────────────────
 exports.healthCheck = functions.https.onRequest((req, res) => {
   res.status(200).json({
     status: 'healthy',
