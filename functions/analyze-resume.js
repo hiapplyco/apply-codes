@@ -2,7 +2,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 // Removed Supabase dependency - now using Firebase Storage and Firestore
 const multer = require('multer');
 
@@ -107,14 +107,11 @@ exports.analyzeResume = onRequest(
       logger.info('File uploaded successfully:', filePath);
 
       // Initialize Gemini
-      const apiKey = process.env.GEMINI_API_KEY;
+      const model = getModel();
 
-      if (!apiKey) {
+      if (!model) {
         throw new Error('Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       // Convert resume to text and clean it
       let resumeText = file.buffer.toString('utf-8');
@@ -179,7 +176,7 @@ Return ONLY the JSON object, no other text.
         };
       }
 
-      // Store the analysis results in Firestore
+      // Store the analysis results in Firestore (canonical collection: resumeMatches)
       await db.collection('resumeMatches').add({
         jobId: jobId,
         userId: userId,
@@ -195,22 +192,6 @@ Return ONLY the JSON object, no other text.
 
       logger.info('Analysis completed successfully for user:', userId);
 
-      // Log to Firestore for additional tracking
-      try {
-        const db = admin.firestore();
-        await db.collection('resume_analyses').add({
-          user_id: userId,
-          job_id: jobId,
-          file_path: filePath,
-          similarity_score: analysis.similarityScore,
-          analyzed_at: admin.firestore.Timestamp.now(),
-          success: true
-        });
-      } catch (logError) {
-        logger.error('Error logging to Firestore:', logError);
-        // Don't fail the main operation
-      }
-
       res.status(200).json({
         success: true,
         filePath,
@@ -224,12 +205,12 @@ Return ONLY the JSON object, no other text.
 
       // Log error to Firestore
       try {
-        const db = admin.firestore();
-        await db.collection('resume_analyses').add({
-          user_id: req.body?.userId || 'unknown',
-          job_id: req.body?.jobId || 'unknown',
+        const errorDb = admin.firestore();
+        await errorDb.collection('resumeMatches').add({
+          jobId: req.body?.jobId || 'unknown',
+          userId: req.body?.userId || 'unknown',
           error: error.message,
-          analyzed_at: admin.firestore.Timestamp.now(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
           success: false
         });
       } catch (logError) {

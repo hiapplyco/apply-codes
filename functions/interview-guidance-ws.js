@@ -36,7 +36,7 @@ exports.interviewGuidanceWs = functions.https.onRequest(async (req, res) => {
     const token = authHeader.replace('Bearer ', '');
     await admin.auth().verifyIdToken(token);
 
-    const websocketUrl = functions.config().interview?.guidance_ws_url || process.env.INTERVIEW_GUIDANCE_WS_URL;
+    const websocketUrl = process.env.INTERVIEW_GUIDANCE_WS_URL;
     if (!websocketUrl) {
       res.status(200).json({ websocket_url: 'wss://example.com/interview-guidance-not-configured' });
       return;

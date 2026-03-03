@@ -6,7 +6,7 @@ let isConfigured = false;
 let cachedKey = null;
 
 const resolveSendGridApiKey = () => {
-  return functions.config().sendgrid?.api_key || process.env.SENDGRID_API_KEY || null;
+  return process.env.SENDGRID_API_KEY || null;
 };
 
 const configureSendGridClient = () => {

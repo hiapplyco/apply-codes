@@ -1,12 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const { getModel } = require('./utils/gemini');
 
 /**
  * Generate sophisticated boolean search strings with variant support and re-roll capability
@@ -18,24 +12,16 @@ const corsHeaders = {
  * - variant: 'strict' | 'balanced' | 'broad'
  * - isReroll: boolean
  */
-exports.generateSophisticatedBoolean = onRequest(
+exports.generateSophisticatedBoolean = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '512MiB',
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
@@ -46,7 +32,7 @@ exports.generateSophisticatedBoolean = onRequest(
         previousGenerations = [],
         variant = 'balanced',
         isReroll = false
-      } = req.body;
+      } = data;
 
       logger.info('[generateSophisticatedBoolean] Request received:', {
         hasJobContext: !!jobContext,
@@ -58,20 +44,14 @@ exports.generateSophisticatedBoolean = onRequest(
 
       // Validate required fields
       if (!jobContext || !jobContext.title) {
-        res.status(400).json({
-          success: false,
-          error: 'jobContext with title is required'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'jobContext with title is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('GEMINI_API_KEY not configured');
-      }
+      const model = getModel();
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY not configured');
+      }
 
       // Build variant-specific instructions
       const variantInstructions = {
@@ -174,20 +154,18 @@ Return ONLY the boolean search string with no explanation, markdown, or formatti
         hasExplanation: !!explanation
       });
 
-      res.status(200).json({
+      return {
         success: true,
         searchString,
         explanation,
         variant,
         timestamp: new Date().toISOString()
-      });
+      };
 
     } catch (error) {
       logger.error('[generateSophisticatedBoolean] Error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to generate boolean search'
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Failed to generate boolean search');
     }
   }
 );

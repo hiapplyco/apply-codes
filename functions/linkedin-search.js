@@ -1,17 +1,7 @@
-const { onRequest } = require('firebase-functions/v2/https');
-
-const { logger } = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-
-
-// CORS headers for browser requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-};
+const { getModel } = require('./utils/gemini');
 
 /**
  * LinkedIn Search Firebase Cloud Function
@@ -31,38 +21,20 @@ const corsHeaders = {
  * @param {string} request.body.experienceLevel - Experience level filter (optional)
  * @param {boolean} request.body.useAIGeneration - Whether to use AI for boolean query generation (default: true)
  */
-const linkedinSearch = onRequest(
+const linkedinSearch = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '256MiB',
-    
   },
-  async (request, response) => {
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      response.set(corsHeaders);
-      response.status(200).send();
-      return;
+  async (request) => {
+    const { data, auth } = request;
+
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
-    // Set CORS headers for all responses
-    response.set(corsHeaders);
-
     try {
-      logger.info('LinkedIn search function called', {
-        method: request.method,
-        hasBody: !!request.body
-      });
-
-      // Validate request method
-      if (request.method !== 'POST') {
-        response.status(405).json({
-          success: false,
-          error: 'Method not allowed. Use POST.'
-        });
-        return;
-      }
+      logger.info('LinkedIn search function called');
 
       // Extract and validate request parameters
       const {
@@ -72,15 +44,11 @@ const linkedinSearch = onRequest(
         page = 1,
         experienceLevel,
         useAIGeneration = true
-      } = request.body;
+      } = data;
 
       // Validate required parameters
       if (!keywords || typeof keywords !== 'string' || keywords.trim() === '') {
-        response.status(400).json({
-          success: false,
-          error: 'Keywords parameter is required and must be a non-empty string'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Keywords parameter is required and must be a non-empty string');
       }
 
       // Validate maxResults
@@ -160,16 +128,12 @@ const linkedinSearch = onRequest(
         topMatchScore: scoredResults[0]?.matchScore || 0
       });
 
-      response.status(200).json(responseData);
+      return responseData;
 
     } catch (error) {
       logger.error('LinkedIn search function error', error);
-
-      response.status(500).json({
-        success: false,
-        error: error.message || 'Internal server error',
-        details: 'An error occurred while processing the LinkedIn search request'
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Internal server error');
     }
   }
 );
@@ -182,13 +146,10 @@ const linkedinSearch = onRequest(
  * @returns {Promise<string>} Generated boolean query
  */
 async function generateAIBooleanQuery(keywords, location, experienceLevel) {
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
+  const model = getModel();
+  if (!model) {
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
-
-  const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
   const locationPrompt = location ? `
 LOCATION TARGETING:

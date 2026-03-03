@@ -2,7 +2,7 @@
  * Waterfall Enrichment Cloud Function
  *
  * Sequentially queries multiple enrichment providers to maximize hit rates.
- * Order: Nymeria → Hunter.io → PDL
+ * Order: Nymeria -> Hunter.io -> PDL
  * Stops at first provider that returns contact data.
  * Returns normalized data in a consistent format regardless of provider.
  *
@@ -17,7 +17,7 @@
  * }
  */
 
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -26,12 +26,6 @@ const axios = require('axios');
 if (!admin.apps.length) {
   admin.initializeApp();
 }
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
 
 const TIMEOUT_MS = 30000;
 
@@ -202,40 +196,19 @@ async function tryPDL(params) {
   }
 }
 
-exports.waterfallEnrich = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
+exports.waterfallEnrich = onCall({}, async (request) => {
+  const { data, auth } = request;
+
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
-  res.set(corsHeaders);
-
   try {
-    // Verify auth
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized - No token provided' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(token);
-    } catch (authError) {
-      res.status(401).json({ error: 'Unauthorized - Invalid token' });
-      return;
-    }
-
-    const requestData = req.body || {};
+    const requestData = data || {};
     const { profileUrl, email, firstName, lastName, company, domain } = requestData;
 
     if (!profileUrl && !email && !(firstName && lastName)) {
-      res.status(400).json({
-        error: 'At least one of profileUrl, email, or firstName+lastName is required'
-      });
-      return;
+      throw new HttpsError('invalid-argument', 'At least one of profileUrl, email, or firstName+lastName is required');
     }
 
     logger.info('Waterfall enrichment request', {
@@ -257,13 +230,12 @@ exports.waterfallEnrich = functions.https.onRequest(async (req, res) => {
       if (!cacheQuery.empty) {
         const cached = cacheQuery.docs[0].data();
         logger.info('Returning cached waterfall result');
-        res.status(200).json({
+        return {
           success: true,
           data: cached.data,
           provider: cached.provider,
           cached: true,
-        });
-        return;
+        };
       }
     } catch (cacheErr) {
       logger.error('Cache lookup error:', cacheErr);
@@ -296,7 +268,7 @@ exports.waterfallEnrich = functions.https.onRequest(async (req, res) => {
       await db.collection('enrichment_logs').add({
         action_type: 'waterfall_enrichment',
         cache_key: cacheKey,
-        user_id: decodedToken.uid,
+        user_id: auth.uid,
         providers_tried: providers,
         provider_found: result?.provider || null,
         status: result ? 'success' : 'not_found',
@@ -319,29 +291,27 @@ exports.waterfallEnrich = functions.https.onRequest(async (req, res) => {
         logger.error('Failed to cache waterfall result:', cacheErr);
       }
 
-      res.status(200).json({
+      return {
         success: true,
         data: result,
         provider: result.provider,
         providers_tried: providers,
         enriched: true,
-      });
+      };
     } else {
-      res.status(200).json({
+      return {
         success: true,
         data: null,
         providers_tried: providers,
         enriched: false,
         message: 'No contact information found across all providers',
-      });
+      };
     }
 
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('Waterfall enrichment error:', error);
-    res.status(500).json({
-      error: error.message || 'Unknown error',
-      timestamp: new Date().toISOString(),
-    });
+    throw new HttpsError('internal', error.message || 'Unknown error');
   }
 });
 

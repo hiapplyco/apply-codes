@@ -1,7 +1,6 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
-const axios = require('axios');
 const { google } = require('googleapis');
 const { getSendGridClient } = require('./utils/sendgrid');
 
@@ -9,13 +8,6 @@ const { getSendGridClient } = require('./utils/sendgrid');
 if (!admin.apps.length) {
   admin.initializeApp();
 }
-
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
 
 // Helper function to validate timezone
 const isValidTimezone = (timezone) => {
@@ -25,14 +17,6 @@ const isValidTimezone = (timezone) => {
   } catch {
     return false;
   }
-};
-
-// Helper function to convert time between timezones
-const convertTimezone = (dateTime, fromTimezone, toTimezone) => {
-  const date = new Date(dateTime);
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-  const targetTime = new Date(utc + (getTimezoneOffset(toTimezone) * 60000));
-  return targetTime;
 };
 
 // Helper function to get timezone offset
@@ -67,7 +51,6 @@ const createMeetingLink = async (platform, meetingDetails) => {
 
     case 'zoom':
       // Integration with Zoom API would go here
-      // For now, return a placeholder
       return 'https://zoom.us/j/placeholder';
 
     case 'teams':
@@ -160,56 +143,15 @@ const sendInvitationEmail = async (emailDetails) => {
   return await sendgridClient.send(msg);
 };
 
-// Helper function to validate Supabase auth token
-const validateAuth = async (authHeader) => {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Invalid authorization header');
-  }
+exports.scheduleInterview = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-  const token = authHeader.substring(7);
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
+  }
 
   try {
-    // Verify the JWT token with Supabase
-    const response = await axios.get(`${process.env.SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'apikey': process.env.SUPABASE_ANON_KEY
-      }
-    });
-
-    return response.data;
-  } catch (error) {
-    throw new Error('Invalid authentication token');
-  }
-};
-
-// Main function
-const scheduleInterview = functions.https.onRequest(async (req, res) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(200).send();
-    return;
-  }
-
-  // Set CORS headers for all responses
-  res.set(corsHeaders);
-
-  try {
-    // Validate authentication
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      res.status(401).json({ error: 'Authorization header required', success: false });
-      return;
-    }
-
-    const user = await validateAuth(authHeader);
-    if (!user) {
-      res.status(401).json({ error: 'Invalid authentication', success: false });
-      return;
-    }
-
-    // Parse request body
+    // Parse request data
     const {
       candidateId,
       candidateEmail,
@@ -226,24 +168,16 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
       additionalNotes = '',
       interviewerCalendarToken,
       action = 'schedule' // schedule, reschedule, cancel
-    } = req.body;
+    } = data;
 
     // Validate required fields
     if (!candidateEmail || !candidateName || !interviewerEmail || !interviewerName || !scheduledDateTime) {
-      res.status(400).json({
-        error: 'Missing required fields: candidateEmail, candidateName, interviewerEmail, interviewerName, scheduledDateTime',
-        success: false
-      });
-      return;
+      throw new HttpsError('invalid-argument', 'Missing required fields: candidateEmail, candidateName, interviewerEmail, interviewerName, scheduledDateTime');
     }
 
     // Validate timezone
     if (!isValidTimezone(timezone)) {
-      res.status(400).json({
-        error: 'Invalid timezone provided',
-        success: false
-      });
-      return;
+      throw new HttpsError('invalid-argument', 'Invalid timezone provided');
     }
 
     // Create interview start and end times
@@ -316,7 +250,7 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
           additionalNotes,
           status: 'scheduled',
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          createdBy: user.id
+          createdBy: auth.uid
         });
 
         // Send invitation email
@@ -343,24 +277,19 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
           // Continue even if email fails
         }
 
-        res.status(200).json({
+        return {
           success: true,
           interviewId: interviewDoc.id,
           meetingLink,
           calendarEventId,
           message: 'Interview scheduled successfully'
-        });
-        break;
+        };
 
-      case 'reschedule':
-        const { interviewId, newScheduledDateTime } = req.body;
+      case 'reschedule': {
+        const { interviewId, newScheduledDateTime } = data;
 
         if (!interviewId || !newScheduledDateTime) {
-          res.status(400).json({
-            error: 'interviewId and newScheduledDateTime required for rescheduling',
-            success: false
-          });
-          return;
+          throw new HttpsError('invalid-argument', 'interviewId and newScheduledDateTime required for rescheduling');
         }
 
         const newStartTime = new Date(newScheduledDateTime);
@@ -372,27 +301,20 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
           endDateTime: admin.firestore.Timestamp.fromDate(newEndTime),
           status: 'rescheduled',
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedBy: user.id
+          updatedBy: auth.uid
         });
 
-        // TODO: Update calendar event if calendar integration is active
-        // TODO: Send rescheduling notification email
-
-        res.status(200).json({
+        return {
           success: true,
           message: 'Interview rescheduled successfully'
-        });
-        break;
+        };
+      }
 
-      case 'cancel':
-        const { interviewId: cancelInterviewId, reason = 'No reason provided' } = req.body;
+      case 'cancel': {
+        const { interviewId: cancelInterviewId, reason = 'No reason provided' } = data;
 
         if (!cancelInterviewId) {
-          res.status(400).json({
-            error: 'interviewId required for cancellation',
-            success: false
-          });
-          return;
+          throw new HttpsError('invalid-argument', 'interviewId required for cancellation');
         }
 
         // Update interview status in database
@@ -400,46 +322,22 @@ const scheduleInterview = functions.https.onRequest(async (req, res) => {
           status: 'cancelled',
           cancellationReason: reason,
           cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-          cancelledBy: user.id
+          cancelledBy: auth.uid
         });
 
-        // TODO: Cancel calendar event if calendar integration is active
-        // TODO: Send cancellation notification email
-
-        res.status(200).json({
+        return {
           success: true,
           message: 'Interview cancelled successfully'
-        });
-        break;
+        };
+      }
 
       default:
-        res.status(400).json({
-          error: 'Invalid action. Must be one of: schedule, reschedule, cancel',
-          success: false
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Invalid action. Must be one of: schedule, reschedule, cancel');
     }
 
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('Error in schedule-interview function:', error);
-
-    let errorMessage = 'Internal server error';
-    let statusCode = 500;
-
-    if (error.message.includes('Invalid authorization') || error.message.includes('Invalid authentication')) {
-      errorMessage = error.message;
-      statusCode = 401;
-    } else if (error.message.includes('Missing required fields') || error.message.includes('Invalid timezone')) {
-      errorMessage = error.message;
-      statusCode = 400;
-    }
-
-    res.status(statusCode).json({
-      error: errorMessage,
-      success: false,
-      details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
-    });
+    throw new HttpsError('internal', error.message || 'Internal server error');
   }
 });
-
-module.exports = { scheduleInterview };

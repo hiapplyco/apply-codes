@@ -1,51 +1,31 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.explainBoolean = onRequest(
+exports.explainBoolean = onCall(
   {
-    cors: true,
     timeoutSeconds: 60,
     memory: '256MiB',
-    
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { searchString } = req.body;
+      const { searchString } = data;
 
       if (!searchString) {
-        res.status(400).json({ error: 'Search string is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Search string is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
+      const model = getModel();
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+      if (!model) {
+        throw new HttpsError('unavailable', 'Gemini API key not configured');
+      }
 
       const prompt = `Explain the following boolean search string in simple terms. Break down what it's looking for and what it's excluding.
       
@@ -64,13 +44,14 @@ exports.explainBoolean = onRequest(
 
       // Clean and parse JSON
       const cleanJson = response.replace(/```json\n?|\n?```/g, '').trim();
-      const data = JSON.parse(cleanJson);
+      const parsed = JSON.parse(cleanJson);
 
-      res.status(200).json(data);
+      return parsed;
 
     } catch (error) {
       logger.error('Error explaining boolean string:', error);
-      res.status(500).json({ error: error.message });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Failed to explain boolean string');
     }
   }
 );

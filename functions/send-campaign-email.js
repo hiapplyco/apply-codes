@@ -1,7 +1,6 @@
 const functions = require('firebase-functions');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { getSendGridClient } = require('./utils/sendgrid');
 
 // Initialize admin if not already done

@@ -1,49 +1,31 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
 
 // People Data Labs API base URLs
 const PDL_API_BASE = 'https://api.peopledatalabs.com/v5';
 
-exports.pdlSearch = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
+exports.pdlSearch = onCall({}, async (request) => {
+  const { data, auth } = request;
+
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
-  res.set(corsHeaders);
-
   try {
-    const { searchType, searchParams, pagination } = req.body || {};
+    const { searchType, searchParams, pagination } = data || {};
     logger.info("PDL Search request:", { searchType, searchParams, pagination });
 
     // Validate search type
     if (!searchType || !['person', 'company', 'person_search', 'company_search', 'person_enrich', 'company_enrich'].includes(searchType)) {
-      res.status(400).json({
-        error: 'Invalid or missing searchType. Must be one of: person, company, person_search, company_search, person_enrich, company_enrich',
-        type: 'ValidationError',
-        timestamp: new Date().toISOString()
-      });
-      return;
+      throw new HttpsError('invalid-argument', 'Invalid or missing searchType. Must be one of: person, company, person_search, company_search, person_enrich, company_enrich');
     }
 
     // Get API key
     const apiKey = process.env.PDL_API_KEY || process.env.PEOPLE_DATA_LABS_API_KEY;
     if (!apiKey) {
       logger.error('PDL_API_KEY is not set');
-      res.status(500).json({
-        error: 'API configuration error: Missing People Data Labs API key',
-        type: 'ConfigurationError',
-        timestamp: new Date().toISOString()
-      });
-      return;
+      throw new HttpsError('unavailable', 'API configuration error: Missing People Data Labs API key');
     }
 
     let result;
@@ -64,28 +46,15 @@ exports.pdlSearch = functions.https.onRequest(async (req, res) => {
         result = await companySearch(apiKey, searchParams, pagination);
         break;
       default:
-        res.status(400).json({
-          error: 'Unsupported search type',
-          type: 'ValidationError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Unsupported search type');
     }
 
-    res.status(200).json(result);
+    return result;
 
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('Error processing PDL search request:', error);
-
-    const errorMessage = error.message || 'Unknown error';
-    const errorDetails = {
-      error: errorMessage,
-      type: error.constructor?.name || 'Error',
-      timestamp: new Date().toISOString()
-    };
-
-    const statusCode = error.status || error.response?.status || 500;
-    res.status(statusCode).json(errorDetails);
+    throw new HttpsError('internal', error.message || 'Unknown error');
   }
 });
 
@@ -422,7 +391,6 @@ function transformCompanyData(company) {
     display_name: company.display_name,
     size: company.size,
     employee_count: company.employee_count,
-    id: company.id,
     founded: company.founded,
     industry: company.industry,
     naics: company.naics || [],

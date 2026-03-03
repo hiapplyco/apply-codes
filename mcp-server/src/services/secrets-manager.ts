@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { promisify } from 'util';
+
+const scrypt = promisify(crypto.scrypt);
 
 interface CachedSecrets {
   secrets: Record<string, string>;
@@ -22,19 +25,19 @@ export class SecretsManager {
     if (this.initialized) return;
 
     // First try to load from cache
-    const cached = this.loadFromCache();
+    const cached = await this.loadFromCache();
     if (cached && !this.isCacheExpired(cached)) {
       this.secrets = cached.secrets;
       console.error('Loaded secrets from cache');
     } else {
       // Load from environment variables
-      this.loadFromEnvironment();
+      await this.loadFromEnvironment();
     }
 
     this.initialized = true;
   }
 
-  private loadFromEnvironment(): void {
+  private async loadFromEnvironment(): Promise<void> {
     const envKeys = [
       'GOOGLE_CSE_API_KEY',
       'GOOGLE_CSE_ID',
@@ -54,20 +57,20 @@ export class SecretsManager {
 
     // Cache the loaded secrets
     if (Object.keys(this.secrets).length > 0) {
-      this.saveToCache(this.secrets);
+      await this.saveToCache(this.secrets);
     }
 
     console.error(`Loaded ${Object.keys(this.secrets).length} secrets from environment`);
   }
 
-  private loadFromCache(): CachedSecrets | null {
+  private async loadFromCache(): Promise<CachedSecrets | null> {
     try {
       if (!fs.existsSync(this.cacheFile)) {
         return null;
       }
 
       const encrypted = fs.readFileSync(this.cacheFile, 'utf8');
-      const decrypted = this.decrypt(encrypted);
+      const decrypted = await this.decrypt(encrypted);
       return JSON.parse(decrypted);
     } catch (error) {
       console.error('Failed to load cache:', error);
@@ -75,7 +78,7 @@ export class SecretsManager {
     }
   }
 
-  private saveToCache(secrets: Record<string, string>): void {
+  private async saveToCache(secrets: Record<string, string>): Promise<void> {
     try {
       const cached: CachedSecrets = {
         secrets,
@@ -83,7 +86,7 @@ export class SecretsManager {
         hash: this.generateHash(secrets)
       };
 
-      const encrypted = this.encrypt(JSON.stringify(cached));
+      const encrypted = await this.encrypt(JSON.stringify(cached));
       fs.writeFileSync(this.cacheFile, encrypted, 'utf8');
     } catch (error) {
       console.error('Failed to save cache:', error);
@@ -94,12 +97,12 @@ export class SecretsManager {
     return Date.now() - cached.timestamp > this.cacheTTL;
   }
 
-  private encrypt(text: string): string {
-    const key = crypto.scryptSync(
-      process.env.USER || 'default',
+  private async encrypt(text: string): Promise<string> {
+    const key = (await scrypt(
+      process.env.MCP_CACHE_SECRET || 'dev-fallback',
       'mcp-secrets-salt',
       32
-    );
+    )) as Buffer;
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 
@@ -109,13 +112,13 @@ export class SecretsManager {
     return iv.toString('hex') + ':' + encrypted;
   }
 
-  private decrypt(encryptedText: string): string {
+  private async decrypt(encryptedText: string): Promise<string> {
     const [ivHex, encrypted] = encryptedText.split(':');
-    const key = crypto.scryptSync(
-      process.env.USER || 'default',
+    const key = (await scrypt(
+      process.env.MCP_CACHE_SECRET || 'dev-fallback',
       'mcp-secrets-salt',
       32
-    );
+    )) as Buffer;
     const iv = Buffer.from(ivHex, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 
@@ -139,7 +142,7 @@ export class SecretsManager {
   }
 
   async refresh(): Promise<void> {
-    this.loadFromEnvironment();
+    await this.loadFromEnvironment();
   }
 
   clearCache(): void {

@@ -1,13 +1,8 @@
 // Apply Codes Extension - Background Service Worker
 // Handles messaging between sidebar/content script and Firebase functions
 
-const FIREBASE_PROJECT_ID = 'applycodes-2683f';
-const FIREBASE_API_KEY = 'AIzaSyB2gdbYSgiRI5n0ckjEIu_rtS4RzM3ezho';
-const FUNCTIONS_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net`;
-
-// Callable functions (onCall) - wrap in { data: {...} }
-// Most functions are HTTP (onRequest) and expect data directly
-const CALLABLE_FUNCTIONS = ['analyzeCandidate', 'generateBooleanSearch'];
+// Import shared config and client
+importScripts('firebase-config.js', 'firebase-client.js');
 
 console.log('Apply Codes Extension background service worker loaded');
 
@@ -16,90 +11,9 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Apply Codes Extension installed');
 });
 
-// Helper to get fresh auth token
-async function getAuthToken() {
-  const stored = await chrome.storage.local.get(['idToken', 'refreshToken']);
-
-  if (!stored.refreshToken) {
-    console.log('No refresh token stored');
-    return stored.idToken || null;
-  }
-
-  // Always refresh to ensure token is valid
-  try {
-    const response = await fetch(
-      `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `grant_type=refresh_token&refresh_token=${stored.refreshToken}`
-      }
-    );
-    const data = await response.json();
-    if (data.id_token) {
-      await chrome.storage.local.set({ idToken: data.id_token });
-      console.log('Token refreshed successfully');
-      return data.id_token;
-    }
-    console.error('Token refresh failed:', data.error);
-  } catch (error) {
-    console.error('Token refresh error:', error);
-  }
-
-  return stored.idToken || null;
-}
-
-// Call Firebase function with proper format
-async function callFirebaseFunction(functionName, data, timeout = 30000) {
-  const idToken = await getAuthToken();
-  const isCallableFunction = CALLABLE_FUNCTIONS.includes(functionName);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  console.log(`Background calling ${functionName}:`, {
-    isCallableFunction,
-    hasToken: !!idToken
-  });
-
-  try {
-    const response = await fetch(`${FUNCTIONS_URL}/${functionName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
-      },
-      // Callable functions need { data: {...} }, HTTP functions get data directly
-      body: JSON.stringify(isCallableFunction ? { data } : data),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    console.log(`${functionName} response status:`, response.status);
-
-    if (!response.ok) {
-      let errorDetail = '';
-      try {
-        const errorBody = await response.json();
-        errorDetail = errorBody.error?.message || errorBody.error || '';
-      } catch (e) {
-        errorDetail = await response.text();
-      }
-      throw new Error(`${response.status}: ${errorDetail}`);
-    }
-
-    const result = await response.json();
-    // Callable functions return { result: {...} }, HTTP functions return data directly
-    return isCallableFunction ? (result.result || result) : result;
-
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.error(`${functionName} error:`, error);
-    throw error;
-  }
-}
-
-// Google OAuth configuration
-const GOOGLE_CLIENT_ID = '697220767333-ere2cnqdmrctjl879983qls9a2kva03t.apps.googleusercontent.com';
+// Google OAuth configuration (from shared config)
+const GOOGLE_CLIENT_ID = globalThis.FIREBASE_CONFIG.GOOGLE_CLIENT_ID;
+const FIREBASE_API_KEY = globalThis.FIREBASE_CONFIG.API_KEY;
 
 // Handle OAuth flow in background script (persists when popup closes)
 async function handleOAuthFlow() {

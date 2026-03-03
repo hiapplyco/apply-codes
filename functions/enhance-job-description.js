@@ -1,51 +1,30 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.enhanceJobDescription = onRequest(
+exports.enhanceJobDescription = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { description, enhancementType } = req.body;
+      const { description, enhancementType } = data;
 
       if (!description) {
-        res.status(400).json({ error: 'Job description is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Job description is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
+      const model = getModel();
+      if (!model) {
+        throw new HttpsError('failed-precondition', 'Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       let prompt = '';
       if (enhancementType === 'clarity') {
@@ -61,11 +40,12 @@ exports.enhanceJobDescription = onRequest(
       const result = await model.generateContent(prompt);
       const enhancedDescription = result.response.text();
 
-      res.status(200).json({ enhancedDescription });
+      return { enhancedDescription };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error enhancing job description:', error);
-      res.status(500).json({ error: error.message });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

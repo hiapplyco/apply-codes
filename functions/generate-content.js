@@ -1,34 +1,17 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.generateContent = onRequest(
+exports.generateContent = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
@@ -42,23 +25,19 @@ exports.generateContent = onRequest(
         systemPrompt: clientSystemPrompt,
         contextContent,
         projectContext
-      } = req.body;
+      } = data;
 
       // Use prompt or userInput (client sends userInput, some components send prompt)
       const finalPrompt = prompt || userInput;
 
       if (!finalPrompt) {
-        res.status(400).json({ error: 'Prompt is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Prompt is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
+      const model = getModel();
+      if (!model) {
+        throw new HttpsError('failed-precondition', 'Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       // Use client-provided systemPrompt if available, otherwise generate based on type
       let systemPrompt = '';
@@ -89,11 +68,12 @@ exports.generateContent = onRequest(
       const result = await model.generateContent(`${systemPrompt}\n\nTask: ${finalPrompt}`);
       const content = result.response.text();
 
-      res.status(200).json({ content });
+      return { content };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error generating content:', error);
-      res.status(500).json({ error: error.message });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

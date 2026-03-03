@@ -1,47 +1,23 @@
-const functions = require('firebase-functions');
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 
+exports.getGeminiKey = onCall({}, async (request) => {
+  const { auth } = request;
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS'
-};
-
-exports.getGeminiKey = onRequest(
-  {
-    cors: true,
-    
-  },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
-
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    // Check authentication (basic check if auth header exists, ideally verify token)
-    if (!req.headers.authorization) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
-      res.status(200).json({ secret: apiKey });
-
-    } catch (error) {
-      logger.error('Error retrieving Gemini key:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
-);
+
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new HttpsError('unavailable', 'Gemini API key not configured');
+    }
+
+    return { secret: apiKey };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error('Error retrieving Gemini key:', error);
+    throw new HttpsError('internal', 'Internal Server Error');
+  }
+});

@@ -1,16 +1,5 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const admin = require('firebase-admin');
-
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
 
 const stopWords = new Set([
   'about','above','after','again','against','there','their','which','should','could','would','these','those','where','while','other','between','during','under','since','until'
@@ -42,40 +31,23 @@ function buildSearchString(terms, searchType, companyName) {
   return `(${formattedTerms}) AND ("candidate" OR "professional" OR "expert")${companyFilter}`;
 }
 
-exports.processJobRequirementsV2 = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
+exports.processJobRequirementsV2 = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ success: false, error: 'Method not allowed' });
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
   try {
-    res.set(corsHeaders);
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ success: false, error: 'Unauthorized' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
-
-    const { content, searchType, companyName } = req.body || {};
+    const { content, searchType, companyName } = data || {};
     if (!content) {
-      res.status(400).json({ success: false, error: 'Content is required' });
-      return;
+      throw new HttpsError('invalid-argument', 'Content is required');
     }
 
     const keyTerms = extractKeyTerms(content);
     const searchString = buildSearchString(keyTerms, searchType, companyName);
 
-    res.status(200).json({
+    return {
       success: true,
       searchString,
       jobId: null,
@@ -84,9 +56,10 @@ exports.processJobRequirementsV2 = functions.https.onRequest(async (req, res) =>
         terms: keyTerms,
         generatedAt: new Date().toISOString()
       }
-    });
+    };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('processJobRequirementsV2 error:', error);
-    res.status(500).json({ success: false, error: 'Failed to process job requirements' });
+    throw new HttpsError('internal', 'Failed to process job requirements');
   }
 });

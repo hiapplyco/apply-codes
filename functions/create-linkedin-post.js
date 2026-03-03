@@ -1,39 +1,27 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const logger = require('firebase-functions/logger');
 
-exports.createLinkedinPost = onRequest(
+exports.createLinkedinPost = onCall(
   {
-    cors: true,
     timeoutSeconds: 60,
     memory: '512MiB'
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { text, accessToken } = req.body;
+      const { text, accessToken } = data;
 
       if (!text) {
-        res.status(400).json({ error: 'Text is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Text is required');
       }
 
       if (!accessToken) {
-        res.status(400).json({ error: 'Access token is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Access token is required');
       }
 
       const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
@@ -62,17 +50,17 @@ exports.createLinkedinPost = onRequest(
       if (!response.ok) {
         const errorText = await response.text();
         logger.error('LinkedIn API error:', errorText);
-        res.status(400).json({ error: `LinkedIn API error: ${errorText}` });
-        return;
+        throw new HttpsError('internal', `LinkedIn API error: ${errorText}`);
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
 
-      res.status(200).json({ success: true, data });
+      return { success: true, data: responseData };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error posting to LinkedIn:', error);
-      res.status(500).json({ error: error.message });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

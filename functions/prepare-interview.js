@@ -1,68 +1,47 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.prepareInterview = onRequest(
+exports.prepareInterview = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { jobDescription, candidateResume, interviewType } = req.body;
+      const { jobDescription, candidateResume, interviewType } = data;
 
       if (!jobDescription || !candidateResume) {
-        res.status(400).json({ error: 'Job description and candidate resume are required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Job description and candidate resume are required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
+      const model = getModel();
+      if (!model) {
+        throw new HttpsError('unavailable', 'Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       const prompt = `Prepare an interview guide based on the following:
-      
+
       Job Description:
       ${jobDescription}
-      
+
       Candidate Resume:
       ${candidateResume}
-      
+
       Interview Type: ${interviewType || 'General'}
-      
+
       Generate a JSON object with:
       1. "summary": Brief summary of the candidate's fit
       2. "strengths": Key strengths identified
       3. "weaknesses": Potential areas of concern
       4. "questions": List of specific interview questions to ask
-      
+
       Return ONLY the JSON object.`;
 
       const result = await model.generateContent(prompt);
@@ -70,13 +49,14 @@ exports.prepareInterview = onRequest(
 
       // Clean and parse JSON
       const cleanJson = response.replace(/```json\n?|\n?```/g, '').trim();
-      const data = JSON.parse(cleanJson);
+      const parsed = JSON.parse(cleanJson);
 
-      res.status(200).json(data);
+      return parsed;
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error preparing interview:', error);
-      res.status(500).json({ error: error.message });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

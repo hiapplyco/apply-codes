@@ -1,58 +1,36 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getModel } = require('./utils/gemini');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
-
-// Define secrets
-
-
-exports.analyzeCompensation = onRequest(
+exports.analyzeCompensation = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { content } = req.body;
+      const { content } = data;
 
       if (!content) {
-        res.status(400).json({ error: 'Content is required in request body' });
-        return;
+        throw new HttpsError('invalid-argument', 'Content is required in request body');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({ error: 'GEMINI_API_KEY is not configured' });
-        return;
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-3-pro-preview",
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 4096,
-        }
+      const model = getModel(undefined, {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 4096,
       });
+
+      if (!model) {
+        throw new HttpsError('failed-precondition', 'GEMINI_API_KEY is not configured');
+      }
 
       // Enhanced compensation analysis prompt
       const prompt = `You are an expert compensation analyst. Analyze the following job description or content and provide comprehensive compensation insights.
@@ -139,26 +117,18 @@ Return only the JSON object, no additional text or formatting.`;
         analysis = JSON.parse(responseText);
       } catch (parseError) {
         logger.error('Failed to parse Gemini response as JSON:', parseError);
-        // Fallback: return the text response wrapped in an object
         analysis = {
           raw_analysis: responseText,
           error: 'Failed to parse structured response'
         };
       }
 
-      res.status(200).json({ analysis });
+      return { analysis };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error in analyze-compensation:', error);
-
-      let status = 500;
-      if (error.message.includes('not configured')) status = 503;
-      if (error.message.includes('required')) status = 400;
-      if (error.message.includes('rate limit') || error.message.includes('429')) status = 429;
-
-      res.status(status).json({
-        error: error.message
-      });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

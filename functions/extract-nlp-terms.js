@@ -1,57 +1,39 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getModel } = require('./utils/gemini');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
-
-
-
-exports.extractNlpTerms = onRequest(
+exports.extractNlpTerms = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '512MiB',
-    
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { content } = req.body;
+      const { content } = data;
       logger.info('Received content:', content?.substring(0, 100) + '...');
 
       if (!content || content.trim().length === 0) {
         logger.info('Empty content received, returning empty arrays');
-        res.status(200).json({
+        return {
           terms: {
             skills: [],
             titles: [],
             keywords: []
           }
-        });
-        return;
+        };
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({ error: 'GEMINI_API_KEY is not configured' });
-        return;
-      }
+      const model = getModel();
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       const prompt = `Extract and categorize key terms from this job description into specific categories. Format your response EXACTLY as a JSON object with these arrays:
 
@@ -113,34 +95,28 @@ Text to analyze: ${content}`;
           .map(skill => skill.trim());
 
         logger.info('Successfully parsed and validated response:', parsedResponse);
-        res.status(200).json({
+        return {
           terms: parsedResponse
-        });
+        };
 
       } catch (parseError) {
         logger.error('Error parsing Gemini response:', parseError);
         logger.error('Raw response that failed parsing:', response);
 
-        res.status(200).json({
+        return {
           terms: {
             skills: [],
             titles: [],
             keywords: []
           },
           error: 'Failed to parse terms'
-        });
+        };
       }
 
     } catch (error) {
       logger.error('Error in extract-nlp-terms:', error);
-      res.status(500).json({
-        terms: {
-          skills: [],
-          titles: [],
-          keywords: []
-        },
-        error: error.message
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Failed to extract NLP terms');
     }
   }
 );

@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -63,19 +63,15 @@ exports.generateBooleanSearch = onCall(
     }
 
     try {
-      // Get Gemini API key from secret (injected by Firebase)
-      const apiKey = process.env.GEMINI_API_KEY;
+      const model = getModel();
 
-      if (!apiKey) {
+      if (!model) {
         logger.error('GEMINI_API_KEY is not configured');
         throw new HttpsError(
           'failed-precondition',
           'GEMINI_API_KEY is not configured'
         );
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       // Extract location information from context items
       const locationItems = contextItems?.filter(item =>

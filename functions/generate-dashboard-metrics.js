@@ -295,134 +295,37 @@ Ensure all numbers are realistic and consistent with the job analysis data. Retu
   }
 }
 
+/**
+ * Upsert a single metric category's entries into the dashboard_metrics table.
+ */
+async function upsertMetric(supabaseClient, jobId, metricType, metricName, metricData, sourceAgentOutput) {
+  await supabaseClient
+    .from('dashboard_metrics')
+    .upsert({
+      user_id: sourceAgentOutput.user_id,
+      job_id: jobId,
+      metric_type: metricType,
+      metric_name: metricName,
+      metric_data: metricData,
+      source_agent_output_id: sourceAgentOutput.id,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+    }, {
+      onConflict: 'job_id,metric_type,metric_name'
+    });
+}
+
 async function storeGeneratedMetrics(jobId, metrics, sourceAgentOutput, supabaseClient) {
   let storedCount = 0;
 
   try {
-    // Store KPI metrics
-    for (const [key, metric] of Object.entries(metrics.kpis)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'kpi',
-          metric_name: key,
-          metric_data: metric,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
+    const metricCategories = ['kpis', 'pipeline', 'skills', 'compensation', 'locations', 'trends', 'predictions'];
 
-    // Store pipeline metrics
-    for (const [key, data] of Object.entries(metrics.pipeline)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'pipeline',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
-
-    // Store skills metrics
-    for (const [key, data] of Object.entries(metrics.skills)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'skills',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
-
-    // Store compensation metrics
-    for (const [key, data] of Object.entries(metrics.compensation)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'compensation',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
-
-    // Store location metrics
-    for (const [key, data] of Object.entries(metrics.locations)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'locations',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
-
-    // Store trends metrics
-    for (const [key, data] of Object.entries(metrics.trends)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'trends',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
-    }
-
-    // Store predictions metrics
-    for (const [key, data] of Object.entries(metrics.predictions)) {
-      await supabaseClient
-        .from('dashboard_metrics')
-        .upsert({
-          user_id: sourceAgentOutput.user_id,
-          job_id: jobId,
-          metric_type: 'predictions',
-          metric_name: key,
-          metric_data: data,
-          source_agent_output_id: sourceAgentOutput.id,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-        }, {
-          onConflict: 'job_id,metric_type,metric_name'
-        });
-      storedCount++;
+    for (const category of metricCategories) {
+      if (!metrics[category]) continue;
+      for (const [key, data] of Object.entries(metrics[category])) {
+        await upsertMetric(supabaseClient, jobId, category === 'kpis' ? 'kpi' : category, key, data, sourceAgentOutput);
+        storedCount++;
+      }
     }
 
     // Refresh materialized view

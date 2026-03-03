@@ -70,6 +70,7 @@ const { processRecording } = require('./process-recording');
 const { checkTrialExpirations, sendSubscriptionNotification } = require('./subscription-emails');
 const { adminGrantPro, grantProAccess } = require('./admin-grant-pro');
 const { getProjects } = require('./get-projects');
+const { mcpChatStream } = require('./mcp-chat-stream');
 
 // Export functions
 exports.generateBooleanSearch = generateBooleanSearch;
@@ -153,6 +154,9 @@ exports.grantProAccess = grantProAccess;
 
 // Extension API functions
 exports.getProjects = getProjects;
+
+// MCP Chat Integration
+exports.mcpChatStream = mcpChatStream;
 
 // Health check
 exports.healthCheck = functions.https.onRequest((req, res) => {

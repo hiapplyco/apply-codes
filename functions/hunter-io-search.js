@@ -5,66 +5,35 @@
  * 1. Domain Search: Find email addresses associated with a domain
  * 2. Email Finder: Find specific person's email address using name and domain
  * 3. Email Verifier: Verify the deliverability of an email address
- *
- * @param {Object} req.body - Request body containing search parameters
- * @param {string} req.body.searchType - Type of search: 'domain', 'email_finder', or 'email_verifier'
- * @param {string} req.body.domain - Domain to search (required for domain and email_finder)
- * @param {string} req.body.company - Company name (optional for email_finder)
- * @param {string} req.body.fullName - Full name (for email_finder, alternative to firstName/lastName)
- * @param {string} req.body.firstName - First name (for email_finder)
- * @param {string} req.body.lastName - Last name (for email_finder)
- * @param {string} req.body.email - Email to verify (required for email_verifier)
- * @param {number} req.body.limit - Limit results for domain search (default: 10, max: 100)
- * @param {number} req.body.offset - Offset for domain search pagination (default: 0)
- *
- * @returns {Object} JSON response with search results and metadata
  */
 
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+exports.hunterIoSearch = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
-  res.set(corsHeaders);
-
   try {
-    const { searchType, domain, company, fullName, firstName, lastName, limit = 10, offset = 0 } = req.body || {};
+    const { searchType, domain, company, fullName, firstName, lastName, limit = 10, offset = 0 } = data || {};
 
     logger.info("Hunter.io search params:", { searchType, domain, company, fullName, firstName, lastName, limit, offset });
 
     // Validate search type
     const validSearchTypes = ['domain', 'email_finder', 'email_verifier'];
     if (!searchType || !validSearchTypes.includes(searchType)) {
-      res.status(400).json({
-        error: `Invalid search type. Must be one of: ${validSearchTypes.join(', ')}`,
-        type: 'ValidationError',
-        timestamp: new Date().toISOString()
-      });
-      return;
+      throw new HttpsError('invalid-argument', `Invalid search type. Must be one of: ${validSearchTypes.join(', ')}`);
     }
 
     // Get API key
     const apiKey = process.env.HUNTER_IO_API_KEY;
     if (!apiKey) {
       logger.error('HUNTER_IO_API_KEY is not set');
-      res.status(500).json({
-        error: 'API configuration error: Missing Hunter.io API key',
-        type: 'ConfigurationError',
-        timestamp: new Date().toISOString()
-      });
-      return;
+      throw new HttpsError('unavailable', 'API configuration error: Missing Hunter.io API key');
     }
 
     let hunterUrl;
@@ -75,12 +44,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
     switch (searchType) {
       case 'domain':
         if (!domain) {
-          res.status(400).json({
-            error: 'Domain is required for domain search',
-            type: 'ValidationError',
-            timestamp: new Date().toISOString()
-          });
-          return;
+          throw new HttpsError('invalid-argument', 'Domain is required for domain search');
         }
         searchParams.append('domain', domain);
         searchParams.append('limit', Math.min(100, Math.max(1, limit)).toString());
@@ -90,12 +54,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
 
       case 'email_finder':
         if (!domain || (!fullName && (!firstName || !lastName))) {
-          res.status(400).json({
-            error: 'Domain and either fullName or both firstName and lastName are required for email finder',
-            type: 'ValidationError',
-            timestamp: new Date().toISOString()
-          });
-          return;
+          throw new HttpsError('invalid-argument', 'Domain and either fullName or both firstName and lastName are required for email finder');
         }
         searchParams.append('domain', domain);
         if (fullName) {
@@ -111,25 +70,15 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
         break;
 
       case 'email_verifier':
-        if (!req.body.email) {
-          res.status(400).json({
-            error: 'Email is required for email verification',
-            type: 'ValidationError',
-            timestamp: new Date().toISOString()
-          });
-          return;
+        if (!data.email) {
+          throw new HttpsError('invalid-argument', 'Email is required for email verification');
         }
-        searchParams.append('email', req.body.email);
+        searchParams.append('email', data.email);
         hunterUrl = `https://api.hunter.io/v2/email-verifier?${searchParams.toString()}`;
         break;
 
       default:
-        res.status(400).json({
-          error: 'Invalid search type',
-          type: 'ValidationError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Invalid search type');
     }
 
     logger.info('Calling Hunter.io API:', hunterUrl.replace(apiKey, '[REDACTED]'));
@@ -150,41 +99,16 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
       logger.error('Hunter.io API error:', status, errorData);
 
       if (status === 401) {
-        res.status(401).json({
-          error: 'Invalid Hunter.io API key. Please check your configuration.',
-          type: 'AuthenticationError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('unauthenticated', 'Invalid Hunter.io API key. Please check your configuration.');
       } else if (status === 429) {
-        res.status(429).json({
-          error: 'Hunter.io rate limit exceeded. Please try again later.',
-          type: 'RateLimitError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('resource-exhausted', 'Hunter.io rate limit exceeded. Please try again later.');
       } else if (status === 402) {
-        res.status(402).json({
-          error: 'Hunter.io API credits exhausted. Please upgrade your plan.',
-          type: 'PaymentRequiredError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('resource-exhausted', 'Hunter.io API credits exhausted. Please upgrade your plan.');
       } else if (hunterError.code === 'ECONNABORTED') {
-        res.status(408).json({
-          error: 'Hunter.io API request timed out. Please try again.',
-          type: 'TimeoutError',
-          timestamp: new Date().toISOString()
-        });
-        return;
+        throw new HttpsError('deadline-exceeded', 'Hunter.io API request timed out. Please try again.');
       }
 
-      res.status(500).json({
-        error: `Hunter.io API error: ${status} - ${errorData?.errors?.[0]?.details || 'Unknown error'}`,
-        type: 'APIError',
-        timestamp: new Date().toISOString()
-      });
-      return;
+      throw new HttpsError('internal', `Hunter.io API error: ${status} - ${errorData?.errors?.[0]?.details || 'Unknown error'}`);
     }
 
     const responseData = hunterResponse.data;
@@ -287,7 +211,7 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
     }
 
     // Add metadata
-    const finalResponse = {
+    return {
       data: transformedData,
       meta: {
         searchType,
@@ -299,18 +223,9 @@ exports.hunterIoSearch = functions.https.onRequest(async (req, res) => {
       }
     };
 
-    res.status(200).json(finalResponse);
-
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('Error processing Hunter.io request:', error);
-
-    const errorMessage = error.message || 'Unknown error';
-    const errorDetails = {
-      error: errorMessage,
-      type: error.constructor?.name || 'Error',
-      timestamp: new Date().toISOString()
-    };
-
-    res.status(500).json(errorDetails);
+    throw new HttpsError('internal', error.message || 'Unknown error');
   }
 });

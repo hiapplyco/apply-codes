@@ -2,9 +2,8 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 const multer = require('multer');
-const axios = require('axios');
 
 
 
@@ -86,12 +85,6 @@ exports.processTextExtraction = onRequest(
         return;
       }
 
-      // Initialize Gemini
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
       // Process based on file type
       let extractionResult;
 
@@ -111,8 +104,10 @@ exports.processTextExtraction = onRequest(
       } else {
         // Use Gemini for all other supported types
         logger.info('Processing document with Gemini...');
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+        const model = getModel();
+        if (!model) {
+          throw new Error('Gemini API key not configured');
+        }
 
         const prompt = `Extract all text from this document.
         Options:

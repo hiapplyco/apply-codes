@@ -1,52 +1,30 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
+const { getModel } = require('./utils/gemini');
 
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.chatAssistant = onRequest(
+exports.chatAssistant = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Set CORS headers
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { message, history, context } = req.body;
+      const { message, history, context } = data;
 
       if (!message) {
-        res.status(400).json({ error: 'Message is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Message is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('Gemini API key not configured');
+      const model = getModel();
+      if (!model) {
+        throw new HttpsError('failed-precondition', 'Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       // Construct chat history for Gemini
       const chatHistory = history ? history.map(msg => ({
@@ -61,19 +39,20 @@ exports.chatAssistant = onRequest(
         },
       });
 
-      const systemPrompt = `You are a helpful AI assistant for a recruitment platform. 
+      const systemPrompt = `You are a helpful AI assistant for a recruitment platform.
       Context: ${JSON.stringify(context || {})}
-      
+
       Answer the user's questions and assist with recruitment tasks.`;
 
       const result = await chat.sendMessage(`${systemPrompt}\n\nUser: ${message}`);
       const response = result.response.text();
 
-      res.status(200).json({ response });
+      return { response };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('Error in chat assistant:', error);
-      res.status(500).json({ error: error.message });
+      throw new HttpsError('internal', error.message);
     }
   }
 );

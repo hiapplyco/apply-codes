@@ -1,50 +1,23 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const admin = require('firebase-admin');
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+exports.getDailyKey = onCall({}, async (request) => {
+  const { auth } = request;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.getDailyKey = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
   try {
-    res.set(corsHeaders);
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
-
-    const apiKey = functions.config().daily?.api_key || process.env.DAILY_API_KEY;
+    const apiKey = process.env.DAILY_API_KEY;
     if (!apiKey) {
-      res.status(500).json({ error: 'Daily API key not configured' });
-      return;
+      throw new HttpsError('unavailable', 'Daily API key not configured');
     }
 
-    res.status(200).json({ secret: apiKey });
+    return { secret: apiKey };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('getDailyKey error:', error);
-    res.status(500).json({ error: 'Failed to retrieve Daily key' });
+    throw new HttpsError('internal', 'Failed to retrieve Daily key');
   }
 });

@@ -1,10 +1,10 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
-const axios = require('axios');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 const { getSendGridClient } = require('./utils/sendgrid');
+const { enrichContact } = require('./utils/enrichment-service');
 
 
 
@@ -21,6 +21,9 @@ exports.sendOutreachEmail = onCall(
     logger.info('Send outreach email function called');
 
     const { data, auth } = request;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required to send outreach emails');
+    }
     const { projectId, candidateProfileUrl, userCustomText } = data;
 
     // Validate input
@@ -110,71 +113,47 @@ async function fetchProjectDetails(projectId) {
 }
 
 async function enrichCandidateProfile(profileUrl) {
-  // Note: Nymeria API key should ideally also be in Secret Manager
-  const nymeriaApiKey = process.env.NYMERIA_API_KEY;
+  // Use shared enrichment service (waterfall: Nymeria -> Hunter -> PDL, with cache)
+  const result = await enrichContact(
+    { profileUrl },
+    { userId: null } // No user context in outreach flow
+  );
 
-  if (!nymeriaApiKey) {
+  if (!result.data) {
     throw new HttpsError(
-      'failed-precondition',
-      'Missing Nymeria API key configuration'
+      'not-found',
+      'Candidate profile not found in contact database'
     );
   }
 
-  const nymeriaUrl = `https://www.nymeria.io/api/v4/person/enrich?profile=${encodeURIComponent(profileUrl)}`;
+  const enrichedData = result.data;
 
-  try {
-    const response = await axios.get(nymeriaUrl, {
-      headers: {
-        'X-Api-Key': nymeriaApiKey
-      }
-    });
-
-    const enrichedData = response.data;
-
-    // Extract key information
-    return {
-      email: enrichedData.emails?.[0]?.email || null,
-      name: enrichedData.name?.full_name || enrichedData.name?.first_name || null,
-      currentRole: enrichedData.experiences?.[0]?.title || null,
-      currentCompany: enrichedData.experiences?.[0]?.company?.name || null,
-      location: enrichedData.location?.full_location || null,
-      skills: enrichedData.skills?.map(skill => skill.name).slice(0, 5) || [],
-      experienceSummary: enrichedData.experiences?.slice(0, 3).map(exp =>
-        `${exp.title} at ${exp.company?.name}`
-      ).join(', ') || null
-    };
-
-  } catch (error) {
-    if (error.response?.status === 404) {
-      throw new HttpsError(
-        'not-found',
-        'Candidate profile not found in contact database'
-      );
-    }
-
-    throw new HttpsError(
-      'internal',
-      `Failed to enrich candidate profile: ${error.message}`
-    );
-  }
+  // Extract key information — normalize across providers
+  return {
+    email: enrichedData.work_email || enrichedData.emails?.[0]?.email || enrichedData.email || null,
+    name: enrichedData.name?.full_name || enrichedData.name?.first_name || enrichedData.full_name || null,
+    currentRole: enrichedData.experiences?.[0]?.title || enrichedData.job_title || null,
+    currentCompany: enrichedData.experiences?.[0]?.company?.name || enrichedData.job_company_name || null,
+    location: enrichedData.location?.full_location || enrichedData.location_name || null,
+    skills: enrichedData.skills?.map(skill => typeof skill === 'string' ? skill : skill.name).slice(0, 5) || [],
+    experienceSummary: enrichedData.experiences?.slice(0, 3).map(exp =>
+      `${exp.title} at ${exp.company?.name || exp.company}`
+    ).join(', ') || null
+  };
 }
 
 async function generateEmailContent(projectData, candidateData, userCustomText, apiKey) {
-  if (!apiKey) {
+  const model = getModel('gemini-3-pro-preview', {
+    temperature: 0.7,
+    maxOutputTokens: 1000,
+  });
+
+  if (!model) {
     throw new HttpsError(
       'failed-precondition',
       'Missing Gemini API key configuration'
     );
   }
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3-pro-preview",
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 1000,
-    }
-  });
 
   const prompt = `You are a friendly and professional recruiter writing a personalized outreach email to a potential candidate.
 

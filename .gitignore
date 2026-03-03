@@ -3,6 +3,7 @@
 .env.local
 .env.*.local
 .runtimeconfig.json
+.secrets-cache
 
 # Firebase service account credentials
 functions/firebase-service-account.json

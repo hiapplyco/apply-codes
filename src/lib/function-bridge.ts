@@ -269,9 +269,9 @@ class FunctionBridge {
    */
   async generateSophisticatedBoolean(payload: SophisticatedBooleanPayload): Promise<SophisticatedBooleanResponse> {
     try {
-      const result = await this.callHttpFunction<SophisticatedBooleanResponse>(
+      const result = await this.callCallable<SophisticatedBooleanPayload, SophisticatedBooleanResponse>(
         "generateSophisticatedBoolean",
-        { body: payload }
+        payload
       );
 
       if (!result.success || !result.searchString) {
@@ -314,7 +314,7 @@ class FunctionBridge {
   }
 
   async processJobRequirementsV2(payload: any): Promise<any> {
-    return this.callHttpFunction("processJobRequirementsV2", { body: payload });
+    return this.callCallable("processJobRequirementsV2", payload);
   }
 
   async sendOutreachEmail(payload: any): Promise<any> {
@@ -330,7 +330,7 @@ class FunctionBridge {
   }
 
   async perplexitySearch(payload: any): Promise<any> {
-    return this.callHttpFunction("perplexitySearch", { body: payload });
+    return this.callCallable("perplexitySearch", payload);
   }
 
   async parseDocument(formData: FormData): Promise<any> {
@@ -338,31 +338,31 @@ class FunctionBridge {
   }
 
   async searchContacts(payload: any): Promise<any> {
-    return this.callHttpFunction("searchContacts", { body: payload });
+    return this.callCallable("searchContacts", payload);
   }
 
   async getContactInfo(payload: any): Promise<any> {
-    return this.callHttpFunction("getContactInfo", { body: payload });
+    return this.callCallable("getContactInfo", payload);
   }
 
   async chatAssistant(payload: any): Promise<any> {
-    return this.callHttpFunction("chatAssistant", { body: payload });
+    return this.callCallable("chatAssistant", payload);
   }
 
   async enhanceJobDescription(payload: any): Promise<any> {
-    return this.callHttpFunction("enhanceJobDescription", { body: payload });
+    return this.callCallable("enhanceJobDescription", payload);
   }
 
   async extractNlpTerms(payload: any): Promise<any> {
-    return this.callHttpFunction("extractNlpTerms", { body: payload });
+    return this.callCallable("extractNlpTerms", payload);
   }
 
   async analyzeCompensation(payload: any): Promise<any> {
-    return this.callHttpFunction("analyzeCompensation", { body: payload });
+    return this.callCallable("analyzeCompensation", payload);
   }
 
   async generateContent(payload: any): Promise<any> {
-    return this.callHttpFunction("generateContent", { body: payload });
+    return this.callCallable("generateContent", payload);
   }
 
   /**
@@ -386,11 +386,11 @@ class FunctionBridge {
     };
     error?: string;
   }> {
-    return this.callHttpFunction("generateJobDescription", { body: payload });
+    return this.callCallable("generateJobDescription", payload);
   }
 
   async geminiApi(payload: any): Promise<any> {
-    return this.callHttpFunction("geminiApi", { body: payload });
+    return this.callCallable("geminiApi", payload);
   }
 
   async extractJobContext(payload: {
@@ -408,7 +408,7 @@ class FunctionBridge {
     };
     error?: string;
   }> {
-    return this.callHttpFunction("extractJobContext", { body: payload });
+    return this.callCallable("extractJobContext", payload);
   }
 
   /**
@@ -435,7 +435,7 @@ class FunctionBridge {
     error?: string;
     raw?: string;
   }> {
-    return this.callHttpFunction("extractDocumentGemini", { body: payload });
+    return this.callCallable("extractDocumentGemini", payload);
   }
 
   /**
@@ -459,15 +459,15 @@ class FunctionBridge {
     };
     error?: string;
   }> {
-    return this.callHttpFunction("optimizeJobTemplate", { body: payload });
+    return this.callCallable("optimizeJobTemplate", payload);
   }
 
   async summarizeJob(payload: any): Promise<any> {
-    return this.callHttpFunction("summarizeJob", { body: payload });
+    return this.callCallable("summarizeJob", payload);
   }
 
   async explainBoolean(payload: any): Promise<any> {
-    return this.callHttpFunction("explainBoolean", { body: payload });
+    return this.callCallable("explainBoolean", payload);
   }
 
   async analyzeResume(payload: any): Promise<any> {
@@ -489,7 +489,7 @@ class FunctionBridge {
   }
 
   async generateInterviewQuestions(payload: any): Promise<any> {
-    return this.callHttpFunction("generateInterviewQuestions", { body: payload });
+    return this.callCallable("generateInterviewQuestions", payload);
   }
 
   async handleInterview(payload: any): Promise<any> {
@@ -497,11 +497,11 @@ class FunctionBridge {
   }
 
   async linkedinSearch(payload: any): Promise<any> {
-    return this.callHttpFunction("linkedinSearch", { body: payload });
+    return this.callCallable("linkedinSearch", payload);
   }
 
   async hunterIoSearch(payload: any): Promise<any> {
-    return this.callHttpFunction("hunterIoSearch", { body: payload });
+    return this.callCallable("hunterIoSearch", payload);
   }
 
   async githubProfile(payload: any): Promise<any> {
@@ -509,15 +509,15 @@ class FunctionBridge {
   }
 
   async clearbitEnrichment(payload: any): Promise<any> {
-    return this.callHttpFunction("clearbitEnrichment", { body: payload });
+    return this.callCallable("clearbitEnrichment", payload);
   }
 
   async waterfallEnrich(payload: any): Promise<any> {
-    return this.callHttpFunction("waterfallEnrich", { body: payload });
+    return this.callCallable("waterfallEnrich", payload);
   }
 
   async pdlSearch(payload: any): Promise<any> {
-    return this.callHttpFunction("pdlSearch", { body: payload });
+    return this.callCallable("pdlSearch", payload);
   }
 
   async sendEmail(payload: any): Promise<any> {
@@ -525,7 +525,7 @@ class FunctionBridge {
   }
 
   async scheduleInterview(payload: any): Promise<any> {
-    return this.callHttpFunction("scheduleInterview", { body: payload });
+    return this.callCallable("scheduleInterview", payload);
   }
 
   async processTextExtraction(payload: any): Promise<any> {
@@ -568,7 +568,7 @@ class FunctionBridge {
   }
 
   async generateEmailTemplates(payload: any): Promise<any> {
-    return this.callHttpFunction("generateEmailTemplates", { body: payload });
+    return this.callCallable("generateEmailTemplates", payload);
   }
 
   async generateDashboardMetrics(payload: any): Promise<any> {
@@ -576,31 +576,31 @@ class FunctionBridge {
   }
 
   async firecrawlUrl(payload: any): Promise<any> {
-    return this.callHttpFunction("firecrawlUrl", { body: payload });
+    return this.callCallable("firecrawlUrl", payload);
   }
 
   async generateLinkedinAnalysis(payload: any): Promise<any> {
-    return this.callHttpFunction("generateLinkedinAnalysis", { body: payload });
+    return this.callCallable("generateLinkedinAnalysis", payload);
   }
 
   async generateLinkedinPost(payload: any): Promise<any> {
-    return this.callHttpFunction("createLinkedinPost", { body: payload });
+    return this.callCallable("createLinkedinPost", payload);
   }
 
   async createDailyRoom(payload: any = {}): Promise<any> {
-    return this.callHttpFunction("createDailyRoom", { body: payload });
+    return this.callCallable("createDailyRoom", payload);
   }
 
   async getDailyKey(): Promise<{ secret: string }> {
-    return this.callHttpFunction("getDailyKey");
+    return this.callCallable("getDailyKey", {});
   }
 
   async getGeminiKey(): Promise<{ secret: string }> {
-    return this.callHttpFunction("getGeminiKey");
+    return this.callCallable("getGeminiKey", {});
   }
 
   async getGoogleCseKey(): Promise<{ secret: string; engineId: string }> {
-    return this.callHttpFunction("getGoogleCseKey");
+    return this.callCallable("getGoogleCseKey", {});
   }
 
   async exportToGoogleDocs(payload: any): Promise<any> {
@@ -624,7 +624,7 @@ class FunctionBridge {
   }
 
   async processRecording(payload: any): Promise<any> {
-    return this.callHttpFunction("processRecording", { body: payload });
+    return this.callCallable("processRecording", payload);
   }
 
   async saveContextItem(payload: any): Promise<any> {
@@ -636,7 +636,7 @@ class FunctionBridge {
   }
 
   async testOrchestration(payload: any): Promise<any> {
-    return this.callHttpFunction("testOrchestration", { body: payload });
+    return this.callCallable("testOrchestration", payload);
   }
 
   async textToSpeech(payload: any): Promise<any> {
@@ -644,13 +644,13 @@ class FunctionBridge {
   }
 
   async generateClarvidaReport(payload: any): Promise<any> {
-    return this.callHttpFunction("generateClarvidaReport", { body: payload });
+    return this.callCallable("generateClarvidaReport", payload);
   }
 
 
 
   async initializeDailyBot(): Promise<{ websocket_url: string }> {
-    return this.callHttpFunction("initializeDailyBot");
+    return this.callCallable("initializeDailyBot", {});
   }
 
   async initializeInterviewGuidance(): Promise<{ websocket_url: string }> {
@@ -658,15 +658,15 @@ class FunctionBridge {
   }
 
   async exchangeGoogleToken(payload: { code: string; redirectUri: string }): Promise<any> {
-    return this.callHttpFunction("exchangeGoogleToken", { body: payload });
+    return this.callCallable("exchangeGoogleToken", payload);
   }
 
   async refreshGoogleToken(payload: { refreshToken: string }): Promise<any> {
-    return this.callHttpFunction("refreshGoogleToken", { body: payload });
+    return this.callCallable("refreshGoogleToken", payload);
   }
 
   async revokeGoogleToken(payload: { accessToken: string }): Promise<any> {
-    return this.callHttpFunction("revokeGoogleToken", { body: payload });
+    return this.callCallable("revokeGoogleToken", payload);
   }
 }
 

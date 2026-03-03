@@ -1,6 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getModel } = require('./utils/gemini');
 
 /**
  * Clarvida Brand Guidelines for Image Generation
@@ -190,25 +190,16 @@ Generate a single, high-quality image that embodies Clarvida's mission of provid
  * - aspectRatio (optional): '1:1' | '16:9' | '9:16' | '4:3' | '3:4'
  * - purpose (optional): 'linkedin' | 'instagram' | 'facebook' | 'general'
  */
-exports.generateClarvidaMarketingImage = onRequest(
+exports.generateClarvidaMarketingImage = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '1GiB',
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
@@ -218,44 +209,23 @@ exports.generateClarvidaMarketingImage = onRequest(
         textOverlay,
         aspectRatio = '1:1',
         purpose = 'linkedin'
-      } = req.body || {};
+      } = data || {};
 
       // Validate required fields
       if (!context || typeof context !== 'string' || context.trim().length === 0) {
-        res.status(400).json({
-          success: false,
-          error: 'Context is required and must be a non-empty string describing the desired image'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Context is required and must be a non-empty string describing the desired image');
       }
 
       // Validate style if provided
       const validStyles = ['photorealistic', 'professional', 'warm_community', 'inspirational', 'healthcare_compassion', 'recruitment'];
       if (style && !validStyles.includes(style)) {
-        res.status(400).json({
-          success: false,
-          error: `Invalid style. Must be one of: ${validStyles.join(', ')}`
-        });
-        return;
+        throw new HttpsError('invalid-argument', `Invalid style. Must be one of: ${validStyles.join(', ')}`);
       }
 
       // Validate aspect ratio if provided
       const validAspectRatios = ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9', '9:21'];
       if (aspectRatio && !validAspectRatios.includes(aspectRatio)) {
-        res.status(400).json({
-          success: false,
-          error: `Invalid aspectRatio. Must be one of: ${validAspectRatios.join(', ')}`
-        });
-        return;
-      }
-
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({
-          success: false,
-          error: 'GEMINI_API_KEY is not configured'
-        });
-        return;
+        throw new HttpsError('invalid-argument', `Invalid aspectRatio. Must be one of: ${validAspectRatios.join(', ')}`);
       }
 
       logger.info('Generating Clarvida marketing image', {
@@ -266,18 +236,17 @@ exports.generateClarvidaMarketingImage = onRequest(
         purpose
       });
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-
-      // Use Gemini 3 Pro Image Preview (Nano Banana Pro) for highest quality
-      // Falls back to gemini-2.5-flash-image if needed
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3-pro-image-preview',
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 8192,
-          responseModalities: ['TEXT', 'IMAGE'],
-        }
+      // Use Gemini 3 Pro Image Preview for image generation
+      // getModel allows specifying custom model + config
+      const model = getModel('gemini-3-pro-image-preview', {
+        temperature: 0.8,
+        maxOutputTokens: 8192,
+        responseModalities: ['TEXT', 'IMAGE'],
       });
+
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       const prompt = buildImagePrompt(context, {
         style: style || 'photorealistic',
@@ -307,12 +276,7 @@ exports.generateClarvidaMarketingImage = onRequest(
 
       if (!imageData) {
         logger.warn('No image generated in response', { textResponse });
-        res.status(500).json({
-          success: false,
-          error: 'Image generation failed - no image in response',
-          details: textResponse
-        });
-        return;
+        throw new HttpsError('internal', 'Image generation failed - no image in response');
       }
 
       logger.info('Successfully generated Clarvida marketing image', {
@@ -320,7 +284,7 @@ exports.generateClarvidaMarketingImage = onRequest(
         hasTextResponse: !!textResponse
       });
 
-      res.status(200).json({
+      return {
         success: true,
         data: {
           image: imageData,
@@ -333,7 +297,7 @@ exports.generateClarvidaMarketingImage = onRequest(
             generatedAt: new Date().toISOString()
           }
         }
-      });
+      };
 
     } catch (error) {
       logger.error('Clarvida marketing image generation failed', {
@@ -341,20 +305,14 @@ exports.generateClarvidaMarketingImage = onRequest(
         stack: error.stack
       });
 
+      if (error instanceof HttpsError) throw error;
+
       // Check for specific error types
       if (error.message?.includes('not found') || error.message?.includes('model')) {
-        res.status(503).json({
-          success: false,
-          error: 'Image generation model not available. The model may require additional permissions or may not be available in your region.',
-          details: error.message
-        });
-        return;
+        throw new HttpsError('unavailable', 'Image generation model not available. The model may require additional permissions or may not be available in your region.');
       }
 
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to generate marketing image'
-      });
+      throw new HttpsError('internal', error.message || 'Failed to generate marketing image');
     }
   }
 );

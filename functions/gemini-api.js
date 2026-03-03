@@ -1,9 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
-
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
-
-
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getJsonModel } = require('./utils/gemini');
 
 const buildPrompt = ({ prompt, data, context = {} }) => {
   let composed = `${prompt}\n\n`;
@@ -40,50 +37,30 @@ const extractJson = (text) => {
   }
 };
 
-exports.geminiApi = onRequest(
+exports.geminiApi = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data: requestData, auth } = request;
 
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { prompt, data, context } = req.body || {};
+      const { prompt, data, context } = requestData || {};
 
       if (!prompt || typeof prompt !== 'string') {
-        res.status(400).json({ success: false, error: 'Prompt is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Prompt is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({ success: false, error: 'GEMINI_API_KEY is not configured' });
-        return;
-      }
+      const model = getJsonModel();
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3-pro-preview',
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json'
-        }
-      });
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       const composedPrompt = buildPrompt({ prompt, data, context });
       logger.info('Invoking Gemini API', {
@@ -102,18 +79,16 @@ exports.geminiApi = onRequest(
       const rawText = result?.response?.text?.() || '';
       const json = extractJson(rawText);
 
-      res.status(200).json({
+      return {
         success: true,
         raw: rawText,
         data: json,
         message: json ? 'Parsed JSON response' : 'Returned raw text; JSON parsing failed'
-      });
+      };
     } catch (error) {
       logger.error('Gemini API call failed', { error });
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Gemini API call failed'
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Gemini API call failed');
     }
   }
 );

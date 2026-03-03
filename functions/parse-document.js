@@ -1,6 +1,6 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { getModel } = require('./utils/gemini');
 
 
 
@@ -39,13 +39,10 @@ exports.parseDocument = onRequest(
         return;
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
+      const model = getModel();
+      if (!model) {
         throw new Error('Gemini API key not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
       const prompt = `Parse the following document content and extract structured data.
       

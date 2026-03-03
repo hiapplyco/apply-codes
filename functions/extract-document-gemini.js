@@ -1,6 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getJsonModel } = require('./utils/gemini');
 
 /**
  * Gemini-powered document extraction for job context building
@@ -136,37 +136,24 @@ const getMimeType = (fileName) => {
   return mimeTypes[ext] || 'application/octet-stream';
 };
 
-exports.extractDocumentGemini = onRequest(
+exports.extractDocumentGemini = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { fileData, mimeType, fileName, additionalContext } = req.body || {};
+      const { fileData, mimeType, fileName, additionalContext } = data || {};
 
       // Validate input
       if (!fileData) {
-        res.status(400).json({
-          success: false,
-          error: 'fileData (base64) is required'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'fileData (base64) is required');
       }
 
       // Determine MIME type
@@ -179,26 +166,14 @@ exports.extractDocumentGemini = onRequest(
         hasAdditionalContext: !!additionalContext
       });
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({
-          success: false,
-          error: 'GEMINI_API_KEY is not configured'
-        });
-        return;
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-
-      // Use gemini-3-pro-preview for better multimodal support
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3-pro-preview',
-        generationConfig: {
-          temperature: 0.2, // Lower temperature for consistent extraction
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json'
-        }
+      const model = getJsonModel('gemini-3-pro-preview', {
+        temperature: 0.2,
+        maxOutputTokens: 8192,
       });
+
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       // Build the prompt with optional additional context
       let fullPrompt = JOB_EXTRACTION_PROMPT;
@@ -232,12 +207,11 @@ exports.extractDocumentGemini = onRequest(
 
       if (!extracted) {
         // If JSON parsing failed, return the raw text for debugging
-        res.status(200).json({
+        return {
           success: false,
           error: 'Failed to parse extraction results as JSON',
           raw: rawText.substring(0, 2000) // Truncate for response size
-        });
-        return;
+        };
       }
 
       // Separate metadata from job data
@@ -248,7 +222,7 @@ exports.extractDocumentGemini = onRequest(
         ...jobData
       } = extracted;
 
-      res.status(200).json({
+      return {
         success: true,
         data: jobData,
         metadata: {
@@ -259,13 +233,15 @@ exports.extractDocumentGemini = onRequest(
           mimeType: resolvedMimeType,
           processedAt: new Date().toISOString()
         }
-      });
+      };
 
     } catch (error) {
       logger.error('Gemini document extraction failed', {
         error: error.message,
         stack: error.stack
       });
+
+      if (error instanceof HttpsError) throw error;
 
       // Provide specific error messages
       let errorMessage = 'Document extraction failed';
@@ -279,10 +255,7 @@ exports.extractDocumentGemini = onRequest(
         errorMessage = error.message;
       }
 
-      res.status(500).json({
-        success: false,
-        error: errorMessage
-      });
+      throw new HttpsError('internal', errorMessage);
     }
   }
 );

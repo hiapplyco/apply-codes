@@ -1,62 +1,40 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getModel } = require('./utils/gemini');
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
-
-
-
-exports.generateEmailTemplates = onRequest(
+exports.generateEmailTemplates = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
-    
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { candidates, jobDescription, context } = req.body;
+      const { candidates, jobDescription, context } = data;
 
       if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
-        res.status(400).json({ error: 'At least one candidate is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'At least one candidate is required');
       }
 
       if (!jobDescription?.trim()) {
-        res.status(400).json({ error: 'Job description is required' });
-        return;
+        throw new HttpsError('invalid-argument', 'Job description is required');
       }
 
       logger.info(`Generating email templates for ${candidates.length} candidate(s)`);
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({ error: 'Missing Gemini API key' });
-        return;
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-3-pro-preview",
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2000,
-        }
+      const model = getModel('gemini-3-pro-preview', {
+        temperature: 0.7,
+        maxOutputTokens: 2000,
       });
+
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       const emailTemplates = [];
 
@@ -82,19 +60,17 @@ exports.generateEmailTemplates = onRequest(
         }
       }
 
-      res.status(200).json({
+      return {
         success: true,
         emailTemplates,
         count: emailTemplates.length
-      });
+      };
 
     } catch (error) {
       logger.error('Error in generate-email-templates:', error);
+      if (error instanceof HttpsError) throw error;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      res.status(400).json({
-        success: false,
-        error: errorMessage
-      });
+      throw new HttpsError('internal', errorMessage);
     }
   }
 );

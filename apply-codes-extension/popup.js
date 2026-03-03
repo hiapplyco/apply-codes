@@ -1,13 +1,8 @@
 // Apply Codes Extension - Popup Script
 // Full-featured extension with project context, Perplexity search, URL scraping, and backend persistence
+// Shared config (FIREBASE_CONFIG) and client (callFirebaseFunction, getAuthToken) loaded via script tags
 
-const FIREBASE_PROJECT_ID = 'applycodes-2683f';
-const FIREBASE_API_KEY = 'AIzaSyB2gdbYSgiRI5n0ckjEIu_rtS4RzM3ezho';
-const FUNCTIONS_URL = `https://us-central1-${FIREBASE_PROJECT_ID}.cloudfunctions.net`;
-
-// Callable functions (onCall) - wrap in { data: {...} }
-// Most functions are HTTP (onRequest) and expect data directly
-const CALLABLE_FUNCTIONS = ['analyzeCandidate', 'generateBooleanSearch'];
+const FIREBASE_API_KEY = globalThis.FIREBASE_CONFIG.API_KEY;
 
 // State
 let currentUser = null;
@@ -351,26 +346,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // ============ INITIALIZATION ============
 
-  // Refresh Firebase ID token using refresh token
-  async function refreshIdToken(refreshToken) {
-    try {
-      const response = await fetch(
-        `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `grant_type=refresh_token&refresh_token=${refreshToken}`
-        }
-      );
-      const data = await response.json();
-      if (data.id_token) {
-        return data.id_token;
-      }
-      throw new Error(data.error?.message || 'Token refresh failed');
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      return null;
-    }
+  // Refresh Firebase ID token using shared client
+  async function refreshIdTokenLocal(refreshToken) {
+    // Delegate to shared refreshIdToken (firebase-client.js)
+    return globalThis.refreshIdToken();
   }
 
   // Check for stored user session and onboarding status
@@ -391,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Always refresh the ID token to ensure it's valid
     console.log('Popup init - refreshing token...');
-    const newIdToken = await refreshIdToken(stored.refreshToken);
+    const newIdToken = await refreshIdTokenLocal(stored.refreshToken);
     if (newIdToken) {
       idToken = newIdToken;
       await chrome.storage.local.set({ idToken: newIdToken });
@@ -1011,83 +990,39 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
 
   // ============ FIREBASE API HELPER ============
+  // Delegate to shared callFirebaseFunction (firebase-client.js),
+  // passing popup's local idToken and handling 401 -> login redirect
+
+  // Shadow the global callFirebaseFunction inside the popup scope
+  // so existing call-sites don't need changes
+  const _sharedCallFirebaseFunction = globalThis.callFirebaseFunction;
 
   async function callFirebaseFunction(functionName, data, options = {}) {
     const { timeout = 30000 } = options;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    const isCallableFunction = CALLABLE_FUNCTIONS.includes(functionName);
-
-    // Debug logging
-    console.log(`Calling ${functionName}:`, {
-      isCallableFunction,
-      hasToken: !!idToken,
-      tokenLength: idToken?.length,
-      data: JSON.stringify(data).substring(0, 100)
-    });
 
     try {
-      const response = await fetch(`${FUNCTIONS_URL}/${functionName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
-        },
-        // Callable functions need { data: {...} }, HTTP functions get data directly
-        body: JSON.stringify(isCallableFunction ? { data } : data),
-        signal: controller.signal
+      const result = await _sharedCallFirebaseFunction(functionName, data, {
+        timeout,
+        idToken // pass popup's managed token
       });
 
-      clearTimeout(timeoutId);
-
-      console.log(`${functionName} response status:`, response.status);
-
-      if (!response.ok) {
-        // Try to get error details from response body
-        let errorDetail = '';
-        try {
-          const errorBody = await response.json();
-          errorDetail = errorBody.error?.message || errorBody.error || JSON.stringify(errorBody);
-          console.error(`${functionName} error body:`, errorBody);
-        } catch (e) {
-          errorDetail = await response.text();
-        }
-
-        if (response.status === 401) {
-          // Try to refresh the token before giving up
-          console.log('Got 401 - attempting token refresh...');
-          const stored = await chrome.storage.local.get(['refreshToken']);
-          if (stored.refreshToken) {
-            const newToken = await refreshIdToken(stored.refreshToken);
-            if (newToken) {
-              console.log('Token refreshed after 401, but not retrying automatically');
-              idToken = newToken;
-              await chrome.storage.local.set({ idToken: newToken });
-              // Don't clear credentials - let user retry
-              throw new Error(`Please try again: ${errorDetail}`);
-            }
-          }
-          // Token refresh failed - clear credentials
-          console.error('Auth failed - token refresh failed, clearing credentials');
-          currentUser = null;
-          idToken = null;
-          await chrome.storage.local.remove(['user', 'idToken', 'refreshToken']);
-          showLoginView();
-          throw new Error(`Session expired: ${errorDetail}`);
-        }
-        throw new Error(`${response.status}: ${errorDetail || 'Request failed'}`);
+      // Sync token back from storage (shared client may have refreshed it)
+      const stored = await chrome.storage.local.get(['idToken']);
+      if (stored.idToken) {
+        idToken = stored.idToken;
       }
 
-      const result = await response.json();
-      console.log(`${functionName} success:`, result);
-
-      // Callable functions return { result: {...} }, HTTP functions return data directly
-      return isCallableFunction ? (result.result || result) : result;
-
+      return result;
     } catch (error) {
-      clearTimeout(timeoutId);
-      console.error(`${functionName} error:`, error);
+      // Handle 401 session expiry at the popup level
+      if (error.message?.includes('401')) {
+        console.error('Auth failed after retry, clearing credentials');
+        currentUser = null;
+        idToken = null;
+        await chrome.storage.local.remove(['user', 'idToken', 'refreshToken']);
+        showLoginView();
+        throw new Error('Session expired. Please sign in again.');
+      }
       if (error.name === 'AbortError') {
         throw new Error('Request timed out. Please try again.');
       }

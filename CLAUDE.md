@@ -1,93 +1,86 @@
 # CLAUDE.md — HiApply (Apply Codes)
 
+Strictly follow the rules in ./AGENTS.md
+
 ## Project
 
 AI recruitment platform fighting "Brain Waste" — underutilization of skilled veterans, immigrants, military spouses.
 
-## Key Features
-
-- **Boolean candidate search** — Google CSE + AI-powered query generation
-- **Contact enrichment** — Waterfall enrichment (Nymeria → Hunter.io → PDL) with usage gating and Firestore caching
-- **Job posting** — AI-optimized job description creation and editing
-- **Interview tools** — AI-guided video interviews via Daily.co
-- **Content studio** — LinkedIn posts, outreach emails, job descriptions
-- **AI assistant** — Recruitment copilot chat
-- **MCP Server** — Custom recruitment tools (v2.0.0, 11 tools)
-
 ## Stack
 
-- Frontend: React 18, Vite, TypeScript, Tailwind CSS
-- Backend: Firebase Cloud Functions (Node.js)
-- Database: Firestore (primary), Supabase PostgreSQL (legacy, 3 functions)
-- AI: Google Gemini (gemini-3-pro-preview), Anthropic APIs
-- Auth: Firebase Auth (see Auth Architecture below)
-- Storage: Firebase Storage
-
-## Navigation (Sidebar)
-
-Grouped sidebar in `src/components/layout/SidebarNew.tsx`:
-- **Dashboard** (`/dashboard`) — Activity command center with stats, recent searches, projects
-- **RECRUIT**: Search (`/sourcing`), Contact Finder (`/enrichment`), Job Posting (`/job-post`)
-- **ENGAGE**: Interviews (`/meeting`), AI Assistant (`/chat`), Content Studio (`/content-creation`)
-- **Bottom**: Documentation (`/documentation`), Settings (`/profile`)
-
-Dynamic routes (not in sidebar): `/report/:jobId`, `/analytics/:jobId`, `/projects/:projectId`, `/job-editor/:id`
+React 18 + TypeScript + Vite · Firebase (Auth, Firestore, Cloud Functions, Storage) · Gemini AI · MCP Server (apply-recruitment v2.0.0)
 
 ## Commands
 
 ```bash
-npm run dev         # Dev server (Vite)
+npm run dev         # Vite dev server
 npm run build       # Production build
-npm test            # Tests (Vitest)
+npm test            # Vitest
 cd functions && node -e "require('./index')"  # Validate functions
 cd mcp-server && npm run build                # Build MCP server
 ```
 
+## Structure
+
+```
+src/components/   — UI (100+ components)
+src/pages/        — Route pages
+src/hooks/        — Custom hooks
+src/lib/          — Services/utilities
+functions/        — Firebase Cloud Functions (74 files)
+functions/utils/  — Shared utilities (gemini, nymeria, enrichment-service, auth-cors, sendgrid)
+functions/mcp-chat/ — MCP Chat orchestrator (Gemini function-calling + MCP tools)
+mcp-server/       — MCP server (11 tools, 5 resources, 5 prompts)
+```
+
+## Shared Utilities (`functions/utils/`)
+
+Lazy-init singletons following the `sendgrid.js` pattern. Import from `./utils/<name>`:
+
+| File | Exports | Purpose |
+|------|---------|---------|
+| `gemini.js` | `getModel`, `getJsonModel`, `generateContent` | Gemini AI singleton (default: `gemini-3-pro-preview`) |
+| `nymeria.js` | `enrichPerson`, `searchPerson` | Nymeria API client (30s timeout) |
+| `enrichment-service.js` | `enrichContact` | Waterfall enrichment with Firestore cache |
+| `auth-cors.js` | `corsHeaders`, `handlePreflight`, `verifyAuth`, `withAuth` | CORS + Firebase Auth for onRequest handlers |
+| `sendgrid.js` | `getSendGrid` | SendGrid email client |
+
+## onCall Migration
+
+30+ functions migrated from `onRequest` to `onCall` (v2). Remaining `onRequest` functions use `auth-cors.js` for shared CORS/auth boilerplate. New functions should default to `onCall` unless SSE streaming is required.
+
+## MCP Chat (`mcpChatStream`)
+
+SSE-streaming `onRequest` function that bridges Gemini function-calling with MCP server tools.
+
+**Backend:** `functions/mcp-chat-stream.js` → `functions/mcp-chat/` (orchestrator, sse-transport, tool-bundler, secrets-bridge, types)
+
+**Frontend:** Feature-flagged via `VITE_ENABLE_MCP_CHAT=true`
+- `src/types/mcp-chat.ts` — Stream event types, tool call types
+- `src/lib/mcp-chat-service.ts` — SSE client, event parsing
+- `src/hooks/useMCPChat.ts` — React hook (state, streaming, confirmation flow)
+- `src/components/chat/EmbeddedChat.tsx` — MCP mode toggle integration
+- `src/components/chat/ToolResultRenderer.tsx` — Tool result display
+- `src/components/chat/tool-results/` — Specialized renderers
+
+**Key behaviors:**
+- High-impact tools (email, scheduling) require user confirmation before execution
+- Max 5 tool calls per turn (`MAX_TOOL_CALLS_PER_TURN`)
+- SSE keepalive every 10s to prevent connection timeout
+- Tool schemas loaded from bundled MCP server dist (`mcp-server-dist/`)
+
 ## Auth Architecture
 
-Two auth contexts, one primary:
-
-- **`src/context/NewAuthContext.tsx`** — Primary auth context (34+ consumers). Provides `useAuth()` hook for all main app routes. Uses `useMemo`/`useCallback` for stable references.
-- **`src/context/ClarvidaAuthContext.tsx`** — Clarvida-specific auth (3 routes under `/clarvida/*` only). Do NOT use outside Clarvida.
-
-Supporting files:
-- `src/components/auth/ProtectedRoute.tsx` — Route guard with dev bypass (`VITE_BYPASS_AUTH`)
-- `src/pages/AuthCallback.tsx` — OAuth callback with open-redirect prevention (relative paths only)
-- `src/pages/Login.tsx` — Unified error messages to prevent account enumeration
-
-**Deleted (do not recreate):** `UnifiedAuthContext.tsx`, `FirebaseAuthContext.tsx`, `auth-bridge.ts`, `useFirebaseAuth.ts`
-
-## Key Directories
-
-- `src/` — Frontend (React components, hooks, contexts, lib)
-- `functions/` — Firebase Cloud Functions (74 files)
-- `mcp-server/` — Custom MCP server (apply-recruitment v2.0.0)
-
-## MCP Server
-
-Custom `apply-recruitment` MCP at `mcp-server/dist/server.js`
-- 11 tools: boolean search, job analysis, market intel, resume parsing, interviews
-- 5 resources: candidate schema, job requirements, skills taxonomy, search filters, tool guide
-- 5 prompts: source candidates, analyze resume, plan recruitment, search guide, tool help
-- SDK: @modelcontextprotocol/sdk v1.26.0
+- **Primary:** `src/context/NewAuthContext.tsx` → `useAuth()` (34+ consumers)
+- **Clarvida only:** `src/context/ClarvidaAuthContext.tsx` (3 routes under `/clarvida/*`)
+- **Deleted (do not recreate):** `UnifiedAuthContext.tsx`, `FirebaseAuthContext.tsx`, `auth-bridge.ts`, `useFirebaseAuth.ts`
 
 ## Enrichment Architecture
 
-**Waterfall enrichment** (`functions/waterfall-enrich.js`): Nymeria → Hunter.io → PDL, first success wins. Normalized to consistent schema via `normalizeEnrichmentData(provider, rawData)`. Wired into frontend through `function-bridge.ts` as `functionBridge.waterfallEnrich()`.
+Waterfall: Nymeria → Hunter.io → PDL (first success wins). Cached in `enrichment_cache` Firestore (30-day TTL). Usage gated via `checkAndExecute('candidates_enriched', ...)`. All Nymeria calls have 30s timeout.
 
-**Usage gating:** All enrichment calls go through `checkAndExecute('candidates_enriched', ...)` in `useEnrichment.ts` and `search/hooks/useProfileEnrichment.ts`. Credits charged only on successful (truthy) results.
+**Deprecated (do not resurrect):** `clearbit-enrichment.js` (410 Gone), `nymeriaService.ts`
 
-**Auth:** `enrich-profile.js` (onCall) requires `context.auth` — throws `unauthenticated` if missing.
+## Sidebar Navigation
 
-**Caching:** `enrich-profile.js`, `get-contact-info.js`, and `waterfall-enrich.js` check `enrichment_cache` Firestore collection (30-day TTL) before API calls. Cache writes use `admin.firestore.Timestamp.now()`.
-
-**Timeouts:** All Nymeria axios calls have `timeout: 30000` (30s) in `enrich-profile.js` and `get-contact-info.js`.
-
-**Deprecated/Deleted:**
-- `clearbit-enrichment.js` — Returns 410 Gone (do not resurrect)
-- `nymeriaService.ts` — Deleted. `EnrichmentAgent.ts` uses `functionBridge` instead (do not recreate)
-- PII removed from enrichment logs — only metadata logged
-
-## Contact
-
-james@hiapply.co
+Dashboard · Search · Contact Finder · Job Posting · Interviews · AI Assistant · Content Studio · Docs · Settings

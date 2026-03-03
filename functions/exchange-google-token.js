@@ -1,53 +1,24 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const admin = require('firebase-admin');
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+exports.exchangeGoogleToken = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.exchangeGoogleToken = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
   try {
-    res.set(corsHeaders);
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
-
-    const { code, redirectUri } = req.body || {};
+    const { code, redirectUri } = data || {};
     if (!code || !redirectUri) {
-      res.status(400).json({ error: 'Missing required parameters' });
-      return;
+      throw new HttpsError('invalid-argument', 'Missing required parameters');
     }
 
-    const clientId = functions.config().google?.oauth_client_id || process.env.GOOGLE_OAUTH_CLIENT_ID;
-    const clientSecret = functions.config().google?.oauth_client_secret || process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-      res.status(500).json({ error: 'Google OAuth credentials not configured' });
-      return;
+      throw new HttpsError('unavailable', 'Google OAuth credentials not configured');
     }
 
     const params = new URLSearchParams();
@@ -66,23 +37,23 @@ exports.exchangeGoogleToken = functions.https.onRequest(async (req, res) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       logger.error('Google token exchange failed:', errorText);
-      res.status(tokenResponse.status).json({ error: 'Failed to exchange authorization code' });
-      return;
+      throw new HttpsError('internal', 'Failed to exchange authorization code');
     }
 
     const tokens = await tokenResponse.json();
     const expiresAt = Date.now() + (tokens.expires_in || 0) * 1000;
 
-    res.status(200).json({
+    return {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       scope: tokens.scope,
       token_type: tokens.token_type,
       expires_in: tokens.expires_in,
       expires_at: expiresAt
-    });
+    };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('exchangeGoogleToken error:', error);
-    res.status(500).json({ error: 'Failed to exchange Google token' });
+    throw new HttpsError('internal', 'Failed to exchange Google token');
   }
 });

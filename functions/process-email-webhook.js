@@ -81,7 +81,7 @@ async function verifyWebhookSignature(req) {
     }
 
     // Get webhook verification key from environment
-    const webhookSecret = functions.config().sendgrid?.webhook_secret || process.env.SENDGRID_WEBHOOK_SECRET;
+    const webhookSecret = process.env.SENDGRID_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
       logger.warn('No webhook secret configured - skipping signature verification');

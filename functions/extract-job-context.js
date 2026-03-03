@@ -1,6 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getJsonModel } = require('./utils/gemini');
 
 const EXTRACTION_PROMPT = `You are a job posting analyst specializing in healthcare and behavioral health positions. Extract structured job information from the provided content.
 
@@ -87,56 +87,32 @@ const extractJson = (text) => {
   }
 };
 
-exports.extractJobContext = onRequest(
+exports.extractJobContext = onCall(
   {
-    cors: true,
     timeoutSeconds: 300,
     memory: '1GiB',
   },
-  async (req, res) => {
-    // Handle CORS preflight
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
-      const { content, contentType, metadata } = req.body || {};
+      const { content, contentType, metadata } = data || {};
 
       if (!content || typeof content !== 'string') {
-        res.status(400).json({
-          success: false,
-          error: 'Content is required and must be a string'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Content is required and must be a string');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({
-          success: false,
-          error: 'GEMINI_API_KEY is not configured'
-        });
-        return;
-      }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3-pro-preview',
-        generationConfig: {
-          temperature: 0.3, // Lower temperature for more consistent extraction
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json'
-        }
+      const model = getJsonModel('gemini-3-pro-preview', {
+        temperature: 0.3,
       });
+
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       // Build the prompt with content type context
       let contextualPrompt = EXTRACTION_PROMPT;
@@ -172,18 +148,17 @@ exports.extractJobContext = onRequest(
       const extracted = extractJson(rawText);
 
       if (!extracted) {
-        res.status(200).json({
+        return {
           success: false,
           error: 'Failed to parse extraction results',
           raw: rawText
-        });
-        return;
+        };
       }
 
       // Separate extraction_meta from the job data
       const { extraction_meta, ...jobData } = extracted;
 
-      res.status(200).json({
+      return {
         success: true,
         data: jobData,
         extractionMeta: extraction_meta || {
@@ -192,14 +167,12 @@ exports.extractJobContext = onRequest(
           fields_inferred: 0,
           source_type: contentType || 'unknown'
         }
-      });
+      };
 
     } catch (error) {
       logger.error('Job context extraction failed', { error });
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Job context extraction failed'
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Job context extraction failed');
     }
   }
 );

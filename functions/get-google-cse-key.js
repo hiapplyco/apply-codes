@@ -1,62 +1,29 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const admin = require('firebase-admin');
-const { defineString } = require('firebase-functions/params');
 
-// Define parameters that will be read from .env
-const googleCseApiKey = defineString('GOOGLE_CSE_API_KEY');
-const googleCseId = defineString('GOOGLE_CSE_ID');
+exports.getGoogleCseKey = onCall({}, async (request) => {
+  const { auth } = request;
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-exports.getGoogleCseKey = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
   try {
-    res.set(corsHeaders);
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
-
-    // Use params which read from .env file
     const apiKey = process.env.GOOGLE_CSE_API_KEY;
     const engineId = process.env.GOOGLE_CSE_ID;
 
     if (!apiKey || !engineId) {
       logger.error('Missing CSE config:', { hasApiKey: !!apiKey, hasEngineId: !!engineId });
-      res.status(500).json({ error: 'Google CSE configuration missing' });
-      return;
+      throw new HttpsError('unavailable', 'Google CSE configuration missing');
     }
 
-    res.status(200).json({
+    return {
       secret: apiKey,
       engineId
-    });
+    };
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('getGoogleCseKey error:', error);
-    res.status(500).json({ error: 'Failed to retrieve Google CSE configuration' });
+    throw new HttpsError('internal', 'Failed to retrieve Google CSE configuration');
   }
 });

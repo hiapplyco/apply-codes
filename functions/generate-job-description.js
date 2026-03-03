@@ -1,34 +1,21 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const { getModel } = require('./utils/gemini');
 
 /**
  * Generate a comprehensive job description using Gemini AI
  * Synthesizes form template data with uploaded context items
  */
-exports.generateJobDescription = onRequest(
+exports.generateJobDescription = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '512MiB',
   },
-  async (req, res) => {
-    res.set(corsHeaders);
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
@@ -36,7 +23,7 @@ exports.generateJobDescription = onRequest(
         template,
         contextItems = [],
         config = {}
-      } = req.body;
+      } = data;
 
       logger.info('[generateJobDescription] Request received:', {
         hasTemplate: !!template,
@@ -45,20 +32,13 @@ exports.generateJobDescription = onRequest(
       });
 
       if (!template) {
-        res.status(400).json({
-          success: false,
-          error: 'Template data is required'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'Template data is required');
       }
 
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('GEMINI_API_KEY not configured');
+      const model = getModel();
+      if (!model) {
+        throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured');
       }
-
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-preview' });
 
       // Build context from uploaded items
       const contextSummary = buildContextSummary(contextItems);
@@ -162,7 +142,7 @@ Return ONLY the complete job description in Markdown format. No explanations, no
         hasContextItems: contextItems.length > 0
       });
 
-      res.status(200).json({
+      return {
         success: true,
         description,
         metadata: {
@@ -170,14 +150,12 @@ Return ONLY the complete job description in Markdown format. No explanations, no
           contextItemsUsed: contextItems.length,
           model: 'gemini-3-pro-preview'
         }
-      });
+      };
 
     } catch (error) {
+      if (error instanceof HttpsError) throw error;
       logger.error('[generateJobDescription] Error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to generate job description'
-      });
+      throw new HttpsError('internal', error.message || 'Failed to generate job description');
     }
   }
 );
@@ -284,14 +262,12 @@ function buildContextSummary(contextItems) {
     }
 
     if (item.content) {
-      // Truncate long content
       const content = item.content.length > 2000
         ? item.content.substring(0, 2000) + '...[truncated]'
         : item.content;
       parts.push(`**Content:**\n${content}`);
     }
 
-    // Include any extracted job data
     if (item.metadata?.extractedJobData) {
       const extracted = item.metadata.extractedJobData;
       const extractedFields = Object.entries(extracted)

@@ -1,16 +1,5 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
-const admin = require('firebase-admin');
-
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
 
 const defaultReport = (content) => {
   const summary = content?.slice(0, 280) || 'No content provided.';
@@ -32,41 +21,25 @@ const defaultReport = (content) => {
   };
 };
 
-exports.generateClarvidaReport = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
-  }
+exports.generateClarvidaReport = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ success: false, error: 'Method not allowed' });
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
   try {
-    res.set(corsHeaders);
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ success: false, error: 'Unauthorized' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    await admin.auth().verifyIdToken(token);
-
-    const { content } = req.body || {};
+    const { content } = data || {};
     if (!content) {
-      res.status(400).json({ success: false, error: 'Content is required' });
-      return;
+      throw new HttpsError('invalid-argument', 'Content is required');
     }
 
     // Placeholder future integration: return structured report derived from content
     const report = defaultReport(content);
-    res.status(200).json(report);
+    return report;
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('generateClarvidaReport error:', error);
-    res.status(500).json({ success: false, error: 'Failed to generate Clarvida report' });
+    throw new HttpsError('internal', 'Failed to generate Clarvida report');
   }
 });

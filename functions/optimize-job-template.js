@@ -1,6 +1,6 @@
-const { onRequest } = require('firebase-functions/v2/https');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const logger = require('firebase-functions/logger');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { logger } = require("firebase-functions/v2");
+const { getJsonModel } = require('./utils/gemini');
 
 /**
  * Gemini-powered job template optimization
@@ -158,24 +158,16 @@ const extractJson = (text) => {
   }
 };
 
-exports.optimizeJobTemplate = onRequest(
+exports.optimizeJobTemplate = onCall(
   {
-    cors: true,
     timeoutSeconds: 120,
     memory: '512MiB',
   },
-  async (req, res) => {
-    if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'POST');
-      res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      res.status(204).send('');
-      return;
-    }
+  async (request) => {
+    const { data, auth } = request;
 
-    if (req.method !== 'POST') {
-      res.status(405).json({ success: false, error: 'Method not allowed' });
-      return;
+    if (!auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
     try {
@@ -184,23 +176,10 @@ exports.optimizeJobTemplate = onRequest(
         newContext,
         contextType,
         userEditedFields = []
-      } = req.body || {};
+      } = data || {};
 
       if (!currentTemplate) {
-        res.status(400).json({
-          success: false,
-          error: 'currentTemplate is required'
-        });
-        return;
-      }
-
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        res.status(503).json({
-          success: false,
-          error: 'GEMINI_API_KEY is not configured'
-        });
-        return;
+        throw new HttpsError('invalid-argument', 'currentTemplate is required');
       }
 
       logger.info('Starting job template optimization', {
@@ -209,15 +188,14 @@ exports.optimizeJobTemplate = onRequest(
         userEditedFieldsCount: userEditedFields.length
       });
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3-pro-preview',
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json'
-        }
+      const model = getJsonModel('gemini-3-pro-preview', {
+        temperature: 0.3,
+        maxOutputTokens: 8192,
       });
+
+      if (!model) {
+        throw new HttpsError('unavailable', 'GEMINI_API_KEY is not configured');
+      }
 
       // Build the optimization request
       let contextSection = '';
@@ -250,12 +228,11 @@ Now optimize the template by merging new context, deduplicating, and enhancing a
 
       if (!parsed || !parsed.optimized_template) {
         logger.warn('Optimization failed to produce valid output');
-        res.status(200).json({
+        return {
           success: false,
           error: 'Optimization produced invalid output',
           raw: rawText.substring(0, 1000)
-        });
-        return;
+        };
       }
 
       logger.info('Optimization complete', {
@@ -264,7 +241,7 @@ Now optimize the template by merging new context, deduplicating, and enhancing a
         confidence: parsed.optimization_summary?.confidence
       });
 
-      res.status(200).json({
+      return {
         success: true,
         data: parsed.optimized_template,
         summary: parsed.optimization_summary || {
@@ -274,7 +251,7 @@ Now optimize the template by merging new context, deduplicating, and enhancing a
           enhancements_made: [],
           confidence: 0.7
         }
-      });
+      };
 
     } catch (error) {
       logger.error('Job template optimization failed', {
@@ -282,10 +259,8 @@ Now optimize the template by merging new context, deduplicating, and enhancing a
         stack: error.stack
       });
 
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Optimization failed'
-      });
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', error.message || 'Optimization failed');
     }
   }
 );

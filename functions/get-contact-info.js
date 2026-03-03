@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -8,45 +8,15 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+exports.getContactInfo = onCall({}, async (request) => {
+  const { data, auth } = request;
 
-exports.getContactInfo = functions.https.onRequest(async (req, res) => {
-  if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
-    res.status(204).send('');
-    return;
+  if (!auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required');
   }
 
-  res.set(corsHeaders);
-
   try {
-    // Get user from Authorization header (Firebase Auth)
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Unauthorized - No token provided' });
-      return;
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-
-    // Verify user with Firebase Auth
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      if (!decodedToken.uid) {
-        res.status(401).json({ error: 'Unauthorized - Invalid token' });
-        return;
-      }
-    } catch (authError) {
-      logger.error('Auth error:', authError);
-      res.status(401).json({ error: 'Unauthorized - Invalid token' });
-      return;
-    }
-
-    const requestData = req.body || {};
+    const requestData = data || {};
     logger.info("Get Contact Info request", { url: (requestData.linkedin_url || requestData.profileUrl || '').substring(0, 100) });
 
     // Validate input
@@ -54,17 +24,14 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
     const targetUrl = linkedin_url || profileUrl;
 
     if (!targetUrl) {
-      res.status(400).json({
-        error: 'linkedin_url or profileUrl is required'
-      });
-      return;
+      throw new HttpsError('invalid-argument', 'linkedin_url or profileUrl is required');
     }
 
     // Get contact information from Nymeria
     const contactData = await getContactFromNymeria(targetUrl);
 
     if (!contactData) {
-      res.status(200).json({
+      return {
         email: null,
         phone: null,
         linkedin: targetUrl,
@@ -74,12 +41,11 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
         phone_numbers: [],
         social_profiles: [],
         message: "No contact information found for this profile"
-      });
-      return;
+      };
     }
 
     // Format response to match expected ContactInfo interface
-    const formattedResponse = {
+    return {
       email: contactData.work_email || contactData.emails?.[0] || null,
       phone: contactData.mobile_phone || contactData.phone_numbers?.[0] || null,
       linkedin: targetUrl,
@@ -95,26 +61,18 @@ exports.getContactInfo = functions.https.onRequest(async (req, res) => {
       message: "Contact information retrieved successfully"
     };
 
-    res.status(200).json(formattedResponse);
-
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error('Error in get-contact-info function:', error);
 
     const errorMessage = error.message || 'Unknown error';
-    const errorResponse = {
-      error: errorMessage,
-      type: error.constructor?.name || 'Error',
-      timestamp: new Date().toISOString()
-    };
 
     // Special handling for common errors
     if (errorMessage.includes('Missing Nymeria API key')) {
-      errorResponse.suggestion = 'Please configure NYMERIA_API_KEY in Cloud Functions environment variables';
+      throw new HttpsError('unavailable', 'Please configure NYMERIA_API_KEY in Cloud Functions environment variables');
     }
 
-    logger.error('Detailed error', errorResponse);
-
-    res.status(500).json(errorResponse);
+    throw new HttpsError('internal', errorMessage);
   }
 });
 
