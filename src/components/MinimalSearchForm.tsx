@@ -1540,23 +1540,10 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     <TooltipProvider>
       {/* Usage Limit Modal */}
       <UsageLimitModalComponent />
-      <div className="space-y-8 max-w-5xl mx-auto p-4">
-        {/* Hero Section with Better Visual Hierarchy */}
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 bg-purple-600 rounded-xl shadow-lg">
-              <Search className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">Boolean Search Generator</h1>
-          </div>
-          <p className="text-gray-600 text-lg max-w-3xl leading-relaxed">
-            Generate intelligent boolean search strings and find qualified candidates with Google Search + Nymeria enrichment
-          </p>
-        </div>
-
+      <div className="space-y-8 max-w-full mx-auto">
         {/* Step 1: Custom Instructions & Context */}
         <Collapsible open={!requirementsCollapsed} onOpenChange={(open) => setRequirementsCollapsed(!open)}>
-          <Card className="border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
             <CollapsibleTrigger asChild>
               <div className="p-6 cursor-pointer group">
                 <div className="flex justify-between items-center">
@@ -1990,7 +1977,7 @@ This area is for your specific search instructions, filtering criteria, or addit
         {/* Step 2: Boolean Search String */}
         {booleanString && (
           <Collapsible open={!booleanCollapsed} onOpenChange={(open) => setBooleanCollapsed(!open)}>
-            <Card className="border-2 border-purple-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-purple-50 to-blue-50">
+            <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <CollapsibleTrigger asChild>
                 <div className="p-6 cursor-pointer group">
                   <div className="flex justify-between items-center">
@@ -2075,7 +2062,7 @@ This area is for your specific search instructions, filtering criteria, or addit
         {/* Boolean Explanation */}
         {booleanExplanation && (
           <Collapsible open={!explanationCollapsed} onOpenChange={(open) => setExplanationCollapsed(!open)}>
-            <Card className="border-2 border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+            <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <CollapsibleTrigger asChild>
                 <div className="p-6 cursor-pointer group">
                   <div className="flex items-center gap-3">
@@ -2138,7 +2125,7 @@ This area is for your specific search instructions, filtering criteria, or addit
             loadingText="Searching LinkedIn profiles..."
             className="mb-6"
           >
-            <Card className="border-2 border-green-300 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-green-50 to-blue-50">
+            <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <div className="p-6">
                 <div className="flex flex-col gap-4 mb-6">
                   {/* Row 1: Title + View Controls */}

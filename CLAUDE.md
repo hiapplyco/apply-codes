@@ -93,3 +93,5 @@ Waterfall: Nymeria → Hunter.io → PDL (first success wins). Cached in `enrich
 ## Sidebar Navigation
 
 Dashboard · Search · Contact Finder · Job Posting · Interviews · AI Assistant · Content Studio · Docs · Settings
+
+**Sourcing Page (`/sourcing`):** Now follows dashboard UX pattern with stats row, quick actions, and recent searches. MinimalSearchForm gradient hero removed — page header serves as hero. Card borders updated to `border-0 shadow-sm` matching dashboard styling.
