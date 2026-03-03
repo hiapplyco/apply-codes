@@ -9,16 +9,15 @@ const { orchestrate } = require('./mcp-chat/gemini-orchestrator');
 const { validateSecrets } = require('./mcp-chat/secrets-bridge');
 const { StreamEventType } = require('./mcp-chat/types');
 
+// Only declare secrets that exist in Secret Manager
+// Optional secrets (GOOGLE_CSE_*, NYMERIA_*) are read from process.env at runtime
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
-const googleCseApiKey = defineSecret('GOOGLE_CSE_API_KEY');
-const googleCseId = defineSecret('GOOGLE_CSE_ID');
-const nymeriaApiKey = defineSecret('NYMERIA_API_KEY');
 
 exports.mcpChatStream = onRequest(
   {
     timeoutSeconds: 540,
     memory: '1GiB',
-    secrets: [geminiApiKey, googleCseApiKey, googleCseId, nymeriaApiKey],
+    secrets: [geminiApiKey],
     cors: false,
   },
   async (req, res) => {
