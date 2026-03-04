@@ -76,7 +76,7 @@ const ClarvidaLogin = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Hero Header */}
       <div className="relative h-48 md:h-64 overflow-hidden">
         <img
@@ -84,27 +84,27 @@ const ClarvidaLogin = () => {
           alt="Clarvida team"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50/90" />
+        <div className="absolute inset-0 bg-background/80" />
       </div>
 
       <div className="max-w-md mx-auto px-4 -mt-20 relative z-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 rounded-full bg-[#0B8A8A] flex items-center justify-center shadow-lg mb-4">
+          <div className="w-16 h-16 rounded-full bg-clarvida-primary/80 flex items-center justify-center shadow-lg mb-4">
             <span className="text-white font-bold text-2xl">C</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#0B5B5E]">clarvida</h1>
-          <p className="text-sm text-gray-600 text-center mt-1">
+          <h1 className="text-2xl font-bold text-clarvida-primary">clarvida</h1>
+          <p className="text-sm text-muted-foreground text-center mt-1">
             Recruitment Tools Platform
           </p>
         </div>
 
         <Card className="shadow-lg rounded-xl p-8 border border-gray-200 bg-white">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-foreground">
               {isSignUp ? "Create Account" : "Welcome Back"}
             </h2>
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground mt-2">
               {isSignUp
                 ? "Fill in your details to get started"
                 : "Sign in to access your recruitment tools"}
@@ -123,7 +123,7 @@ const ClarvidaLogin = () => {
                       <Input
                         type="email"
                         placeholder="you@clarvida.com"
-                        className="border-gray-300 focus:border-[#0B5B5E] focus:ring-[#0B5B5E]"
+                        className="border-gray-300 focus:border-clarvida-primary focus:ring-clarvida-primary"
                         {...field}
                         disabled={isLoading}
                       />
@@ -143,7 +143,7 @@ const ClarvidaLogin = () => {
                       <Input
                         type="password"
                         placeholder="••••••••"
-                        className="border-gray-300 focus:border-[#0B5B5E] focus:ring-[#0B5B5E]"
+                        className="border-gray-300 focus:border-clarvida-primary focus:ring-clarvida-primary"
                         {...field}
                         disabled={isLoading}
                       />
@@ -157,7 +157,7 @@ const ClarvidaLogin = () => {
                 <div className="text-right">
                   <Link
                     to="/reset-password-request"
-                    className="text-sm text-[#0B5B5E] hover:text-[#0A4F4F] hover:underline"
+                    className="text-sm text-clarvida-primary hover:text-clarvida-primary/80 hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -166,7 +166,7 @@ const ClarvidaLogin = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-[#D4A03C] hover:bg-[#C4902C] text-white font-semibold py-3 h-auto"
+                className="w-full bg-clarvida-accent hover:bg-clarvida-accent/90 text-white font-semibold py-3 h-auto"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -180,15 +180,16 @@ const ClarvidaLogin = () => {
               </Button>
 
               <div className="text-center pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="link"
                   onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-[#0B5B5E] hover:text-[#0A4F4F] font-medium"
+                  className="text-sm text-clarvida-primary font-medium p-0 h-auto"
                 >
                   {isSignUp
                     ? "Already have an account? Sign in"
                     : "Don't have an account? Sign up"}
-                </button>
+                </Button>
               </div>
             </form>
           </Form>
@@ -200,11 +201,11 @@ const ClarvidaLogin = () => {
             &copy; {new Date().getFullYear()} Clarvida Recruitment Tools
           </p>
           <div className="flex justify-center gap-4 mt-2 text-sm text-gray-500">
-            <a href="https://www.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B5B5E]">
+            <a href="https://www.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-clarvida-primary">
               Clarvida.com
             </a>
             <span>|</span>
-            <a href="https://jobs.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#0B5B5E]">
+            <a href="https://jobs.clarvida.com" target="_blank" rel="noopener noreferrer" className="hover:text-clarvida-primary">
               Jobs
             </a>
           </div>

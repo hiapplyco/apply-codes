@@ -43,16 +43,16 @@ const CheckoutSuccess = () => {
   }, [sessionId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(34,197,94,1)] text-center">
+        <div className="bg-card rounded-2xl border p-8 shadow-sm text-center">
           {isVerifying ? (
             <>
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
               </div>
               <h1 className="text-3xl font-black mb-4">Verifying Payment...</h1>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Please wait while we confirm your subscription.
               </p>
             </>
@@ -62,11 +62,11 @@ const CheckoutSuccess = () => {
                 <PartyPopper className="w-10 h-10 text-green-600" />
               </div>
               <h1 className="text-3xl font-black mb-4">Welcome to Pro!</h1>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Your subscription is now active. You have access to all Pro features!
               </p>
 
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+              <div className="bg-success/10 border border-success/30 rounded-xl p-4 mb-6">
                 <h3 className="font-bold text-green-800 mb-2">What's Unlocked:</h3>
                 <ul className="text-left text-green-700 space-y-2">
                   <li className="flex items-center gap-2">
@@ -91,14 +91,14 @@ const CheckoutSuccess = () => {
               <div className="space-y-3">
                 <Button
                   onClick={() => navigate('/dashboard')}
-                  className="w-full py-6 text-lg font-bold bg-green-600 hover:bg-green-700 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                  className="w-full py-6 text-lg font-bold"
                 >
                   Go to Dashboard
                 </Button>
                 <Button
                   onClick={() => navigate('/sourcing')}
                   variant="outline"
-                  className="w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                  className="w-full py-6 text-lg font-bold"
                 >
                   Start Sourcing
                 </Button>

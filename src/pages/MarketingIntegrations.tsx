@@ -783,10 +783,10 @@ const getCategoryColor = (category: string) => {
   switch (category) {
     case 'HRIS': return 'bg-blue-100 text-blue-700 border-blue-200';
     case 'ATS': return 'bg-green-100 text-green-700 border-green-200';
-    case 'Unified': return 'bg-purple-100 text-purple-700 border-purple-200';
+    case 'Unified': return 'bg-primary/10 text-primary border-purple-200';
     case 'Free': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
     case 'CRM': return 'bg-pink-100 text-pink-700 border-pink-200';
-    default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    default: return 'bg-gray-100 text-gray-700 border-border';
   }
 };
 
@@ -1008,9 +1008,9 @@ export default function IntegrationsEnhanced() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white">
+    <div className="min-h-screen bg-background">
       {/* Header - same as landing page */}
-      <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b-2 border-black z-50">
+      <header className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-border z-50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
@@ -1021,21 +1021,23 @@ export default function IntegrationsEnhanced() {
               />
             </div>
             <nav className="hidden md:flex items-center gap-6">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => navigate('/')}
-                className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+                className="text-muted-foreground hover:text-primary font-medium transition-colors"
               >
                 Home
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={() => navigate('/pricing')}
-                className="text-gray-700 hover:text-[#8B5CF6] font-medium transition-colors"
+                className="text-muted-foreground hover:text-primary font-medium transition-colors"
               >
                 Pricing
-              </button>
+              </Button>
               <Button
                 onClick={handleGetStarted}
-                className="bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-4 py-2 rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                className="px-4 py-2 rounded-lg transition-all"
               >
                 Get Started
               </Button>
@@ -1047,29 +1049,29 @@ export default function IntegrationsEnhanced() {
       <div className="pt-32 p-4 md:p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-black text-gray-900 mb-2">Integration Marketplace</h1>
-          <p className="text-lg text-gray-600">
+          <h1 className="text-4xl font-black text-foreground mb-2">Integration Marketplace</h1>
+          <p className="text-lg text-muted-foreground">
             Connect your existing tools to transform recruitment with unified access to 20+ platforms
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <div className="text-3xl font-black text-purple-600">{stats.connected}</div>
-            <div className="text-sm text-gray-600 mt-1">Connected</div>
+          <Card className="p-6">
+            <div className="text-3xl font-black text-primary">{stats.connected}</div>
+            <div className="text-sm text-muted-foreground mt-1">Connected</div>
           </Card>
-          <Card className="p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <Card className="p-6">
             <div className="text-3xl font-black text-green-600">{stats.available}</div>
-            <div className="text-sm text-gray-600 mt-1">Available</div>
+            <div className="text-sm text-muted-foreground mt-1">Available</div>
           </Card>
-          <Card className="p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <Card className="p-6">
             <div className="text-3xl font-black text-blue-600">{stats.enterprise}</div>
-            <div className="text-sm text-gray-600 mt-1">Enterprise</div>
+            <div className="text-sm text-muted-foreground mt-1">Enterprise</div>
           </Card>
-          <Card className="p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <Card className="p-6">
             <div className="text-3xl font-black text-yellow-600">{stats.free}</div>
-            <div className="text-sm text-gray-600 mt-1">Free Options</div>
+            <div className="text-sm text-muted-foreground mt-1">Free Options</div>
           </Card>
         </div>
 
@@ -1083,13 +1085,13 @@ export default function IntegrationsEnhanced() {
                 placeholder="Search integrations, features, or capabilities..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                className="pl-10"
               />
             </div>
             
             <div className="flex gap-2">
               <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as typeof selectedCategory)}>
-                <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1103,7 +1105,7 @@ export default function IntegrationsEnhanced() {
               </Select>
 
               <Select value={selectedSubcategory} onValueChange={(value) => setSelectedSubcategory(value as typeof selectedSubcategory)}>
-                <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1115,7 +1117,7 @@ export default function IntegrationsEnhanced() {
               </Select>
 
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                <SelectTrigger className="w-40 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1125,7 +1127,7 @@ export default function IntegrationsEnhanced() {
                 </SelectContent>
               </Select>
 
-              <div className="flex gap-1 border-2 border-black rounded-lg p-1 bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex gap-1 border border-border rounded-lg p-1 bg-white shadow-sm">
                 <Button
                   size="sm"
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -1155,20 +1157,21 @@ export default function IntegrationsEnhanced() {
                 : integrations.filter(i => i.category === category).length;
               
               return (
-                <button
+                <Button
                   key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
                   className={cn(
-                    "px-4 py-2 rounded-full border-2 font-semibold transition-all duration-200 flex items-center gap-2",
+                    "px-4 py-2 rounded-full font-semibold transition-all duration-200 flex items-center gap-2",
                     selectedCategory === category
-                      ? "bg-purple-600 text-white border-purple-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                      : "bg-white border-gray-300 hover:border-purple-600"
+                      ? ""
+                      : "bg-white border-border hover:border-primary"
                   )}
                 >
                   {Icon && <Icon className="w-4 h-4" />}
                   {category === 'all' ? 'All' : category}
                   <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{count}</span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -1181,8 +1184,8 @@ export default function IntegrationsEnhanced() {
               <Card
                 key={integration.id}
                 className={cn(
-                  "border-2 border-black p-6 cursor-pointer transition-all duration-200",
-                  "hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1",
+                  "p-6 cursor-pointer transition-all duration-200",
+                  "hover:shadow-md hover:-translate-y-1",
                   false
                 )}
                 onClick={() => setSelectedIntegration(integration)}
@@ -1198,13 +1201,13 @@ export default function IntegrationsEnhanced() {
                     </div>
                   </div>
                   {integration.badge && (
-                    <Badge className="bg-purple-100 text-purple-700 text-xs">
+                    <Badge className="bg-primary/10 text-primary text-xs">
                       {integration.badge}
                     </Badge>
                   )}
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                   {integration.description}
                 </p>
 
@@ -1231,7 +1234,7 @@ export default function IntegrationsEnhanced() {
                     }}
                     variant="default"
                     className={cn(
-                      "border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                      "transition-all"
                     )}
                   >
                     <Plus className="w-4 h-4 mr-1" />
@@ -1254,8 +1257,8 @@ export default function IntegrationsEnhanced() {
             {/* Not Listed Card */}
             <Card
               className={cn(
-                "border-2 border-dashed border-gray-300 p-6 cursor-pointer transition-all duration-200",
-                "hover:border-purple-500 hover:bg-purple-50"
+                "border-dashed border-border p-6 cursor-pointer transition-all duration-200",
+                "hover:border-primary hover:bg-primary/5"
               )}
               onClick={() => {
                 const customPlatform = prompt("Enter the name of the platform you'd like to integrate:");
@@ -1267,13 +1270,13 @@ export default function IntegrationsEnhanced() {
               <div className="flex flex-col items-center justify-center text-center min-h-[200px]">
                 <div className="text-4xl mb-4">🔗</div>
                 <h3 className="font-bold text-lg mb-2">Not Listed?</h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   Don't see your platform? Click here to request a custom integration.
                 </p>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  className="transition-all"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Request Integration
@@ -1287,8 +1290,8 @@ export default function IntegrationsEnhanced() {
               <Card
                 key={integration.id}
                 className={cn(
-                  "border-2 border-black p-6 cursor-pointer transition-all duration-200",
-                  "hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5",
+                  "p-6 cursor-pointer transition-all duration-200",
+                  "hover:shadow-md hover:-translate-y-0.5",
                   false
                 )}
                 onClick={() => setSelectedIntegration(integration)}
@@ -1308,12 +1311,12 @@ export default function IntegrationsEnhanced() {
                           </Badge>
                         )}
                         {integration.badge && (
-                          <Badge className="bg-purple-100 text-purple-700 text-xs">
+                          <Badge className="bg-primary/10 text-primary text-xs">
                             {integration.badge}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-gray-600 mb-3">{integration.description}</p>
+                      <p className="text-muted-foreground mb-3">{integration.description}</p>
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4 text-gray-400" />
@@ -1339,7 +1342,7 @@ export default function IntegrationsEnhanced() {
                       e.stopPropagation();
                       handleIntegrationRequest(integration);
                     }}
-                    className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                    className="transition-all"
                   >
                     Get Connected
                     <ChevronRight className="w-4 h-4 ml-1" />
@@ -1351,8 +1354,8 @@ export default function IntegrationsEnhanced() {
             {/* Not Listed Card - List View */}
             <Card
               className={cn(
-                "border-2 border-dashed border-gray-300 p-6 cursor-pointer transition-all duration-200",
-                "hover:border-purple-500 hover:bg-purple-50"
+                "border-dashed border-border p-6 cursor-pointer transition-all duration-200",
+                "hover:border-primary hover:bg-primary/5"
               )}
               onClick={() => {
                 const customPlatform = prompt("Enter the name of the platform you'd like to integrate:");
@@ -1371,7 +1374,7 @@ export default function IntegrationsEnhanced() {
                         Custom
                       </Badge>
                     </div>
-                    <p className="text-gray-600 mb-3">
+                    <p className="text-muted-foreground mb-3">
                       Don't see your platform? Request a custom integration with any system you need.
                     </p>
                     <div className="flex items-center gap-1 text-sm">
@@ -1382,7 +1385,7 @@ export default function IntegrationsEnhanced() {
                 </div>
                 <Button
                   variant="outline"
-                  className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  className="transition-all"
                 >
                   Request Integration
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -1404,10 +1407,10 @@ export default function IntegrationsEnhanced() {
       {selectedIntegration && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
              onClick={() => setSelectedIntegration(null)}>
-          <div className="bg-white rounded-xl border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] 
+          <div className="bg-white rounded-xl border border-border shadow-lg
                         max-w-4xl w-full max-h-[90vh] overflow-hidden"
                onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b-2 border-black">
+            <div className="p-6 border-b border-border">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="text-5xl">{selectedIntegration.logo}</div>
@@ -1423,19 +1426,21 @@ export default function IntegrationsEnhanced() {
                         </Badge>
                       )}
                       {selectedIntegration.badge && (
-                        <Badge className="bg-purple-100 text-purple-700 text-sm">
+                        <Badge className="bg-primary/10 text-primary text-sm">
                           {selectedIntegration.badge}
                         </Badge>
                       )}
                     </div>
                   </div>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setSelectedIntegration(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   ✕
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -1443,7 +1448,7 @@ export default function IntegrationsEnhanced() {
               <div className="p-6 space-y-6">
                 <div>
                   <h3 className="font-bold text-lg mb-2">About</h3>
-                  <p className="text-gray-600">{selectedIntegration.description}</p>
+                  <p className="text-muted-foreground">{selectedIntegration.description}</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -1470,8 +1475,8 @@ export default function IntegrationsEnhanced() {
                     <ul className="space-y-2">
                       {selectedIntegration.aiFeatures.map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
-                          <div className="w-4 h-4 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <div className="w-2 h-2 rounded-full bg-purple-600" />
+                          <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <div className="w-2 h-2 rounded-full bg-primary" />
                           </div>
                           <span className="text-sm text-gray-700">{feature}</span>
                         </li>
@@ -1497,20 +1502,20 @@ export default function IntegrationsEnhanced() {
                 <div className="grid md:grid-cols-3 gap-4 pt-4 border-t">
                   <div className="text-center">
                     <Clock className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                    <p className="text-sm text-gray-600">Setup Time</p>
+                    <p className="text-sm text-muted-foreground">Setup Time</p>
                     <p className="font-bold">{selectedIntegration.setupTime}</p>
                   </div>
                   {selectedIntegration.employeeRange && (
                     <div className="text-center">
                       <Users className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                      <p className="text-sm text-gray-600">Best For</p>
+                      <p className="text-sm text-muted-foreground">Best For</p>
                       <p className="font-bold">{selectedIntegration.employeeRange}</p>
                     </div>
                   )}
                   {selectedIntegration.pricing && (
                     <div className="text-center">
                       <TrendingUp className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                      <p className="text-sm text-gray-600">Pricing</p>
+                      <p className="text-sm text-muted-foreground">Pricing</p>
                       <p className="font-bold text-green-600">{selectedIntegration.pricing}</p>
                     </div>
                   )}
@@ -1518,22 +1523,18 @@ export default function IntegrationsEnhanced() {
 
                 <div className="flex gap-3 pt-4">
                   {selectedIntegration.status === 'connected' && (
-                    <Button 
+                    <Button
                       onClick={() => handleIntegrationRequest(selectedIntegration)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white 
-                               border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
-                               hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                      className="w-full transition-all"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Get Connected
                     </Button>
                   )}
                   {selectedIntegration.status === 'available' && (
-                    <Button 
+                    <Button
                       onClick={() => handleIntegrationRequest(selectedIntegration)}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white 
-                               border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] 
-                               hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                      className="w-full transition-all"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Get Connected

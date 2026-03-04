@@ -7,6 +7,7 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { Menu, X } from "lucide-react";
 import { SidebarNew } from "./SidebarNew";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 
 const MainLayoutComponent = () => {
@@ -28,7 +29,7 @@ const MainLayoutComponent = () => {
   const sidebarClosedWidth = "5rem"; // 80px
 
   return (
-    <div className="min-h-screen w-full bg-[#F1F0FB] overflow-hidden">
+    <div className="min-h-screen w-full bg-background overflow-hidden">
       {/* Desktop Sidebar - Fixed Position */}
       <div
         className="hidden lg:block fixed left-0 top-0 h-full transition-all duration-300 z-30"
@@ -73,14 +74,16 @@ const MainLayoutComponent = () => {
           <div className="p-4 lg:p-6 min-h-[100dvh] flex flex-col">
             <div className="flex flex-col gap-4 h-full">
               <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
                   aria-label={mobileDrawerOpen ? "Close menu" : "Open menu"}
                   aria-expanded={mobileDrawerOpen}
-                  className="lg:hidden h-11 w-11 rounded-md border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 flex items-center justify-center shadow-sm"
+                  className="lg:hidden"
                 >
                   {mobileDrawerOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
+                </Button>
                 <NavigationProgress
                   isNavigating={isNavigating}
                   progress={progress}

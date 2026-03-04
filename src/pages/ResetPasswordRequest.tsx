@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/components/ui/use-toast";
 import { useNewAuth } from "@/context/NewAuthContext";
 import { ArrowLeft, Mail } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 export default function ResetPasswordRequest() {
   const [email, setEmail] = useState("");
@@ -48,11 +49,11 @@ export default function ResetPasswordRequest() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Mail className="h-6 w-6 text-green-600" />
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+              <Mail className="h-6 w-6 text-success" />
             </div>
             <CardTitle>Check your email</CardTitle>
             <CardDescription className="mt-2">
@@ -60,7 +61,7 @@ export default function ResetPasswordRequest() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600 text-center">
+            <p className="text-sm text-muted-foreground text-center">
               Click the link in the email to reset your password. If you don't see the email, check your spam folder.
             </p>
             <div className="flex flex-col gap-2">
@@ -88,7 +89,7 @@ export default function ResetPasswordRequest() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Reset your password</CardTitle>
@@ -99,9 +100,9 @@ export default function ResetPasswordRequest() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <Label htmlFor="email">
                 Email address
-              </label>
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -121,7 +122,7 @@ export default function ResetPasswordRequest() {
               {isLoading ? "Sending..." : "Send reset email"}
             </Button>
             <div className="text-center">
-              <Link to="/login" className="text-sm text-blue-600 hover:text-blue-500">
+              <Link to="/login" className="text-sm text-primary hover:text-primary/80">
                 <ArrowLeft className="inline h-3 w-3 mr-1" />
                 Back to login
               </Link>

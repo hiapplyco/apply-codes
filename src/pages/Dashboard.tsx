@@ -66,7 +66,7 @@ const quickActions = [
     description: "Find candidates with AI boolean search",
     icon: Search,
     path: "/sourcing",
-    color: "bg-purple-100 text-purple-700",
+    color: "bg-primary/10 text-primary",
   },
   {
     title: "Find Contacts",
@@ -80,14 +80,14 @@ const quickActions = [
     description: "Create an AI-optimized job posting",
     icon: Briefcase,
     path: "/job-post",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-info/10 text-info",
   },
   {
     title: "Start Interview",
     description: "Launch an AI-assisted video call",
     icon: Video,
     path: "/meeting",
-    color: "bg-green-100 text-green-700",
+    color: "bg-success/10 text-success",
   },
   {
     title: "AI Assistant",
@@ -101,7 +101,7 @@ const quickActions = [
     description: "Generate outreach and job descriptions",
     icon: PlusCircle,
     path: "/content-creation",
-    color: "bg-orange-100 text-orange-700",
+    color: "bg-warning/10 text-warning",
   },
 ];
 
@@ -193,10 +193,10 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Welcome */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {firstName}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Here's what's happening with your recruiting pipeline
           </p>
         </div>
@@ -214,45 +214,45 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Search className="h-5 w-5 text-purple-600" />
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Search className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalSearches}</p>
-                  <p className="text-xs text-gray-500">Total Searches</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalSearches}</p>
+                  <p className="text-xs text-muted-foreground">Total Searches</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
+                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.searchesThisWeek}</p>
-                  <p className="text-xs text-gray-500">This Week</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.searchesThisWeek}</p>
+                  <p className="text-xs text-muted-foreground">This Week</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <Folder className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
+                  <Folder className="h-5 w-5 text-info" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeProjects}</p>
-                  <p className="text-xs text-gray-500">Active Projects</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.activeProjects}</p>
+                  <p className="text-xs text-muted-foreground">Active Projects</p>
                 </div>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                  <Activity className="h-5 w-5 text-orange-600" />
+                <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
+                  <Activity className="h-5 w-5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalProjects}</p>
-                  <p className="text-xs text-gray-500">Total Projects</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalProjects}</p>
+                  <p className="text-xs text-muted-foreground">Total Projects</p>
                 </div>
               </CardContent>
             </Card>
@@ -261,29 +261,30 @@ const Dashboard = () => {
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Quick Actions
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {quickActions.map((action) => (
-              <button
+              <Button
                 key={action.path}
+                variant="ghost"
                 onClick={() => navigate(action.path)}
-                className="group flex flex-col items-center gap-2 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200"
+                className="group flex flex-col items-center gap-2 p-4 h-auto rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200"
               >
                 <div className={`h-10 w-10 rounded-lg ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   <action.icon className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                <span className="text-xs font-medium text-muted-foreground text-center leading-tight">
                   {action.title}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -296,14 +297,14 @@ const Dashboard = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-400" />
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     Recent Searches
                   </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => navigate("/profile")}
-                    className="text-xs text-purple-600 hover:text-purple-700"
+                    className="text-xs text-primary hover:text-primary"
                   >
                     View All
                     <ArrowRight className="h-3 w-3 ml-1" />
@@ -313,12 +314,12 @@ const Dashboard = () => {
               <CardContent>
                 {recentSearches.length === 0 ? (
                   <div className="text-center py-6">
-                    <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No searches yet</p>
+                    <Search className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No searches yet</p>
                     <Button
                       size="sm"
                       onClick={() => navigate("/sourcing")}
-                      className="mt-3 bg-purple-600 hover:bg-purple-700 text-white"
+                      className="mt-3"
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
                       Start Your First Search
@@ -328,12 +329,13 @@ const Dashboard = () => {
                   <ul className="space-y-2">
                     {recentSearches.map((search) => (
                       <li key={search.id}>
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => navigate("/sourcing")}
-                          className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                          className="w-full flex items-center justify-between p-2.5 h-auto rounded-lg hover:bg-muted transition-colors text-left"
                         >
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {search.search_query || "Boolean Search"}
                             </p>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -341,18 +343,18 @@ const Dashboard = () => {
                                 {search.platform || "Google"}
                               </Badge>
                               {search.results_count > 0 && (
-                                <span className="text-[10px] text-gray-400">
+                                <span className="text-[10px] text-muted-foreground">
                                   {search.results_count} results
                                 </span>
                               )}
                             </div>
                           </div>
-                          <span className="text-[10px] text-gray-400 flex-shrink-0 ml-2">
+                          <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
                             {search.created_at
                               ? formatDistanceToNow(new Date(search.created_at), { addSuffix: true })
                               : ""}
                           </span>
-                        </button>
+                        </Button>
                       </li>
                     ))}
                   </ul>
@@ -365,14 +367,14 @@ const Dashboard = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Folder className="h-4 w-4 text-gray-400" />
+                    <Folder className="h-4 w-4 text-muted-foreground" />
                     Active Projects
                   </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => navigate("/profile")}
-                    className="text-xs text-purple-600 hover:text-purple-700"
+                    className="text-xs text-primary hover:text-primary"
                   >
                     View All
                     <ArrowRight className="h-3 w-3 ml-1" />
@@ -382,9 +384,9 @@ const Dashboard = () => {
               <CardContent>
                 {projects.length === 0 ? (
                   <div className="text-center py-6">
-                    <Folder className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No active projects</p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <Folder className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No active projects</p>
+                    <p className="text-xs text-muted-foreground mt-1">
                       Create a project to organize your recruiting pipeline
                     </p>
                   </div>
@@ -392,9 +394,10 @@ const Dashboard = () => {
                   <ul className="space-y-2">
                     {projects.map((project) => (
                       <li key={project.id}>
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => navigate(`/projects/${project.id}`)}
-                          className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                          className="w-full flex items-center justify-between p-2.5 h-auto rounded-lg hover:bg-muted transition-colors text-left"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div
@@ -404,11 +407,11 @@ const Dashboard = () => {
                               <Folder className="h-4 w-4" style={{ color: project.color }} />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
+                              <p className="text-sm font-medium text-foreground truncate">
                                 {project.name}
                               </p>
                               {project.description && (
-                                <p className="text-[10px] text-gray-400 truncate">
+                                <p className="text-[10px] text-muted-foreground truncate">
                                   {project.description}
                                 </p>
                               )}
@@ -417,7 +420,7 @@ const Dashboard = () => {
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
                             {project.candidates_count || 0} candidates
                           </Badge>
-                        </button>
+                        </Button>
                       </li>
                     ))}
                   </ul>

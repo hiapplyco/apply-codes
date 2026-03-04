@@ -37,7 +37,7 @@ export function JobEditorPage() {
       variant: "destructive",
     });
     return (
-      <div className="flex items-center justify-center min-h-screen text-red-500">
+      <div className="flex items-center justify-center min-h-screen text-destructive">
         Error loading job analysis
       </div>
     );

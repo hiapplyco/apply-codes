@@ -159,13 +159,13 @@ const SourcingComponent = () => {
     {
       title: "New Search",
       icon: Search,
-      color: "bg-purple-100 text-purple-700",
+      color: "bg-primary/10 text-primary",
       onClick: scrollToSearch,
     },
     {
       title: "Upload JD",
       icon: Upload,
-      color: "bg-emerald-100 text-emerald-700",
+      color: "bg-success/10 text-success",
       onClick: () => {
         scrollToSearch();
         toast.info("Use the Upload button in the search form below");
@@ -174,7 +174,7 @@ const SourcingComponent = () => {
     {
       title: "Scrape URL",
       icon: Link,
-      color: "bg-blue-100 text-blue-700",
+      color: "bg-info/10 text-info",
       onClick: () => {
         scrollToSearch();
         toast.info("Use the Scrape button in the search form below");
@@ -183,7 +183,7 @@ const SourcingComponent = () => {
     {
       title: "AI Research",
       icon: Sparkles,
-      color: "bg-pink-100 text-pink-700",
+      color: "bg-warning/10 text-warning",
       onClick: () => {
         scrollToSearch();
         toast.info("Use the AI Research button in the search form below");
@@ -197,19 +197,20 @@ const SourcingComponent = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Candidate Sourcing</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl font-bold text-foreground">Candidate Sourcing</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               AI-powered boolean search, enrichment, and outreach pipeline
             </p>
           </div>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setShowContext(!showContext)}
             aria-label={showContext ? 'Hide context panel' : 'Show context panel'}
             aria-expanded={showContext}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               selectedProject
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-success/5 text-success border border-success/20'
+                : 'bg-muted text-muted-foreground hover:bg-muted'
             }`}
           >
             <Folder className="w-4 h-4" />
@@ -217,7 +218,7 @@ const SourcingComponent = () => {
               {selectedProject?.name || 'Add Context'}
             </span>
             {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
+          </Button>
         </div>
 
         {/* Collapsible Context */}
@@ -256,51 +257,51 @@ const SourcingComponent = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                <Search className="h-5 w-5 text-purple-600" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Search className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" /> : totalSearches}
+                <p className="text-2xl font-bold text-foreground">
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" /> : totalSearches}
                 </p>
-                <p className="text-xs text-gray-500">Total Searches</p>
+                <p className="text-xs text-muted-foreground">Total Searches</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" /> : searchesThisWeek}
+                <p className="text-2xl font-bold text-foreground">
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground/60" /> : searchesThisWeek}
                 </p>
-                <p className="text-xs text-gray-500">This Week</p>
+                <p className="text-xs text-muted-foreground">This Week</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
-                <Users className="h-5 w-5 text-teal-600" />
+              <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{enrichmentsUsed}</p>
-                <p className="text-xs text-gray-500">Enrichments</p>
+                <p className="text-2xl font-bold text-foreground">{enrichmentsUsed}</p>
+                <p className="text-xs text-muted-foreground">Enrichments</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <Folder className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center flex-shrink-0">
+                <Folder className="h-5 w-5 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 truncate max-w-[100px]">
+                <p className="text-2xl font-bold text-foreground truncate max-w-[100px]">
                   {selectedProject?.name || "—"}
                 </p>
-                <p className="text-xs text-gray-500">Active Project</p>
+                <p className="text-xs text-muted-foreground">Active Project</p>
               </div>
             </CardContent>
           </Card>
@@ -308,23 +309,24 @@ const SourcingComponent = () => {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Quick Actions
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {quickActions.map((action) => (
-              <button
+              <Button
+                variant="ghost"
                 key={action.title}
                 onClick={action.onClick}
-                className="group flex flex-col items-center gap-2 p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200"
+                className="group flex flex-col items-center gap-2 p-4 h-auto rounded-xl bg-white border border-border shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200"
               >
                 <div aria-hidden="true" className={`h-10 w-10 rounded-lg ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   <action.icon className="h-5 w-5" />
                 </div>
-                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                <span className="text-xs font-medium text-muted-foreground text-center leading-tight">
                   {action.title}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -335,7 +337,7 @@ const SourcingComponent = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-400" />
+                  <Clock className="h-4 w-4 text-muted-foreground/60" />
                   Recent Searches
                 </CardTitle>
                 {recentSearches.length > 0 && (
@@ -343,7 +345,7 @@ const SourcingComponent = () => {
                     variant="ghost"
                     size="sm"
                     onClick={scrollToSearch}
-                    className="text-xs text-purple-600 hover:text-purple-700"
+                    className="text-xs text-primary hover:text-primary"
                   >
                     New Search
                     <ArrowRight className="h-3 w-3 ml-1" />
@@ -354,12 +356,12 @@ const SourcingComponent = () => {
             <CardContent>
               {recentSearches.length === 0 ? (
                 <div className="text-center py-6">
-                  <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No searches yet</p>
+                  <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No searches yet</p>
                   <Button
                     size="sm"
                     onClick={scrollToSearch}
-                    className="mt-3 bg-purple-600 hover:bg-purple-700 text-white"
+                    className="mt-3"
                   >
                     <Sparkles className="h-3 w-3 mr-1" />
                     Start Your First Search
@@ -369,12 +371,13 @@ const SourcingComponent = () => {
                 <ul className="space-y-2">
                   {recentSearches.map((search) => (
                     <li key={search.id}>
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={scrollToSearch}
-                        className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                        className="w-full flex items-center justify-between p-2.5 h-auto rounded-lg hover:bg-muted transition-colors text-left"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {search.search_query || "Boolean Search"}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -382,18 +385,18 @@ const SourcingComponent = () => {
                               {search.platform || "Google"}
                             </Badge>
                             {search.results_count > 0 && (
-                              <span className="text-[10px] text-gray-400">
+                              <span className="text-[10px] text-muted-foreground/60">
                                 {search.results_count} results
                               </span>
                             )}
                           </div>
                         </div>
-                        <span className="text-[10px] text-gray-400 flex-shrink-0 ml-2">
+                        <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 ml-2">
                           {search.created_at
                             ? formatDistanceToNow(new Date(search.created_at), { addSuffix: true })
                             : ""}
                         </span>
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -403,7 +406,7 @@ const SourcingComponent = () => {
         )}
 
         {/* Section Divider */}
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Boolean Search
         </h2>
 

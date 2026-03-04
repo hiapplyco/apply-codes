@@ -195,7 +195,7 @@ const ClarvidaSourcing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Navigation Header */}
       <ClarvidaNavHeader />
 
@@ -203,20 +203,20 @@ const ClarvidaSourcing = () => {
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Candidate Sourcing</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Candidate Sourcing</h1>
+            <p className="text-muted-foreground mt-1">
               Build job descriptions and find qualified candidates
             </p>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0">
             {currentTemplate && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-2 rounded-lg shadow-sm">
-                <Briefcase className="w-4 h-4 text-[#0B5B5E]" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white px-4 py-2 rounded-lg shadow-sm">
+                <Briefcase className="w-4 h-4 text-clarvida-primary" />
                 <span className="font-medium">{currentTemplate.job_title}</span>
                 {currentTemplate.location?.city && (
                   <>
                     <span className="text-gray-400">|</span>
-                    <MapPin className="w-4 h-4 text-[#0B5B5E]" />
+                    <MapPin className="w-4 h-4 text-clarvida-primary" />
                     <span>{currentTemplate.location.city}, {currentTemplate.location.state}</span>
                   </>
                 )}
@@ -246,7 +246,7 @@ const ClarvidaSourcing = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-gray-300 text-gray-600 hover:bg-gray-100"
+                  className="border-gray-300 text-muted-foreground hover:bg-gray-100"
                 >
                   <History className="w-4 h-4 mr-2" />
                   History
@@ -255,7 +255,7 @@ const ClarvidaSourcing = () => {
               <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
                 <SheetHeader className="p-4 border-b">
                   <SheetTitle className="flex items-center gap-2">
-                    <History className="w-5 h-5 text-[#0B5B5E]" />
+                    <History className="w-5 h-5 text-clarvida-primary" />
                     Saved Workflows
                   </SheetTitle>
                 </SheetHeader>
@@ -271,7 +271,7 @@ const ClarvidaSourcing = () => {
               variant="outline"
               size="sm"
               onClick={handleStartNewJob}
-              className="border-[#0B5B5E] text-[#0B5B5E] hover:bg-[#0B5B5E] hover:text-white"
+              className="border-clarvida-primary text-clarvida-primary hover:bg-clarvida-primary hover:text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               New Job
@@ -281,12 +281,12 @@ const ClarvidaSourcing = () => {
 
         {/* Organization Badge */}
         {organization && (
-          <div className="mb-6 p-4 bg-[#0B5B5E]/5 rounded-lg border border-[#0B5B5E]/20">
+          <div className="mb-6 p-4 bg-clarvida-primary/5 rounded-lg border border-clarvida-primary/20">
             <div className="flex items-center gap-3">
-              <Building2 className="w-5 h-5 text-[#0B5B5E]" />
-              <span className="font-medium text-[#0B5B5E]">{organization.name}</span>
+              <Building2 className="w-5 h-5 text-clarvida-primary" />
+              <span className="font-medium text-clarvida-primary">{organization.name}</span>
               {userRole && (
-                <Badge className="bg-[#0B5B5E] text-white">
+                <Badge className="bg-clarvida-primary text-white">
                   {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                 </Badge>
               )}
@@ -299,13 +299,13 @@ const ClarvidaSourcing = () => {
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${
               activeTab === 'builder'
-                ? 'bg-[#0B5B5E] text-white'
-                : 'bg-white text-gray-600 hover:bg-[#0B5B5E]/10 border border-gray-200'
+                ? 'bg-clarvida-primary text-white'
+                : 'bg-white text-muted-foreground hover:bg-clarvida-primary/10 border border-gray-200'
             }`}
             onClick={() => setActiveTab('builder')}
           >
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
-              activeTab === 'builder' ? 'bg-white/20' : 'bg-[#0B5B5E]/10'
+              activeTab === 'builder' ? 'bg-white/20' : 'bg-clarvida-primary/10'
             }`}>
               1
             </span>
@@ -319,15 +319,15 @@ const ClarvidaSourcing = () => {
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${
               activeTab === 'search'
-                ? 'bg-[#0B5B5E] text-white'
+                ? 'bg-clarvida-primary text-white'
                 : booleanState.current
-                ? 'bg-white text-gray-600 hover:bg-[#0B5B5E]/10 border border-gray-200'
+                ? 'bg-white text-muted-foreground hover:bg-clarvida-primary/10 border border-gray-200'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
             onClick={() => booleanState.current && setActiveTab('search')}
           >
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
-              activeTab === 'search' ? 'bg-white/20' : 'bg-[#0B5B5E]/10'
+              activeTab === 'search' ? 'bg-white/20' : 'bg-clarvida-primary/10'
             }`}>
               2
             </span>
@@ -338,7 +338,7 @@ const ClarvidaSourcing = () => {
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
               activeTab === 'results'
-                ? 'bg-[#0B5B5E] text-white'
+                ? 'bg-clarvida-primary text-white'
                 : 'bg-gray-100 text-gray-400 border border-gray-200'
             }`}
           >
@@ -363,17 +363,17 @@ const ClarvidaSourcing = () => {
               />
 
               {/* Preview Panel - Artifact Style */}
-              <Card className={`border-2 shadow-lg transition-all h-full flex flex-col overflow-hidden ${
+              <Card className={`shadow-sm transition-all h-full flex flex-col overflow-hidden ${
                 (generatedDescription || generatedContent) ? 'border-emerald-300 bg-emerald-50/30' : 'border-gray-200'
               }`}>
                 <CardHeader className={`border-b flex-shrink-0 ${
                   (generatedDescription || generatedContent)
-                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white'
+                    ? 'bg-clarvida-primary text-white'
                     : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className="flex items-center justify-between">
                     <CardTitle className={`flex items-center gap-2 ${
-                      (generatedDescription || generatedContent) ? 'text-white' : 'text-[#0B5B5E]'
+                      (generatedDescription || generatedContent) ? 'text-white' : 'text-clarvida-primary'
                     }`}>
                       {(generatedDescription || generatedContent) ? (
                         <CheckCircle2 className="w-5 h-5" />
@@ -439,7 +439,7 @@ const ClarvidaSourcing = () => {
                               </div>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleExport('txt')} className="cursor-pointer">
-                              <FileText className="w-4 h-4 mr-2 text-gray-600" />
+                              <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
                               <div className="flex flex-col">
                                 <span className="font-medium">Plain Text</span>
                                 <span className="text-xs text-gray-500">.txt simple format</span>
@@ -493,7 +493,7 @@ const ClarvidaSourcing = () => {
                         <div className="pt-4 border-t border-emerald-200">
                           <Button
                             onClick={() => setActiveTab('search')}
-                            className="w-full bg-[#0B5B5E] hover:bg-[#094547]"
+                            className="w-full bg-clarvida-primary hover:bg-clarvida-primary/80"
                           >
                             <Search className="w-4 h-4 mr-2" />
                             Search for Candidates
@@ -527,19 +527,19 @@ const ClarvidaSourcing = () => {
             <div className="space-y-6">
               {/* Current Job Context */}
               {currentTemplate && (
-                <Card className="bg-[#0B5B5E]/5 border-[#0B5B5E]/20">
+                <Card className="bg-clarvida-primary/5 border-clarvida-primary/20">
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-[#0B5B5E] rounded-lg">
+                        <div className="p-3 bg-clarvida-primary rounded-lg">
                           <Briefcase className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-[#0B5B5E]">
+                          <h3 className="font-semibold text-clarvida-primary">
                             {currentTemplate.job_title}
                             {currentTemplate.specialty_credential && ` – ${currentTemplate.specialty_credential}`}
                           </h3>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-muted-foreground">
                             {currentTemplate.location?.city}, {currentTemplate.location?.state} |{' '}
                             {currentTemplate.employment_type} |{' '}
                             {currentTemplate.location?.work_arrangement}
@@ -550,7 +550,7 @@ const ClarvidaSourcing = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => setActiveTab('builder')}
-                        className="border-[#0B5B5E] text-[#0B5B5E] hover:bg-[#0B5B5E] hover:text-white"
+                        className="border-clarvida-primary text-clarvida-primary hover:bg-clarvida-primary hover:text-white"
                       >
                         Edit Job
                       </Button>

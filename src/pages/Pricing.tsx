@@ -128,23 +128,23 @@ const Pricing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b-4 border-black">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => navigate('/')}
             >
-              <div className="w-12 h-12 bg-purple-600 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
                 <span className="text-white font-black text-xl">A</span>
               </div>
               <h1 className="text-2xl font-black">Apply</h1>
             </div>
             <Button
               onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
-              className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              className=""
             >
               {isAuthenticated ? 'Dashboard' : 'Sign In'}
             </Button>
@@ -155,34 +155,34 @@ const Pricing = () => {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-purple-100 border-2 border-purple-300 rounded-full px-4 py-2 mb-6">
-            <Sparkles className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-semibold text-purple-800">AI-POWERED RECRUITING</span>
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2 mb-6">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold text-primary">AI-POWERED RECRUITING</span>
           </div>
           <h1 className="text-5xl font-black mb-6">
             Simple, transparent
-            <span className="block text-purple-600">pricing</span>
+            <span className="block text-primary">pricing</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Start with a 7-day free trial. No credit card required.
             Upgrade when you're ready.
           </p>
 
           {/* Billing Toggle */}
           <div className="flex items-center justify-center gap-4">
-            <span className={`text-lg font-semibold ${!isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
+            <span className={`text-lg font-semibold ${!isYearly ? 'text-primary' : 'text-muted-foreground'}`}>
               Monthly
             </span>
             <Switch
               checked={isYearly}
               onCheckedChange={setIsYearly}
-              className="data-[state=checked]:bg-purple-600"
+              className="data-[state=checked]:bg-primary"
             />
-            <span className={`text-lg font-semibold ${isYearly ? 'text-purple-600' : 'text-gray-500'}`}>
+            <span className={`text-lg font-semibold ${isYearly ? 'text-primary' : 'text-muted-foreground'}`}>
               Yearly
             </span>
             {isYearly && (
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold border-2 border-green-300">
+              <span className="bg-success/10 text-success px-3 py-1 rounded-full text-sm font-bold border border-success/30">
                 Save 17%
               </span>
             )}
@@ -194,15 +194,15 @@ const Pricing = () => {
           {tiers.map((tier) => (
             <div
               key={tier.name}
-              className={`relative bg-white rounded-2xl border-4 border-black p-8 ${
+              className={`relative bg-card rounded-2xl border p-8 shadow-sm ${
                 tier.popular
-                  ? 'shadow-[8px_8px_0px_0px_rgba(147,51,234,1)] scale-105 z-10'
-                  : 'shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
-              } hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all`}
+                  ? 'ring-2 ring-primary scale-105 z-10'
+                  : ''
+              } hover:shadow-md transition-all`}
             >
               {tier.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-bold border-2 border-black">
+                  <div className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-bold">
                     MOST POPULAR
                   </div>
                 </div>
@@ -217,7 +217,7 @@ const Pricing = () => {
                       : tier.price}
                   </span>
                   {tier.period && (
-                    <span className="text-gray-600 font-medium">
+                    <span className="text-muted-foreground font-medium">
                       /{isYearly && tier.yearlyPeriod ? tier.yearlyPeriod : tier.period}
                     </span>
                   )}
@@ -227,7 +227,7 @@ const Pricing = () => {
                     {tier.yearlySavings}
                   </span>
                 )}
-                <p className="text-gray-600 mt-2">{tier.description}</p>
+                <p className="text-muted-foreground mt-2">{tier.description}</p>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -248,10 +248,10 @@ const Pricing = () => {
               <Button
                 onClick={() => handleSelectPlan(tier.tier)}
                 disabled={tier.disabled || loadingPlan === tier.tier}
-                className={`w-full py-6 text-lg font-bold border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`w-full py-6 text-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   tier.popular
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                    : 'bg-white hover:bg-gray-50 text-black'
+                    ? ''
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
               >
                 {loadingPlan === tier.tier ? (
@@ -268,27 +268,27 @@ const Pricing = () => {
         <div className="mt-24 max-w-3xl mx-auto">
           <h2 className="text-3xl font-black text-center mb-12">Frequently Asked Questions</h2>
           <div className="space-y-6">
-            <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-card rounded-xl border p-6 shadow-sm">
               <h3 className="font-bold text-lg mb-2">What's included in the free trial?</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 You get 7 days to try all features: 10 searches, 50 contact enrichments, 100 AI interactions, 5 video interviews, and 3 projects. No credit card required.
               </p>
             </div>
-            <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-card rounded-xl border p-6 shadow-sm">
               <h3 className="font-bold text-lg mb-2">Can I change plans anytime?</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Yes! You can upgrade or cancel your subscription at any time from your account settings. Changes take effect immediately.
               </p>
             </div>
-            <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-card rounded-xl border p-6 shadow-sm">
               <h3 className="font-bold text-lg mb-2">How does contact enrichment work?</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Our AI agents automatically find and verify email addresses and phone numbers for candidates you're interested in using multiple data sources.
               </p>
             </div>
-            <div className="bg-white rounded-xl border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="bg-card rounded-xl border p-6 shadow-sm">
               <h3 className="font-bold text-lg mb-2">What payment methods do you accept?</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.
               </p>
             </div>
@@ -296,18 +296,18 @@ const Pricing = () => {
         </div>
 
         {/* CTA Section */}
-        <div className="mt-24 text-center bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl border-4 border-black p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <h2 className="text-4xl font-black text-white mb-4">
+        <div className="mt-24 text-center bg-primary rounded-2xl p-12">
+          <h2 className="text-4xl font-black text-primary-foreground mb-4">
             Ready to transform your recruiting?
           </h2>
-          <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
             Join thousands of recruiters using AI to find perfect candidates faster
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Button
               onClick={() => navigate('/login')}
               size="lg"
-              className="bg-white text-purple-600 hover:bg-gray-100 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold px-8 py-6 text-lg"
+              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 font-bold px-8 py-6 text-lg"
             >
               Start Free Trial
             </Button>
@@ -315,7 +315,7 @@ const Pricing = () => {
               onClick={() => navigate('/')}
               size="lg"
               variant="outline"
-              className="bg-transparent text-white border-2 border-white hover:bg-white/10 shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] transform hover:translate-x-[2px] hover:translate-y-[2px] transition-all font-bold px-8 py-6 text-lg"
+              className="bg-transparent text-primary-foreground border border-primary-foreground/30 hover:bg-primary-foreground/10 font-bold px-8 py-6 text-lg"
             >
               Back to Home
             </Button>

@@ -30,8 +30,8 @@ export const JobPostingPage = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl flex flex-col items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-[#8B5CF6] mb-4" />
-        <p className="text-gray-600">Loading job details...</p>
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading job details...</p>
       </div>
     );
   }

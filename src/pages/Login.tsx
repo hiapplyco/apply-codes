@@ -84,7 +84,7 @@ const Login = () => {
   const buttonLoading = isLoading || isSubmitting;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo and Header */}
         <div className="flex flex-col items-center mb-8">
@@ -93,10 +93,10 @@ const Login = () => {
             alt="Apply Logo"
             className="w-24 h-24 object-contain mb-4"
           />
-          <h1 className="text-3xl font-black text-center mb-2 text-gray-900">
+          <h1 className="text-3xl font-black text-center mb-2 text-foreground">
             {isSignUp ? 'Start Your Free Trial' : 'Welcome Back'}
           </h1>
-          <p className="text-gray-600 text-center">
+          <p className="text-muted-foreground text-center">
             {isSignUp
               ? '7 days free, no credit card required'
               : 'Sign in to continue recruiting smarter'}
@@ -104,14 +104,14 @@ const Login = () => {
         </div>
 
         {/* Auth Card */}
-        <div className="border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white p-8 rounded-2xl">
+        <div className="border bg-card p-8 rounded-2xl shadow-sm">
           {/* Google Sign In - Primary Action */}
           <Button
             type="button"
             variant="outline"
             onClick={handleGoogleSignIn}
             disabled={isGoogleLoading || buttonLoading}
-            className="w-full py-6 mb-6 border-2 border-gray-800 hover:border-black bg-white hover:bg-gray-50 rounded-xl font-semibold flex items-center justify-center gap-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            className="w-full py-6 mb-6 rounded-xl font-semibold flex items-center justify-center gap-3"
           >
             {isGoogleLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -143,7 +143,7 @@ const Login = () => {
           {/* Divider */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-300" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-white px-3 text-gray-500">or continue with email</span>
@@ -159,7 +159,7 @@ const Login = () => {
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-11 py-6 border-2 border-gray-200 focus:border-purple-500 rounded-xl text-base"
+                className="pl-11 py-6 border-2 border-gray-200 focus:border-primary rounded-xl text-base"
                 required
                 disabled={buttonLoading}
               />
@@ -171,25 +171,27 @@ const Login = () => {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-11 pr-11 py-6 border-2 border-gray-200 focus:border-purple-500 rounded-xl text-base"
+                className="pl-11 pr-11 py-6 border-2 border-gray-200 focus:border-primary rounded-xl text-base"
                 required
                 disabled={buttonLoading}
                 minLength={6}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-muted-foreground"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+              </Button>
             </div>
 
             {!isSignUp && (
               <div className="text-right">
                 <a
                   href="/reset-password-request"
-                  className="text-sm text-purple-600 hover:text-purple-700 hover:underline"
+                  className="text-sm text-primary hover:text-primary/80 hover:underline"
                 >
                   Forgot password?
                 </a>
@@ -199,7 +201,7 @@ const Login = () => {
             <Button
               type="submit"
               disabled={buttonLoading}
-              className="w-full py-6 bg-purple-600 hover:bg-purple-700 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] rounded-xl text-white font-bold text-lg transition-all"
+              className="w-full py-6 rounded-xl font-bold text-lg"
             >
               {buttonLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -210,18 +212,19 @@ const Login = () => {
           </form>
 
           {/* Toggle Sign Up / Sign In */}
-          <div className="text-center mt-6 pt-6 border-t border-gray-200">
-            <span className="text-gray-600">
+          <div className="text-center mt-6 pt-6 border-t border-border">
+            <span className="text-muted-foreground">
               {isSignUp ? 'Already have an account?' : "Don't have an account?"}
             </span>
             {' '}
-            <button
+            <Button
               type="button"
+              variant="link"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-purple-600 hover:text-purple-700 font-semibold hover:underline"
+              className="font-semibold p-0 h-auto"
             >
               {isSignUp ? 'Sign in' : 'Start free trial'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -240,9 +243,9 @@ const Login = () => {
         {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6">
           By continuing, you agree to our{' '}
-          <a href="/terms" className="text-purple-600 hover:underline">Terms of Service</a>
+          <a href="/terms" className="text-primary hover:underline">Terms of Service</a>
           {' '}and{' '}
-          <a href="/privacy" className="text-purple-600 hover:underline">Privacy Policy</a>
+          <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
         </p>
       </div>
     </div>

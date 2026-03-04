@@ -110,11 +110,11 @@ const ProjectDetail = () => {
   // Show loading state while waiting for auth
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Authenticating...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Authenticating...</p>
           </div>
         </div>
       </div>
@@ -416,7 +416,7 @@ const ProjectDetail = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -424,13 +424,13 @@ const ProjectDetail = () => {
   if (!project) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <p className="text-gray-600">Project not found</p>
+        <p className="text-muted-foreground">Project not found</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-green-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -456,11 +456,11 @@ const ProjectDetail = () => {
               />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-[#39FF14] to-[#9D4EDD] bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold text-foreground">
                 {project.name}
               </h1>
               {project.description && (
-                <p className="text-gray-600 mt-2 text-lg">{project.description}</p>
+                <p className="text-muted-foreground mt-2 text-lg">{project.description}</p>
               )}
               <div className="flex gap-4 mt-3 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
@@ -484,7 +484,7 @@ const ProjectDetail = () => {
             <Button
               onClick={handleExportCandidates}
               disabled={filteredCandidates.length === 0}
-              className="bg-gradient-to-r from-[#39FF14] to-[#9D4EDD] hover:opacity-90 text-white font-medium shadow-lg hover:shadow-xl transition-all"
+              className="font-medium"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -502,7 +502,7 @@ const ProjectDetail = () => {
               placeholder="Search candidates by name, title, company, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white/80 backdrop-blur-sm border-gray-200 focus:bg-white focus:ring-2 focus:ring-purple-500/20"
+              className="pl-10 focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </div>
@@ -510,10 +510,10 @@ const ProjectDetail = () => {
         {/* Candidates Grid */}
         <div className="grid gap-4">
           {filteredCandidates.length === 0 ? (
-            <Card className="bg-white/90 backdrop-blur-sm border-gray-200">
+            <Card className="border shadow-sm">
               <CardContent className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {searchTerm ? "No candidates match your search" : "No candidates in this project yet"}
               </p>
               {!searchTerm && (
@@ -529,7 +529,7 @@ const ProjectDetail = () => {
           </Card>
         ) : (
           filteredCandidates.map((candidate) => (
-            <Card key={candidate.id} className="bg-white/90 backdrop-blur-sm border-gray-200 hover:shadow-xl transition-all hover:scale-[1.01] hover:bg-white group">
+            <Card key={candidate.id} className="border shadow-sm hover:shadow-xl transition-all hover:scale-[1.01] hover:bg-white group">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -544,19 +544,19 @@ const ProjectDetail = () => {
 
                     <div className="space-y-2 mb-4">
                       {candidate.job_title && (
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Briefcase className="w-4 h-4" />
                           <span>{candidate.job_title}</span>
                         </div>
                       )}
                       {candidate.company && (
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Building className="w-4 h-4" />
                           <span>{candidate.company}</span>
                         </div>
                       )}
                       {candidate.location && (
-                        <div className="flex items-center gap-2 text-gray-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <MapPin className="w-4 h-4" />
                           <span>{candidate.location}</span>
                         </div>
@@ -565,7 +565,7 @@ const ProjectDetail = () => {
 
                     {/* Contact Information */}
                     {(candidate.work_email || candidate.personal_emails?.length || candidate.mobile_phone) && (
-                      <div className="bg-gradient-to-r from-green-50 to-purple-50 p-4 rounded-lg mb-4 space-y-2 border border-green-200/50">
+                      <div className="bg-success/5 p-4 rounded-lg mb-4 space-y-2 border border-success/20">
                         {candidate.work_email && (
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-sm">
@@ -611,7 +611,7 @@ const ProjectDetail = () => {
 
                     {/* Summary */}
                     {candidate.profile_summary && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                         {candidate.profile_summary}
                       </p>
                     )}
@@ -641,7 +641,7 @@ const ProjectDetail = () => {
                           variant="outline"
                           onClick={() => handleEnrichCandidate(candidate)}
                           disabled={enrichingCandidate === candidate.id}
-                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                          className="border-info text-info hover:bg-info/10"
                         >
                           {enrichingCandidate === candidate.id ? (
                             <>
@@ -661,7 +661,7 @@ const ProjectDetail = () => {
                         size="sm"
                         variant="outline"
                           onClick={() => handleRemoveCandidate(candidate.id, candidate.projectCandidateId)}
-                        className="text-red-600 hover:bg-red-50"
+                        className="text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

@@ -225,14 +225,14 @@ export default function MeetingSimplified() {
 
   if (meetingStep === 'welcome') {
     return (
-      <div className="flex-1 flex flex-col bg-gradient-to-br from-purple-50 to-white rounded-lg overflow-auto">
+      <div className="flex-1 flex flex-col bg-background rounded-lg overflow-auto">
         <div className="max-w-4xl mx-auto p-4 sm:p-8 w-full">
           <div className="text-center mb-8 sm:mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-              <Video className="w-8 h-8 text-purple-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+              <Video className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-2xl sm:text-4xl font-bold mb-4">Welcome to Meeting Room</h1>
-            <p className="text-base sm:text-xl text-gray-600">
+            <p className="text-base sm:text-xl text-muted-foreground">
               AI-powered meetings that help you make better hiring decisions
             </p>
           </div>
@@ -241,20 +241,20 @@ export default function MeetingSimplified() {
             <Card 
               className={cn(
                 "cursor-pointer border-2 transition-all",
-                meetingPurpose === 'interview' 
-                  ? "border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]" 
-                  : "border-gray-200 hover:border-purple-300"
+                meetingPurpose === 'interview'
+                  ? "border-primary ring-1 ring-primary"
+                  : "border-border hover:border-primary/50"
               )}
               onClick={() => setMeetingPurpose('interview')}
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-purple-600" />
+                  <Users className="w-5 h-5 text-primary" />
                   Interview
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Conduct structured interviews with AI-powered guidance and real-time insights
                 </p>
               </CardContent>
@@ -263,20 +263,20 @@ export default function MeetingSimplified() {
             <Card 
               className={cn(
                 "cursor-pointer border-2 transition-all",
-                meetingPurpose === 'kickoff' 
-                  ? "border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]" 
-                  : "border-gray-200 hover:border-purple-300"
+                meetingPurpose === 'kickoff'
+                  ? "border-primary ring-1 ring-primary"
+                  : "border-border hover:border-primary/50"
               )}
               onClick={() => setMeetingPurpose('kickoff')}
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-blue-600" />
+                  <MessageSquare className="w-5 h-5 text-info" />
                   Kickoff Call
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Understand hiring needs and build effective job requirements
                 </p>
               </CardContent>
@@ -285,20 +285,20 @@ export default function MeetingSimplified() {
             <Card 
               className={cn(
                 "cursor-pointer border-2 transition-all",
-                meetingPurpose === 'other' 
-                  ? "border-purple-600 shadow-[4px_4px_0px_0px_rgba(147,51,234,1)]" 
-                  : "border-gray-200 hover:border-purple-300"
+                meetingPurpose === 'other'
+                  ? "border-primary ring-1 ring-primary"
+                  : "border-border hover:border-primary/50"
               )}
               onClick={() => setMeetingPurpose('other')}
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Phone className="w-5 h-5 text-green-600" />
+                  <Phone className="w-5 h-5 text-success" />
                   General Meeting
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Any other recruitment-related meeting or discussion
                 </p>
               </CardContent>
@@ -309,10 +309,7 @@ export default function MeetingSimplified() {
             <Button
               onClick={() => setMeetingStep('setup')}
               size="lg"
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold 
-                       border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] 
-                       hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform hover:translate-x-[2px] 
-                       hover:translate-y-[2px] transition-all"
+              className="px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
             >
               Continue
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -325,7 +322,7 @@ export default function MeetingSimplified() {
 
   if (meetingStep === 'setup') {
     return (
-      <div className="flex-1 flex flex-col bg-gray-50 rounded-lg overflow-auto">
+      <div className="flex-1 flex flex-col bg-background rounded-lg overflow-auto">
         <div className="max-w-3xl mx-auto p-6 w-full">
           <div className="mb-6">
             <Button
@@ -338,7 +335,7 @@ export default function MeetingSimplified() {
 
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-foreground">
                   {meetingPurpose === 'interview' && 'Interview Setup'}
                   {meetingPurpose === 'kickoff' && 'Kickoff Call Setup'}
                   {meetingPurpose === 'other' && 'Meeting Setup'}
@@ -347,12 +344,14 @@ export default function MeetingSimplified() {
                   Configure your meeting settings
                 </p>
               </div>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowContext(!showContext)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 ${
                   selectedProject || uploadedFiles.length > 0
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-success/10 text-success border-success/30'
+                    : ''
                 }`}
               >
                 <Folder className="w-4 h-4" />
@@ -360,7 +359,7 @@ export default function MeetingSimplified() {
                   {selectedProject?.name || (uploadedFiles.length > 0 ? 'Context Added' : 'Add Context')}
                 </span>
                 {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -496,7 +495,7 @@ export default function MeetingSimplified() {
               <Button
                 onClick={() => startMeeting()}
                 disabled={(meetingPurpose === 'interview' && !jobTitle.trim()) || isLoading || isContextProcessing}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 font-medium disabled:opacity-50"
+                className="w-full py-3 font-medium disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
@@ -513,7 +512,7 @@ export default function MeetingSimplified() {
               
               {/* Helpful validation message */}
               {meetingPurpose === 'interview' && !jobTitle.trim() && (
-                <p className="text-sm text-gray-600 mt-3 text-center">
+                <p className="text-sm text-muted-foreground mt-3 text-center">
                   Please enter a job title to continue
                 </p>
               )}
@@ -549,8 +548,7 @@ export default function MeetingSimplified() {
 
       {/* Meeting Controls */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2
-                    bg-white rounded-full border-2 border-black
-                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-1.5 sm:p-2 max-w-[95vw]">
+                    bg-card rounded-full border shadow-lg p-1.5 sm:p-2 max-w-[95vw]">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
             onClick={toggleMute}
@@ -592,15 +590,14 @@ export default function MeetingSimplified() {
 
       {/* Participants List */}
       {participants.length > 0 && (
-        <div className="absolute top-16 right-2 sm:top-4 sm:right-4 bg-white rounded-lg border-2 border-black
-                      shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
+        <div className="absolute top-16 right-2 sm:top-4 sm:right-4 bg-card rounded-lg border shadow-lg p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4" />
             <span className="font-medium text-sm">Participants ({participants.length})</span>
           </div>
           <div className="space-y-1">
             {participants.map((p) => (
-              <div key={p.id} className="text-sm text-gray-600">
+              <div key={p.id} className="text-sm text-muted-foreground">
                 {p.name || 'Anonymous'}
               </div>
             ))}
@@ -609,12 +606,11 @@ export default function MeetingSimplified() {
       )}
 
       {/* Meeting Info */}
-      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white rounded-lg border-2 border-black
-                    shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
+      <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-card rounded-lg border shadow-lg p-2 sm:p-3 max-w-[45vw] sm:max-w-none">
         <div className="text-sm font-medium">
           {meetingPurpose === 'interview' ? `Interview: ${jobTitle}` : jobTitle || 'Meeting'}
         </div>
-        <div className="text-xs text-gray-600 mt-1">
+        <div className="text-xs text-muted-foreground mt-1">
           AI Assistant Active
         </div>
       </div>

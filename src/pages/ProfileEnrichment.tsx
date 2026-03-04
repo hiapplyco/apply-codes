@@ -65,7 +65,7 @@ const ProfileEnrichment = memo(() => {
   if (!isAuthenticated) {
     return (
       <div className="container max-w-4xl py-8">
-        <Card className="border-2 border-red-300 bg-red-50">
+        <Card className="border border-destructive/30 bg-destructive/10">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 text-red-700">
               <AlertCircle className="h-5 w-5" />
@@ -115,8 +115,8 @@ const ProfileEnrichment = memo(() => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <UserSearch className="h-7 w-7 text-purple-600" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <UserSearch className="h-7 w-7 text-primary" />
             Contact Enrichment
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -127,7 +127,7 @@ const ProfileEnrichment = memo(() => {
       </div>
 
       {/* Main Card with Tabs */}
-      <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+      <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">Find Contact Information</CardTitle>
           <CardDescription>
@@ -188,7 +188,7 @@ const ProfileEnrichment = memo(() => {
       {enrichedData && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Enrichment Result</h2>
+            <h2 className="font-semibold text-foreground">Enrichment Result</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -207,7 +207,7 @@ const ProfileEnrichment = memo(() => {
 
       {/* Error Display */}
       {error && !enrichedData && (
-        <Card className="border-2 border-red-300 bg-red-50">
+        <Card className="border border-destructive/30 bg-destructive/10">
           <CardContent className="p-4">
             <div className="flex items-center gap-3 text-red-700">
               <AlertCircle className="h-5 w-5" />
@@ -219,7 +219,7 @@ const ProfileEnrichment = memo(() => {
 
       {/* History Section */}
       {history.length > 0 && (
-        <Card className="border-2 border-gray-200">
+        <Card>
           <CardHeader
             className="cursor-pointer hover:bg-gray-50 transition-colors"
             onClick={() => setShowHistory(!showHistory)}

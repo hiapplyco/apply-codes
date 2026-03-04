@@ -40,13 +40,30 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
-        // Redesign specific colors
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        clarvida: {
+          primary: "hsl(var(--clarvida-primary))",
+          accent: "hsl(var(--clarvida-accent))",
+        },
+        // Legacy aliases (kept for landing page compatibility)
         electric: {
           purple: "#8B5CF6",
           cyan: "#06B6D4",
-        },
-        warning: {
-          orange: "#F97316",
         },
       },
       keyframes: {

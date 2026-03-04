@@ -590,9 +590,9 @@ export default function Profile() {
   const getTierBadge = () => {
     if (!subscription) return null;
     const tierConfig = {
-      free_trial: { label: 'Free Trial', color: 'bg-blue-100 text-blue-700', icon: Clock },
-      pro: { label: 'Pro', color: 'bg-purple-100 text-purple-700', icon: Crown },
-      enterprise: { label: 'Enterprise', color: 'bg-amber-100 text-amber-700', icon: Zap },
+      free_trial: { label: 'Free Trial', color: 'bg-info/10 text-info', icon: Clock },
+      pro: { label: 'Pro', color: 'bg-primary/10 text-primary', icon: Crown },
+      enterprise: { label: 'Enterprise', color: 'bg-warning/10 text-warning', icon: Zap },
     };
     const config = tierConfig[subscription.tier] || tierConfig.free_trial;
     const Icon = config.icon;
@@ -607,7 +607,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -631,15 +631,15 @@ export default function Profile() {
   return (
     <div className="container mx-auto py-8 px-4 space-y-8 max-w-7xl">
       {/* Profile Header */}
-      <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+      <Card>
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col gap-6">
             {/* Avatar and Info Row */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <div className="relative flex-shrink-0">
-                <Avatar className="h-24 w-24 border-2 border-black">
+                <Avatar className="h-24 w-24 border-2 border-border">
                   <AvatarImage src={profileData?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl font-bold">
+                  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
                     {getInitials(profileData?.full_name, user?.email || '')}
                   </AvatarFallback>
                 </Avatar>
@@ -651,7 +651,7 @@ export default function Profile() {
                     onChange={handleAvatarUpload}
                     disabled={uploadingAvatar}
                   />
-                  <div className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors border-2 border-black">
+                  <div className="bg-primary text-primary-foreground p-2 rounded-full hover:bg-primary/90 transition-colors">
                     {uploadingAvatar ? (
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                     ) : (
@@ -662,14 +662,14 @@ export default function Profile() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
                   {profileData?.full_name || 'Unnamed User'}
                 </h1>
-                <p className="text-gray-600 flex items-center gap-2 mt-1 text-sm sm:text-base">
+                <p className="text-muted-foreground flex items-center gap-2 mt-1 text-sm sm:text-base">
                   <Mail className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate">{user?.email}</span>
                 </p>
-                <p className="text-gray-500 flex items-center gap-2 mt-1 text-sm">
+                <p className="text-muted-foreground flex items-center gap-2 mt-1 text-sm">
                   <Calendar className="h-4 w-4 flex-shrink-0" />
                   Member since {profileData && format(new Date(profileData.created_at), 'MMMM yyyy')}
                 </p>
@@ -681,7 +681,7 @@ export default function Profile() {
               <Button
                 variant="outline"
                 onClick={() => setEditModalOpen(true)}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all"
+                className="transition-all"
               >
                 <Edit3 className="h-4 w-4 mr-2" />
                 Edit Profile
@@ -689,7 +689,7 @@ export default function Profile() {
               <Button
                 variant="outline"
                 onClick={handleSignOut}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all"
+                className="transition-all"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -701,50 +701,50 @@ export default function Profile() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Searches</p>
-                <p className="text-2xl font-bold text-purple-600">{userStats?.totalSearches || 0}</p>
+                <p className="text-sm text-muted-foreground">Total Searches</p>
+                <p className="text-2xl font-bold text-primary">{userStats?.totalSearches || 0}</p>
               </div>
-              <Search className="h-8 w-8 text-purple-600 opacity-20" />
+              <Search className="h-8 w-8 text-primary opacity-20" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Saved Candidates</p>
-                <p className="text-2xl font-bold text-green-600">{userStats?.totalCandidatesSaved || 0}</p>
+                <p className="text-sm text-muted-foreground">Saved Candidates</p>
+                <p className="text-2xl font-bold text-success">{userStats?.totalCandidatesSaved || 0}</p>
               </div>
-              <Users className="h-8 w-8 text-green-600 opacity-20" />
+              <Users className="h-8 w-8 text-success opacity-20" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Projects</p>
-                <p className="text-2xl font-bold text-orange-600">{userStats?.totalProjects || 0}</p>
+                <p className="text-sm text-muted-foreground">Active Projects</p>
+                <p className="text-2xl font-bold text-warning">{userStats?.totalProjects || 0}</p>
               </div>
-              <Folder className="h-8 w-8 text-orange-600 opacity-20" />
+              <Folder className="h-8 w-8 text-warning opacity-20" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]">
+        <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">This Month</p>
-                <p className="text-2xl font-bold text-blue-600">{userStats?.searchesThisMonth || 0}</p>
+                <p className="text-sm text-muted-foreground">This Month</p>
+                <p className="text-2xl font-bold text-info">{userStats?.searchesThisMonth || 0}</p>
               </div>
-              <Activity className="h-8 w-8 text-blue-600 opacity-20" />
+              <Activity className="h-8 w-8 text-info opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -752,41 +752,41 @@ export default function Profile() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="activity" className="space-y-4">
-        <TabsList className="grid grid-cols-4 w-full bg-[#F1F1F1] p-1 rounded-lg border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]">
-          <TabsTrigger value="activity" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+        <TabsList className="grid grid-cols-4 w-full bg-muted p-1 rounded-lg">
+          <TabsTrigger value="activity" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             Recent Activity
           </TabsTrigger>
-          <TabsTrigger value="searches" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+          <TabsTrigger value="searches" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             Search History
           </TabsTrigger>
-          <TabsTrigger value="projects" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+          <TabsTrigger value="projects" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             Projects
           </TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">
+          <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-white">
             Settings
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity" className="space-y-4">
-          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
               <CardDescription>Your latest actions and searches</CardDescription>
             </CardHeader>
             <CardContent>
               {userStats?.recentActivity.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No recent activity</p>
+                <p className="text-muted-foreground text-center py-8">No recent activity</p>
               ) : (
                 <div className="space-y-4">
                   {userStats?.recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={activity.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
                       <div className="flex items-center gap-3">
-                        {activity.type === 'search' && <Search className="h-5 w-5 text-purple-600" />}
+                        {activity.type === 'search' && <Search className="h-5 w-5 text-primary" />}
                         {activity.type === 'save' && <Star className="h-5 w-5 text-yellow-600" />}
-                        {activity.type === 'project' && <Folder className="h-5 w-5 text-green-600" />}
+                        {activity.type === 'project' && <Folder className="h-5 w-5 text-success" />}
                         <div>
                           <p className="font-medium">{activity.description}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                           </p>
                         </div>
@@ -803,7 +803,7 @@ export default function Profile() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Search History</h2>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]">
+              <Button variant="outline" size="sm">
                 <Filter className="h-4 w-4 mr-1" />
                 Filter
               </Button>
@@ -812,7 +812,7 @@ export default function Profile() {
 
           {/* Favorite Searches */}
           {favoriteSearches.length > 0 && (
-            <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Star className="h-5 w-5 text-yellow-500" />
@@ -822,10 +822,10 @@ export default function Profile() {
               <CardContent>
                 <div className="space-y-3">
                   {favoriteSearches.map((search) => (
-                    <div key={search.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)]">
+                    <div key={search.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">{search.search_query}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Hash className="h-3 w-3" />
                             {search.platform}
@@ -864,21 +864,21 @@ export default function Profile() {
           )}
 
           {/* All Searches */}
-          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <Card>
             <CardHeader>
               <CardTitle>All Searches</CardTitle>
               <CardDescription>Your complete search history</CardDescription>
             </CardHeader>
             <CardContent>
               {searchHistory.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No searches yet</p>
+                <p className="text-muted-foreground text-center py-8">No searches yet</p>
               ) : (
                 <div className="space-y-3">
                   {searchHistory.map((search) => (
-                    <div key={search.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div key={search.id} className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
                       <div className="flex-1">
                         <p className="font-medium">{search.search_query}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Hash className="h-3 w-3" />
                             {search.platform}
@@ -930,7 +930,6 @@ export default function Profile() {
             <h2 className="text-2xl font-bold">Projects</h2>
             <Button
               onClick={() => setShowCreateProject(true)}
-              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)]"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Project
@@ -943,7 +942,7 @@ export default function Profile() {
               return (
                 <Card
                   key={project.id}
-                  className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] hover:shadow-[7px_7px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                  className="transition-all cursor-pointer"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
                   <CardContent className="p-6">
@@ -979,8 +978,8 @@ export default function Profile() {
                       </DropdownMenu>
                     </div>
                     <h3 className="font-semibold text-lg mb-2">{project.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4">{project.description}</p>
-                    <div className="flex items-center justify-between text-sm text-gray-500">
+                    <p className="text-muted-foreground text-sm mb-4">{project.description}</p>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{project.candidates_count} candidates</span>
                       <span>{format(new Date(project.created_at), 'MMM d')}</span>
                     </div>
@@ -993,7 +992,7 @@ export default function Profile() {
 
         <TabsContent value="settings" className="space-y-4">
           {/* Subscription Card */}
-          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -1009,19 +1008,19 @@ export default function Profile() {
             <CardContent className="space-y-6">
               {subscriptionLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : subscription ? (
                 <>
                   {/* Current Plan Info */}
-                  <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
+                  <div className="bg-muted rounded-lg p-4 border-2 border-border">
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h4 className="font-semibold text-lg">
                           {subscription.tier === 'free_trial' ? 'Free Trial' :
                            subscription.tier === 'pro' ? 'Pro Plan' : 'Enterprise Plan'}
                         </h4>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           {subscription.status === 'trialing' && subscription.timeRemaining && (
                             <>
                               {subscription.timeRemaining.days > 0
@@ -1040,7 +1039,6 @@ export default function Profile() {
                       {subscription.tier === 'free_trial' && (
                         <Button
                           onClick={() => navigate('/pricing')}
-                          className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
                         >
                           <Zap className="h-4 w-4 mr-2" />
                           Upgrade to Pro
@@ -1076,7 +1074,7 @@ export default function Profile() {
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between mb-2">
-                          <span className="text-sm text-gray-600">Searches</span>
+                          <span className="text-sm text-muted-foreground">Searches</span>
                           <span className="text-sm font-medium">
                             {subscription.usage.searches} / {subscription.limits.searches ?? 'Unlimited'}
                           </span>
@@ -1090,7 +1088,7 @@ export default function Profile() {
                       </div>
                       <div>
                         <div className="flex justify-between mb-2">
-                          <span className="text-sm text-gray-600">Contact Enrichments</span>
+                          <span className="text-sm text-muted-foreground">Contact Enrichments</span>
                           <span className="text-sm font-medium">
                             {subscription.usage.candidatesEnriched} / {subscription.limits.candidatesEnriched ?? 'Unlimited'}
                           </span>
@@ -1104,7 +1102,7 @@ export default function Profile() {
                       </div>
                       <div>
                         <div className="flex justify-between mb-2">
-                          <span className="text-sm text-gray-600">AI Calls</span>
+                          <span className="text-sm text-muted-foreground">AI Calls</span>
                           <span className="text-sm font-medium">
                             {subscription.usage.aiCalls} / {subscription.limits.aiCalls ?? 'Unlimited'}
                           </span>
@@ -1126,7 +1124,6 @@ export default function Profile() {
                         onClick={handleManageSubscription}
                         disabled={openingPortal}
                         variant="outline"
-                        className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
                       >
                         {openingPortal ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1135,7 +1132,7 @@ export default function Profile() {
                         )}
                         Manage Subscription
                       </Button>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         Update payment method, view invoices, or cancel subscription
                       </p>
                     </div>
@@ -1143,10 +1140,9 @@ export default function Profile() {
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">No subscription found</p>
+                  <p className="text-muted-foreground mb-4">No subscription found</p>
                   <Button
                     onClick={() => navigate('/pricing')}
-                    className="bg-purple-600 hover:bg-purple-700 text-white border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
                   >
                     View Plans
                   </Button>
@@ -1156,7 +1152,7 @@ export default function Profile() {
           </Card>
 
           {/* Account Settings Card */}
-          <Card className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <Card>
             <CardHeader>
               <CardTitle>Account Settings</CardTitle>
               <CardDescription>Manage your account preferences</CardDescription>
@@ -1164,10 +1160,10 @@ export default function Profile() {
             <CardContent className="space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">Danger Zone</h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   Once you delete your account, there is no going back. Please be certain.
                 </p>
-                <Button variant="destructive" className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]">
+                <Button variant="destructive">
                   Delete Account
                 </Button>
               </div>
@@ -1178,7 +1174,7 @@ export default function Profile() {
 
       {/* Edit Profile Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
           </DialogHeader>
@@ -1189,21 +1185,18 @@ export default function Profile() {
                 id="name"
                 value={editingName}
                 onChange={(e) => setEditingName(e.target.value)}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-              />
+                             />
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setEditModalOpen(false)}
-              className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateProfile}
-              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Save Changes
             </Button>
@@ -1213,7 +1206,7 @@ export default function Profile() {
 
       {/* Create Project Modal */}
       <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
-        <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Project</DialogTitle>
             <DialogDescription>
@@ -1227,8 +1220,7 @@ export default function Profile() {
                 id="project-name"
                 value={newProject.name}
                 onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-                placeholder="e.g., Q1 Engineering Hiring"
+                               placeholder="e.g., Q1 Engineering Hiring"
               />
             </div>
             <div className="space-y-2">
@@ -1237,24 +1229,26 @@ export default function Profile() {
                 id="project-description"
                 value={newProject.description}
                 onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-                placeholder="Brief description of this project..."
+                               placeholder="Brief description of this project..."
               />
             </div>
             <div className="space-y-2">
               <Label>Icon</Label>
               <div className="flex gap-2">
                 {projectIcons.map(({ name, icon: Icon }) => (
-                  <button
+                  <Button
                     key={name}
+                    type="button"
+                    variant="outline"
+                    size="icon"
                     onClick={() => setNewProject({ ...newProject, icon: name })}
-                    className={`p-3 rounded-lg border-2 ${newProject.icon === name
-                        ? 'border-purple-600 bg-purple-50'
-                        : 'border-gray-300'
+                    className={`p-3 rounded-lg ${newProject.icon === name
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border'
                       }`}
                   >
                     <Icon className="h-5 w-5" />
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -1262,12 +1256,14 @@ export default function Profile() {
               <Label>Color</Label>
               <div className="flex gap-2">
                 {projectColors.map((color) => (
-                  <button
+                  <Button
                     key={color}
+                    type="button"
+                    variant="outline"
                     onClick={() => setNewProject({ ...newProject, color })}
-                    className={`w-10 h-10 rounded-lg border-2 ${newProject.color === color
-                        ? 'border-gray-900 scale-110'
-                        : 'border-gray-300'
+                    className={`w-10 h-10 rounded-lg p-0 ${newProject.color === color
+                        ? 'border-foreground scale-110'
+                        : 'border-border'
                       }`}
                     style={{ backgroundColor: color }}
                   />
@@ -1279,14 +1275,12 @@ export default function Profile() {
             <Button
               variant="outline"
               onClick={() => setShowCreateProject(false)}
-              className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Cancel
             </Button>
             <Button
               onClick={createProject}
               disabled={!newProject.name}
-              className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
             >
               Create Project
             </Button>
@@ -1297,7 +1291,7 @@ export default function Profile() {
       {/* Edit Project Modal */}
       {editingProject && (
         <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
-          <DialogContent className="border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Project</DialogTitle>
             </DialogHeader>
@@ -1308,8 +1302,7 @@ export default function Profile() {
                   id="edit-project-name"
                   value={editingProject.name}
                   onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                  className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-                />
+                                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-project-description">Description</Label>
@@ -1317,23 +1310,25 @@ export default function Profile() {
                   id="edit-project-description"
                   value={editingProject.description}
                   onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                  className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
-                />
+                                 />
               </div>
               <div className="space-y-2">
                 <Label>Icon</Label>
                 <div className="flex gap-2">
                   {projectIcons.map(({ name, icon: Icon }) => (
-                    <button
+                    <Button
                       key={name}
+                      type="button"
+                      variant="outline"
+                      size="icon"
                       onClick={() => setEditingProject({ ...editingProject, icon: name })}
-                      className={`p-3 rounded-lg border-2 ${editingProject.icon === name
-                          ? 'border-purple-600 bg-purple-50'
-                          : 'border-gray-300'
+                      className={`p-3 rounded-lg ${editingProject.icon === name
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border'
                         }`}
                     >
                       <Icon className="h-5 w-5" />
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -1341,12 +1336,14 @@ export default function Profile() {
                 <Label>Color</Label>
                 <div className="flex gap-2">
                   {projectColors.map((color) => (
-                    <button
+                    <Button
                       key={color}
+                      type="button"
+                      variant="outline"
                       onClick={() => setEditingProject({ ...editingProject, color })}
-                      className={`w-10 h-10 rounded-lg border-2 ${editingProject.color === color
-                          ? 'border-gray-900 scale-110'
-                          : 'border-gray-300'
+                      className={`w-10 h-10 rounded-lg p-0 ${editingProject.color === color
+                          ? 'border-foreground scale-110'
+                          : 'border-border'
                         }`}
                       style={{ backgroundColor: color }}
                     />
@@ -1358,13 +1355,11 @@ export default function Profile() {
               <Button
                 variant="outline"
                 onClick={() => setEditingProject(null)}
-                className="border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
               >
                 Cancel
               </Button>
               <Button
                 onClick={updateProject}
-                className="bg-purple-600 text-white hover:bg-purple-700 border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)]"
               >
                 Save Changes
               </Button>
