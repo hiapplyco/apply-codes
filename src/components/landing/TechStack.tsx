@@ -1,30 +1,64 @@
 import { motion } from "framer-motion";
 import { fadeInUp } from "@/lib/animations";
 
-const technologies = [
-    { name: "OpenAI", icon: "🧠" },
-    { name: "Anthropic", icon: "🤖" },
-    { name: "Google Cloud", icon: "☁️" },
-    { name: "Vercel", icon: "▲" },
-    { name: "React", icon: "⚛️" },
-    { name: "Tailwind", icon: "🎨" },
-    { name: "Python", icon: "🐍" },
-    { name: "TensorFlow", icon: "📊" },
-    { name: "Next.js", icon: "N" },
-    { name: "TypeScript", icon: "TS" },
-    { name: "PostgreSQL", icon: "🐘" },
-    { name: "Redis", icon: "🔴" },
-    { name: "Docker", icon: "🐳" },
-    { name: "Kubernetes", icon: "☸️" },
-    { name: "Stripe", icon: "💳" },
-    { name: "Sentry", icon: "👀" },
+// Simple Icons CDN: https://simpleicons.org
+// URL pattern: https://cdn.simpleicons.org/[slug]
+const ICON_CDN = "https://cdn.simpleicons.org";
+
+interface TechItem {
+    name: string;
+    slug: string;
+}
+
+// Row 1: AI, ML, Cloud & Infrastructure
+const row1: TechItem[] = [
+    { name: "OpenAI", slug: "openai" },
+    { name: "Anthropic", slug: "anthropic" },
+    { name: "Google Gemini", slug: "googlegemini" },
+    { name: "Meta AI", slug: "meta" },
+    { name: "Hugging Face", slug: "huggingface" },
+    { name: "TensorFlow", slug: "tensorflow" },
+    { name: "PyTorch", slug: "pytorch" },
+    { name: "LangChain", slug: "langchain" },
+    { name: "Firebase", slug: "firebase" },
+    { name: "Google Cloud", slug: "googlecloud" },
+    { name: "AWS", slug: "amazonwebservices" },
+    { name: "Vercel", slug: "vercel" },
+    { name: "Docker", slug: "docker" },
+    { name: "Kubernetes", slug: "kubernetes" },
+    { name: "Supabase", slug: "supabase" },
+    { name: "Grafana", slug: "grafana" },
 ];
 
-const MarqueeRow = ({ direction = "left", speed = 30 }: { direction?: "left" | "right"; speed?: number }) => {
-    const items = [...technologies, ...technologies]; // Double for seamless loop
+// Row 2: Languages, Frameworks, Data & Tools
+const row2: TechItem[] = [
+    { name: "React", slug: "react" },
+    { name: "TypeScript", slug: "typescript" },
+    { name: "Python", slug: "python" },
+    { name: "Node.js", slug: "nodedotjs" },
+    { name: "Next.js", slug: "nextdotjs" },
+    { name: "Tailwind CSS", slug: "tailwindcss" },
+    { name: "PostgreSQL", slug: "postgresql" },
+    { name: "Redis", slug: "redis" },
+    { name: "MongoDB", slug: "mongodb" },
+    { name: "Elasticsearch", slug: "elasticsearch" },
+    { name: "Stripe", slug: "stripe" },
+    { name: "Sentry", slug: "sentry" },
+    { name: "GitHub", slug: "github" },
+    { name: "Figma", slug: "figma" },
+    { name: "Slack", slug: "slack" },
+    { name: "Linear", slug: "linear" },
+];
+
+const MarqueeRow = ({ items, direction = "left", speed = 30 }: { items: TechItem[]; direction?: "left" | "right"; speed?: number }) => {
+    const doubled = [...items, ...items]; // Seamless loop
 
     return (
         <div className="relative overflow-hidden py-2">
+            {/* Fade masks on edges */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+
             <motion.div
                 className="flex gap-4 w-max"
                 animate={{
@@ -39,15 +73,20 @@ const MarqueeRow = ({ direction = "left", speed = 30 }: { direction?: "left" | "
                     },
                 }}
             >
-                {items.map((tech, i) => (
+                {doubled.map((tech, i) => (
                     <div
-                        key={`${tech.name}-${i}`}
-                        className="flex items-center gap-3 px-5 py-3 rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm hover:border-electric-purple/30 hover:bg-card/50 transition-all duration-300 group cursor-default select-none"
+                        key={`${tech.slug}-${i}`}
+                        className="flex items-center gap-3 px-5 py-3 rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm hover:border-electric-purple/30 hover:bg-card/50 transition-all duration-300 group/item cursor-default select-none"
                     >
-                        <span className="text-2xl filter grayscale group-hover:grayscale-0 transition-all duration-300 group-hover:scale-110">
-                            {tech.icon}
-                        </span>
-                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">
+                        <img
+                            src={`${ICON_CDN}/${tech.slug}`}
+                            alt={tech.name}
+                            width={20}
+                            height={20}
+                            loading="lazy"
+                            className="h-5 w-5 [filter:brightness(0)_invert(1)] opacity-40 group-hover/item:[filter:none] group-hover/item:opacity-100 group-hover/item:scale-110 transition-all duration-300"
+                        />
+                        <span className="text-sm font-medium text-muted-foreground group-hover/item:text-foreground transition-colors whitespace-nowrap">
                             {tech.name}
                         </span>
                     </div>
@@ -82,8 +121,8 @@ export const TechStack = () => {
 
             {/* Full-width marquee (breaks container) */}
             <div className="space-y-3">
-                <MarqueeRow direction="left" speed={35} />
-                <MarqueeRow direction="right" speed={40} />
+                <MarqueeRow items={row1} direction="left" speed={40} />
+                <MarqueeRow items={row2} direction="right" speed={45} />
             </div>
         </section>
     );

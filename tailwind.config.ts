@@ -123,6 +123,10 @@ export default {
           "0%": { backgroundPosition: "-500px 0" },
           "100%": { backgroundPosition: "500px 0" },
         },
+        "shimmer-sweep": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
         "cinematic-entrance": {
           "0%": {
             opacity: "0",
@@ -158,6 +162,7 @@ export default {
         "float": "float 3s ease-in-out infinite",
         "pulse": "pulse 2s ease-in-out infinite",
         "shimmer": "shimmer 2s infinite linear",
+        "shimmer-sweep": "shimmer-sweep 2.5s ease-in-out infinite",
         "cinematic-entrance": "cinematic-entrance 1.2s ease-out",
         "scroll-bounce": "scroll-bounce 2s infinite",
         "slow-bounce": "slow-bounce 3s infinite",
