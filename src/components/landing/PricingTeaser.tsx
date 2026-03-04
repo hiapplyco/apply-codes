@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/design-system/Button";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerChildren } from "@/lib/animations";
 import { Check, MessageSquare } from "lucide-react";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const tiers = [
@@ -41,13 +40,15 @@ export const PricingTeaser = () => {
     const navigate = useNavigate();
 
     const handlePlanClick = (planName: string) => {
-        // Navigate to login page with plan info
         navigate(`/login?plan=${encodeURIComponent(planName)}`);
     };
 
     return (
         <section id="pricing" className="py-24 bg-background relative">
-            <div className="container px-4 md:px-6">
+            {/* Ambient glow */}
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-electric-cyan/5 rounded-full blur-3xl" />
+
+            <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial="hidden"
                     whileInView="visible"
@@ -64,10 +65,17 @@ export const PricingTeaser = () => {
                         </p>
                     </motion.div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {tiers.map((tier) => (
                             <motion.div key={tier.name} variants={fadeInUp} className="h-full">
-                                <Card className={`h-full flex flex-col ${tier.popular ? 'border-electric-purple shadow-[8px_8px_0px_0px_rgba(139,92,246,0.3)]' : ''}`}>
+                                <Card className={`h-full flex flex-col ${tier.popular ? 'border-electric-purple/40 shadow-[0_0_30px_rgba(139,92,246,0.15)] ring-1 ring-electric-purple/20' : ''}`}>
+                                    {tier.popular && (
+                                        <div className="px-6 pt-4">
+                                            <span className="text-xs font-medium text-electric-purple bg-electric-purple/10 px-3 py-1 rounded-full border border-electric-purple/20">
+                                                Most Popular
+                                            </span>
+                                        </div>
+                                    )}
                                     <CardHeader>
                                         <CardTitle className="text-2xl">{tier.name}</CardTitle>
                                         <CardDescription>{tier.description}</CardDescription>

@@ -55,7 +55,10 @@ export const CaseStudies = () => {
 
     return (
         <section id="case-studies" className="py-24 bg-background relative overflow-hidden">
-            <div className="container px-4 md:px-6">
+            {/* Ambient glow */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-electric-purple/5 rounded-full blur-3xl" />
+
+            <div className="container px-4 md:px-6 relative z-10">
                 <motion.div
                     initial="hidden"
                     whileInView="visible"
@@ -64,50 +67,48 @@ export const CaseStudies = () => {
                     className="space-y-12"
                 >
                     <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-                        <div className="space-y-4 text-center">
+                        <div className="space-y-4 text-center md:text-left">
                             <h2 className="text-3xl md:text-5xl font-bold font-display">
                                 Real Results, <br /> Real Impact
                             </h2>
-                            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+                            <p className="text-lg text-muted-foreground max-w-xl">
                                 See how industry leaders are transforming their operations with our custom AI solutions and expert talent.
                             </p>
                         </div>
 
-                        <motion.div
-                            variants={fadeInUp}
-                            className="flex flex-wrap justify-center gap-4 mb-12"
-                        >
+                        <div className="flex flex-wrap justify-center gap-2 mb-12">
                             {industries.map((industry) => (
                                 <Button
                                     key={industry}
                                     variant={activeFilter === industry ? "neubrutalist" : "outline"}
+                                    size="sm"
                                     onClick={() => setActiveFilter(industry)}
                                     className="rounded-full"
                                 >
                                     {industry}
                                 </Button>
                             ))}
-                        </motion.div>
+                        </div>
                     </div>
 
                     <motion.div
                         layout
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                     >
                         <AnimatePresence mode="popLayout">
                             {filteredStudies.map((study) => (
                                 <motion.div
                                     key={study.client}
                                     layout
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ duration: 0.3 }}
+                                    initial={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+                                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                                    exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+                                    transition={{ duration: 0.35, ease: [0.25, 0.4, 0.25, 1] }}
                                 >
-                                    <Card tilt className="h-full hover:border-electric-purple/50 transition-colors group cursor-pointer">
+                                    <Card tilt className="h-full hover:border-electric-purple/30 transition-all duration-300 group cursor-pointer">
                                         <CardHeader>
                                             <div className="flex justify-between items-start mb-4">
-                                                <span className="text-xs font-mono text-electric-purple bg-electric-purple/10 px-2 py-1 rounded">
+                                                <span className="text-xs font-mono text-electric-purple bg-electric-purple/10 px-2.5 py-1 rounded-full border border-electric-purple/20">
                                                     {study.industry}
                                                 </span>
                                                 <study.icon className="h-5 w-5 text-muted-foreground group-hover:text-electric-purple transition-colors" />
@@ -123,7 +124,7 @@ export const CaseStudies = () => {
                                             <p className="text-sm text-muted-foreground line-clamp-3">
                                                 {study.description}
                                             </p>
-                                            <div className="flex items-center text-sm font-medium text-electric-purple opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                                            <div className="flex items-center text-sm font-medium text-electric-purple opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
                                                 Read Case Study <ArrowRight className="ml-2 h-4 w-4" />
                                             </div>
                                         </CardContent>

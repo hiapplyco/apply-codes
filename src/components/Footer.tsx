@@ -7,7 +7,7 @@ const Footer = () => {
         <div className="flex flex-col items-center md:items-start gap-2">
           <span className="text-xl font-bold font-display">Apply, Co.</span>
           <p className="text-sm text-muted-foreground">
-            © 2025 Apply, Co. All rights reserved.
+            © 2026 Apply, Co. All rights reserved.
           </p>
         </div>
 

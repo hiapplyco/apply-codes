@@ -15,9 +15,9 @@ export const FloatingNav = () => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
             if (currentScrollY > lastScrollY && currentScrollY > 100) {
-                setIsVisible(false); // Hide on scroll down
+                setIsVisible(false);
             } else {
-                setIsVisible(true); // Show on scroll up
+                setIsVisible(true);
             }
             setLastScrollY(currentScrollY);
         };
@@ -54,15 +54,19 @@ export const FloatingNav = () => {
                     initial={{ y: 100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: 100, opacity: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
                     className="fixed bottom-8 left-0 right-0 z-50 flex justify-center px-4"
                 >
                     <div
-                        className="flex items-center gap-2 p-2 rounded-full bg-background/80 backdrop-blur-md border border-border shadow-lg"
+                        className="flex items-center gap-2 p-2 rounded-2xl bg-background/70 backdrop-blur-xl border border-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
                         onMouseEnter={() => setIsExpanded(true)}
                         onMouseLeave={() => setIsExpanded(false)}
                     >
                         <div className="flex items-center gap-1">
-                            <div className="h-8 w-8 rounded-full bg-electric-purple flex items-center justify-center text-white font-bold font-display cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <div
+                                className="h-8 w-8 rounded-full bg-gradient-to-br from-electric-purple to-violet-600 flex items-center justify-center text-white font-bold font-display cursor-pointer shadow-[0_0_12px_rgba(139,92,246,0.4)]"
+                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                            >
                                 A
                             </div>
                             <AnimatePresence>
@@ -71,6 +75,7 @@ export const FloatingNav = () => {
                                         initial={{ width: 0, opacity: 0 }}
                                         animate={{ width: "auto", opacity: 1 }}
                                         exit={{ width: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
                                         className="overflow-hidden whitespace-nowrap font-bold font-display pr-2 cursor-pointer"
                                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                                     >
@@ -80,7 +85,7 @@ export const FloatingNav = () => {
                             </AnimatePresence>
                         </div>
 
-                        <div className="h-6 w-px bg-border mx-1" />
+                        <div className="h-6 w-px bg-border/40 mx-1" />
 
                         <nav className="flex items-center gap-1">
                             {navItems.map((item) => (
@@ -88,7 +93,7 @@ export const FloatingNav = () => {
                                     key={item.name}
                                     variant="ghost"
                                     size="icon"
-                                    className="rounded-full hover:bg-accent"
+                                    className="rounded-full hover:bg-white/10"
                                     title={item.name}
                                     onClick={(e) => scrollToSection(e, item.href)}
                                 >
@@ -97,12 +102,12 @@ export const FloatingNav = () => {
                             ))}
                         </nav>
 
-                        <div className="h-6 w-px bg-border mx-1" />
+                        <div className="h-6 w-px bg-border/40 mx-1" />
 
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="rounded-full px-4 mr-1 hover:bg-accent"
+                            className="rounded-full px-4 mr-1 hover:bg-white/10"
                             onClick={() => window.location.href = '/login'}
                         >
                             Login
