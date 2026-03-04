@@ -70,14 +70,14 @@ export const Hero = () => {
                     initial="hidden"
                     animate="visible"
                     variants={blurIn}
-                    className="h-[50vh] lg:h-[800px] w-full relative flex items-center justify-center"
+                    className="h-[50vh] lg:h-[600px] w-full relative flex items-center justify-center"
                 >
                     {/* Ambient glow */}
                     <div className="absolute inset-0 bg-gradient-radial from-electric-purple/15 via-electric-purple/5 to-transparent opacity-60 blur-3xl pointer-events-none" />
                     <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-electric-cyan/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
 
                     <div className="w-full h-full">
-                        <Canvas camera={{ position: [0, 0, 9], fov: 45 }} resize={{ scroll: false }}>
+                        <Canvas camera={{ position: [0, 0, 14], fov: 45 }} resize={{ scroll: false }}>
                             <Globe />
                         </Canvas>
                     </div>
