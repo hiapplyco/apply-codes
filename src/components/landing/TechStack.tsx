@@ -12,22 +12,22 @@ interface TechItem {
 
 // Row 1: AI, ML, Cloud & Infrastructure
 const row1: TechItem[] = [
-    { name: "OpenAI", slug: "openai" },
     { name: "Anthropic", slug: "anthropic" },
     { name: "Google Gemini", slug: "googlegemini" },
-    { name: "Meta AI", slug: "meta" },
+    { name: "Meta", slug: "meta" },
     { name: "Hugging Face", slug: "huggingface" },
     { name: "TensorFlow", slug: "tensorflow" },
     { name: "PyTorch", slug: "pytorch" },
     { name: "LangChain", slug: "langchain" },
     { name: "Firebase", slug: "firebase" },
     { name: "Google Cloud", slug: "googlecloud" },
-    { name: "AWS", slug: "amazonwebservices" },
+    { name: "Amazon", slug: "amazon" },
     { name: "Vercel", slug: "vercel" },
     { name: "Docker", slug: "docker" },
     { name: "Kubernetes", slug: "kubernetes" },
     { name: "Supabase", slug: "supabase" },
     { name: "Grafana", slug: "grafana" },
+    { name: "Datadog", slug: "datadog" },
 ];
 
 // Row 2: Languages, Frameworks, Data & Tools
@@ -46,7 +46,7 @@ const row2: TechItem[] = [
     { name: "Sentry", slug: "sentry" },
     { name: "GitHub", slug: "github" },
     { name: "Figma", slug: "figma" },
-    { name: "Slack", slug: "slack" },
+    { name: "Notion", slug: "notion" },
     { name: "Linear", slug: "linear" },
 ];
 
@@ -84,6 +84,7 @@ const MarqueeRow = ({ items, direction = "left", speed = 30 }: { items: TechItem
                             width={20}
                             height={20}
                             loading="lazy"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             className="h-5 w-5 [filter:brightness(0)_invert(1)] opacity-40 group-hover/item:[filter:none] group-hover/item:opacity-100 group-hover/item:scale-110 transition-all duration-300"
                         />
                         <span className="text-sm font-medium text-muted-foreground group-hover/item:text-foreground transition-colors whitespace-nowrap">

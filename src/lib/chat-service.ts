@@ -164,12 +164,21 @@ export const generateResponse = async (input: string, history: Message[] = []): 
     }
 
     try {
-        const chat = model.startChat({
-            history: history.map(msg => ({
-                role: msg.role === 'user' ? 'user' : 'model',
+        // Build history: exclude the current message (last item) and ensure
+        // the first entry has role 'user' (Gemini requirement)
+        const chatHistory = history
+            .map(msg => ({
+                role: msg.role === 'user' ? 'user' as const : 'model' as const,
                 parts: [{ text: msg.content }],
-            })).slice(0, -1),
-        });
+            }))
+            .slice(0, -1);
+
+        // Drop leading 'model' messages (e.g. welcome greeting)
+        while (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+            chatHistory.shift();
+        }
+
+        const chat = model.startChat({ history: chatHistory });
 
         const result = await chat.sendMessage(sanitized);
         const response = await result.response;
