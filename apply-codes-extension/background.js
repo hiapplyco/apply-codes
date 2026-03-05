@@ -172,6 +172,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'evaluateCandidate') {
     (async () => {
       try {
+        const idToken = await getAuthToken();
+        if (!idToken) {
+          sendResponse({ error: 'Please sign in via the extension popup first' });
+          return;
+        }
         const result = await callFirebaseFunction('analyzeCandidate', {
           candidate: request.data.candidate,
           requirements: request.data.requirements || 'General candidate evaluation - assess overall qualifications and experience'
@@ -275,11 +280,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'explainBoolean') {
     (async () => {
       try {
+        const idToken = await getAuthToken();
+        if (!idToken) {
+          sendResponse({ error: 'Please sign in via the extension popup first' });
+          return;
+        }
         const result = await callFirebaseFunction('explainBoolean', {
           booleanString: request.data.booleanString,
           requirements: request.data.requirements
         });
         sendResponse(result);
+      } catch (error) {
+        sendResponse({ error: error.message });
+      }
+    })();
+    return true;
+  }
+
+  // Generate boolean search (for sourcing)
+  if (request.action === 'generateBooleanSearch') {
+    (async () => {
+      try {
+        const idToken = await getAuthToken();
+        if (!idToken) {
+          sendResponse({ error: 'Please sign in via the extension popup first' });
+          return;
+        }
+        const result = await callFirebaseFunction('generateBooleanSearch', {
+          description: request.data.description,
+          jobTitle: request.data.jobTitle || ''
+        });
+        sendResponse(result);
+      } catch (error) {
+        sendResponse({ error: error.message });
+      }
+    })();
+    return true;
+  }
+
+  // Get sourcing results from storage
+  if (request.action === 'getSourcingResults') {
+    (async () => {
+      try {
+        const result = await chrome.storage.local.get('applycodes_sourcing_candidates');
+        sendResponse({ candidates: result.applycodes_sourcing_candidates || [] });
       } catch (error) {
         sendResponse({ error: error.message });
       }
