@@ -213,6 +213,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'generateOutreach') {
     (async () => {
       try {
+        const idToken = await getAuthToken();
+        if (!idToken) {
+          sendResponse({ error: 'Please sign in via the extension popup first' });
+          return;
+        }
         const result = await callFirebaseFunction('generateContent', {
           userInput: `Write a friendly recruiting outreach message for ${request.data.candidateName}, who is a ${request.data.candidateHeadline}. Keep it brief, personalized, and professional.`,
           contentType: 'recruiting_email',

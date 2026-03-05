@@ -83,10 +83,12 @@ class RecruiterAdapter extends (window.ApplyCodesBaseAdapter || Object) {
   async submitSearch() {
     const { humanSleep, TIMING } = window.ApplyCodesTiming;
     const input = this.queryFirst(RecruiterAdapter.SELECTORS.searchInput);
-    if (input) {
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+    if (!input) {
+      console.warn('[Apply Codes] Recruiter: Could not find search input for submit');
+      return false;
     }
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
     await humanSleep(...TIMING.AFTER_SEARCH_SUBMIT);
     this._currentPage = 1;
     return true;

@@ -42,8 +42,9 @@ class SourcingPanel {
   // ============ UI CREATION ============
 
   _createTab() {
-    this._tab = document.createElement('div');
+    this._tab = document.createElement('button');
     this._tab.id = 'ac-sourcing-tab';
+    this._tab.setAttribute('aria-label', 'Open candidate sourcing panel');
     this._tab.innerHTML = '<span class="ac-tab-text">Source</span>';
     this._tab.addEventListener('click', () => this._toggle());
     document.body.appendChild(this._tab);
@@ -52,6 +53,8 @@ class SourcingPanel {
   _createPanel() {
     this._panel = document.createElement('div');
     this._panel.id = 'ac-sourcing-panel';
+    this._panel.setAttribute('role', 'dialog');
+    this._panel.setAttribute('aria-label', 'Candidate Sourcing');
 
     const DashboardDetector = window.ApplyCodesDashboardDetector;
     const dashboardType = DashboardDetector.detectDashboard();
@@ -63,21 +66,21 @@ class SourcingPanel {
           <span class="ac-logo-icon">AC</span>
           <span class="ac-logo-text">Candidate Sourcing</span>
         </div>
-        <button class="ac-close-btn" title="Close">&times;</button>
+        <button class="ac-close-btn" title="Close" aria-label="Close panel">&times;</button>
       </div>
 
-      <div class="ac-panel-nav">
-        <button class="ac-nav-btn active" data-view="criteria">Search</button>
-        <button class="ac-nav-btn" data-view="results">Results</button>
+      <div class="ac-panel-nav" role="tablist">
+        <button class="ac-nav-btn active" data-view="criteria" role="tab" aria-selected="true" aria-controls="ac-view-criteria">Search</button>
+        <button class="ac-nav-btn" data-view="results" role="tab" aria-selected="false" aria-controls="ac-view-results">Results</button>
       </div>
 
       <div class="ac-panel-body">
         <!-- CRITERIA VIEW -->
-        <div class="ac-view ac-view-criteria active" data-view="criteria">
+        <div class="ac-view ac-view-criteria active" data-view="criteria" id="ac-view-criteria" role="tabpanel">
           <div class="ac-dashboard-badge">${this._escape(dashboardLabel)}</div>
 
           <div class="ac-field-group">
-            <label class="ac-label">What are you looking for?</label>
+            <label class="ac-label" for="ac-query">What are you looking for?</label>
             <textarea class="ac-textarea" id="ac-query" rows="3" placeholder="e.g., Senior React developer with AWS experience in Austin, TX, 5+ years"></textarea>
           </div>
 
@@ -85,31 +88,31 @@ class SourcingPanel {
             <summary>Advanced Filters</summary>
             <div class="ac-advanced-fields">
               <div class="ac-field-group">
-                <label class="ac-label">Job Title</label>
+                <label class="ac-label" for="ac-filter-title">Job Title</label>
                 <input type="text" class="ac-input" id="ac-filter-title" placeholder="e.g., Software Engineer" />
               </div>
               <div class="ac-field-group">
-                <label class="ac-label">Location</label>
+                <label class="ac-label" for="ac-filter-location">Location</label>
                 <input type="text" class="ac-input" id="ac-filter-location" placeholder="e.g., San Francisco, CA" />
               </div>
               <div class="ac-field-group">
-                <label class="ac-label">Skills (comma-separated)</label>
+                <label class="ac-label" for="ac-filter-skills">Skills (comma-separated)</label>
                 <input type="text" class="ac-input" id="ac-filter-skills" placeholder="e.g., Python, React, AWS" />
               </div>
               <div class="ac-field-group">
-                <label class="ac-label">Current Company</label>
+                <label class="ac-label" for="ac-filter-company">Current Company</label>
                 <input type="text" class="ac-input" id="ac-filter-company" placeholder="e.g., Google" />
               </div>
               <div class="ac-field-row">
                 <div class="ac-field-group ac-field-half">
-                  <label class="ac-label">Max Pages</label>
+                  <label class="ac-label" for="ac-max-pages">Max Pages</label>
                   <input type="number" class="ac-input" id="ac-max-pages" value="10" min="1" max="50" />
                 </div>
                 <div class="ac-field-group ac-field-half">
                   <label class="ac-label">&nbsp;</label>
                   <label class="ac-checkbox-label">
                     <input type="checkbox" id="ac-use-ai" checked />
-                    Use AI Boolean
+                    <span title="Generate optimized Boolean search query using AI">Use AI Boolean</span>
                   </label>
                 </div>
               </div>
@@ -131,7 +134,7 @@ class SourcingPanel {
         </div>
 
         <!-- RESULTS VIEW -->
-        <div class="ac-view ac-view-results" data-view="results">
+        <div class="ac-view ac-view-results" data-view="results" id="ac-view-results" role="tabpanel">
           <div class="ac-results-toolbar">
             <div class="ac-export-buttons">
               <button class="ac-btn-sm" id="ac-export-csv">CSV</button>
@@ -186,7 +189,9 @@ class SourcingPanel {
   _switchView(view) {
     this._activeView = view;
     this._panel.querySelectorAll('.ac-nav-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === view);
+      const isActive = btn.dataset.view === view;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
     });
     this._panel.querySelectorAll('.ac-view').forEach(el => {
       el.classList.toggle('active', el.dataset.view === view);

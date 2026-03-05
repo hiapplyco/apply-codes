@@ -96,7 +96,7 @@ class ResultsTable {
         <table class="ac-table">
           <thead>
             <tr>
-              <th class="ac-th-check"><input type="checkbox" class="ac-select-all" ${allSelected ? 'checked' : ''} /></th>
+              <th class="ac-th-check"><input type="checkbox" class="ac-select-all" aria-label="Select all candidates" ${allSelected ? 'checked' : ''} /></th>
               ${this._renderSortHeader('name', 'Name')}
               ${this._renderSortHeader('headline', 'Title')}
               ${this._renderSortHeader('company', 'Company')}
@@ -115,7 +115,7 @@ class ResultsTable {
       const checked = this._selectedIds.has(c.id) ? 'checked' : '';
       html += `
         <tr class="ac-table-row" data-id="${c.id}">
-          <td><input type="checkbox" class="ac-row-check" data-id="${c.id}" ${checked} /></td>
+          <td><input type="checkbox" class="ac-row-check" data-id="${c.id}" aria-label="Select ${this._escape(c.name)}" ${checked} /></td>
           <td class="ac-td-name">
             <a href="${this._safeHref(c.profileUrl)}" target="_blank" rel="noopener">${this._escape(c.name)}</a>
           </td>

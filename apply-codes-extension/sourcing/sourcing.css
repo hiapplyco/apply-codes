@@ -9,6 +9,7 @@
   background: linear-gradient(135deg, #059669 0%, #10b981 100%);
   color: white;
   padding: 14px 8px;
+  border: none;
   border-radius: 8px 0 0 8px;
   cursor: pointer;
   z-index: 999999;
@@ -260,7 +261,7 @@
 }
 .ac-progress-stats {
   font-size: 11px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 /* Results toolbar */
@@ -300,7 +301,7 @@
 }
 .ac-table-count {
   font-size: 11px;
-  color: #9ca3af;
+  color: #6b7280;
   white-space: nowrap;
 }
 .ac-table-scroll {
@@ -358,7 +359,7 @@
 .ac-btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
 .ac-table-empty {
   text-align: center;
-  color: #9ca3af;
+  color: #6b7280;
   padding: 30px !important;
   font-style: italic;
 }
