@@ -425,3 +425,98 @@
   font-size: 12px;
   margin-top: 4px;
 }
+
+/* Responsive: narrow viewports */
+@media (max-width: 1400px) {
+  #ac-sourcing-panel {
+    width: 340px;
+    right: -360px;
+  }
+}
+@media (max-width: 1100px) {
+  #ac-sourcing-panel {
+    width: 300px;
+    right: -320px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  #ac-sourcing-panel {
+    background: #1f2937;
+    color: #e5e7eb;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+  }
+  .ac-panel-header {
+    border-bottom-color: #374151;
+  }
+  .ac-label {
+    color: #d1d5db;
+  }
+  .ac-input, .ac-textarea {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+  .ac-input:focus, .ac-textarea:focus {
+    border-color: #059669;
+  }
+  .ac-dashboard-badge {
+    background: #374151;
+    color: #d1d5db;
+  }
+  .ac-advanced-toggle summary {
+    color: #d1d5db;
+  }
+  .ac-table {
+    background: #1f2937;
+  }
+  .ac-table thead th {
+    background: #111827;
+    color: #d1d5db;
+    border-bottom-color: #374151;
+  }
+  .ac-table-row {
+    border-bottom-color: #374151;
+  }
+  .ac-table-row:hover {
+    background: #374151;
+  }
+  .ac-table-filter {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+  .ac-tos-modal {
+    background: #1f2937;
+    color: #e5e7eb;
+  }
+  .ac-tos-modal p {
+    color: #d1d5db;
+  }
+  .ac-nav-btn {
+    color: #d1d5db;
+  }
+  .ac-nav-btn.active {
+    color: #059669;
+    border-bottom-color: #059669;
+  }
+  .ac-results-toolbar {
+    border-bottom-color: #374151;
+  }
+  .ac-progress {
+    background: #374151;
+  }
+  .ac-progress-bar {
+    background: #4b5563;
+  }
+  .ac-table-empty {
+    color: #6b7280;
+  }
+  .ac-td-name a {
+    color: #34d399;
+  }
+  .ac-td-name a:hover {
+    color: #6ee7b7;
+  }
+}

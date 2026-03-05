@@ -421,6 +421,9 @@ class SourcingPanel {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'ac-tos-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-label', 'Terms of Service Warning');
       overlay.innerHTML = `
         <div class="ac-tos-modal">
           <h3>Important Notice</h3>
@@ -435,14 +438,49 @@ class SourcingPanel {
       `;
       document.body.appendChild(overlay);
 
-      overlay.querySelector('#ac-tos-cancel').addEventListener('click', () => {
+      const cancelBtn = overlay.querySelector('#ac-tos-cancel');
+      const acceptBtn = overlay.querySelector('#ac-tos-accept');
+      const focusable = [cancelBtn, acceptBtn];
+
+      // Focus trapping
+      const trapFocus = (e) => {
+        if (e.key === 'Tab') {
+          const idx = focusable.indexOf(document.activeElement);
+          if (e.shiftKey) {
+            e.preventDefault();
+            focusable[idx <= 0 ? focusable.length - 1 : idx - 1].focus();
+          } else {
+            e.preventDefault();
+            focusable[(idx + 1) % focusable.length].focus();
+          }
+        }
+      };
+
+      // Escape key dismisses
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          cleanup();
+          resolve(false);
+        }
+      };
+
+      overlay.addEventListener('keydown', trapFocus);
+      document.addEventListener('keydown', handleEscape);
+      cancelBtn.focus();
+
+      const cleanup = () => {
+        document.removeEventListener('keydown', handleEscape);
         overlay.remove();
+      };
+
+      cancelBtn.addEventListener('click', () => {
+        cleanup();
         resolve(false);
       });
-      overlay.querySelector('#ac-tos-accept').addEventListener('click', async () => {
+      acceptBtn.addEventListener('click', async () => {
         this._tosAccepted = true;
         await chrome.storage.local.set({ linkedinAutomationTosAccepted: true });
-        overlay.remove();
+        cleanup();
         resolve(true);
       });
     });

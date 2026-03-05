@@ -67,9 +67,19 @@ function normalizeProfileUrl(url) {
  * Get all stored candidates.
  * @returns {Promise<Object[]>}
  */
+const RETENTION_DAYS = 30;
+
 async function getAllCandidates() {
   const result = await chrome.storage.local.get(STORAGE_KEY);
-  return result[STORAGE_KEY] || [];
+  const candidates = result[STORAGE_KEY] || [];
+
+  // Auto-purge records older than retention period
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const fresh = candidates.filter(c => c.collectedAt > cutoff);
+  if (fresh.length < candidates.length) {
+    await chrome.storage.local.set({ [STORAGE_KEY]: fresh });
+  }
+  return fresh;
 }
 
 /**

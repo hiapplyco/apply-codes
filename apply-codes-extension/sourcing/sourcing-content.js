@@ -73,9 +73,9 @@
       return true;
     });
 
-    // SPA navigation observer - re-check dashboard on URL changes
+    // SPA navigation detection via History API + periodic check
     let lastUrl = location.href;
-    new MutationObserver(() => {
+    function checkUrlChange() {
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
@@ -84,7 +84,11 @@
           console.log(`[Apply Codes] SPA navigation detected, dashboard: ${DashboardDetector.getDashboardLabel(newType)}`);
         }
       }
-    }).observe(document, { subtree: true, childList: true });
+    }
+    window.addEventListener('popstate', checkUrlChange);
+    window.addEventListener('hashchange', checkUrlChange);
+    // Periodic check for pushState navigations (LinkedIn SPA)
+    setInterval(checkUrlChange, 1000);
   }
 
   // Initialize when DOM is ready

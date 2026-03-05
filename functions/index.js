@@ -13,7 +13,7 @@ exports.perplexitySearch = require('./perplexity-search').perplexitySearch;
 
 // ─── Enrichment ──────────────────────────────────────────────────────────────
 exports.enrichProfile = require('./enrich-profile').enrichProfile;
-exports.searchContacts = require('./search-contacts').searchContacts;
+// exports.searchContacts = require('./search-contacts').searchContacts; // File never created
 exports.getContactInfo = require('./get-contact-info').getContactInfo;
 exports.clearbitEnrichment = require('./clearbit-enrichment').clearbitEnrichment;
 exports.hunterIoSearch = require('./hunter-io-search').hunterIoSearch;
@@ -109,7 +109,7 @@ exports.generateClarvidaMarketingImage = require('./generate-clarvida-marketing-
 // ─── Extension API & MCP ─────────────────────────────────────────────────────
 exports.getProjects = require('./get-projects').getProjects;
 exports.mcpChatStream = require('./mcp-chat-stream').mcpChatStream;
-exports.testOrchestration = require('./test-orchestration').testOrchestration;
+// exports.testOrchestration = require('./test-orchestration').testOrchestration; // File never created
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 exports.healthCheck = functions.https.onRequest((req, res) => {

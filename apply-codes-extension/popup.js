@@ -181,7 +181,7 @@ function displayBooleanExplanation(explanation, searchString) {
   }
 
   // Insert after the boolean results
-  const booleanResults = document.getElementById('booleanResults');
+  const booleanResults = document.getElementById('boolean-results');
   if (booleanResults) {
     booleanResults.insertAdjacentElement('afterend', container);
   }
