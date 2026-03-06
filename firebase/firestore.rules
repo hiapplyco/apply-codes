@@ -97,10 +97,51 @@ service cloud.firestore {
       allow write: if false; // Only system can write usage tracking
     }
 
-    // Chat messages - users can access their own messages
+    // Chat messages (camelCase) - users can access their own messages
     match /chatMessages/{messageId} {
       allow read, write: if isAuthenticated() &&
         resource.data.user_id == request.auth.uid;
+    }
+
+    // Chat messages (underscore) - real-time messaging with audit trail
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['sessionId', 'role', 'content', 'timestamp', 'userId']) &&
+        request.resource.data.role in ['user', 'assistant', 'system'];
+
+      allow update, delete: if false;
+    }
+
+    // Chat sessions - users can access their own sessions
+    match /chat_sessions/{sessionId} {
+      allow read, write: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'createdAt']);
+    }
+
+    // Presence - authenticated users can read all, write only own
+    match /presence/{presenceId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['userId', 'documentId', 'name', 'lastSeen', 'isOnline']);
+
+      allow update, delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Usage tracking - users can read own, system writes via admin SDK
+    match /usage_tracking/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false;
     }
 
     // Context items - users can access their own items
