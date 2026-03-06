@@ -8,12 +8,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// CORS headers configuration
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+const { getCorsHeaders } = require('./utils/auth-cors');
 
 // Initialize Supabase client for potential future integrations
 const initSupabaseClient = () => {
@@ -169,12 +164,12 @@ const handleInterviewScheduling = async (schedulingData) => {
 exports.handleInterview = functions.https.onRequest(async (req, res) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
     res.status(204).send('');
     return;
   }
 
-  res.set(corsHeaders);
+  res.set(getCorsHeaders(req.headers.origin));
 
   try {
     const {

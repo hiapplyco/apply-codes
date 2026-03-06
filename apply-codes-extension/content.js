@@ -726,6 +726,22 @@ ${educationText}
   function showResults(html) {
     const results = sidebar.querySelector('#applycodes-results');
     results.innerHTML = html;
+    bindCopyButtons(results);
+  }
+
+  function bindCopyButtons(container) {
+    container.querySelectorAll('[data-copy]').forEach(el => {
+      el.addEventListener('click', () => {
+        const text = el.dataset.copy;
+        navigator.clipboard.writeText(text).then(() => {
+          if (el.classList.contains('applycodes-copy-btn')) {
+            el.textContent = 'Copied!';
+            el.classList.add('copied');
+            setTimeout(() => { el.textContent = 'Copy'; el.classList.remove('copied'); }, 2000);
+          }
+        });
+      });
+    });
   }
 
   function escapeHtml(text) {
@@ -810,7 +826,7 @@ ${educationText}
       if (response?.success && response.content) {
         let html = `<h4>Outreach Message</h4>`;
         html += `<p style="white-space: pre-wrap;">${escapeHtml(response.content)}</p>`;
-        html += `<button class="applycodes-copy-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(response.content)}).then(() => { this.textContent = 'Copied!'; this.classList.add('copied'); setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('copied'); }, 2000); })">Copy</button>`;
+        html += `<button class="applycodes-copy-btn" data-copy="${escapeHtml(response.content)}">Copy</button>`;
         showResults(html);
       } else {
         showError(response?.error || 'Generation failed');
@@ -993,7 +1009,7 @@ ${educationText}
     if (data.emails?.length) {
       html += `<div class="enrichment-field">
         <span class="field-label">Emails:</span>
-        ${data.emails.map(e => `<div class="enrichment-value copyable" onclick="navigator.clipboard.writeText('${escapeHtml(e)}')">${escapeHtml(e)} <span class="copy-hint">click to copy</span></div>`).join('')}
+        ${data.emails.map(e => `<div class="enrichment-value copyable" data-copy="${escapeHtml(e)}">${escapeHtml(e)} <span class="copy-hint">click to copy</span></div>`).join('')}
       </div>`;
     }
 
@@ -1001,7 +1017,7 @@ ${educationText}
     if (data.phone_numbers?.length) {
       html += `<div class="enrichment-field">
         <span class="field-label">Phone:</span>
-        ${data.phone_numbers.map(p => `<div class="enrichment-value copyable" onclick="navigator.clipboard.writeText('${escapeHtml(p)}')">${escapeHtml(p)} <span class="copy-hint">click to copy</span></div>`).join('')}
+        ${data.phone_numbers.map(p => `<div class="enrichment-value copyable" data-copy="${escapeHtml(p)}">${escapeHtml(p)} <span class="copy-hint">click to copy</span></div>`).join('')}
       </div>`;
     }
 
@@ -1043,6 +1059,7 @@ ${educationText}
 
     html += `</div>`;
     results.innerHTML = html;
+    bindCopyButtons(results);
   }
 
   function showHunterResult(data) {
@@ -1053,7 +1070,7 @@ ${educationText}
     if (data.email) {
       html += `<div class="enrichment-field">
         <span class="field-label">Email:</span>
-        <div class="enrichment-value copyable" onclick="navigator.clipboard.writeText('${escapeHtml(data.email)}')">${escapeHtml(data.email)} <span class="copy-hint">click to copy</span></div>
+        <div class="enrichment-value copyable" data-copy="${escapeHtml(data.email)}">${escapeHtml(data.email)} <span class="copy-hint">click to copy</span></div>
       </div>`;
     }
 
@@ -1080,6 +1097,7 @@ ${educationText}
 
     html += `</div>`;
     results.innerHTML = html;
+    bindCopyButtons(results);
   }
 
   // ============ MESSAGE LISTENER ============

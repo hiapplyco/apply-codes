@@ -20,12 +20,7 @@ const upload = multer({
   },
 });
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const { getCorsHeaders } = require('./utils/auth-cors');
 
 exports.processTextExtraction = onRequest(
   {
@@ -37,13 +32,13 @@ exports.processTextExtraction = onRequest(
   async (req, res) => {
     // Handle CORS preflight
     if (req.method === 'OPTIONS') {
-      res.set(corsHeaders);
+      res.set(getCorsHeaders(req.headers.origin));
       res.status(200).send();
       return;
     }
 
     // Set CORS headers for all responses
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
 
     if (req.method !== 'POST') {
       res.status(405).json({ error: 'Method not allowed' });

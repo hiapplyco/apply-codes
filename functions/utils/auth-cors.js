@@ -19,7 +19,42 @@ const { logger } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 
 /**
- * Standard CORS headers used across all onRequest functions.
+ * Allowed CORS origins for onRequest functions.
+ * Chrome extension origins use chrome-extension:// protocol.
+ */
+const ALLOWED_ORIGINS = [
+  "https://applycodes-2683f.web.app",
+  "https://applycodes-2683f.firebaseapp.com",
+];
+
+/**
+ * Check if an origin is allowed (exact match or chrome-extension://).
+ */
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (origin.startsWith("chrome-extension://")) return true;
+  return false;
+}
+
+/**
+ * Get CORS headers for a given request origin.
+ * Returns origin-specific header if allowed, omits Access-Control-Allow-Origin otherwise.
+ */
+function getCorsHeaders(origin) {
+  const headers = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+  if (isAllowedOrigin(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
+
+/**
+ * @deprecated Use getCorsHeaders(req.headers.origin) instead for origin-checked CORS.
+ * Kept for backward compatibility during migration.
  */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +72,7 @@ const corsHeaders = {
  */
 const handlePreflight = (req, res) => {
   if (req.method === "OPTIONS") {
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
     res.status(204).send("");
     return true;
   }
@@ -97,7 +132,7 @@ const verifyAuth = async (req, options = {}) => {
 const withAuth = async (req, res, options = {}) => {
   if (handlePreflight(req, res)) return false;
 
-  res.set(corsHeaders);
+  res.set(getCorsHeaders(req.headers.origin));
 
   try {
     return await verifyAuth(req, options);
@@ -109,6 +144,8 @@ const withAuth = async (req, res, options = {}) => {
 
 module.exports = {
   corsHeaders,
+  getCorsHeaders,
+  isAllowedOrigin,
   handlePreflight,
   verifyAuth,
   withAuth,

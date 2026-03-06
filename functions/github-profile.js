@@ -3,20 +3,16 @@ const { logger } = require("firebase-functions/v2");
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+const { getCorsHeaders } = require('./utils/auth-cors');
 
 exports.githubProfile = functions.https.onRequest(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
     res.status(204).send('');
     return;
   }
 
-  res.set(corsHeaders);
+  res.set(getCorsHeaders(req.headers.origin));
 
   try {
     // Initialize Supabase client for auth verification

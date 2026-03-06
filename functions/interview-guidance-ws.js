@@ -6,15 +6,11 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const { getCorsHeaders } = require('./utils/auth-cors');
 
 exports.interviewGuidanceWs = functions.https.onRequest(async (req, res) => {
   if (req.method === 'OPTIONS') {
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
     res.status(204).send('');
     return;
   }
@@ -25,7 +21,7 @@ exports.interviewGuidanceWs = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
 
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

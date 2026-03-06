@@ -1,14 +1,7 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const { getModel } = require('./utils/gemini');
-
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+const { getCorsHeaders } = require('./utils/auth-cors');
 
 exports.parseDocument = onRequest(
   {
@@ -19,7 +12,7 @@ exports.parseDocument = onRequest(
   },
   async (req, res) => {
     // Set CORS headers
-    res.set(corsHeaders);
+    res.set(getCorsHeaders(req.headers.origin));
 
     if (req.method === 'OPTIONS') {
       res.status(204).send('');
