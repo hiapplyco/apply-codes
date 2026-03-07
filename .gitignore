@@ -73,6 +73,7 @@ hive-mind-prompt-*.txt
 # Development artifacts (but allow sql/ directory)
 *.docx
 search-*.js
+!functions/utils/search-cache.js
 direct-search.js
 create-real-docx.js
 

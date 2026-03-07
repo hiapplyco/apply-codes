@@ -301,6 +301,10 @@ class FunctionBridge {
   // REMOVED: Local fallback boolean generation
   // Per production guidelines: No fallbacks - errors must be handled explicitly in the UI
 
+  async candidateSearch(payload: any): Promise<any> {
+    return this.callCallable("candidateSearch", payload);
+  }
+
   async enrichProfile(payload: any): Promise<any> {
     return this.callCallable("enrichProfile", payload);
   }

@@ -8,6 +8,7 @@ exports.generateBooleanSearch = require('./generate-boolean-search').generateBoo
 exports.generateSophisticatedBoolean = require('./generate-sophisticated-boolean').generateSophisticatedBoolean;
 exports.explainBoolean = require('./explain-boolean').explainBoolean;
 exports.linkedinSearch = require('./linkedin-search').linkedinSearch;
+exports.candidateSearch = require('./candidate-search').candidateSearch;
 exports.locationSearch = require('./location-search').locationSearch;
 exports.perplexitySearch = require('./perplexity-search').perplexitySearch;
 

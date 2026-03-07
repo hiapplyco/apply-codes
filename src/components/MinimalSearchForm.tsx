@@ -10,7 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
 import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square, ArrowUpDown, Filter, Send, Users } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square, ArrowUpDown, Filter, Send, Users, AlertTriangle } from 'lucide-react';
+import { SourceSelector } from '@/components/search/SourceSelector';
+import { SourceBadge } from '@/components/search/SourceBadge';
+import { SourceTabs } from '@/components/search/SourceTabs';
+import { DEFAULT_SOURCES, type CandidateSource, type SourceSearchResult } from '@/types/candidate-search';
 import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
@@ -180,6 +184,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
   const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
   const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Multi-source search states
+  const [selectedSources, setSelectedSources] = useState<CandidateSource[]>(DEFAULT_SOURCES);
+  const [activeSourceTab, setActiveSourceTab] = useState<CandidateSource | 'all'>('all');
+  const [sourceResults, setSourceResults] = useState<SourceSearchResult[]>([]);
+  const [sourcesFailed, setSourcesFailed] = useState<CandidateSource[]>([]);
 
   // Filter/Sort states
   const [sortBy, setSortBy] = useState<'default' | 'score' | 'location'>('default');
@@ -868,7 +878,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     }
   };
 
-  const searchGoogle = async (page = 1) => {
+  const searchCandidates = async (page = 1) => {
     if (!booleanString.trim()) {
       toast.error('Please generate or enter a boolean search string');
       return;
@@ -877,86 +887,82 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     // Check usage limit only for new searches (page 1), not for loading more results
     if (page === 1) {
       if (isLimitReached('searches')) {
-        // The modal will be shown by the hook - we just need to trigger it
         await checkAndExecute('searches', async () => null);
         return;
       }
       setIsSearching(true);
+      setActiveSourceTab('all');
     } else {
       setIsLoadingMore(true);
     }
 
     try {
-      // Get the API key from Cloud Function
-      const keyData = await functionBridge.getGoogleCseKey();
-
-      if (!keyData?.secret || !keyData.engineId) {
-        throw new Error('Failed to get API key');
-      }
-
-      const searchQuery = `${booleanString} site:linkedin.com/in/`;
-      const cseId = keyData.engineId;
-
-      // Google CSE pagination: start parameter is 1-indexed
-      // Page 1 = start 1, Page 2 = start 11, Page 3 = start 21, etc.
-      const startIndex = (page - 1) * 10 + 1;
-
-      const response = await fetch(
-        `https://www.googleapis.com/customsearch/v1?key=${keyData.secret}&cx=${cseId}&q=${encodeURIComponent(searchQuery)}&start=${startIndex}&num=10`
-      );
-
-      if (!response.ok) throw new Error('Search failed');
-
-      const data = await response.json();
-
-      // Get total results (capped at 100 by Google CSE)
-      const total = Math.min(Number(data.searchInformation?.totalResults || 0), 100);
-      setTotalSearchResults(total);
-      setSearchPage(page);
-
-      // Track location context for analytics
-      const hasLocationContext = contextItems.some(item =>
+      // Extract location from context items if present
+      const locationContext = contextItems.find(item =>
         item.type === 'manual_input' && item.metadata?.isLocationContext
       );
+      const location = locationContext?.content || undefined;
 
-      if (data.items) {
-        // Map Google search results to SearchResult objects with location extraction
-        const mappedResults: SearchResult[] = data.items.map((item: any) => ({
-          title: item.title,
-          link: item.link,
-          snippet: item.snippet,
-          displayLink: item.displayLink,
-          htmlTitle: item.htmlTitle,
-          location: extractLocationFromSnippet(item.snippet)
-        }));
+      const response = await functionBridge.candidateSearch({
+        keywords: booleanString,
+        sources: selectedSources,
+        location,
+        page,
+        resultsPerSource: 10,
+        useAIGeneration: false, // Boolean already generated
+      });
 
-        if (page === 1) {
-          setSearchResults(mappedResults);
-          // Collapse Boolean container to focus on Search Results
-          setBooleanCollapsed(true);
-          toast.success(`Found ${total} results`);
-          // Increment search usage count for new searches only
-          incrementUsage('searches').catch(err => console.error('Failed to increment search usage:', err));
-        } else {
-          setSearchResults(prev => [...prev, ...mappedResults]);
-          toast.success(`Loaded ${mappedResults.length} more results`);
-        }
-
-        // Track successful search
-        trackCandidateSearch('google_cse', mappedResults.length, {
-          hasLocation: hasLocationContext ? 'yes' : 'no',
-          booleanLength: booleanString.length.toString()
-        });
-      } else {
-        if (page === 1) {
-          setSearchResults([]);
-          toast.info('No results found');
-        }
-        trackCandidateSearch('google_cse', 0, {
-          hasLocation: hasLocationContext ? 'yes' : 'no',
-          booleanLength: booleanString.length.toString()
-        });
+      if (!response?.success) {
+        throw new Error(response?.error || 'Search failed');
       }
+
+      const { data } = response;
+      const total = data.metadata.totalFound;
+      setTotalSearchResults(total);
+      setSearchPage(page);
+      setSourceResults(data.sources);
+      setSourcesFailed(data.metadata.sourcesFailed || []);
+
+      // Map CandidateResult[] to SearchResult[] for backward compatibility
+      const mappedResults: SearchResult[] = data.merged.map((candidate: any) => ({
+        title: `${candidate.name}${candidate.title ? ' | ' + candidate.title : ''}`,
+        link: candidate.profileUrl,
+        snippet: candidate.snippet,
+        displayLink: candidate.profileUrl?.replace(/https?:\/\/(www\.)?/, '').split('/').slice(0, 2).join('/') || '',
+        location: candidate.location || undefined,
+        source: candidate.source,
+        matchScore: candidate.matchScore,
+        skills: candidate.skills,
+        candidateName: candidate.name,
+        candidateTitle: candidate.title,
+        candidateCompany: candidate.company,
+      }));
+
+      if (page === 1) {
+        setSearchResults(mappedResults);
+        setBooleanCollapsed(true);
+        const sourceInfo = data.metadata.sourcesSucceeded.length > 1
+          ? ` across ${data.metadata.sourcesSucceeded.length} sources`
+          : '';
+        toast.success(`Found ${total} results${sourceInfo}`);
+        incrementUsage('searches').catch(err => console.error('Failed to increment search usage:', err));
+
+        if (data.metadata.sourcesFailed.length > 0) {
+          toast.warning(`Some sources failed: ${data.metadata.sourcesFailed.join(', ')}`);
+        }
+      } else {
+        setSearchResults(prev => [...prev, ...mappedResults]);
+        toast.success(`Loaded ${mappedResults.length} more results`);
+      }
+
+      // Track successful search
+      trackCandidateSearch('serper_multi', mappedResults.length, {
+        sources: selectedSources.join(','),
+        sourcesSucceeded: data.metadata.sourcesSucceeded.join(','),
+        sourcesFailed: data.metadata.sourcesFailed.join(','),
+        cached: data.metadata.cached ? 'yes' : 'no',
+        booleanLength: booleanString.length.toString(),
+      });
     } catch (error) {
       console.error('Error searching:', error);
       toast.error('Search encountered an issue. Please try again.');
@@ -967,9 +973,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
   };
 
   const loadMoreResults = () => {
-    // Google CSE allows max 100 results (10 pages of 10)
-    if (searchResults.length < totalSearchResults && searchPage < 10) {
-      searchGoogle(searchPage + 1);
+    if (searchResults.length < totalSearchResults) {
+      searchCandidates(searchPage + 1);
     }
   };
 
@@ -1011,18 +1016,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
       return;
     }
 
-    const headers = ['Name', 'Title/Role', 'Company', 'Location', 'Profile URL', 'Snippet', 'Email', 'Phone'];
+    const headers = ['Name', 'Source', 'Title/Role', 'Company', 'Location', 'Profile URL', 'Snippet', 'Email', 'Phone'];
     const rows = selected.map((r, idx) => {
       const originalIdx = searchResults.indexOf(r);
       const contact = contactInfo[originalIdx];
-      const nameParts = r.title?.split(' | ') || r.title?.split(' - ') || [r.title];
-      const name = nameParts[0] || '';
-      const role = nameParts[1] || '';
+      const name = (r as any).candidateName || r.title?.split(' | ')[0] || r.title?.split(' - ')[0] || r.title || '';
+      const role = (r as any).candidateTitle || r.title?.split(' | ')[1] || r.title?.split(' - ')[1] || '';
+      const company = (r as any).candidateCompany || '';
       const location = r.location || extractLocationFromSnippet(r.snippet) || '';
+      const source = (r as any).source || 'linkedin';
       return [
         name,
+        source,
         role,
-        '', // Company not always parsed separately
+        company,
         location,
         r.link,
         r.snippet?.replace(/"/g, '""').substring(0, 200) || '',
@@ -1043,7 +1050,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
   };
 
   // Filtered & sorted results (derived state)
-  const filteredResults = searchResults.map((result, index) => ({ result, index })).filter(({ index }) => {
+  const filteredResults = searchResults.map((result, index) => ({ result, index })).filter(({ result, index }) => {
+    // Source tab filter
+    if (activeSourceTab !== 'all' && (result as any).source !== activeSourceTab) return false;
     if (filterBy === 'analyzed') return !!analysisResults[index];
     if (filterBy === 'enriched') return !!contactInfo[index];
     if (filterBy === 'not-analyzed') return !analysisResults[index];
@@ -2029,7 +2038,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                         </Button>
                       </div>
                       <Button
-                        onClick={() => searchGoogle()}
+                        onClick={() => searchCandidates()}
                         disabled={isSearching}
                         className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 sm:ml-auto"
                       >
@@ -2038,10 +2047,20 @@ This area is for your specific search instructions, filtering criteria, or addit
                           loadingText="Searching..."
                         >
                           <Search className="w-4 h-4 mr-2" />
-                          <span className="hidden sm:inline">Search LinkedIn Profiles</span>
-                          <span className="sm:hidden">Search LinkedIn</span>
+                          <span className="hidden sm:inline">Search Candidates</span>
+                          <span className="sm:hidden">Search</span>
                         </ButtonLoading>
                       </Button>
+                    </div>
+
+                    {/* Source Selection */}
+                    <div className="border-t border-gray-100 pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Search sources:</p>
+                      <SourceSelector
+                        selectedSources={selectedSources}
+                        onSourcesChange={setSelectedSources}
+                        disabled={isSearching}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2113,11 +2132,26 @@ This area is for your specific search instructions, filtering criteria, or addit
         {(searchResults.length > 0 || isSearching) && (
           <ContainedLoading
             isLoading={isSearching}
-            loadingText="Searching LinkedIn profiles..."
+            loadingText={`Searching ${selectedSources.length} source${selectedSources.length > 1 ? 's' : ''}...`}
             className="mb-6"
           >
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <div className="p-6">
+                {/* Source failure warning */}
+                {sourcesFailed.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <span>Some sources failed: {sourcesFailed.join(', ')}. Showing results from successful sources.</span>
+                  </div>
+                )}
+
+                {/* Source Tabs */}
+                <SourceTabs
+                  sources={sourceResults}
+                  activeTab={activeSourceTab}
+                  onTabChange={setActiveSourceTab}
+                />
+
                 <div className="flex flex-col gap-4 mb-6">
                   {/* Row 1: Title + View Controls */}
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -2323,16 +2357,21 @@ This area is for your specific search instructions, filtering criteria, or addit
 
                           {/* Location & Source */}
                           <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
+                            {(result as any).source && (
+                              <SourceBadge source={(result as any).source} size="sm" />
+                            )}
                             {result.location && (
                               <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
                                 <MapPin className="w-3 h-3" />
                                 {result.location}
                               </span>
                             )}
-                            <span className="flex items-center gap-1">
-                              <Globe className="w-3 h-3" />
-                              {new URL(result.link).hostname.replace('www.', '')}
-                            </span>
+                            {!((result as any).source) && (
+                              <span className="flex items-center gap-1">
+                                <Globe className="w-3 h-3" />
+                                {(() => { try { return new URL(result.link).hostname.replace('www.', ''); } catch { return result.displayLink; } })()}
+                              </span>
+                            )}
                           </div>
 
                           {/* Snippet */}
@@ -2342,7 +2381,10 @@ This area is for your specific search instructions, filtering criteria, or addit
 
                           {/* Skills Tags */}
                           <div className="flex flex-wrap gap-1.5 mb-4">
-                            {result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, viewMode === 'grid' ? 4 : 8).map((skill, skillIndex) => (
+                            {((result as any).skills?.length > 0
+                              ? (result as any).skills.slice(0, viewMode === 'grid' ? 4 : 8)
+                              : result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, viewMode === 'grid' ? 4 : 8) || []
+                            ).map((skill: string, skillIndex: number) => (
                               <Badge
                                 key={skillIndex}
                                 variant="secondary"
@@ -2587,7 +2629,7 @@ This area is for your specific search instructions, filtering criteria, or addit
           searchResults.length === 0 && booleanString && (
             <Card className="p-6 border-0 shadow-sm">
               <p className="text-center text-gray-500">
-                Click "Search LinkedIn Profiles" to find candidates
+                Click "Search Candidates" to find candidates
               </p>
             </Card>
           )
