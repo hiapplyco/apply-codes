@@ -81,6 +81,7 @@ const candidateSearch = onCall(
   {
     timeoutSeconds: 120,
     memory: "512MiB",
+    secrets: ["SERPER_API_KEY"],
   },
   async (request) => {
     const { data, auth } = request;
