@@ -47,7 +47,7 @@ import {
   useFileSorting 
 } from '@/hooks/useDriveFiles';
 import { useDriveOperations } from '@/hooks/useDriveOperations';
-import { useDriveDropUpload } from '@/hooks/useDriveUpload';
+import { useDriveDropUpload, useDriveFileInput } from '@/hooks/useDriveUpload';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,6 +145,7 @@ export function GoogleDriveFileBrowser({
   const { searchFiles, searchResults, isSearching, clearSearch } = useFileSearch();
   const operations = useDriveOperations();
   const upload = useDriveDropUpload(currentFolderId || undefined);
+  const fileInput = useDriveFileInput();
 
   // Build search parameters
   const searchParams = useMemo(() => {
@@ -489,7 +490,7 @@ export function GoogleDriveFileBrowser({
           <Button
             variant="outline"
             size="sm"
-            onClick={upload.openFileDialog}
+            onClick={fileInput.openFileDialog}
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -775,7 +776,7 @@ export function GoogleDriveFileBrowser({
       </div>
 
       {/* Upload file input */}
-      {allowUpload && <upload.FileInput />}
+      {allowUpload && <fileInput.FileInput />}
 
       {/* Drag overlay */}
       {isDragOver && allowUpload && (

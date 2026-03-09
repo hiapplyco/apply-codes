@@ -16,7 +16,7 @@ import {
   Bell,
   BellOff
 } from 'lucide-react';
-import { googleTokenManager } from '@/lib/google-token-manager';
+import { GoogleTokenManager } from '@/lib/google-token-manager';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { toast } from 'sonner';
 
@@ -59,7 +59,22 @@ export function GoogleSessionMonitor({
   // Update session stats
   const updateSessionStats = useCallback(async () => {
     try {
-      const stats = await googleTokenManager.getSessionStats();
+      const tokenManager = GoogleTokenManager.getInstance();
+      const totalAccounts = accounts.length;
+      let activeAccounts = 0;
+      let expiredAccounts = 0;
+      let expiringSoonAccounts = 0;
+      for (const account of accounts) {
+        if (tokenManager.isTokenExpired(account as any)) {
+          expiredAccounts++;
+        } else if (tokenManager.isTokenExpiringSoon(account as any)) {
+          expiringSoonAccounts++;
+          activeAccounts++;
+        } else {
+          activeAccounts++;
+        }
+      }
+      const stats: SessionStats = { totalAccounts, activeAccounts, expiredAccounts, expiringSoonAccounts };
       setSessionStats(stats);
       setLastCheck(new Date());
 

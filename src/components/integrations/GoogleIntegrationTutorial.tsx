@@ -24,7 +24,7 @@ import {
   Share2,
   Settings,
   Shield,
-  GoogleDrive,
+  HardDrive,
   FileText,
   Users,
   Lightbulb,
@@ -79,7 +79,7 @@ export function GoogleIntegrationTutorial() {
       content: (
         <div className="space-y-4">
           <div className="text-center">
-            <GoogleDrive className="w-16 h-16 mx-auto text-blue-600 mb-4" />
+            <HardDrive className="w-16 h-16 mx-auto text-blue-600 mb-4" />
             <h3 className="text-2xl font-bold mb-2">Welcome to Google Integration!</h3>
             <p className="text-gray-600 mb-6">
               Connect your Google account to seamlessly create, edit, and share recruitment documents 
@@ -158,7 +158,7 @@ export function GoogleIntegrationTutorial() {
                   className="bg-blue-600 hover:bg-blue-700"
                   onClick={() => window.open('/google-integrations-settings', '_blank')}
                 >
-                  <GoogleDrive className="w-5 h-5 mr-2" />
+                  <HardDrive className="w-5 h-5 mr-2" />
                   Connect Google Account
                 </Button>
                 <p className="text-sm text-gray-600 mt-2">
@@ -531,7 +531,7 @@ export function GoogleIntegrationTutorial() {
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="flex items-center space-x-2">
-                      <GoogleDrive className="w-5 h-5 text-blue-600" />
+                      <HardDrive className="w-5 h-5 text-blue-600" />
                       <span>Google Integration Tutorial</span>
                     </DialogTitle>
                   </DialogHeader>

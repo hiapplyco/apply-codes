@@ -2,8 +2,9 @@
  * Types for the Profile Enrichment feature
  */
 
-// Re-export from main types
-export type { EnrichedProfileData, Education, Experience, Language, SocialProfile } from '@/types';
+// Import and re-export from main types
+import type { EnrichedProfileData, Education, Experience, Language, SocialProfile } from '@/types/domains';
+export type { EnrichedProfileData, Education, Experience, Language, SocialProfile };
 
 /**
  * Input type for enrichment - determines which API method to use

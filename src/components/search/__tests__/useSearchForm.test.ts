@@ -1,27 +1,26 @@
 import { renderHook, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useSearchForm } from '../hooks/useSearchForm';
 
-vi.mock('@/lib/function-bridge', () => ({
+jest.mock('@/lib/function-bridge', () => ({
   functionBridge: {
-    generateBooleanSearch: vi.fn(),
-    processJobRequirements: vi.fn(),
-    enhanceJobDescription: vi.fn(),
-    extractNlpTerms: vi.fn(() => Promise.resolve({ terms: [] })),
-    analyzeCompensation: vi.fn(() => Promise.resolve({ analysis: {} })),
-    summarizeJob: vi.fn(() => Promise.resolve({ summary: 'summary', title: 'Job Title' })),
-    summarizeTitle: vi.fn(() => Promise.resolve({ summary: 'summary', title: 'Job Title' })),
+    generateBooleanSearch: jest.fn(),
+    processJobRequirements: jest.fn(),
+    enhanceJobDescription: jest.fn(),
+    extractNlpTerms: jest.fn(() => Promise.resolve({ terms: [] })),
+    analyzeCompensation: jest.fn(() => Promise.resolve({ analysis: {} })),
+    summarizeJob: jest.fn(() => Promise.resolve({ summary: 'summary', title: 'Job Title' })),
+    summarizeTitle: jest.fn(() => Promise.resolve({ summary: 'summary', title: 'Job Title' })),
   },
 }));
 
-const mockCollection = vi.fn();
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockSetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
-const mockAddDoc = vi.fn();
+const mockCollection = jest.fn();
+const mockDoc = jest.fn();
+const mockGetDoc = jest.fn();
+const mockSetDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
+const mockAddDoc = jest.fn();
 
-vi.mock('firebase/firestore', () => ({
+jest.mock('firebase/firestore', () => ({
   collection: (...args: any[]) => mockCollection(...args),
   doc: (...args: any[]) => mockDoc(...args),
   getDoc: (...args: any[]) => mockGetDoc(...args),
@@ -30,30 +29,32 @@ vi.mock('firebase/firestore', () => ({
   addDoc: (...args: any[]) => mockAddDoc(...args),
 }));
 
-vi.mock('@/lib/firebase', () => ({
+jest.mock('@/lib/firebase', () => ({
   db: {},
   storage: {},
 }));
 
-vi.mock('react-router-dom', () => ({
-  useLocation: () => ({ state: null }),
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => '/search',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock('sonner', () => ({
+jest.mock('sonner', () => ({
   toast: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: jest.fn(),
+    success: jest.fn(),
   },
 }));
 
 // Import mocked module to access mocks
-const { functionBridge } = await import('@/lib/function-bridge');
+const { functionBridge } = require('@/lib/function-bridge');
 
 describe('useSearchForm', () => {
-  const mockOnJobCreated = vi.fn();
+  const mockOnJobCreated = jest.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     (functionBridge.generateBooleanSearch as any).mockResolvedValue({ success: true, searchString: 'boolean string' });
     (functionBridge.processJobRequirements as any).mockResolvedValue({ searchString: 'boolean string' });
     (functionBridge.enhanceJobDescription as any).mockResolvedValue({ enhancedDescription: 'enhanced content' });

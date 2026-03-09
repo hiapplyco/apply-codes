@@ -5,8 +5,6 @@ const { logger } = require('firebase-functions/v2');
 const REQUIRED_SECRETS = ['GEMINI_API_KEY'];
 
 const OPTIONAL_SECRETS = [
-  'GOOGLE_CSE_API_KEY',
-  'GOOGLE_CSE_ID',
   'NYMERIA_API_KEY',
   'PERPLEXITY_API_KEY',
 ];

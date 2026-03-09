@@ -23,7 +23,7 @@ export const CompensationAnalysis = ({ jobId }: CompensationAnalysisProps) => {
         </div>
       ) : (
         <div className="prose prose-sm max-w-none whitespace-pre-line text-gray-800">
-          {agentOutput?.compensation_analysis || "No compensation information found."}
+          {(agentOutput?.compensation_analysis as React.ReactNode) || "No compensation information found."}
         </div>
       )}
     </AgentWindow>

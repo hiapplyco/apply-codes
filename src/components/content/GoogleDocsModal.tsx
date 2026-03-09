@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  GoogleDrive,
+  HardDrive,
   FileText,
   Upload,
   Download,
@@ -84,13 +84,6 @@ export function GoogleDocsModal({
 
   const { currentAccount } = useGoogleAuth();
 
-  // Load available folders
-  useEffect(() => {
-    if (currentAccount) {
-      loadAvailableFolders();
-    }
-  }, [currentAccount, loadAvailableFolders]);
-
   const loadAvailableFolders = useCallback(async () => {
     if (!currentAccount) return;
 
@@ -111,6 +104,13 @@ export function GoogleDocsModal({
       setLoadingFolders(false);
     }
   }, [currentAccount]);
+
+  // Load available folders
+  useEffect(() => {
+    if (currentAccount) {
+      loadAvailableFolders();
+    }
+  }, [currentAccount, loadAvailableFolders]);
 
   const handleExportWithSettings = async () => {
     try {
@@ -217,7 +217,7 @@ export function GoogleDocsModal({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <GoogleDrive className="w-5 h-5" />
+                <HardDrive className="w-5 h-5" />
                 <span>Export to Google Docs</span>
               </CardTitle>
               <CardDescription>

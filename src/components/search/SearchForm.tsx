@@ -230,7 +230,7 @@ export const SearchForm = ({
                   setSearchText(prev => `${prev}\n\n--- Search Result for "${result.query}" ---\n${result.text}`);
                   toast.success('Search result imported successfully');
                 }}
-                projectId={currentJobId}
+                projectId={currentJobId != null ? String(currentJobId) : undefined}
               />
             </div>
           </div>
@@ -277,7 +277,7 @@ export const SearchForm = ({
                       setSearchText(prev => `${prev}\n\n--- Search Result for "${result.query}" ---\n${result.text}`);
                       toast.success('Search result imported successfully');
                     }}
-                    projectId={currentJobId}
+                    projectId={currentJobId != null ? String(currentJobId) : undefined}
                   />
                 </div>
               </div>

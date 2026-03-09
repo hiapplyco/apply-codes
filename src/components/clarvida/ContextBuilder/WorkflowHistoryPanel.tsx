@@ -38,7 +38,7 @@ export function WorkflowHistoryPanel({
   onRestoreWorkflow,
   className = '',
 }: WorkflowHistoryPanelProps) {
-  const { user, organization } = useClarvidaAuth();
+  const { session: user, organization } = useClarvidaAuth();
   const {
     workflowHistory,
     loading,

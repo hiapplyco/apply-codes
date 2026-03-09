@@ -1,19 +1,20 @@
+'use client';
 
 import { useCallback, useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useRouter, usePathname } from "next/navigation";
 
 export function useNavigation() {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const [progress, setProgress] = useState(0);
-  
+
   const handleNavigation = useCallback((path: string) => {
-    if (path === location.pathname) return;
-    
+    if (path === pathname) return;
+
     setIsNavigating(true);
     setProgress(0);
-    
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -24,10 +25,10 @@ export function useNavigation() {
       });
     }, 50);
 
-    navigate(path);
-    
+    router.push(path);
+
     return () => clearInterval(interval);
-  }, [navigate, location.pathname]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (isNavigating) {
@@ -39,11 +40,11 @@ export function useNavigation() {
       return () => clearTimeout(timer);
     }
   }, [isNavigating]);
-  
+
   return {
     isNavigating,
     progress,
     handleNavigation,
-    currentPath: location.pathname
+    currentPath: pathname
   };
 }

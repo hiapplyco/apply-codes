@@ -95,6 +95,19 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   ],
 };
 
+// Alias for backward compatibility with GoogleDriveService
+export class GoogleDriveApiError extends Error {
+  public readonly code: number;
+  public readonly status: string;
+
+  constructor(message: string, code: number = 0, status: string = 'UNKNOWN') {
+    super(message);
+    this.name = 'GoogleDriveApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
 // Enhanced error class for Google API errors
 export class GoogleApiErrorHandler extends Error {
   public readonly originalError: unknown;
@@ -241,27 +254,30 @@ export function classifyGoogleApiError(error: unknown): GoogleApiErrorClassifica
 
 // Extract error code from various error formats
 function extractErrorCode(error: unknown): number {
-  if (error?.response?.status) return error.response.status;
-  if (error?.status) return error.status;
-  if (error?.code) return error.code;
-  if (error?.error?.code) return error.error.code;
+  const err = error as Record<string, any> | null | undefined;
+  if (err?.response?.status) return err.response.status;
+  if (err?.status) return err.status;
+  if (err?.code) return err.code;
+  if (err?.error?.code) return err.error.code;
   return 0;
 }
 
 // Extract error message from various error formats
 function extractErrorMessage(error: unknown): string {
-  if (error?.response?.data?.error?.message) return error.response.data.error.message;
-  if (error?.error?.message) return error.error.message;
-  if (error?.message) return error.message;
+  const err = error as Record<string, any> | null | undefined;
+  if (err?.response?.data?.error?.message) return err.response.data.error.message;
+  if (err?.error?.message) return err.error.message;
+  if (err?.message) return err.message;
   if (typeof error === 'string') return error;
   return 'Unknown error occurred';
 }
 
 // Extract error status from various error formats
 function extractErrorStatus(error: unknown): string {
-  if (error?.response?.data?.error?.status) return error.response.data.error.status;
-  if (error?.error?.status) return error.error.status;
-  if (error?.status) return error.status;
+  const err = error as Record<string, any> | null | undefined;
+  if (err?.response?.data?.error?.status) return err.response.data.error.status;
+  if (err?.error?.status) return err.error.status;
+  if (err?.status) return err.status;
   return 'UNKNOWN';
 }
 
@@ -324,8 +340,9 @@ export async function retryWithBackoff<T>(
 
 // Extract request ID from error for debugging
 function extractRequestId(error: unknown): string | undefined {
-  if (error?.response?.headers?.['x-request-id']) return error.response.headers['x-request-id'];
-  if (error?.headers?.['x-request-id']) return error.headers['x-request-id'];
+  const err = error as Record<string, any> | null | undefined;
+  if (err?.response?.headers?.['x-request-id']) return err.response.headers['x-request-id'];
+  if (err?.headers?.['x-request-id']) return err.headers['x-request-id'];
   return undefined;
 }
 

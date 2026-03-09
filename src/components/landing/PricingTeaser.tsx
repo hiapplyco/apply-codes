@@ -1,9 +1,11 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/design-system/Card";
 import { Button } from "@/components/ui/design-system/Button";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerChildren } from "@/lib/animations";
 import { Check, MessageSquare } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 
 const tiers = [
     {
@@ -37,10 +39,10 @@ import { useChat } from "@/context/ChatContext";
 
 export const PricingTeaser = () => {
     const { openChat } = useChat();
-    const navigate = useNavigate();
+    const router = useRouter();
 
     const handlePlanClick = (planName: string) => {
-        navigate(`/login?plan=${encodeURIComponent(planName)}`);
+        router.push(`/login?plan=${encodeURIComponent(planName)}`);
     };
 
     return (

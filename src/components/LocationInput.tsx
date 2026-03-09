@@ -34,9 +34,10 @@ declare global {
             types?: string[];
             fields?: string[];
             componentRestrictions?: { country?: string[] };
+            strictBounds?: boolean;
           }) => {
             addListener: (event: string, callback: () => void) => void;
-            getPlace: () => google.maps.places.PlaceResult;
+            getPlace: () => any;
           };
           PlaceResult: {
             formatted_address?: string;
@@ -71,7 +72,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
   const [isProcessing, setIsProcessing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteRef = useRef<any>(null);
   const lastProcessedLocation = useRef<string>('');
   const isInitialized = useRef(false);
 
@@ -81,7 +82,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
   }, []);
 
   // Process place result with proper error handling
-  const processPlaceResult = useCallback((place: google.maps.places.PlaceResult) => {
+  const processPlaceResult = useCallback((place: any) => {
     try {
       console.log('🔍 Processing place result:', {
         place,
@@ -381,7 +382,7 @@ const LocationInput = memo(React.forwardRef<HTMLInputElement, LocationInputProps
 
   // Load Google Maps API with proper error handling
   const loadGoogleMapsAPI = useCallback(() => {
-    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
 
     if (!apiKey) {
       setError('Google Maps API key not configured. Enter location manually.');

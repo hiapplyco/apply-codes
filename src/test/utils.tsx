@@ -1,6 +1,5 @@
 import { ReactElement, createContext } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock ProjectContext for tests
@@ -58,9 +57,7 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <MockProjectProvider>
-          <BrowserRouter>
-            {children}
-          </BrowserRouter>
+          {children}
         </MockProjectProvider>
       </QueryClientProvider>
     );

@@ -1,10 +1,11 @@
+'use client';
 
 import { AgentOutput } from "@/types/agent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText, Briefcase, DollarSign, Star, Users, Target, BarChart3, ExternalLink } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 
 interface AnalysisReportProps {
   agentOutput?: AgentOutput | null;
@@ -21,7 +22,7 @@ export const AnalysisReport = ({
   jobId,
   children 
 }: AnalysisReportProps) => {
-  const navigate = useNavigate();
+  const router = useRouter();
   if (isGeneratingAnalysis && !isProcessingComplete) {
     return (
       <div className="space-y-6">
@@ -203,7 +204,7 @@ export const AnalysisReport = ({
                 </ul>
               </div>
               <Button
-                onClick={() => navigate(`/analytics/${jobId}`)}
+                onClick={() => router.push(`/analytics/${jobId}`)}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />

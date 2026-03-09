@@ -21,7 +21,7 @@ export function SocialAuthButtons({ onSuccess, redirectTo }: SocialAuthButtonsPr
 
       {/* Social login buttons */}
       <div className="space-y-3">
-        <GoogleSignIn onSuccess={onSuccess} redirectTo={redirectTo} />
+        <GoogleSignIn />
         <LinkedInSignIn onSuccess={onSuccess} redirectTo={redirectTo} />
         
         {/* Future social providers can be added here */}

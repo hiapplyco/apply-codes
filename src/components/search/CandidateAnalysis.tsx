@@ -23,7 +23,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { SearchResult } from '@/types/search';
+import { SearchResult } from '@/components/search/types';
 import { useNewAuth } from '@/context/NewAuthContext';
 import { toast } from 'sonner';
 

@@ -1,22 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AgentOrchestrator } from '../AgentOrchestrator';
 import { MessageBus } from '../protocols/MessageBus';
 import { WORKFLOW_TEMPLATES, validateWorkflow } from '../workflows/templates';
 import { AgentContext, AgentMessage } from '@/types/orchestration';
 
-const mockCollection = vi.fn();
-const mockAddDoc = vi.fn();
-const mockDoc = vi.fn();
-const mockWriteBatch = vi.fn();
+const mockCollection = jest.fn();
+const mockAddDoc = jest.fn();
+const mockDoc = jest.fn();
+const mockWriteBatch = jest.fn();
 
-vi.mock('firebase/firestore', () => ({
+jest.mock('firebase/firestore', () => ({
   collection: (...args: any[]) => mockCollection(...args),
   addDoc: (...args: any[]) => mockAddDoc(...args),
   serverTimestamp: () => 'timestamp',
   writeBatch: () => {
     const batch = {
-      set: vi.fn(),
-      commit: vi.fn().mockResolvedValue(undefined)
+      set: jest.fn(),
+      commit: jest.fn().mockResolvedValue(undefined)
     };
     mockWriteBatch.mockReturnValue(batch);
     return batch;
@@ -30,7 +29,7 @@ describe('AI Orchestration System Tests', () => {
   let mockContext: AgentContext;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     mockCollection.mockReturnValue({});
     mockDoc.mockReturnValue({});
     mockAddDoc.mockResolvedValue(undefined);

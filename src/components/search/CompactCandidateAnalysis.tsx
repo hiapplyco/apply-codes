@@ -22,7 +22,7 @@ import {
   Grid3X3,
   List
 } from 'lucide-react';
-import { SearchResult } from '@/types/search';
+import { SearchResult } from '@/components/search/types';
 import { cn } from '@/lib/utils';
 
 interface CompactCandidateAnalysisProps {

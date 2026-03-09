@@ -7,7 +7,7 @@ interface LinkedInSignInProps {
   redirectTo?: string;
 }
 
-export function LinkedInSignIn({ onSuccess, redirectTo = '/dashboard' }: LinkedInSignInProps) {
+export function LinkedInSignIn({ onSuccess: _onSuccess, redirectTo: _redirectTo = '/dashboard' }: LinkedInSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLinkedInSignIn = async () => {

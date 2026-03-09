@@ -66,7 +66,9 @@ export interface UseDriveUploadResult {
  * Hook for Google Drive file uploads
  */
 export function useDriveUpload(options: UseDriveUploadOptions = {}): UseDriveUploadResult {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
   const queryClient = useQueryClient();
   
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);

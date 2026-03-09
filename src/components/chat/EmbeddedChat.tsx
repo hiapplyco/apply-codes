@@ -35,7 +35,7 @@ import { ToolConfirmationDialog } from './ToolConfirmationDialog';
 import { useMCPChat } from '@/hooks/useMCPChat';
 import type { MCPToolResultEntry, PendingConfirmation } from '@/types/mcp-chat';
 
-const MCP_CHAT_ENABLED = import.meta.env.VITE_ENABLE_MCP_CHAT === 'true';
+const MCP_CHAT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MCP_CHAT === 'true';
 
 interface Message {
   id: string;

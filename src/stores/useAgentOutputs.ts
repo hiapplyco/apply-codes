@@ -1,7 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExtractedTerms } from "@/types/agent";
+import { ExtractedTerms, AgentOutput } from "@/types/agent";
 import { useClientAgentOutputs } from "./useClientAgentOutputs";
 import { firestoreClient } from "@/lib/firebase-database-bridge";
+
+/**
+ * Shape returned by the query (a subset/adaptation of AgentOutput for display).
+ * Uses `terms` instead of `key_terms` because this store
+ * parses the raw Firestore record and validates the terms shape.
+ */
+interface AgentOutputResult {
+  id: number;
+  job_id: number;
+  created_at: string;
+  terms: ExtractedTerms | null;
+  compensation_analysis: unknown;
+  enhanced_description: unknown;
+  job_summary: unknown;
+}
 
 function isTerms(value: unknown): value is ExtractedTerms {
   if (typeof value !== 'object' || value === null) return false;
@@ -64,15 +79,16 @@ export const useAgentOutputs = (jobId: number | null) => {
           return null;
         }
 
+        const record = data as unknown as Record<string, unknown>;
         return {
-          id: data.id,
-          job_id: data.job_id,
-          created_at: data.created_at,
-          terms: isTerms(data.terms) ? data.terms : null,
-          compensation_analysis: data.compensation_analysis,
-          enhanced_description: data.enhanced_description,
-          job_summary: data.job_summary
-        };
+          id: record.id,
+          job_id: record.job_id,
+          created_at: record.created_at,
+          terms: isTerms(record.terms) ? record.terms : null,
+          compensation_analysis: record.compensation_analysis,
+          enhanced_description: record.enhanced_description,
+          job_summary: record.job_summary
+        } as AgentOutputResult;
       } catch (error) {
         throw error;
       }

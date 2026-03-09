@@ -10,7 +10,7 @@ import { google } from 'googleapis';
 
 // Environment variables validation
 const requiredEnvVars = [
-  'VITE_GOOGLE_CLIENT_ID',
+  'NEXT_PUBLIC_GOOGLE_CLIENT_ID',
   'GOOGLE_CLOUD_PROJECT_ID',
   'GOOGLE_CLOUD_PRIVATE_KEY_ID',
   'GOOGLE_CLOUD_PRIVATE_KEY',
@@ -21,7 +21,7 @@ const requiredEnvVars = [
 
 // Validate environment variables
 function validateEnvironmentVariables(): boolean {
-  const missing = requiredEnvVars.filter(envVar => !import.meta.env[envVar] && !process.env[envVar]);
+  const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
   
   if (missing.length > 0) {
     console.warn(`Missing required environment variables: ${missing.join(', ')}`);
@@ -56,7 +56,7 @@ export const GOOGLE_API_SCOPES = {
 
 // Google OAuth2 client configuration
 export const getGoogleOAuth2Config = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   
   if (!clientId) {
     throw new Error('Google OAuth2 client ID is required');
@@ -76,12 +76,12 @@ export const getGoogleOAuth2Config = () => {
 
 // Service account configuration
 export const getServiceAccountConfig = () => {
-  const projectId = import.meta.env.GOOGLE_CLOUD_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT_ID;
-  const privateKeyId = import.meta.env.GOOGLE_CLOUD_PRIVATE_KEY_ID || process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID;
-  const privateKey = import.meta.env.GOOGLE_CLOUD_PRIVATE_KEY || process.env.GOOGLE_CLOUD_PRIVATE_KEY;
-  const clientEmail = import.meta.env.GOOGLE_CLOUD_CLIENT_EMAIL || process.env.GOOGLE_CLOUD_CLIENT_EMAIL;
-  const clientId = import.meta.env.GOOGLE_CLOUD_CLIENT_ID || process.env.GOOGLE_CLOUD_CLIENT_ID;
-  const clientX509CertUrl = import.meta.env.GOOGLE_CLOUD_CLIENT_X509_CERT_URL || process.env.GOOGLE_CLOUD_CLIENT_X509_CERT_URL;
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+  const privateKeyId = process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID;
+  const privateKey = process.env.GOOGLE_CLOUD_PRIVATE_KEY;
+  const clientEmail = process.env.GOOGLE_CLOUD_CLIENT_EMAIL;
+  const clientId = process.env.GOOGLE_CLOUD_CLIENT_ID;
+  const clientX509CertUrl = process.env.GOOGLE_CLOUD_CLIENT_X509_CERT_URL;
 
   if (!projectId || !privateKeyId || !privateKey || !clientEmail || !clientId || !clientX509CertUrl) {
     throw new Error('Google Cloud service account configuration is incomplete');
@@ -229,7 +229,7 @@ export const isGoogleApiConfigured = (): boolean => {
 // Configuration status
 export const getGoogleApiStatus = () => {
   const isConfigured = isGoogleApiConfigured();
-  const missingVars = requiredEnvVars.filter(envVar => !import.meta.env[envVar] && !process.env[envVar]);
+  const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
   
   return {
     isConfigured,

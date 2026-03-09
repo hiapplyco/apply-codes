@@ -9,10 +9,10 @@ describe('LocationDisplay', () => {
 
   it('renders location with company when showCompany is true', () => {
     render(
-      <LocationDisplay 
-        location="Atlanta Metropolitan Area" 
-        company="IGEL Technology" 
-        showCompany={true} 
+      <LocationDisplay
+        location="Atlanta Metropolitan Area"
+        company="IGEL Technology"
+        showCompany={true}
       />
     );
     expect(screen.getByText('Atlanta Metropolitan Area')).toBeInTheDocument();
@@ -21,10 +21,10 @@ describe('LocationDisplay', () => {
 
   it('does not render company when showCompany is false', () => {
     render(
-      <LocationDisplay 
-        location="Atlanta Metropolitan Area" 
-        company="IGEL Technology" 
-        showCompany={false} 
+      <LocationDisplay
+        location="Atlanta Metropolitan Area"
+        company="IGEL Technology"
+        showCompany={false}
       />
     );
     expect(screen.getByText('Atlanta Metropolitan Area')).toBeInTheDocument();
@@ -40,9 +40,9 @@ describe('LocationDisplay', () => {
 describe('GoogleStyleLocationDisplay', () => {
   it('renders Google-style location display', () => {
     render(
-      <GoogleStyleLocationDisplay 
-        location="Atlanta Metropolitan Area" 
-        company="IGEL Technology" 
+      <GoogleStyleLocationDisplay
+        location="Atlanta Metropolitan Area"
+        company="IGEL Technology"
       />
     );
     expect(screen.getByText('Atlanta Metropolitan Area')).toBeInTheDocument();
@@ -52,8 +52,8 @@ describe('GoogleStyleLocationDisplay', () => {
 
   it('renders location without company separator when no company', () => {
     render(
-      <GoogleStyleLocationDisplay 
-        location="Atlanta Metropolitan Area" 
+      <GoogleStyleLocationDisplay
+        location="Atlanta Metropolitan Area"
       />
     );
     expect(screen.getByText('Atlanta Metropolitan Area')).toBeInTheDocument();

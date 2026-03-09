@@ -65,14 +65,23 @@ export type AgentType =
 export interface AgentOutput {
   id: number;
   job_id: number;
-  agent_type: AgentType;
-  output_data: AgentOutputData;
+  agent_type?: AgentType;
+  output_data?: AgentOutputData;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   key_terms?: string;
+  terms?: {
+    skills?: string[];
+    titles?: string[];
+    keywords?: string[];
+    [key: string]: any;
+  };
   compensation_analysis?: string;
+  compensationData?: any;
   enhanced_description?: string;
+  enhancerData?: any;
   job_summary?: string;
+  summaryData?: any;
 }
 
 // Generic API error interface

@@ -30,7 +30,7 @@ const SearchResults = ({ jobId }: SearchResultsProps) => {
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as Record<string, any>)
       }));
     },
     enabled: !!jobId,
@@ -53,7 +53,7 @@ const SearchResults = ({ jobId }: SearchResultsProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {results?.map((result) => (
+          {results?.map((result: any) => (
             <TableRow key={result.id}>
               <TableCell>{result.profile_name}</TableCell>
               <TableCell>{result.profile_title}</TableCell>

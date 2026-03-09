@@ -269,22 +269,28 @@ class DatabaseBridge {
     const results: any[] = [];
 
     try {
-      // Execute main query
-      const mainQuery = { ...queryBuilder };
-      mainQuery.orConds = [];
-      const mainResult = await this.executeQuery(mainQuery);
+      // Execute main query (without OR conditions - handled separately)
+      // We re-use the same queryBuilder but skip OR conditions in executeQuery
+      const mainResult = await this.executeQuery(queryBuilder);
 
       if (mainResult.data) {
         results.push(...(Array.isArray(mainResult.data) ? mainResult.data : [mainResult.data]));
       }
 
-      // Execute OR queries
+      // Execute OR queries by creating new builders for each OR condition set
       for (const orConditions of queryBuilder.orConds) {
-        const orQuery = { ...queryBuilder };
-        orQuery.conditions = orConditions;
-        orQuery.orConds = [];
+        const orQueryBuilder = this.from(queryBuilder.table);
+        for (const cond of orConditions) {
+          orQueryBuilder.eq(cond.field, cond.value);
+        }
+        for (const orderField of queryBuilder.orderFields) {
+          orQueryBuilder.order(orderField.field, { ascending: orderField.ascending });
+        }
+        if (queryBuilder.limitValue) {
+          orQueryBuilder.limit(queryBuilder.limitValue);
+        }
 
-        const orResult = await this.executeQuery(orQuery);
+        const orResult = await orQueryBuilder.execute();
         if (orResult.data) {
           results.push(...(Array.isArray(orResult.data) ? orResult.data : [orResult.data]));
         }

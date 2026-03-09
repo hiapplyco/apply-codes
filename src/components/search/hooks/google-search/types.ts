@@ -4,7 +4,7 @@ import { SearchResult } from "../../types";
 export interface GoogleSearchResult {
   items: any[];
   searchInformation: {
-    totalResults: string; // Changed from number to string to match Google CSE API response
+    totalResults: string;
   };
 }
 

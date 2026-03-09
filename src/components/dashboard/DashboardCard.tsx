@@ -90,7 +90,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
       case 'bar':
         return <BarChart data={data as ChartDataPoint[]} onBarClick={onChartClick} />;
       case 'line':
-        return <LineChart data={data as TimeSeriesData[]} onPointClick={onChartClick} />;
+        return <LineChart data={data as TimeSeriesData[]} onPointClick={onChartClick as ((data: TimeSeriesData) => void) | undefined} />;
       case 'gauge':
         return <GaugeChart data={data as DashboardMetric} />;
       case 'funnel':
@@ -100,7 +100,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
       case 'radar':
         return <RadarChart data={data as RadarChartData[]} />;
       case 'multiline':
-        return <MultiLineChart data={data as MultiLineChartData[]} series={[] as MultiLineChartSeries[]} />;
+        return <MultiLineChart data={data as any[]} series={[] as MultiLineChartSeries[]} />;
       default:
         return (
           <div className="flex items-center justify-center h-40 text-gray-400">

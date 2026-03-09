@@ -6,7 +6,7 @@ export interface Message {
     content: string;
 }
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
 // ═══════════════════════════════════════════════
 // SECURITY-HARDENED SYSTEM PROMPT

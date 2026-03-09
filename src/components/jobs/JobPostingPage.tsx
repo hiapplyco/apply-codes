@@ -1,6 +1,7 @@
+'use client';
 
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { JobPostingForm } from './JobPostingForm';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { useJobPostingForm } from './hooks/useJobPostingForm';
 
 export const JobPostingPage = () => {
   const { id } = useParams<{ id?: string }>();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   
   // Pre-fetch job data to handle loading state at the page level
@@ -24,7 +25,7 @@ export const JobPostingPage = () => {
   };
   
   const handleCancel = () => {
-    navigate(-1);
+    router.back();
   };
   
   if (isLoading) {
@@ -47,7 +48,7 @@ export const JobPostingPage = () => {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => navigate(-1)}
+          onClick={() => router.back()}
           className="mb-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -63,7 +64,7 @@ export const JobPostingPage = () => {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={() => navigate(-1)}
+          onClick={() => router.back()}
           className="mr-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

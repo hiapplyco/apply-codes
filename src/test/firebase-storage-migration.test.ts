@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   FirebaseStorageAdapter,
   FirebaseStorageManager,
@@ -7,14 +6,14 @@ import {
   uploadDocument
 } from '@/lib/firebase-storage';
 
-const mockRef = vi.fn();
-const mockUploadBytes = vi.fn();
-const mockUploadBytesResumable = vi.fn();
-const mockGetDownloadURL = vi.fn();
-const mockDeleteObject = vi.fn();
-const mockListAll = vi.fn();
+const mockRef = jest.fn();
+const mockUploadBytes = jest.fn();
+const mockUploadBytesResumable = jest.fn();
+const mockGetDownloadURL = jest.fn();
+const mockDeleteObject = jest.fn();
+const mockListAll = jest.fn();
 
-vi.mock('firebase/storage', () => ({
+jest.mock('firebase/storage', () => ({
   ref: (...args: any[]) => mockRef(...args),
   uploadBytes: (...args: any[]) => mockUploadBytes(...args),
   uploadBytesResumable: (...args: any[]) => mockUploadBytesResumable(...args),
@@ -23,13 +22,13 @@ vi.mock('firebase/storage', () => ({
   listAll: (...args: any[]) => mockListAll(...args)
 }));
 
-vi.mock('@/lib/firebase', () => ({
+jest.mock('@/lib/firebase', () => ({
   storage: { name: 'mock-storage' }
 }));
 
 describe('Firebase Storage helpers', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     mockRef.mockReturnValue({});
     mockUploadBytes.mockResolvedValue({ ref: { fullPath: 'bucket/path', bucket: 'bucket' }, metadata: {} });
 

@@ -45,7 +45,9 @@ export interface UseDriveFilesResult {
  * Hook for fetching and managing Google Drive files
  */
 export function useDriveFiles(options: UseDriveFilesOptions = {}): UseDriveFilesResult {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
   const queryClient = useQueryClient();
   const [allFiles, setAllFiles] = useState<GoogleDriveFile[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>();
@@ -116,7 +118,7 @@ export function useDriveFiles(options: UseDriveFilesOptions = {}): UseDriveFiles
     enabled: options.enabled !== false && isAuthenticated && !!accessToken,
     refetchInterval: options.refetchInterval,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   // Update local state when data changes
@@ -160,7 +162,9 @@ export function useDriveFiles(options: UseDriveFilesOptions = {}): UseDriveFiles
  * Hook for fetching a specific file
  */
 export function useDriveFile(fileId: string | null) {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
 
   return useQuery({
     queryKey: ['drive-file', fileId],
@@ -173,7 +177,7 @@ export function useDriveFile(fileId: string | null) {
     },
     enabled: !!fileId && isAuthenticated && !!accessToken,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 15 * 60 * 1000, // 15 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
   });
 }
 
@@ -181,7 +185,9 @@ export function useDriveFile(fileId: string | null) {
  * Hook for recent files
  */
 export function useRecentFiles(limit: number = 20) {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
 
   return useQuery({
     queryKey: ['drive-recent-files', limit],
@@ -194,7 +200,7 @@ export function useRecentFiles(limit: number = 20) {
     },
     enabled: isAuthenticated && !!accessToken,
     staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -202,7 +208,9 @@ export function useRecentFiles(limit: number = 20) {
  * Hook for starred files
  */
 export function useStarredFiles() {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
 
   return useQuery({
     queryKey: ['drive-starred-files'],
@@ -215,7 +223,7 @@ export function useStarredFiles() {
     },
     enabled: isAuthenticated && !!accessToken,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -223,7 +231,9 @@ export function useStarredFiles() {
  * Hook for shared files
  */
 export function useSharedFiles() {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
 
   return useQuery({
     queryKey: ['drive-shared-files'],
@@ -236,7 +246,7 @@ export function useSharedFiles() {
     },
     enabled: isAuthenticated && !!accessToken,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 }
 
@@ -244,7 +254,9 @@ export function useSharedFiles() {
  * Hook for folder contents
  */
 export function useFolderContents(folderId: string | null) {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
 
   return useQuery({
     queryKey: ['drive-folder-contents', folderId],
@@ -257,7 +269,7 @@ export function useFolderContents(folderId: string | null) {
     },
     enabled: !!folderId && isAuthenticated && !!accessToken,
     staleTime: 30 * 1000, // 30 seconds
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -265,7 +277,9 @@ export function useFolderContents(folderId: string | null) {
  * Hook for file search
  */
 export function useFileSearch() {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
   const [searchResults, setSearchResults] = useState<GoogleDriveFile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 

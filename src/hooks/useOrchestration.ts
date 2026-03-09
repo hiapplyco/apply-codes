@@ -28,7 +28,7 @@ interface OrchestrationState {
 
 export const useOrchestration = (options?: UseOrchestrationOptions) => {
   const { user } = useNewAuth();
-  const { currentProject } = useProjectContext();
+  const { selectedProject } = useProjectContext();
   const orchestratorRef = useRef<AgentOrchestrator | null>(null);
   const messageBusRef = useRef<MessageBus | null>(null);
 
@@ -139,9 +139,9 @@ export const useOrchestration = (options?: UseOrchestrationOptions) => {
     }
 
     const context: AgentContext = {
-      userId: user?.id || '',
+      userId: user?.uid || '',
       sessionId: `session-${Date.now()}`,
-      projectId: currentProject?.id,
+      projectId: selectedProject?.id,
       metadata: {
         workflowId,
         input
@@ -172,7 +172,7 @@ export const useOrchestration = (options?: UseOrchestrationOptions) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, currentProject]);
+  }, [user, selectedProject]);
 
   // Execute custom workflow
   const executeCustomWorkflow = useCallback(async (
@@ -185,9 +185,9 @@ export const useOrchestration = (options?: UseOrchestrationOptions) => {
 
     const workflow = createCustomWorkflow(params);
     const context: AgentContext = {
-      userId: user?.id || '',
+      userId: user?.uid || '',
       sessionId: `session-${Date.now()}`,
-      projectId: currentProject?.id,
+      projectId: selectedProject?.id,
       metadata: {
         customWorkflow: true,
         params
@@ -211,7 +211,7 @@ export const useOrchestration = (options?: UseOrchestrationOptions) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, currentProject]);
+  }, [user, selectedProject]);
 
   // Send message to agent
   const sendMessage = useCallback((message: Omit<AgentMessage, 'id' | 'timestamp'>) => {

@@ -191,6 +191,7 @@ export type GoogleMimeType =
   | 'image/gif'
   | 'image/bmp'
   | 'image/svg+xml'
+  | 'text/markdown'
   | 'video/mp4'
   | 'video/quicktime'
   | 'audio/mpeg'

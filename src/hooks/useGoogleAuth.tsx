@@ -59,7 +59,7 @@ export const useGoogleAuth = () => {
   return context;
 };
 
-const accountsCollection = (userId: string) => collection(db, 'users', userId, 'googleAccounts');
+const accountsCollection = (userId: string) => collection(db!, 'users', userId, 'googleAccounts');
 
 export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<GoogleAuthState>({
@@ -135,7 +135,7 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .then(buffer => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
 
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      authUrl.searchParams.set('client_id', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+      authUrl.searchParams.set('client_id', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '');
       authUrl.searchParams.set('redirect_uri', window.location.origin);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', scopes.join(' '));

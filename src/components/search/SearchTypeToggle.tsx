@@ -44,7 +44,7 @@ export const SearchTypeToggle = ({ value, onValueChange }: SearchTypeToggleProps
       <ToggleGroup
         type="single"
         value={value}
-        onValueChange={(value) => value && onValueChange(value as SearchType)}
+        onValueChange={(value: string) => value && onValueChange(value as SearchType)}
         className="border-4 border-black p-2 rounded-lg bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
       >
         <ToggleGroupItem 

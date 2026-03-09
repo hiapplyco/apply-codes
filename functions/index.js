@@ -16,7 +16,6 @@ exports.perplexitySearch = require('./perplexity-search').perplexitySearch;
 exports.enrichProfile = require('./enrich-profile').enrichProfile;
 exports.searchContacts = require('./search-contacts').searchContacts;
 exports.getContactInfo = require('./get-contact-info').getContactInfo;
-exports.clearbitEnrichment = require('./clearbit-enrichment').clearbitEnrichment;
 exports.hunterIoSearch = require('./hunter-io-search').hunterIoSearch;
 exports.pdlSearch = require('./pdl-search').pdlSearch;
 exports.waterfallEnrich = require('./waterfall-enrich').waterfallEnrich;
@@ -28,6 +27,7 @@ exports.analyzeCompensation = require('./analyze-compensation').analyzeCompensat
 exports.extractNlpTerms = require('./extract-nlp-terms').extractNlpTerms;
 exports.geminiApi = require('./gemini-api').geminiApi;
 exports.chatAssistant = require('./chat-assistant').chatAssistant;
+exports.summarizeTitle = require('./summarize-title').summarizeTitle;
 
 // ─── Document Processing ─────────────────────────────────────────────────────
 exports.parseDocument = require('./parse-document').parseDocument;
@@ -72,6 +72,7 @@ exports.getEmailAnalytics = emailWebhookModule.getEmailAnalytics;
 
 // ─── Interviews & Meetings ───────────────────────────────────────────────────
 exports.generateInterviewQuestions = require('./generate-interview-questions').generateInterviewQuestions;
+exports.handleInterview = require('./handle-interview').handleInterview;
 exports.scheduleInterview = require('./schedule-interview').scheduleInterview;
 exports.prepareInterview = require('./prepare-interview').prepareInterview;
 exports.createDailyRoom = require('./create-daily-room').createDailyRoom;
@@ -93,15 +94,23 @@ exports.exchangeGoogleToken = require('./exchange-google-token').exchangeGoogleT
 exports.refreshGoogleToken = require('./refresh-google-token').refreshGoogleToken;
 exports.revokeGoogleToken = require('./revoke-google-token').revokeGoogleToken;
 
+// ─── Google Docs & Drive ────────────────────────────────────────────────────
+exports.exportToGoogleDocs = require('./export-to-google-docs').exportToGoogleDocs;
+exports.importFromGoogleDocs = require('./import-from-google-docs').importFromGoogleDocs;
+exports.getDriveFolders = require('./get-drive-folders').getDriveFolders;
+exports.shareGoogleDoc = require('./share-google-doc').shareGoogleDoc;
+
 // ─── API Keys ────────────────────────────────────────────────────────────────
 exports.getDailyKey = require('./get-daily-key').getDailyKey;
 exports.getGeminiKey = require('./get-gemini-key').getGeminiKey;
-exports.getGoogleCseKey = require('./get-google-cse-key').getGoogleCseKey;
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 const adminModule = require('./admin-grant-pro');
 exports.adminGrantPro = adminModule.adminGrantPro;
 exports.grantProAccess = adminModule.grantProAccess;
+
+// ─── Dashboard ──────────────────────────────────────────────────────────────
+exports.generateDashboardMetrics = require('./generate-dashboard-metrics').generateDashboardMetrics;
 
 // ─── Clarvida ────────────────────────────────────────────────────────────────
 exports.generateClarvidaReport = require('./generate-clarvida-report').generateClarvidaReport;

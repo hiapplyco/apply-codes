@@ -41,7 +41,7 @@ interface SessionInfo {
 
 const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // 5 minutes
 
-const accountsCollection = (userId: string) => collection(db, 'users', userId, 'googleAccounts');
+const accountsCollection = (userId: string) => collection(db!, 'users', userId, 'googleAccounts');
 
 export class GoogleTokenManager {
   private static instance: GoogleTokenManager;

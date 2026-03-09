@@ -1,7 +1,9 @@
+'use client';
+
 import { useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +16,7 @@ interface PhoneAuthProps {
 }
 
 export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthProps) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -139,7 +141,7 @@ export function PhoneAuth({ onSuccess, redirectTo = '/dashboard' }: PhoneAuthPro
         if (onSuccess) {
           onSuccess();
         } else {
-          navigate(redirectTo);
+          router.push(redirectTo);
         }
       }
     } catch (error: any) {

@@ -1,27 +1,24 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render, screen, waitFor, userEvent } from '@/test/utils';
 import { JobPostingForm } from './JobPostingForm';
-import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
-vi.mock('@/lib/function-bridge', () => ({
+jest.mock('@/lib/function-bridge', () => ({
   functionBridge: {
-    generateBooleanSearch: vi.fn(),
-    enhanceJobDescription: vi.fn(),
-    extractNlpTerms: vi.fn(),
-    analyzeCompensation: vi.fn(),
-    summarizeJob: vi.fn(),
-    summarizeTitle: vi.fn(),
+    generateBooleanSearch: jest.fn(),
+    enhanceJobDescription: jest.fn(),
+    extractNlpTerms: jest.fn(),
+    analyzeCompensation: jest.fn(),
+    summarizeJob: jest.fn(),
+    summarizeTitle: jest.fn(),
   },
 }));
 
-const mockCollection = vi.fn();
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockSetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
+const mockCollection = jest.fn();
+const mockDoc = jest.fn();
+const mockGetDoc = jest.fn();
+const mockSetDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
 
-vi.mock('firebase/firestore', () => ({
+jest.mock('firebase/firestore', () => ({
   collection: (...args: any[]) => mockCollection(...args),
   doc: (...args: any[]) => mockDoc(...args),
   getDoc: (...args: any[]) => mockGetDoc(...args),
@@ -29,42 +26,50 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: (...args: any[]) => mockUpdateDoc(...args),
 }));
 
-vi.mock('@/lib/firebase', () => ({
+jest.mock('@/lib/firebase', () => ({
   db: {},
   auth: { currentUser: { uid: 'test-user' } },
 }));
 
-vi.mock('@/context/AuthContext', () => ({
-  useAuth: vi.fn(),
+jest.mock('@/context/NewAuthContext', () => ({
+  useNewAuth: jest.fn(() => ({
+    user: { uid: 'user-123', email: 'test@example.com' },
+    isAuthenticated: true,
+    isLoading: false,
+  })),
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: vi.fn(),
-  };
-});
+// Mock next/navigation instead of react-router-dom
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: mockPush,
+    replace: mockReplace,
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+    prefetch: jest.fn(),
+  })),
+  usePathname: jest.fn(() => '/jobs'),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}));
 
-vi.mock('@/hooks/use-toast', () => ({
-  toast: vi.fn(),
-  useToast: vi.fn(() => ({ toast: vi.fn() })),
+jest.mock('@/hooks/use-toast', () => ({
+  toast: jest.fn(),
+  useToast: jest.fn(() => ({ toast: jest.fn() })),
 }));
 
 // Import mocked module to access mocks
-const { functionBridge } = await import('@/lib/function-bridge');
+const { functionBridge } = require('@/lib/function-bridge');
 
 describe('JobPostingForm', () => {
-  const mockNavigate = vi.fn();
-  const mockOnSuccess = vi.fn();
-  const mockOnCancel = vi.fn();
-  const mockOnError = vi.fn();
-  const mockSession = { user: { id: 'user-123' } };
+  const mockOnSuccess = jest.fn();
+  const mockOnCancel = jest.fn();
+  const mockOnError = jest.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    (useAuth as unknown as Mock).mockReturnValue({ session: mockSession });
-    (useNavigate as unknown as Mock).mockReturnValue(mockNavigate);
+    jest.clearAllMocks();
 
     mockCollection.mockReturnValue('jobs-collection');
     mockDoc.mockImplementation((arg1: any, arg2?: string, arg3?: string) => {

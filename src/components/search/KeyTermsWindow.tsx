@@ -45,9 +45,9 @@ export const KeyTermsWindow = ({ jobId }: KeyTermsWindowProps) => {
       </CardHeader>
       <CardContent>
         <div className="prose prose-sm max-w-none">
-          {agentOutput?.key_terms ? (
+          {(agentOutput as any)?.key_terms ? (
             <div className="whitespace-pre-line text-gray-800">
-              {agentOutput.key_terms}
+              {(agentOutput as any).key_terms}
             </div>
           ) : (
             <p className="text-gray-500">No key terms analysis available</p>

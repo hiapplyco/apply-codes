@@ -15,7 +15,7 @@ import {
   Upload, 
   Download, 
   FolderOpen, 
-  GoogleDrive,
+  HardDrive as GoogleDrive,
   Share2,
   Settings,
   CheckCircle,
@@ -33,6 +33,7 @@ import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { GoogleDriveFilePicker } from "@/components/drive/GoogleDriveFilePicker";
 import { GoogleDocsModal } from "./GoogleDocsModal";
+// @ts-ignore - JSON module import
 import contentTypes from "../../../contentcreationbots.json";
 
 interface GeneratedContent {
@@ -89,7 +90,7 @@ export const ContentCreationWithGoogle = () => {
       return;
     }
 
-    const selectedOption = contentOptions.find(opt => opt.content_type === selectedContentType);
+    const selectedOption = contentOptions.find((opt: any) => opt.content_type === selectedContentType);
     if (!selectedOption) {
       toast.error("Invalid content type selected");
       return;
@@ -202,7 +203,7 @@ export const ContentCreationWithGoogle = () => {
     }
   };
 
-  const selectedOption = contentOptions.find(opt => opt.content_type === selectedContentType);
+  const selectedOption = contentOptions.find((opt: any) => opt.content_type === selectedContentType);
 
   return (
     <div className="space-y-8">
@@ -309,7 +310,7 @@ export const ContentCreationWithGoogle = () => {
                       <SelectValue placeholder="Select content type..." />
                     </SelectTrigger>
                     <SelectContent className="border-2 border-black">
-                      {contentOptions.map((option) => (
+                      {contentOptions.map((option: any) => (
                         <SelectItem key={option.content_type} value={option.content_type}>
                           <span className="flex items-center gap-2">
                             <span>{option.emoji}</span>
@@ -504,10 +505,10 @@ export const ContentCreationWithGoogle = () => {
             </DialogHeader>
             <div className="overflow-y-auto">
               <GoogleDriveFilePicker
-                onFileSelect={handleImportFromGoogleDocs}
-                onCancel={() => setShowDriveFilePicker(false)}
-                fileTypes={['application/vnd.google-apps.document']}
-                disabled={isImporting}
+                open={showDriveFilePicker}
+                onOpenChange={setShowDriveFilePicker}
+                onFileSelect={(file: any) => handleImportFromGoogleDocs(file.id, file.name)}
+                allowedTypes={['application/vnd.google-apps.document'] as any}
               />
               {isImporting && (
                 <div className="flex items-center justify-center py-8">

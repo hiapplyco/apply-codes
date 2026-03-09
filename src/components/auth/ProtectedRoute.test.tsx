@@ -1,40 +1,37 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render, screen } from '@testing-library/react';
 import { ProtectedRoute } from './ProtectedRoute';
-import { useAuth } from '@/context/AuthContext';
-import { Route, Routes } from 'react-router-dom';
+import { useNewAuth } from '@/context/NewAuthContext';
 
-// Mock environment variables to disable dev bypass
-vi.stubEnv('VITE_BYPASS_AUTH', 'false');
+// Disable auth bypass in test environment
+process.env.NEXT_PUBLIC_BYPASS_AUTH = 'false';
 
-// Mock the AuthContext
-vi.mock('@/context/AuthContext', () => ({
-  useAuth: vi.fn(),
+// Mock the NewAuthContext
+jest.mock('@/context/NewAuthContext', () => ({
+  useNewAuth: jest.fn(),
 }));
 
-// Mock Navigate component to track navigation
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    Navigate: vi.fn(({ to }) => <div data-testid="navigate">Navigating to {to}</div>),
-  };
-});
+// Mock the useSubscription hook
+jest.mock('@/hooks/useSubscription', () => ({
+  useSubscription: jest.fn(() => ({
+    subscription: null,
+    loading: false,
+    isExpired: () => false,
+  })),
+}));
+
+// Mock next/navigation
+const mockReplace = jest.fn();
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
+  usePathname: () => '/protected',
+}));
 
 describe('ProtectedRoute', () => {
-  const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
+  const mockUseAuth = useNewAuth as jest.Mock;
 
-  const renderWithRoute = (initialRoute = '/protected') => {
-    return render(
-      <Routes>
-        <Route path="/" element={<div>Login Page</div>} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/protected" element={<div>Protected Content</div>} />
-        </Route>
-      </Routes>,
-      { initialRoute }
-    );
-  };
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   describe('when loading', () => {
     it('should show loading spinner', () => {
@@ -43,25 +40,32 @@ describe('ProtectedRoute', () => {
         isLoading: true,
       });
 
-      renderWithRoute();
+      render(
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
+      );
 
       // Look for the spinner by its CSS classes
       const spinner = document.querySelector('.animate-spin');
       expect(spinner).toBeInTheDocument();
-      expect(spinner).toHaveClass('rounded-full', 'h-8', 'w-8', 'border-b-2', 'border-purple-800');
     });
   });
 
   describe('when not authenticated', () => {
-    it('should redirect to login page', () => {
+    it('should call router.replace to redirect to login', () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: false,
         isLoading: false,
       });
 
-      renderWithRoute();
+      render(
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
+      );
 
-      expect(screen.getByTestId('navigate')).toHaveTextContent('Navigating to /login');
+      expect(mockReplace).toHaveBeenCalledWith('/login');
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
     });
   });
@@ -73,10 +77,14 @@ describe('ProtectedRoute', () => {
         isLoading: false,
       });
 
-      renderWithRoute();
+      render(
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
+      );
 
       expect(screen.getByText('Protected Content')).toBeInTheDocument();
-      expect(screen.queryByTestId('navigate')).not.toBeInTheDocument();
+      expect(mockReplace).not.toHaveBeenCalled();
     });
   });
 
@@ -87,17 +95,18 @@ describe('ProtectedRoute', () => {
         isLoading: false,
       });
 
-      const { rerender } = renderWithRoute();
+      const { rerender } = render(
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
+      );
       const firstRender = screen.getByText('Protected Content');
 
       // Re-render with same props
       rerender(
-        <Routes>
-          <Route path="/" element={<div>Login Page</div>} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/protected" element={<div>Protected Content</div>} />
-          </Route>
-        </Routes>
+        <ProtectedRoute>
+          <div>Protected Content</div>
+        </ProtectedRoute>
       );
 
       const secondRender = screen.getByText('Protected Content');

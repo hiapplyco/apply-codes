@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import {
-  GoogleDrive,
+  HardDrive,
   FileText,
   Upload,
   Download,
@@ -199,7 +199,7 @@ export function GoogleIntegrationCards() {
         <Card className="border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50">
           <CardHeader className="text-center pb-4">
             <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <GoogleDrive className="w-8 h-8 text-blue-600" />
+              <HardDrive className="w-8 h-8 text-blue-600" />
             </div>
             <CardTitle className="text-2xl">Connect Google Integration</CardTitle>
             <CardDescription className="text-base">
@@ -231,7 +231,7 @@ export function GoogleIntegrationCards() {
                 onClick={handleConnectGoogle}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                <GoogleDrive className="w-5 h-5 mr-2" />
+                <HardDrive className="w-5 h-5 mr-2" />
                 Connect Google Account
               </Button>
               <Button 
@@ -286,7 +286,7 @@ export function GoogleIntegrationCards() {
                 <p className="text-sm font-medium text-gray-600">Storage Used</p>
                 <p className="text-2xl font-bold text-blue-600">{metrics.storageUsed}MB</p>
               </div>
-              <GoogleDrive className="w-8 h-8 text-blue-600" />
+              <HardDrive className="w-8 h-8 text-blue-600" />
             </div>
             <Progress value={getStoragePercentage()} className="mt-2" />
             <p className="text-xs text-gray-600 mt-1">
@@ -491,7 +491,7 @@ export function GoogleIntegrationCards() {
               variant="outline"
               onClick={() => window.open('https://myaccount.google.com/permissions', '_blank')}
             >
-              <GoogleDrive className="w-4 h-4 mr-2" />
+              <HardDrive className="w-4 h-4 mr-2" />
               Google Account
             </Button>
           </div>

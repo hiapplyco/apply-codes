@@ -123,7 +123,7 @@ export function GoogleAccountManager({
                   </div>
                   <div className="flex items-center space-x-2">
                     {account.hasRequiredScopes ? (
-                      <Badge variant="success">Required scopes granted</Badge>
+                      <Badge variant="default">Required scopes granted</Badge>
                     ) : (
                       <Badge variant="destructive">Missing scopes</Badge>
                     )}

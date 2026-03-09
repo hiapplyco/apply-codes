@@ -67,7 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return { success: false, error: 'No data available to export' };
     }
     
-    return await exportDashboard(metrics, options, jobId);
+    return await exportDashboard(metrics.metrics, options, jobId);
   };
 
   const handleSettings = () => {
@@ -83,7 +83,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Run anomaly detection when metrics are updated
   useEffect(() => {
     if (metrics && !isLoading && !error) {
-      analyzeMetrics(metrics);
+      analyzeMetrics(metrics.metrics);
     }
   }, [metrics, isLoading, error, analyzeMetrics]);
 
@@ -137,6 +137,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
     );
   }
+
+  const recruitmentMetrics = metrics.metrics;
 
   return (
     <>
@@ -254,25 +256,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
             title="Total Candidates"
             type="metric"
             size="small"
-            data={metrics.kpis.totalCandidates}
+            data={recruitmentMetrics.kpis.totalCandidates}
           />
           <DashboardCard
             title="Qualified Candidates"
             type="metric"
             size="small"
-            data={metrics.kpis.qualifiedCandidates}
+            data={recruitmentMetrics.kpis.qualifiedCandidates}
           />
           <DashboardCard
             title="Time to Fill"
             type="metric"
             size="small"
-            data={metrics.kpis.timeToFill}
+            data={recruitmentMetrics.kpis.timeToFill}
           />
           <DashboardCard
             title="Cost per Hire"
             type="metric"
             size="small"
-            data={metrics.kpis.costPerHire}
+            data={recruitmentMetrics.kpis.costPerHire}
           />
         </div>
 
@@ -284,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Candidate funnel progression"
             type="chart"
             size="large"
-            data={metrics.pipeline.stages}
+            data={recruitmentMetrics.pipeline.stages}
             chartType="funnel"
             className="col-span-2"
             onChartClick={(data) => handleChartClick(data, 'funnel', 'pipeline', 'Talent Pipeline')}
@@ -296,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Most demanded skills"
             type="chart"
             size="medium"
-            data={metrics.skills.distribution}
+            data={recruitmentMetrics.skills.distribution}
             chartType="pie"
             onChartClick={(data) => handleChartClick(data, 'pie', 'skills', 'Skills Distribution')}
           />
@@ -307,7 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Salary distribution"
             type="chart"
             size="medium"
-            data={metrics.compensation.ranges}
+            data={recruitmentMetrics.compensation.ranges}
             chartType="bar"
             onChartClick={(data) => handleChartClick(data, 'bar', 'compensation', 'Compensation Ranges')}
           />
@@ -318,7 +320,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Geographic distribution"
             type="chart"
             size="large"
-            data={metrics.locations.geographic}
+            data={recruitmentMetrics.locations.geographic}
             chartType="heatmap"
             className="col-span-2"
             onChartClick={(data) => handleChartClick(data, 'heatmap', 'locations', 'Talent Locations')}
@@ -330,7 +332,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Applications over time"
             type="chart"
             size="medium"
-            data={metrics.trends.applications}
+            data={recruitmentMetrics.trends.applications}
             chartType="line"
             onChartClick={(data) => handleChartClick(data, 'line', 'trends', 'Application Trends')}
           />
@@ -341,7 +343,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             subtitle="Hiring success prediction"
             type="chart"
             size="medium"
-            data={metrics.predictions.successProbability}
+            data={recruitmentMetrics.predictions.successProbability}
             chartType="gauge"
             onChartClick={(data) => handleChartClick(data, 'gauge', 'predictions', 'Success Probability')}
           />

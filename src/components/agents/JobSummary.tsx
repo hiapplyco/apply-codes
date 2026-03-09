@@ -23,7 +23,7 @@ export const JobSummary = ({ jobId }: JobSummaryProps) => {
         </div>
       ) : (
         <div className="prose prose-sm max-w-none whitespace-pre-line text-gray-800">
-          {agentOutput?.job_summary || "No job summary available."}
+          {(agentOutput?.job_summary as React.ReactNode) || "No job summary available."}
         </div>
       )}
     </AgentWindow>

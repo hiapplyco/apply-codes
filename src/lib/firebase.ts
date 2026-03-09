@@ -40,13 +40,13 @@ interface FirebaseServices {
 
 // Firebase configuration from environment variables
 const firebaseConfig: FirebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ''
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ''
 };
 
 // Initialize Firebase services
@@ -69,17 +69,17 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId) {
     services.storage = getStorage(services.app);
 
     const useEmulators =
-      (import.meta.env.VITE_USE_FIREBASE_EMULATORS || '').toLowerCase() === 'true' ||
-      (!import.meta.env.PROD && typeof window !== 'undefined' && window.location.hostname === 'localhost');
+      (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS || '').toLowerCase() === 'true' ||
+      (!(process.env.NODE_ENV === 'production') && typeof window !== 'undefined' && window.location.hostname === 'localhost');
 
     if (services.functions && useEmulators) {
-      const emulatorHost = import.meta.env.VITE_FIREBASE_FUNCTIONS_EMULATOR_HOST || '127.0.0.1';
-      const emulatorPort = Number(import.meta.env.VITE_FIREBASE_FUNCTIONS_EMULATOR_PORT || 5001);
+      const emulatorHost = process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_HOST || '127.0.0.1';
+      const emulatorPort = Number(process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_PORT || 5001);
       connectFunctionsEmulator(services.functions, emulatorHost, emulatorPort);
     }
 
     // Initialize Analytics conditionally - only in production
-    const isProduction = import.meta.env.PROD;
+    const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction) {
       isSupported().then(supported => {
         if (supported && firebaseConfig.measurementId && services.app) {

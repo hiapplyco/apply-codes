@@ -493,9 +493,9 @@ Company: Clarvida - Behavioral health and human services provider
             });
 
             // Use the data URL for immediate display
-            metadata.imageUrl = imageResult.dataUrl;
+            metadata!.imageUrl = imageResult.dataUrl;
             // Store the raw image data for download/copy functionality
-            metadata.imageData = imageResult;
+            metadata!.imageData = imageResult;
 
             // Save to Firebase Storage if user is authenticated
             const currentUser = auth?.currentUser;
@@ -506,8 +506,8 @@ Company: Clarvida - Behavioral health and human services provider
                   currentUser.uid,
                   'linkedin-post'
                 );
-                metadata.imageStorageUrl = storageUrl;
-                metadata.imageStoragePath = storagePath;
+                metadata!.imageStorageUrl = storageUrl;
+                metadata!.imageStoragePath = storagePath;
                 console.log('[ContextBuilder] LinkedIn image saved to storage:', storagePath);
               } catch (storageError) {
                 console.warn('[ContextBuilder] Failed to save image to storage:', storageError);

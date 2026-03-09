@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Wifi,
   WifiOff,
-  GoogleDrive,
+  HardDrive,
   FileText,
   Users,
   Key,
@@ -270,7 +270,7 @@ export function GoogleIntegrationStatus() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <GoogleDrive className="w-5 h-5 text-blue-600" />
+              <HardDrive className="w-5 h-5 text-blue-600" />
               <CardTitle>Google Integration Status</CardTitle>
             </div>
             <div className="flex items-center space-x-2">
@@ -296,7 +296,7 @@ export function GoogleIntegrationStatus() {
             {/* Drive Status */}
             <div className="flex items-center justify-between p-3 border rounded-lg">
               <div className="flex items-center space-x-2">
-                <GoogleDrive className="w-5 h-5 text-blue-600" />
+                <HardDrive className="w-5 h-5 text-blue-600" />
                 <span className="font-medium">Drive</span>
               </div>
               <div className={`flex items-center space-x-1 ${getStatusColor(serviceStatus.drive.available)}`}>

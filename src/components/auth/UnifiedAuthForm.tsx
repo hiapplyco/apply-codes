@@ -18,40 +18,37 @@ export function UnifiedAuthForm({ redirectTo, onSuccess }: UnifiedAuthFormProps)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp } = useNewAuth();
+  const { signIn, signUp, resetPasswordForEmail } = useNewAuth();
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // First, try to sign in using the AuthContext (which uses the bridge)
-      const signInResult = await signIn(email, password);
-
-      if (signInResult.error) {
-        // If sign in fails with invalid credentials, try to sign up
-        if (signInResult.error.message.includes('Invalid login credentials')) {
-          const signUpResult = await signUp(email, password);
-
-          if (signUpResult.error) {
-            throw signUpResult.error;
-          }
-
-          toast({
-            title: "Account created!",
-            description: "Please check your email to confirm your account.",
-          });
-          if (onSuccess) onSuccess();
-        } else {
-          throw signInResult.error;
-        }
-      } else {
-        // Sign in successful
+      // First, try to sign in
+      try {
+        await signIn(email, password);
         toast({
           title: "Welcome back!",
           description: "You've successfully signed in.",
         });
         if (onSuccess) onSuccess();
+      } catch (signInError: any) {
+        // If sign in fails with invalid credentials, try to sign up
+        if (signInError?.code === 'auth/invalid-credential' || signInError?.code === 'auth/user-not-found' || signInError?.message?.includes('Invalid login credentials')) {
+          try {
+            await signUp(email, password);
+            toast({
+              title: "Account created!",
+              description: "Please check your email to confirm your account.",
+            });
+            if (onSuccess) onSuccess();
+          } catch (signUpError) {
+            throw signUpError;
+          }
+        } else {
+          throw signInError;
+        }
       }
     } catch (error: unknown) {
       console.error('Auth error:', error);
@@ -126,23 +123,15 @@ export function UnifiedAuthForm({ redirectTo, onSuccess }: UnifiedAuthFormProps)
                 onClick={async () => {
                   if (email) {
                     try {
-                      const result = await resetPasswordForEmail(email, { redirectTo: redirectTo || `${window.location.origin}/reset-password` });
-                      if (result.error) {
-                        toast({
-                          title: "Error",
-                          description: result.error.message,
-                          variant: "destructive",
-                        });
-                      } else {
-                        toast({
-                          title: "Password reset email sent",
-                          description: "Please check your email for password reset instructions.",
-                        });
-                      }
+                      await resetPasswordForEmail(email, redirectTo || `${window.location.origin}/reset-password`);
+                      toast({
+                        title: "Password reset email sent",
+                        description: "Please check your email for password reset instructions.",
+                      });
                     } catch (error) {
                       toast({
                         title: "Error",
-                        description: "Failed to send password reset email.",
+                        description: error instanceof Error ? error.message : "Failed to send password reset email.",
                         variant: "destructive",
                       });
                     }

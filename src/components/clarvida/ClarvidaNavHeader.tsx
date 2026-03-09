@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useClarvidaAuth } from '@/context/ClarvidaAuthContext';
 import { Button } from '@/components/ui/button';
 import { LogOut, Menu, X } from 'lucide-react';
@@ -7,14 +9,14 @@ import { toast } from 'sonner';
 
 export const ClarvidaNavHeader = () => {
   const { signOut, organization } = useClarvidaAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
       toast.success('Successfully signed out from Clarvida!');
-      navigate('/clarvida/login', { replace: true });
+      router.replace('/clarvida/login');
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Failed to sign out');
@@ -28,7 +30,7 @@ export const ClarvidaNavHeader = () => {
           {/* Logo - Clarvida SVG from website */}
           <div
             className="flex items-center cursor-pointer"
-            onClick={() => navigate('/clarvida')}
+            onClick={() => router.push('/clarvida')}
           >
             <img
               src="https://www.clarvida.com/wp-content/uploads/2024/06/Clarvida_Logo_Horizontal_SM-Scaled.svg"

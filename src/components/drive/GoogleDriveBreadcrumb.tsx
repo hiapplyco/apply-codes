@@ -11,7 +11,7 @@ import {
   Clock, 
   Users, 
   Trash2,
-  GoogleDrive,
+  HardDrive,
   Search,
   Filter
 } from 'lucide-react';
@@ -97,7 +97,7 @@ export function GoogleDriveBreadcrumb({
     <div className={`flex items-center justify-between p-4 bg-white border-b ${className}`}>
       <div className="flex items-center space-x-2 flex-1 min-w-0">
         {/* Google Drive Icon */}
-        <GoogleDrive className="w-5 h-5 text-blue-600 flex-shrink-0" />
+        <HardDrive className="w-5 h-5 text-blue-600 flex-shrink-0" />
         
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-1 min-w-0">

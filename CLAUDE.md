@@ -8,12 +8,12 @@ AI recruitment platform fighting "Brain Waste" — underutilization of skilled v
 
 ## Stack
 
-React 18 + TypeScript + Vite · Firebase (Auth, Firestore, Cloud Functions, Storage) · Gemini AI · MCP Server (apply-recruitment v2.0.0)
+React 18 + TypeScript + Next.js · Firebase (Auth, Firestore, Cloud Functions, Storage) · Gemini AI · MCP Server (apply-recruitment v2.0.0)
 
 ## Commands
 
 ```bash
-npm run dev         # Vite dev server
+npm run dev         # Next.js dev server
 npm run build       # Production build
 npm test            # Vitest
 cd functions && node -e "require('./index')"  # Validate functions
@@ -56,7 +56,7 @@ SSE-streaming `onRequest` function that bridges Gemini function-calling with MCP
 
 **Backend:** `functions/mcp-chat-stream.js` → `functions/mcp-chat/` (orchestrator, sse-transport, tool-bundler, secrets-bridge, types)
 
-**Frontend:** Feature-flagged via `VITE_ENABLE_MCP_CHAT=true`
+**Frontend:** Feature-flagged via `NEXT_PUBLIC_ENABLE_MCP_CHAT=true`
 - `src/types/mcp-chat.ts` — Stream event types, tool call types
 - `src/lib/mcp-chat-service.ts` — SSE client, event parsing
 - `src/hooks/useMCPChat.ts` — React hook (state, streaming, confirmation flow)

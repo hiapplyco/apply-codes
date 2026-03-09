@@ -1,3 +1,7 @@
+# Next.js
+.next/
+out/
+
 # Environment files with secrets
 .env
 .env.local

@@ -45,12 +45,12 @@ export function URLScrapeModal({
       if (result.success && result.data) {
         setScrapedData({
           text: result.data.text,
-          rawContent: result.data.rawContent
+          rawContent: result.data.rawContent || ''
         });
 
         // Save to project if we have one
         if (activeProjectId) {
-          await saveToProject(result.data.text, result.data.rawContent);
+          await saveToProject(result.data.text, result.data.rawContent || '');
         }
 
         toast.success('Content scraped successfully!');

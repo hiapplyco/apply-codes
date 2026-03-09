@@ -10,7 +10,7 @@ export function GoogleSignIn() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const user = await signInWithGooglePopup();
+      await signInWithGooglePopup();
       toast.success('Successfully signed in with Google!');
       trackFormSubmit('Google Auth', true);
 

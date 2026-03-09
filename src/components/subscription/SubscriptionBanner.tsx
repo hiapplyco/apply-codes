@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -18,7 +20,7 @@ export const SubscriptionBanner = () => {
   return null;
 
   // Original implementation preserved below (unreachable)
-  const navigate = useNavigate();
+  const router = useRouter();
   const { subscription, loading } = useSubscription();
   const [showBanner, setShowBanner] = useState(false);
 
@@ -39,8 +41,8 @@ export const SubscriptionBanner = () => {
   }
 
   const getUsagePercentage = () => {
-    const limits = subscription.limits;
-    const usage = subscription.usage;
+    const limits = subscription!.limits;
+    const usage = subscription!.usage;
     
     // Calculate percentage for the most used resource
     const percentages = [
@@ -53,7 +55,7 @@ export const SubscriptionBanner = () => {
   };
 
   const renderTrialBanner = () => {
-    const { days, hours } = subscription.timeRemaining;
+    const { days, hours } = subscription!.timeRemaining;
     const totalDays = days + (hours > 0 ? 1 : 0); // Round up
     const isExpiringSoon = totalDays <= 3;
     const usagePercentage = getUsagePercentage();
@@ -89,7 +91,7 @@ export const SubscriptionBanner = () => {
             <Button
               size="sm"
               variant={isExpiringSoon ? "default" : "outline"}
-              onClick={() => navigate('/pricing')}
+              onClick={() => router.push('/pricing')}
               className={isExpiringSoon ? "bg-orange-600 hover:bg-orange-700" : ""}
             >
               <Sparkles className="h-4 w-4 mr-1" />
@@ -122,7 +124,7 @@ export const SubscriptionBanner = () => {
           <Button
             size="sm"
             variant="destructive"
-            onClick={() => navigate('/account')}
+            onClick={() => router.push('/account')}
           >
             <CreditCard className="h-4 w-4 mr-1" />
             Update Payment
@@ -133,7 +135,7 @@ export const SubscriptionBanner = () => {
   };
 
   const renderCanceledBanner = () => {
-    const { days } = subscription.timeRemaining;
+    const { days } = subscription!.timeRemaining;
     
     return (
       <Alert className="border-2 border-gray-500 bg-gray-50">
@@ -147,7 +149,7 @@ export const SubscriptionBanner = () => {
           </div>
           <Button
             size="sm"
-            onClick={() => navigate('/account')}
+            onClick={() => router.push('/account')}
           >
             <CheckCircle className="h-4 w-4 mr-1" />
             Reactivate
@@ -170,7 +172,7 @@ export const SubscriptionBanner = () => {
           <Button
             size="sm"
             variant="destructive"
-            onClick={() => navigate('/pricing')}
+            onClick={() => router.push('/pricing')}
           >
             <Sparkles className="h-4 w-4 mr-1" />
             Upgrade Now
@@ -180,7 +182,7 @@ export const SubscriptionBanner = () => {
     );
   };
 
-  switch (subscription.status) {
+  switch (subscription!.status) {
     case 'trialing':
       return renderTrialBanner();
     case 'past_due':
@@ -188,7 +190,7 @@ export const SubscriptionBanner = () => {
     case 'expired':
       return renderExpiredBanner();
     case 'canceled':
-      return subscription.cancelAtPeriodEnd ? null : renderCanceledBanner();
+      return subscription!.cancelAtPeriodEnd ? null : renderCanceledBanner();
     default:
       return null;
   }

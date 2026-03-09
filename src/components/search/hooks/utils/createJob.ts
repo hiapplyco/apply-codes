@@ -29,7 +29,7 @@ export const createJob = async (
     }
     
     const insertedJob = Array.isArray(data) ? data[0] : data;
-    const jobId = insertedJob?.id;
+    const jobId = (insertedJob as any)?.id;
     console.log(`Created job with ID: ${jobId}`);
     
     // Clear previous search results when creating a new job

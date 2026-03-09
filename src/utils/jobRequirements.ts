@@ -51,7 +51,7 @@ export const processJobRequirements = async (
     }
     
     // Save search history when we have a successful boolean search string
-    if (userId && data.searchString && source !== 'clarvida') {
+    if (userId && data.searchString && (source as string) !== 'clarvida') {
       try {
         if (!db) {
           console.warn('Firestore not initialized; skipping search history persistence');

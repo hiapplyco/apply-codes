@@ -1,10 +1,11 @@
+'use client';
 
 import { useState, useEffect } from "react";
 import { functionBridge } from "@/lib/function-bridge";
 import { db } from "@/lib/firebase";
 import { collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 import { useNewAuth } from "@/context/NewAuthContext";
 import { useProjectContext } from "@/context/ProjectContext";
 
@@ -53,7 +54,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
     isLoading: !!jobId, // Set initial loading state to true if we're editing an existing job
     error: null
   });
-  const navigate = useNavigate();
+  const router = useRouter();
   const { user } = useNewAuth();
   const { selectedProjectId } = useProjectContext();
 
@@ -363,7 +364,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
           
           // Navigate to the editor page as fallback
           console.log("Navigating to editor page (fallback):", `/job-editor/${newJobId}`);
-          navigate(`/job-editor/${newJobId}`, { replace: true });
+          router.replace(`/job-editor/${newJobId}`);
         }
       } else {
         // Show a success message for updates or when no modal is needed
@@ -379,7 +380,7 @@ export function useJobPostingForm({ jobId, onSuccess, onError }: UseJobPostingFo
         
         // Navigate to the editor page
         console.log("Navigating to editor page:", `/job-editor/${newJobId}`);
-        navigate(`/job-editor/${newJobId}`, { replace: true });
+        router.replace(`/job-editor/${newJobId}`);
       }
 
       // Wait for analysis to complete in the background

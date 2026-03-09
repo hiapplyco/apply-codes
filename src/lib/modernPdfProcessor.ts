@@ -24,12 +24,11 @@ export class ModernPdfProcessor {
       // Load document with worker disabled
       const loadingTask = pdfjsLib.getDocument({
         data: arrayBuffer,
-        disableWorker: true,
         isEvalSupported: false,
         useSystemFonts: true,
         disableFontFace: false,
         verbosity: 0
-      });
+      } as any);
 
       const pdf = await loadingTask.promise;
       console.log('PDF loaded successfully:', { pages: pdf.numPages });

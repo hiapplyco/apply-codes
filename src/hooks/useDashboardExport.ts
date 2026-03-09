@@ -272,7 +272,7 @@ export const useDashboardExport = () => {
       return { success: true };
     } catch (error) {
       console.error('Export failed:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : 'Export failed' };
     }
   };
 

@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useNewAuth } from '@/context/NewAuthContext';
 import {
@@ -17,8 +19,8 @@ export const TrialExpirationModal = () => {
   return null;
 
   // Original implementation preserved below (unreachable)
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const { user } = useNewAuth();
   const { subscription, loading, isExpired } = useSubscription();
   const [isOpen, setIsOpen] = useState(false);
@@ -30,20 +32,20 @@ export const TrialExpirationModal = () => {
     if (!user || loading) return;
 
     // Don't show on pricing page - let them browse pricing
-    if (location.pathname === '/pricing') return;
+    if (pathname === '/pricing') return;
 
     // Don't show for Clarvida routes - Clarvida users have enterprise access
-    if (location.pathname.startsWith('/clarvida')) return;
+    if (pathname.startsWith('/clarvida')) return;
 
     // Check if trial is expired
     if (trialFullyExpired) {
       setIsOpen(true);
     }
-  }, [user, subscription, loading, trialFullyExpired, location.pathname]);
+  }, [user, subscription, loading, trialFullyExpired, pathname]);
 
   const handleUpgrade = () => {
     setIsOpen(false);
-    navigate('/pricing');
+    router.push('/pricing');
   };
 
   // Only allow dismissal if trial is NOT fully expired (just a warning)
@@ -175,19 +177,19 @@ export const TrialWarningBanner = () => {
   return null;
 
   // Original implementation preserved below (unreachable)
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const { subscription, loading } = useSubscription();
   const [dismissed, setDismissed] = useState(false);
 
   // Don't show for Clarvida routes - Clarvida users have enterprise access
-  if (location.pathname.startsWith('/clarvida')) return null;
+  if (pathname.startsWith('/clarvida')) return null;
 
   if (loading || dismissed) return null;
-  if (!subscription || subscription.tier !== 'free_trial') return null;
-  if (subscription.status !== 'trialing') return null;
+  if (!subscription || subscription!.tier !== 'free_trial') return null;
+  if (subscription!.status !== 'trialing') return null;
 
-  const { days, hours } = subscription.timeRemaining;
+  const { days, hours } = subscription!.timeRemaining;
 
   // Only show if less than 3 days remaining
   if (days > 3) return null;
@@ -218,7 +220,7 @@ export const TrialWarningBanner = () => {
         <Button
           size="sm"
           variant="secondary"
-          onClick={() => navigate('/pricing')}
+          onClick={() => router.push('/pricing')}
           className="text-xs font-bold"
         >
           Upgrade Now

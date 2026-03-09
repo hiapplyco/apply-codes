@@ -364,10 +364,10 @@ class FirebasePostgrestBuilder<T> implements PostgrestBuilder<T> {
     const q = query(collectionRef, ...this.queryBuilder.queryConstraints);
     const querySnapshot = await getDocs(q);
 
-    let data = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as T[];
+    let data = querySnapshot.docs.map(doc => {
+      const docData = doc.data() as Record<string, unknown>;
+      return { id: doc.id, ...docData } as unknown as T;
+    });
 
     // Apply field selection if specified
     if (this.queryBuilder.selectFields) {
@@ -413,16 +413,16 @@ class FirebasePostgrestBuilder<T> implements PostgrestBuilder<T> {
       // Batch insert
       const results = [];
       for (const item of insertData) {
-        const docRef = await addDoc(collectionRef, item);
+        const docRef = await addDoc(collectionRef, item as any);
         const docSnap = await getDoc(docRef);
-        results.push({ id: docRef.id, ...docSnap.data() } as T);
+        results.push({ id: docRef.id, ...docSnap.data() } as unknown as T);
       }
       return { data: results, error: null };
     } else {
       // Single insert
-      const docRef = await addDoc(collectionRef, insertData);
+      const docRef = await addDoc(collectionRef, insertData as any);
       const docSnap = await getDoc(docRef);
-      const result = { id: docRef.id, ...docSnap.data() } as T;
+      const result = { id: docRef.id, ...docSnap.data() } as unknown as T;
 
       if (this.queryBuilder.shouldReturnSingle || this.queryBuilder.shouldReturnMaybeSingle) {
         return { data: result as any, error: null };
@@ -457,7 +457,8 @@ class FirebasePostgrestBuilder<T> implements PostgrestBuilder<T> {
     for (const docSnap of querySnapshot.docs) {
       await updateDoc(docSnap.ref, updateData as any);
       const updatedDoc = await getDoc(docSnap.ref);
-      results.push({ id: docSnap.id, ...updatedDoc.data() } as T);
+      const updatedData = updatedDoc.data() as Record<string, unknown>;
+      results.push({ id: docSnap.id, ...updatedData } as unknown as T);
     }
 
     return { data: results, error: null };
@@ -469,7 +470,8 @@ class FirebasePostgrestBuilder<T> implements PostgrestBuilder<T> {
 
     const deletedDocs = [];
     for (const docSnap of querySnapshot.docs) {
-      const docData = { id: docSnap.id, ...docSnap.data() } as T;
+      const snapData = docSnap.data() as Record<string, unknown>;
+      const docData = { id: docSnap.id, ...snapData } as unknown as T;
       await deleteDoc(docSnap.ref);
       deletedDocs.push(docData);
     }
@@ -733,7 +735,7 @@ export class FirebaseSupabaseAdapter {
           }
         }
 
-        return this;
+        return this as any;
       },
       subscribe: () => {
         // Firebase listeners are automatically subscribed when created

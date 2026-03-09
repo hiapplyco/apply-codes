@@ -83,13 +83,16 @@ const fetchDashboardMetrics = async (jobId: string): Promise<DashboardMetricsRes
   );
 
   const agentOutputsSnapshot = await getDocs(agentOutputsQuery);
-  const allAgentOutputs = agentOutputsSnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-    created_at: doc.data().created_at instanceof Timestamp
-      ? doc.data().created_at.toDate().toISOString()
-      : doc.data().created_at
-  }));
+  const allAgentOutputs: Record<string, any>[] = agentOutputsSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      created_at: data.created_at instanceof Timestamp
+        ? data.created_at.toDate().toISOString()
+        : data.created_at
+    };
+  });
 
   // Filter agent outputs that match the jobId (client-side since Firestore doesn't support OR with different field paths)
   const agentOutputs = allAgentOutputs.filter(output => {
@@ -390,7 +393,7 @@ export const useDashboardMetrics = (
     queryFn: () => fetchDashboardMetrics(jobId),
     enabled: !!jobId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     ...options
   });
 };

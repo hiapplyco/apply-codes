@@ -1,4 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +45,7 @@ export const UsageLimitModal = ({
   currentUsage,
   limit,
 }: UsageLimitModalProps) => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { title, description } = limitTypeLabels[limitType] || {
     title: 'Limit Reached',
     description: 'You\'ve reached your usage limit.',
@@ -51,7 +53,7 @@ export const UsageLimitModal = ({
 
   const handleUpgrade = () => {
     onClose();
-    navigate('/pricing');
+    router.push('/pricing');
   };
 
   return (

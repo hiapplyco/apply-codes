@@ -1,5 +1,5 @@
 import { BaseAgent } from './BaseAgent';
-import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
+import { AgentTask, AgentCapability, AgentContext, AgentMessage } from '@/types/orchestration';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
 
 interface PlanningTaskInput {
@@ -91,6 +91,10 @@ interface Metric {
 }
 
 export class PlanningAgent extends BaseAgent {
+  constructor(context: AgentContext) {
+    super('planning', context);
+  }
+
   protected initialize(): void {
     this.capabilities = [
       {

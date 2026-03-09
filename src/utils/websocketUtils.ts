@@ -15,7 +15,7 @@ export const initializeWebSocketConnection = async () => {
 export const setupWebSocketEventHandlers = (
   ws: WebSocket, 
   sessionId: string | null,
-  onError?: (error: ErrorEvent) => void
+  onError?: (error: Event) => void
 ) => {
   ws.onopen = () => {
     console.log('WebSocket Connected');
@@ -54,7 +54,7 @@ export const setupWebSocketEventHandlers = (
     }
   };
 
-  ws.onerror = (error: ErrorEvent) => {
+  ws.onerror = (error: Event) => {
     console.error('WebSocket error:', error);
     if (onError) onError(error);
     // Remove toast notification for WebSocket connection errors

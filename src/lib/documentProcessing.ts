@@ -63,7 +63,7 @@ class ClientDocumentProcessor {
           workerSetupSuccessful = true;
           console.log('PDF worker setup successful:', workerSrc || 'main-thread');
           break;
-        } catch (workerError) {
+        } catch (workerError: any) {
           console.warn('PDF worker source failed:', workerSrc, workerError.message);
           continue;
         }
@@ -160,8 +160,8 @@ class ClientDocumentProcessor {
       
       // Enhanced configuration for better text extraction
       const options = {
-        convertImage: mammoth.images.imgElement(function() {
-          return { alt: '[IMAGE]' }; // Replace images with placeholder
+        convertImage: mammoth.images.imgElement(function(_image: any) {
+          return Promise.resolve({ src: '', alt: '[IMAGE]' }); // Replace images with placeholder
         }),
         styleMap: [
           // Preserve paragraph structure
@@ -177,7 +177,7 @@ class ClientDocumentProcessor {
       };
       
       // Extract with enhanced formatting
-      const result = await mammoth.extractRawText({ arrayBuffer }, options);
+      const result = await mammoth.extractRawText({ arrayBuffer });
       
       // Log warnings but don't fail on them (they're usually just styling info)
       if (result.messages.length > 0) {
@@ -305,7 +305,8 @@ class ClientDocumentProcessor {
       console.log('Starting PPTX extraction with JSZip');
 
       // Dynamic import JSZip
-      const JSZip = await import('jszip');
+      const JSZipModule = await import('jszip');
+      const JSZip = JSZipModule.default || JSZipModule;
 
       const arrayBuffer = await file.arrayBuffer();
       const zip = await JSZip.loadAsync(arrayBuffer);
@@ -626,7 +627,7 @@ export class DocumentProcessor {
     console.log('Uploading document with hybrid storage manager:', {
       fileName: file.name,
       userId: userId,
-      backend: storageManager.getCurrentBackend()
+      backend: (storageManager as any).getCurrentBackend?.()
     });
 
     try {
@@ -653,7 +654,7 @@ export class DocumentProcessor {
             status: 'pending',
             processing_status: 'pending',
             storage_url: documentUrl,
-            storage_backend: storageManager.getCurrentBackend(),
+            storage_backend: (storageManager as any).getCurrentBackend?.(),
             created_at: timestamp,
             updated_at: timestamp
           });
@@ -803,7 +804,7 @@ export class DocumentProcessor {
           console.log('Client-side processing successful, uploading result...');
           
           // Upload file to storage for record keeping
-          onProgress?.(`Saving processed document to ${storageManager.getCurrentBackend()} storage...`);
+          onProgress?.(`Saving processed document to ${(storageManager as any).getCurrentBackend?.()} storage...`);
           const { storagePath, storageUrl } = await this.uploadDocument(file, userId);
 
           await this.updateDocumentStatus(storagePath, {

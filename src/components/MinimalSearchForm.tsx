@@ -24,7 +24,7 @@ import BooleanExplainer from '@/components/BooleanExplainer';
 import { functionBridge } from '@/lib/function-bridge';
 import { BooleanExplanation } from '@/types/boolean-explanation';
 import LocationModal from '@/components/LocationModal';
-import ProjectLocationService from '@/services/ProjectLocationService';
+import { ProjectLocationService } from '@/services/ProjectLocationService';
 import { useProjectContext } from '@/context/ProjectContext';
 import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
 import { trackBooleanGeneration, trackCandidateSearch, trackEvent, trackProfileEnrichment } from '@/lib/analytics';
@@ -51,18 +51,25 @@ interface SearchResult {
   link: string;
   snippet: string;
   displayLink: string;
-  location?: string;
+  name: string;
+  location: string;
+  [key: string]: any;
 }
 
 interface ContactInfo {
   email: string;
   phone?: string;
   linkedin?: string;
+  work_email?: string;
+  personal_emails?: string[];
+  phone_numbers?: string[];
+  twitter_url?: string;
+  github_url?: string;
 }
 
 interface ContextItem {
   id: string;
-  type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'manual_input';
+  type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'perplexity' | 'manual_input' | 'location_input';
   title: string;
   content: string;
   summary?: string;
@@ -71,8 +78,10 @@ interface ContextItem {
   file_type?: string;
   created_at?: string | Date | { toDate?: () => Date; seconds?: number; nanoseconds?: number };
   project_id?: string | null;
+  user_id?: string | null;
   metadata?: Record<string, any>;
   isExpanded?: boolean;
+  [key: string]: any;
 }
 
 // Helper function to extract location from LinkedIn snippet
@@ -336,9 +345,13 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
         throw insertResult.error;
       }
 
-      const inserted = Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data;
+      const inserted = (Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data) as Partial<ContextItem>;
 
       const newContextItem: ContextItem = {
+        id: '',
+        type: 'manual_input',
+        title: '',
+        content: '',
         ...inserted,
         isExpanded: false
       };
@@ -544,9 +557,7 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
 
       const extractedText = await DocumentProcessor.processDocument({
         file,
-        userId,
-        maxRetries: 4, // Much faster failure for better UX
-        pollInterval: 3000, // Reasonable polling interval
+        userId: userId || '',
         onProgress: (status) => {
           console.log('Processing status:', status);
           // Enhanced UI feedback with file-type awareness
@@ -929,7 +940,8 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
         link: candidate.profileUrl,
         snippet: candidate.snippet,
         displayLink: candidate.profileUrl?.replace(/https?:\/\/(www\.)?/, '').split('/').slice(0, 2).join('/') || '',
-        location: candidate.location || undefined,
+        name: candidate.name || '',
+        location: candidate.location || '',
         source: candidate.source,
         matchScore: candidate.matchScore,
         skills: candidate.skills,
@@ -1291,9 +1303,9 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
         throw insertCandidate.error;
       }
 
-      const savedCandidate = Array.isArray(insertCandidate.data)
+      const savedCandidate = (Array.isArray(insertCandidate.data)
         ? insertCandidate.data[0]
-        : insertCandidate.data;
+        : insertCandidate.data) as Record<string, any> | undefined;
 
       console.log('Candidate save result:', savedCandidate);
 
@@ -1899,7 +1911,7 @@ This area is for your specific search instructions, filtering criteria, or addit
                                     <span className="text-amber-600">Google Maps</span>
                                   )}
                                 </span>
-                                <span className="text-gray-400">{new Date(item.created_at).toLocaleDateString()}</span>
+                                <span className="text-gray-400">{new Date(item.created_at as string | number | Date).toLocaleDateString()}</span>
                               </div>
 
                               {/* Expanded content */}

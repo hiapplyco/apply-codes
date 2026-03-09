@@ -1,6 +1,5 @@
 
 import { render } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
 import { SearchFormContent } from '../SearchFormContent';
 
 // Mock the required props
@@ -9,24 +8,24 @@ const mockProps = {
   isProcessing: false,
   isScrapingProfiles: false,
   searchString: '',
-  onSearchTextChange: vi.fn(),
-  onFileUpload: vi.fn(),
-  onSubmit: vi.fn(),
+  onSearchTextChange: jest.fn(),
+  onFileUpload: jest.fn(),
+  onSubmit: jest.fn(),
   hideSearchTypeToggle: false,
   submitButtonText: 'Submit',
-  onTextUpdate: vi.fn()
+  onTextUpdate: jest.fn()
 };
 
 describe('SearchFormContent', () => {
   it('renders form content', () => {
     const { container } = render(<SearchFormContent {...mockProps} />);
-    
+
     expect(container.querySelector('form')).toBeTruthy();
   });
 
   it('renders without crashing', () => {
     const { container } = render(<SearchFormContent {...mockProps} />);
-    
+
     expect(container).toBeTruthy();
   });
 });

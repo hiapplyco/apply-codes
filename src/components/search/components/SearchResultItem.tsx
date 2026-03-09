@@ -13,7 +13,7 @@ export const SearchResultItem = ({
 }: SearchResultItemProps) => {
   const { enrichProfile } = useProfileEnrichment();
   const [isLoading, setIsLoading] = useState(false);
-  const [enrichedData, setEnrichedData] = useState(null);
+  const [enrichedData, setEnrichedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showContactCard, setShowContactCard] = useState(false);
 
@@ -95,11 +95,11 @@ export const SearchResultItem = ({
   // Construct a basic Profile object from the result
   const profile: Profile = {
     name,
-    title: jobTitle,
-    location,
+    title: jobTitle || undefined,
+    location: location || undefined,
     profile_name: name,
-    profile_title: jobTitle,
-    profile_location: location,
+    profile_title: jobTitle || undefined,
+    profile_location: location || undefined,
     profile_url: profileUrl,
     snippet,
   };

@@ -71,7 +71,8 @@ export function DriveDragDropImporter({
     lastImportedFile: null
   });
 
-  const { isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const isAuthenticated = !!currentAccount;
   const operations = useDriveOperations();
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const dragTimeoutRef = useRef<NodeJS.Timeout>();

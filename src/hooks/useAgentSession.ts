@@ -29,8 +29,8 @@ export function useAgentSession(options: UseAgentSessionOptions = {}) {
 
   // Create new session when user or project changes
   useEffect(() => {
-    if (autoCreate && user?.id) {
-      const newSessionId = `session_${user.id}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    if (autoCreate && user?.uid) {
+      const newSessionId = `session_${user.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       setSession(prev => ({
         ...prev,
         sessionId: newSessionId,
@@ -38,7 +38,7 @@ export function useAgentSession(options: UseAgentSessionOptions = {}) {
         complexity: null,
       }));
     }
-  }, [user?.id, projectId, autoCreate]);
+  }, [user?.uid, projectId, autoCreate]);
 
   const setSessionId = useCallback((sessionId: string | null) => {
     setSession(prev => ({ ...prev, sessionId }));
@@ -53,8 +53,8 @@ export function useAgentSession(options: UseAgentSessionOptions = {}) {
   }, []);
 
   const resetSession = useCallback(() => {
-    if (user?.id) {
-      const newSessionId = `session_${user.id}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    if (user?.uid) {
+      const newSessionId = `session_${user.uid}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       setSession({
         sessionId: newSessionId,
         isStreaming: false,
@@ -62,7 +62,7 @@ export function useAgentSession(options: UseAgentSessionOptions = {}) {
         complexity: null,
       });
     }
-  }, [user?.id]);
+  }, [user?.uid]);
 
   return {
     ...session,

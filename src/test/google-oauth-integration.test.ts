@@ -1,16 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GoogleTokenManager } from '@/lib/google-token-manager';
 import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
 
-const mockCollection = vi.fn();
-const mockDoc = vi.fn();
-const mockQuery = vi.fn();
-const mockOrderBy = vi.fn();
-const mockGetDocs = vi.fn();
-const mockGetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
+const mockCollection = jest.fn();
+const mockDoc = jest.fn();
+const mockQuery = jest.fn();
+const mockOrderBy = jest.fn();
+const mockGetDocs = jest.fn();
+const mockGetDoc = jest.fn();
+const mockUpdateDoc = jest.fn();
 
-vi.mock('firebase/firestore', () => ({
+jest.mock('firebase/firestore', () => ({
   collection: (...args: any[]) => mockCollection(...args),
   doc: (...args: any[]) => mockDoc(...args),
   query: (...args: any[]) => mockQuery(...args),
@@ -21,27 +20,27 @@ vi.mock('firebase/firestore', () => ({
   serverTimestamp: () => 'timestamp'
 }));
 
-vi.mock('@/lib/function-bridge', () => ({
+jest.mock('@/lib/function-bridge', () => ({
   functionBridge: {
-    refreshGoogleToken: vi.fn(),
+    refreshGoogleToken: jest.fn(),
   },
 }));
 
-vi.mock('sonner', () => ({
+jest.mock('sonner', () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
   },
 }));
 
-vi.mock('@/lib/firebase', () => ({
+jest.mock('@/lib/firebase', () => ({
   auth: { currentUser: { uid: 'test-user-id', email: 'test@example.com' } },
   db: {}
 }));
 
 // Import the mocked module to get access to the mock functions
-const { functionBridge } = await import('@/lib/function-bridge');
+const { functionBridge } = require('@/lib/function-bridge');
 
 describe('GoogleTokenManager', () => {
   let tokenManager: GoogleTokenManager;
@@ -58,7 +57,7 @@ describe('GoogleTokenManager', () => {
 
   beforeEach(() => {
     tokenManager = GoogleTokenManager.getInstance();
-    vi.clearAllMocks();
+    jest.clearAllMocks();
 
     mockCollection.mockReturnValue('collection-path');
     mockOrderBy.mockReturnValue('order-by');

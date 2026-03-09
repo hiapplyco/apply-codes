@@ -73,9 +73,9 @@ interface SophisticatedBooleanResponse {
 
 type Json = Record<string, unknown> | Array<unknown> | string | number | boolean | null;
 
-const DEFAULT_REGION = import.meta.env.VITE_FIREBASE_REGION || "us-central1";
-const PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID || "";
-const EXPLICIT_HTTP_BASE_URL = import.meta.env.VITE_FIREBASE_FUNCTION_BASE_URL || "";
+const DEFAULT_REGION = process.env.NEXT_PUBLIC_FIREBASE_REGION || "us-central1";
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "";
+const EXPLICIT_HTTP_BASE_URL = process.env.NEXT_PUBLIC_FIREBASE_FUNCTION_BASE_URL || "";
 
 const resolveHttpFunctionBaseUrl = (): string => {
   if (EXPLICIT_HTTP_BASE_URL) {
@@ -84,7 +84,7 @@ const resolveHttpFunctionBaseUrl = (): string => {
 
   if (!PROJECT_ID) {
     console.warn(
-      "[function-bridge] Missing VITE_FIREBASE_FUNCTION_BASE_URL and VITE_FIREBASE_PROJECT_ID; HTTP callable endpoints may fail."
+      "[function-bridge] Missing NEXT_PUBLIC_FIREBASE_FUNCTION_BASE_URL and NEXT_PUBLIC_FIREBASE_PROJECT_ID; HTTP callable endpoints may fail."
     );
     return "";
   }
@@ -120,7 +120,7 @@ class FunctionBridge {
     }
   }
 
-  private ensureFunctions(): asserts firebaseFunctions is NonNullable<typeof firebaseFunctions> {
+  private ensureFunctions() {
     if (!firebaseFunctions) {
       throw new Error("Firebase Functions not configured");
     }
@@ -129,7 +129,7 @@ class FunctionBridge {
   private ensureHttpBaseUrl(): string {
     if (!this.httpBaseUrl) {
       throw new Error(
-        "Firebase HTTP Function base URL not configured. Set VITE_FIREBASE_FUNCTION_BASE_URL or VITE_FIREBASE_PROJECT_ID."
+        "Firebase HTTP Function base URL not configured. Set NEXT_PUBLIC_FIREBASE_FUNCTION_BASE_URL or NEXT_PUBLIC_FIREBASE_PROJECT_ID."
       );
     }
     return this.httpBaseUrl;
@@ -142,7 +142,7 @@ class FunctionBridge {
     this.ensureFunctions();
 
     try {
-      const callable = httpsCallable<TRequest, TResponse>(firebaseFunctions, name);
+      const callable = httpsCallable<TRequest, TResponse>(firebaseFunctions!, name);
       const result = await callable(payload);
       return result.data;
     } catch (error) {
@@ -508,14 +508,6 @@ class FunctionBridge {
     return this.callCallable("hunterIoSearch", payload);
   }
 
-  async githubProfile(payload: any): Promise<any> {
-    return this.callHttpFunction("githubProfile", { body: payload });
-  }
-
-  async clearbitEnrichment(payload: any): Promise<any> {
-    return this.callCallable("clearbitEnrichment", payload);
-  }
-
   async waterfallEnrich(payload: any): Promise<any> {
     return this.callCallable("waterfallEnrich", payload);
   }
@@ -603,10 +595,6 @@ class FunctionBridge {
     return this.callCallable("getGeminiKey", {});
   }
 
-  async getGoogleCseKey(): Promise<{ secret: string; engineId: string }> {
-    return this.callCallable("getGoogleCseKey", {});
-  }
-
   async exportToGoogleDocs(payload: any): Promise<any> {
     return this.callHttpFunction("exportToGoogleDocs", { body: payload });
   }
@@ -623,28 +611,12 @@ class FunctionBridge {
     return this.callHttpFunction("shareGoogleDoc", { body: payload });
   }
 
-  async processKickoffCall(payload: any): Promise<any> {
-    return this.callHttpFunction("processKickoffCall", { body: payload });
-  }
-
   async processRecording(payload: any): Promise<any> {
     return this.callCallable("processRecording", payload);
   }
 
-  async saveContextItem(payload: any): Promise<any> {
-    return this.callHttpFunction("saveContextItem", { body: payload });
-  }
-
   async summarizeTitle(payload: any): Promise<any> {
     return this.callHttpFunction("summarizeTitle", { body: payload });
-  }
-
-  async testOrchestration(payload: any): Promise<any> {
-    return this.callCallable("testOrchestration", payload);
-  }
-
-  async textToSpeech(payload: any): Promise<any> {
-    return this.callHttpFunction("textToSpeech", { body: payload });
   }
 
   async generateClarvidaReport(payload: any): Promise<any> {

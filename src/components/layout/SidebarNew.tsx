@@ -1,3 +1,5 @@
+'use client';
+
 import { memo, useCallback } from "react";
 import {
   MessageSquare,
@@ -15,7 +17,7 @@ import {
   Settings
 } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 import { cn } from "@/lib/utils";
 import { useNewAuth } from "@/context/NewAuthContext";
 
@@ -140,19 +142,19 @@ export const SidebarNew = memo(({
   handleNavigation,
   isMobile,
 }: SidebarNewProps) => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { signOut } = useNewAuth();
 
   const handleSignOut = useCallback(async () => {
     try {
       await signOut();
       toast.success("Successfully signed out!");
-      navigate("/", { replace: true });
+      router.replace("/");
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
     }
-  }, [navigate, signOut]);
+  }, [router, signOut]);
 
   const handleItemClick = useCallback(
     (path: string, disabled?: boolean) => {

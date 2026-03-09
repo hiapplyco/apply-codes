@@ -3,7 +3,7 @@
 ## Commands
 
 ```bash
-npm run dev              # Vite dev (5173)
+npm run dev              # Next.js dev (3000)
 npm run build            # Production build
 npm test                 # Unit tests (Vitest)
 npm run lint             # ESLint
@@ -26,7 +26,7 @@ firebase deploy --only firestore:rules
 ## Key Paths
 
 - `firebase.json` — Firebase config
-- `vite.config.ts` — Vite config
+- `next.config.ts` — Next.js config
 - `mcp-server/src/index.ts` — MCP entry point
 - `functions/src/index.ts` — Cloud Functions entry
 
@@ -34,8 +34,8 @@ firebase deploy --only firestore:rules
 
 ```bash
 # Frontend (.env.local)
-VITE_FIREBASE_API_KEY · VITE_FIREBASE_AUTH_DOMAIN · VITE_FIREBASE_PROJECT_ID
-VITE_FIREBASE_STORAGE_BUCKET · VITE_GOOGLE_CLIENT_ID · GEMINI_API_KEY
+NEXT_PUBLIC_FIREBASE_API_KEY · NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN · NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET · NEXT_PUBLIC_GOOGLE_CLIENT_ID · GEMINI_API_KEY
 
 # Functions
 firebase functions:config:set gemini.key="xxx" nymeria.key="xxx"

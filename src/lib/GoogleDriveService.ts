@@ -106,7 +106,7 @@ export class GoogleDriveService {
       this.driveClient = await createGoogleDriveClient(accessToken);
       this.docsClient = await createGoogleDocsClient(accessToken);
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to initialize Google Drive service', error);
+      throw new GoogleDriveApiError('Failed to initialize Google Drive service');
     }
   }
 
@@ -160,7 +160,7 @@ export class GoogleDriveService {
 
       return fileList;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to fetch files', error);
+      throw new GoogleDriveApiError('Failed to fetch files');
     }
   }
 
@@ -253,7 +253,7 @@ export class GoogleDriveService {
 
       return file;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to fetch file', error);
+      throw new GoogleDriveApiError('Failed to fetch file');
     }
   }
 
@@ -294,7 +294,7 @@ export class GoogleDriveService {
       
       return folder;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to create folder', error);
+      throw new GoogleDriveApiError('Failed to create folder');
     }
   }
 
@@ -330,7 +330,7 @@ export class GoogleDriveService {
       
       return file;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to upload file', error);
+      throw new GoogleDriveApiError('Failed to upload file');
     }
   }
 
@@ -348,7 +348,7 @@ export class GoogleDriveService {
 
       return response.data;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to download file', error);
+      throw new GoogleDriveApiError('Failed to download file');
     }
   }
 
@@ -366,7 +366,7 @@ export class GoogleDriveService {
 
       return response.data;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to export file', error);
+      throw new GoogleDriveApiError('Failed to export file');
     }
   }
 
@@ -383,7 +383,7 @@ export class GoogleDriveService {
 
       return response.data;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to fetch document content', error);
+      throw new GoogleDriveApiError('Failed to fetch document content');
     }
   }
 
@@ -395,7 +395,7 @@ export class GoogleDriveService {
       const document = await this.getDocumentContent(documentId);
       return this.parseDocumentToHtml(document);
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to convert document to HTML', error);
+      throw new GoogleDriveApiError('Failed to convert document to HTML');
     }
   }
 
@@ -407,7 +407,7 @@ export class GoogleDriveService {
       const document = await this.getDocumentContent(documentId);
       return this.parseDocumentToMarkdown(document);
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to convert document to Markdown', error);
+      throw new GoogleDriveApiError('Failed to convert document to Markdown');
     }
   }
 
@@ -435,7 +435,7 @@ export class GoogleDriveService {
       // Clear cache for this file
       this.cache.files.delete(params.fileId);
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to share file', error);
+      throw new GoogleDriveApiError('Failed to share file');
     }
   }
 
@@ -469,7 +469,7 @@ export class GoogleDriveService {
       
       return copiedFile;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to copy file', error);
+      throw new GoogleDriveApiError('Failed to copy file');
     }
   }
 
@@ -501,7 +501,7 @@ export class GoogleDriveService {
       
       return movedFile;
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to move file', error);
+      throw new GoogleDriveApiError('Failed to move file');
     }
   }
 
@@ -525,7 +525,7 @@ export class GoogleDriveService {
         file.parents.forEach(parentId => this.clearFolderCache(parentId));
       }
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to delete file', error);
+      throw new GoogleDriveApiError('Failed to delete file');
     }
   }
 
@@ -548,7 +548,7 @@ export class GoogleDriveService {
         file.parents.forEach(parentId => this.clearFolderCache(parentId));
       }
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to permanently delete file', error);
+      throw new GoogleDriveApiError('Failed to permanently delete file');
     }
   }
 
@@ -570,7 +570,7 @@ export class GoogleDriveService {
         cachedFile.starred = starred;
       }
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to toggle star', error);
+      throw new GoogleDriveApiError('Failed to toggle star');
     }
   }
 
@@ -609,7 +609,7 @@ export class GoogleDriveService {
       // Clear relevant caches
       this.clearAllCaches();
     } catch (error) {
-      throw new GoogleDriveApiError('Failed to perform batch operation', error);
+      throw new GoogleDriveApiError('Failed to perform batch operation');
     }
   }
 

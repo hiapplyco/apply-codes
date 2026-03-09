@@ -1,7 +1,8 @@
-import { Outlet } from "react-router-dom";
-import { useEffect, memo, useState } from "react";
+'use client';
+
+import { useEffect, memo, useState, type ReactNode } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useRouter, usePathname } from 'next/navigation';
 import { NavigationProgress } from "./NavigationProgress";
 import { useNavigation } from "@/hooks/useNavigation";
 import { Menu, X } from "lucide-react";
@@ -10,19 +11,23 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 
-const MainLayoutComponent = () => {
+interface MainLayoutProps {
+  children: ReactNode;
+}
+
+const MainLayoutComponent = ({ children }: MainLayoutProps) => {
   const { isNavigating, progress, handleNavigation, currentPath } = useNavigation();
   const { user, isLoading, isAuthenticated } = useNewAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate('/', { replace: true });
+      router.replace('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, router]);
 
   // Define sidebar widths
   const sidebarOpenWidth = "20rem"; // 320px
@@ -94,7 +99,7 @@ const MainLayoutComponent = () => {
                 className={`transition-opacity duration-300 flex-1 min-h-0 ${isNavigating ? 'opacity-50' : 'opacity-100'
                   }`}
               >
-                <Outlet />
+                {children}
               </div>
             </div>
           </div>

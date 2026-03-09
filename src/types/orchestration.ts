@@ -74,6 +74,7 @@ export interface WorkflowStep {
   name: string;
   agentType: AgentType;
   task: Omit<AgentTask, 'id'>;
+  dependencies?: string[];
   conditions?: WorkflowCondition[];
   onSuccess?: string[];
   onFailure?: string[];

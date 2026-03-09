@@ -35,7 +35,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  const resultsPerPage = 25; // Google CSE API limit per request
+  const resultsPerPage = 25;
 
   // Store enriched contact data per profile URL
   const [enrichedProfiles, setEnrichedProfiles] = useState<Record<string, any>>({});
@@ -110,7 +110,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
         setTotalResults(parseInt(data.searchInformation?.totalResults || '0'));
         setCurrentPage(page);
         
-        // Check if we've reached the end (Google CSE has a limit)
+        // Check if we've reached the end
         if (processedResults.length < resultsPerPage) {
           setHasReachedEnd(true);
         }
@@ -305,7 +305,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
                 onSearchContacts={handleSearchContacts}
                 contactInfo={enrichedProfiles[result.link]}
                 isLoadingContact={loadingProfiles.has(result.link)}
-                jobId={jobId}
+                jobId={jobId != null ? String(jobId) : null}
                 searchString={searchString}
                 onOmit={handleOmitProfile}
                 isOmitted={omittedProfiles.has(result.link)}
@@ -325,7 +325,7 @@ export const StructuredSearchResults: React.FC<StructuredSearchResultsProps> = (
               onSearchContacts={handleSearchContacts}
               contactInfo={enrichedProfiles[result.link]}
               isLoadingContact={loadingProfiles.has(result.link)}
-              jobId={jobId}
+              jobId={jobId != null ? String(jobId) : null}
               searchString={searchString}
               onOmit={handleOmitProfile}
               isOmitted={omittedProfiles.has(result.link)}

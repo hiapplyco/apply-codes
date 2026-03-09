@@ -101,8 +101,8 @@ export function PerplexityResult({
               </ol>
             ),
             // Customize code rendering
-            code: ({ node, inline, children, ...props }) =>
-              inline ? (
+            code: ({ node, children, className: codeClassName, ...props }) =>
+              !codeClassName ? (
                 <code
                   className="bg-purple-50 text-purple-800 px-1.5 py-0.5 rounded text-sm font-mono"
                   {...props}

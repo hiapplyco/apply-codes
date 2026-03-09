@@ -55,7 +55,9 @@ export interface UseDriveOperationsResult {
  * Hook for Google Drive operations
  */
 export function useDriveOperations(): UseDriveOperationsResult {
-  const { accessToken, isAuthenticated } = useGoogleAuth();
+  const { currentAccount } = useGoogleAuth();
+  const accessToken = currentAccount?.accessToken ?? null;
+  const isAuthenticated = !!currentAccount;
   const queryClient = useQueryClient();
 
   // Helper function to invalidate related queries

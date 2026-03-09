@@ -1,0 +1,3 @@
+# Raw Input
+
+Deprecate Vite and refactor the entire frontend build system and architecture for the HiApply/Apply Codes recruitment platform. Research modern alternatives optimized for agentic AI, MCP apps, MCP UI, and code mode paradigms. Use Exa deep research to find frontier patterns for scalable AI-first web applications in 2026. Consider Next.js, Remix, TanStack Start, or other frameworks that better support MCP integration, server components, streaming, and AI-native UX patterns. Refactor all Vite-specific code, configs, and dependencies. Design for scalability and growth as an AI recruitment platform.

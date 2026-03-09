@@ -37,7 +37,7 @@ export function ProjectScrapedData({ projectId }: ProjectScrapedDataProps) {
       const result = await FirecrawlService.getProjectScrapedData(projectId);
       
       if (result.success && result.data) {
-        setScrapedData(result.data);
+        setScrapedData(result.data as unknown as ScrapedData[]);
       } else {
         console.error('Failed to fetch scraped data:', result.error);
       }

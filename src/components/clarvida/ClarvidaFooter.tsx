@@ -1,8 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export const ClarvidaFooter = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   return (
     <section className="py-12 md:py-16 bg-gray-50">
@@ -18,7 +20,7 @@ export const ClarvidaFooter = () => {
               Build job descriptions, generate boolean searches, and analyze candidates.
             </p>
             <Button
-              onClick={() => navigate('/clarvida/sourcing')}
+              onClick={() => router.push('/clarvida/sourcing')}
               className="bg-[#D4A03C] hover:bg-[#C4902C] text-white"
             >
               Get Started

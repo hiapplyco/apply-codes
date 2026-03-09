@@ -157,6 +157,90 @@ export interface EntityUsageStats {
   experience_distribution: Record<string, number>;
 }
 
+// Profile and enriched data types (used by enrichment and search components)
+export interface EnrichedProfileData {
+  name: string;
+  emails?: string[];
+  work_email?: string;
+  personal_emails?: string[];
+  phone_numbers?: string[];
+  mobile_phone?: string;
+  location?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  company?: string;
+  job_company_name?: string;
+  job_title?: string;
+  company_size?: string;
+  title?: string;
+  linkedin_url?: string;
+  twitter_url?: string;
+  github_url?: string;
+  website?: string;
+  skills?: string[];
+  education?: Education[];
+  experience?: Experience[];
+  languages?: Language[];
+  social_profiles?: SocialProfile[];
+  profiles?: SocialProfile[];
+  summary?: string;
+  bio?: string;
+  industry?: string;
+  enriched?: boolean;
+  profile?: EnrichedProfile;
+}
+
+export interface EnrichedProfile {
+  id?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  title?: string;
+  location?: string;
+  profile_name?: string;
+  profile_title?: string;
+  profile_location?: string;
+  profile_url?: string;
+  snippet?: string;
+  relevance_score?: number;
+}
+
+export interface Education {
+  school: string;
+  institution?: string;
+  degree?: string;
+  field_of_study?: string;
+  field?: string;
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+}
+
+export interface Experience {
+  company: string;
+  title: string;
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+  location?: string;
+}
+
+export interface SocialProfile {
+  network: string;
+  url: string;
+  username?: string;
+}
+
+export interface Language {
+  language: string;
+  proficiency?: string;
+}
+
 // Enrichment types
 export interface EnrichmentRequest {
   candidate_id: string;

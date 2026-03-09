@@ -46,7 +46,7 @@ export interface DashboardCardProps {
   type: 'metric' | 'chart';
   size: 'small' | 'medium' | 'large';
   data: DashboardMetric | ChartDataPoint[] | TimeSeriesData[] | RadarChartData[] | MultiLineChartData[];
-  chartType?: 'pie' | 'bar' | 'line' | 'gauge' | 'radar' | 'funnel' | 'heatmap';
+  chartType?: 'pie' | 'bar' | 'line' | 'gauge' | 'radar' | 'funnel' | 'heatmap' | 'multiline';
   loading?: boolean;
   error?: string;
   className?: string;

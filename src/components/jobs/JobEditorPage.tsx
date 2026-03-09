@@ -1,6 +1,7 @@
+'use client';
 
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Dashboard } from '../dashboard/Dashboard';
@@ -70,7 +71,7 @@ export function JobEditorPage() {
 
       {formattedData && (
         <div className="mb-8">
-          <Dashboard data={formattedData} configs={DEFAULT_CARD_CONFIGS} />
+          <Dashboard jobId={id!} />
         </div>
       )}
 

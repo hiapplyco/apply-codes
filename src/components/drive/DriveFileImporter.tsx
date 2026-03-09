@@ -77,7 +77,6 @@ const SUPPORTED_IMPORT_TYPES: GoogleMimeType[] = [
   'application/pdf',
   'text/plain',
   'text/html',
-  'text/markdown',
   'image/jpeg',
   'image/png',
   'image/gif',

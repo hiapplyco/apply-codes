@@ -59,7 +59,7 @@ export function UploadRequirementsButton({
       className={variant === 'inline' ? 'border-2 border-black bg-white hover:bg-gray-50' : ''}
       buttonText="Scrape Website"
       size={size}
-      context={context === 'linkedin' ? 'general' : context}
+      context={context === 'linkedin' ? 'general' : context === 'interview' ? 'general' : context}
     />
   );
 

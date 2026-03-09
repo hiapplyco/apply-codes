@@ -25,7 +25,6 @@ export const processSearchResults = (data: GoogleSearchResult): SearchResult[] =
 
 /**
  * Fetches search results via the candidateSearch cloud function (Serper.dev).
- * Replaces direct Google CSE API calls — no API keys exposed to the browser.
  *
  * @deprecated Use functionBridge.candidateSearch() directly from MinimalSearchForm.
  * This wrapper exists for backward compatibility with the hooks system.

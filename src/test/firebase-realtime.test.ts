@@ -5,7 +5,6 @@
  * for Firebase Firestore real-time listeners.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import {
   onSnapshot,
@@ -19,41 +18,43 @@ import {
 import { useSubscription } from '@/hooks/useSubscription';
 
 // Mock Firebase
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn(),
-  collection: vi.fn(),
-  onSnapshot: vi.fn(),
-  setDoc: vi.fn(),
-  deleteDoc: vi.fn(),
-  serverTimestamp: vi.fn(() => 'timestamp'),
-  query: vi.fn(),
-  where: vi.fn(),
-  orderBy: vi.fn(),
-  addDoc: vi.fn(),
-  getDoc: vi.fn(),
+jest.mock('firebase/firestore', () => ({
+  doc: jest.fn(),
+  collection: jest.fn(),
+  onSnapshot: jest.fn(),
+  setDoc: jest.fn(),
+  deleteDoc: jest.fn(),
+  serverTimestamp: jest.fn(() => 'timestamp'),
+  query: jest.fn(),
+  where: jest.fn(),
+  orderBy: jest.fn(),
+  addDoc: jest.fn(),
+  getDoc: jest.fn(),
 }));
 
-vi.mock('@/lib/firebase', () => ({
+jest.mock('@/lib/firebase', () => ({
   db: {},
 }));
 
-vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'test-user', email: 'test@example.com' },
+jest.mock('@/context/NewAuthContext', () => ({
+  useNewAuth: () => ({
+    user: { uid: 'test-user', email: 'test@example.com' },
+    isAuthenticated: true,
+    isLoading: false,
   }),
 }));
 
 describe('Firebase Real-time Migration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
 
-    (collection as unknown as Mock).mockImplementation((...segments: any[]) => ({ path: segments.join('/') }));
-    (doc as unknown as Mock).mockImplementation((...segments: any[]) => ({ path: segments.join('/') }));
-    (setDoc as unknown as Mock).mockResolvedValue(undefined);
-    (deleteDoc as unknown as Mock).mockResolvedValue(undefined);
-    (addDoc as unknown as Mock).mockResolvedValue({ id: 'new-doc' });
-    (getDoc as unknown as Mock).mockResolvedValue({ exists: () => true, data: () => ({}) });
-    (onSnapshot as unknown as Mock).mockImplementation(() => vi.fn());
+    (collection as unknown as jest.Mock).mockImplementation((...segments: any[]) => ({ path: segments.join('/') }));
+    (doc as unknown as jest.Mock).mockImplementation((...segments: any[]) => ({ path: segments.join('/') }));
+    (setDoc as unknown as jest.Mock).mockResolvedValue(undefined);
+    (deleteDoc as unknown as jest.Mock).mockResolvedValue(undefined);
+    (addDoc as unknown as jest.Mock).mockResolvedValue({ id: 'new-doc' });
+    (getDoc as unknown as jest.Mock).mockResolvedValue({ exists: () => true, data: () => ({}) });
+    (onSnapshot as unknown as jest.Mock).mockImplementation(() => jest.fn());
   });
 
   describe('useSubscription', () => {
@@ -84,7 +85,7 @@ describe('Firebase Real-time Migration', () => {
         videoInterviewsCount: 0,
       };
 
-      (onSnapshot as unknown as Mock).mockImplementation((docRef, callback) => {
+      (onSnapshot as unknown as jest.Mock).mockImplementation((docRef: any, callback: any) => {
         const mockDocSnapshot = {
           exists: () => true,
           data: () => mockSubscriptionData
@@ -92,7 +93,7 @@ describe('Firebase Real-time Migration', () => {
         act(() => {
           callback(mockDocSnapshot);
         });
-        return vi.fn();
+        return jest.fn();
       });
 
       const { result } = renderHook(() => useSubscription());
@@ -112,7 +113,7 @@ describe('Firebase Real-time Migration', () => {
 
   describe('Real-time Listener Cleanup', () => {
     it('should properly unsubscribe all listeners on component unmount', () => {
-      const unsubscribeMocks = [vi.fn()];
+      const unsubscribeMocks = [jest.fn()];
       let callIndex = 0;
 
       (onSnapshot as any).mockImplementation(() => {

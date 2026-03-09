@@ -1,8 +1,7 @@
 import { BaseAgent } from './BaseAgent';
-import { AgentTask, AgentCapability, AgentMessage } from '@/types/orchestration';
+import { AgentTask, AgentCapability, AgentContext, AgentMessage } from '@/types/orchestration';
 import { firestoreClient } from '@/lib/firebase-database-bridge';
 import { functionBridge } from '@/lib/function-bridge';
-import { parseJobDescription } from '@/utils/jobDescriptionParser';
 import { searchGoogleJobs } from '@/services/googleJobsService';
 
 interface SourcingTaskInput {
@@ -37,6 +36,10 @@ interface SourcingResult {
 }
 
 export class SourcingAgent extends BaseAgent {
+  constructor(context: AgentContext) {
+    super('sourcing', context);
+  }
+
   protected initialize(): void {
     this.capabilities = [
       {
@@ -164,14 +167,8 @@ export class SourcingAgent extends BaseAgent {
     // Use the function bridge to generate boolean query
     try {
       const result = await functionBridge.generateBooleanSearch({
+        description: `Required skills: ${requiredTerms.join(', ')}. Preferred skills: ${preferredTerms.join(', ')}. Experience: ${criteria.experienceLevel || 'Not specified'}. Location: ${criteria.location || 'Any'}.`,
         jobTitle: criteria.jobTitles?.[0] || '',
-        requiredSkills: requiredTerms,
-        niceToHaveSkills: preferredTerms,
-        experienceYears: criteria.experienceLevel,
-        location: criteria.location || '',
-        companyName: '',
-        companyType: '',
-        excludeTerms: []
       });
       return result.searchString || '';
     } catch (error) {
@@ -298,16 +295,16 @@ export class SourcingAgent extends BaseAgent {
     const candidateSkills = (candidate.skills || []).map((s: string) => s.toLowerCase());
     const requiredSkills = (criteria.requiredSkills || []).map((s: string) => s.toLowerCase());
     
-    const matchedRequired = requiredSkills.filter(skill => 
-      candidateSkills.some(cs => cs.includes(skill) || skill.includes(cs))
+    const matchedRequired = requiredSkills.filter((skill: string) =>
+      candidateSkills.some((cs: string) => cs.includes(skill) || skill.includes(cs))
     );
-    
+
     score += (matchedRequired.length / Math.max(requiredSkills.length, 1)) * 30;
 
     // Match preferred skills
     const preferredSkills = (criteria.preferredSkills || []).map((s: string) => s.toLowerCase());
-    const matchedPreferred = preferredSkills.filter(skill => 
-      candidateSkills.some(cs => cs.includes(skill) || skill.includes(cs))
+    const matchedPreferred = preferredSkills.filter((skill: string) =>
+      candidateSkills.some((cs: string) => cs.includes(skill) || skill.includes(cs))
     );
     
     score += (matchedPreferred.length / Math.max(preferredSkills.length, 1)) * 20;

@@ -9,7 +9,7 @@ import { Coins, AlertCircle } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 
 const CreditUsageDisplay = memo(() => {
-  const { subscription, isLoading } = useSubscription();
+  const { subscription, loading: isLoading } = useSubscription();
 
   if (isLoading || !subscription) {
     return (

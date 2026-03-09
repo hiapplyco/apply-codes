@@ -1,6 +1,7 @@
+'use client';
 
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useSearchParams } from "next/navigation";
 import { SearchType } from "../types";
 
 /**
@@ -9,19 +10,19 @@ import { SearchType } from "../types";
 export const useSearchFormState = (
   initialSearchText: string = ""
 ) => {
-  const location = useLocation();
+  const searchParams = useSearchParams();
   const [searchText, setSearchText] = useState(initialSearchText);
   const [companyName, setCompanyName] = useState("");
   const [searchType, setSearchType] = useState<SearchType>("candidates");
   const [searchString, setSearchString] = useState("");
 
-  // Handle content from location state
+  // Handle content from search params (replaces location.state)
   useEffect(() => {
-    const state = location.state as { content?: string; autoRun?: boolean } | null;
-    if (state?.content) {
-      setSearchText(state.content);
+    const content = searchParams.get('content');
+    if (content) {
+      setSearchText(content);
     }
-  }, [location.state]);
+  }, [searchParams]);
 
   return {
     searchText,

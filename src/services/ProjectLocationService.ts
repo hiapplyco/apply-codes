@@ -104,7 +104,7 @@ export class ProjectLocationService {
 
       const snapshot = await getDocs(locationsQuery);
 
-      return snapshot.docs.map((docSnap) => this.mapDocumentToProjectLocation(docSnap.id, docSnap.data()));
+      return snapshot.docs.map((docSnap) => this.mapDocumentToProjectLocation(docSnap.id, docSnap.data() as FirestoreProjectLocation));
     } catch (error) {
       console.error('ProjectLocationService.getProjectLocations error:', error);
       throw error;
@@ -127,7 +127,7 @@ export class ProjectLocationService {
         return null;
       }
 
-      return this.mapDocumentToProjectLocation(docSnap.id, docSnap.data());
+      return this.mapDocumentToProjectLocation(docSnap.id, docSnap.data() as FirestoreProjectLocation);
     } catch (error) {
       console.error('ProjectLocationService.getProjectLocationById error:', error);
       return null;
@@ -249,9 +249,9 @@ export class ProjectLocationService {
     const locationDetails: Location = {
       id: data.placeId || id,
       canonical_name: data.formattedAddress,
-      city: this.findAddressComponent(data.addressComponents, 'locality'),
-      state: this.findAddressComponent(data.addressComponents, 'administrative_area_level_1'),
-      country: this.findAddressComponent(data.addressComponents, 'country'),
+      city: this.findAddressComponent(data.addressComponents, 'locality') || '',
+      state: this.findAddressComponent(data.addressComponents, 'administrative_area_level_1') || '',
+      country: this.findAddressComponent(data.addressComponents, 'country') || '',
       aliases: [],
       coordinates: data.geometry?.location
         ? {
@@ -269,7 +269,7 @@ export class ProjectLocationService {
       location_id: data.placeId || id,
       added_by: data.addedBy || '',
       added_at: createdAt,
-      notes: data.notes || null,
+      notes: data.notes || undefined,
       is_primary: !!data.isPrimary,
       location: locationDetails
     };

@@ -1,7 +1,8 @@
+'use client';
 
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar/context";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -9,7 +10,7 @@ import { LogOut } from "lucide-react";
 import { useNewAuth } from "@/context/NewAuthContext";
 
 export const SignOutButton = memo(function SignOutButton() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { signOut } = useNewAuth();
@@ -18,11 +19,11 @@ export const SignOutButton = memo(function SignOutButton() {
     try {
       await signOut();
       toast.success('Successfully signed out!');
-      navigate('/', { replace: true });
+      router.replace('/');
     } catch {
       toast.error('Failed to sign out');
     }
-  }, [navigate, signOut]);
+  }, [router, signOut]);
   
   const buttonContent = (
     <>

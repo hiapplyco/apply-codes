@@ -181,7 +181,7 @@ export const ProfileCard = ({ profile: originalProfile }: { profile: Profile }) 
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         profile={profile}
-        profileData={enrichedData}
+        profileData={enrichedData as any}
         isLoading={loading}
         error={error}
       />

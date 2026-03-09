@@ -1,4 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import {
   FileText,
@@ -79,7 +81,7 @@ const tools: ToolItem[] = [
 ];
 
 export const ClarvidaToolsGrid = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   return (
     <section className="py-12 md:py-16 bg-[#E8F4F4]">
@@ -88,7 +90,7 @@ export const ClarvidaToolsGrid = () => {
           {tools.map((tool) => (
             <Card
               key={tool.title}
-              onClick={() => navigate(tool.path)}
+              onClick={() => router.push(tool.path)}
               className="group cursor-pointer overflow-hidden bg-white hover:shadow-lg transition-all duration-300 border-0"
             >
               {/* Image */}
@@ -118,7 +120,7 @@ export const ClarvidaToolsGrid = () => {
 
           {/* Browse All Card */}
           <Card
-            onClick={() => navigate('/clarvida/sourcing')}
+            onClick={() => router.push('/clarvida/sourcing')}
             className="group cursor-pointer overflow-hidden bg-[#0B5B5E] hover:bg-[#0A4F4F] transition-colors border-0 flex items-center justify-center min-h-[200px]"
           >
             <div className="text-center p-6">

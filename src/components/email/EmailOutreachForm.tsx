@@ -59,20 +59,6 @@ export function EmailOutreachForm({
   const [projects, setProjects] = useState<Array<{ id: string; name: string; color: string }>>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
-  // Fetch user's projects when modal opens
-  useEffect(() => {
-    if (isOpen && user && !projectId) {
-      fetchProjects();
-    }
-  }, [isOpen, user, projectId, fetchProjects]);
-
-  // Update selected project when prop changes
-  useEffect(() => {
-    if (projectId) {
-      setSelectedProjectId(projectId);
-    }
-  }, [projectId]);
-
   const fetchProjects = async () => {
     setLoadingProjects(true);
     try {
@@ -113,6 +99,20 @@ export function EmailOutreachForm({
       setLoadingProjects(false);
     }
   };
+
+  // Fetch user's projects when modal opens
+  useEffect(() => {
+    if (isOpen && user && !projectId) {
+      fetchProjects();
+    }
+  }, [isOpen, user, projectId, fetchProjects]);
+
+  // Update selected project when prop changes
+  useEffect(() => {
+    if (projectId) {
+      setSelectedProjectId(projectId);
+    }
+  }, [projectId]);
 
   const handleSendEmail = async () => {
     if (!customText.trim()) {

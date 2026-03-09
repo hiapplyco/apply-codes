@@ -1,5 +1,7 @@
+'use client';
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -31,20 +33,20 @@ export function JobCreatedModal({
   booleanSearch,
   onCreateAnother,
 }: JobCreatedModalProps) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isCopied, setIsCopied] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
   const handleSourceCandidates = () => {
     setIsNavigating(true);
     // Navigate to sourcing page with job parameters
-    navigate(`/sourcing?jobId=${jobId}&autoSearch=true`);
+    router.push(`/sourcing?jobId=${jobId}&autoSearch=true`);
     onClose();
   };
 
   const handleViewJob = () => {
     setIsNavigating(true);
-    navigate(`/job-editor/${jobId}`);
+    router.push(`/job-editor/${jobId}`);
     onClose();
   };
 

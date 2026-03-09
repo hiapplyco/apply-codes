@@ -127,7 +127,7 @@ export function useWorkflowHistory({
       ];
 
       if (isLoadMore && lastDoc) {
-        queryConstraints.push(startAfter(lastDoc));
+        queryConstraints.push(startAfter(lastDoc) as any);
       }
 
       const workflowQuery = query(

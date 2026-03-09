@@ -19,7 +19,7 @@ export function FirebaseEmailAuthForm({ view, onSuccess, redirectTo }: FirebaseE
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  const { signIn, signUp } = useNewAuth();
+  const { signIn, signUp, resetPasswordForEmail } = useNewAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,20 +32,15 @@ export function FirebaseEmailAuthForm({ view, onSuccess, redirectTo }: FirebaseE
     setIsLoading(true);
 
     try {
-      let result;
       if (view === 'sign_in') {
-        result = await signIn(email, password);
+        await signIn(email, password);
       } else {
-        result = await signUp(email, password);
+        await signUp(email, password);
       }
 
-      if (result.error) {
-        toast.error(result.error.message);
-      } else {
-        toast.success(view === 'sign_in' ? 'Successfully signed in!' : 'Account created successfully!');
-        if (onSuccess) {
-          onSuccess();
-        }
+      toast.success(view === 'sign_in' ? 'Successfully signed in!' : 'Account created successfully!');
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error: any) {
       toast.error(error.message || 'An unexpected error occurred');
@@ -65,13 +60,9 @@ export function FirebaseEmailAuthForm({ view, onSuccess, redirectTo }: FirebaseE
     setIsLoading(true);
 
     try {
-      const result = await resetPasswordForEmail(email, { redirectTo });
-      if (result.error) {
-        toast.error(result.error.message);
-      } else {
-        toast.success('Password reset email sent! Check your inbox.');
-        setShowForgotPassword(false);
-      }
+      await resetPasswordForEmail(email, redirectTo);
+      toast.success('Password reset email sent! Check your inbox.');
+      setShowForgotPassword(false);
     } catch (error: any) {
       toast.error(error.message || 'Failed to send reset email');
     } finally {

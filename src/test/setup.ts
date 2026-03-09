@@ -1,22 +1,21 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, afterAll, vi } from 'vitest';
 
 // Disable auth bypass in test environment
-vi.stubEnv('VITE_BYPASS_AUTH', 'false');
+process.env.NEXT_PUBLIC_BYPASS_AUTH = 'false';
 
 // Mock ProjectContext globally
-vi.mock('@/context/ProjectContext', () => ({
+jest.mock('@/context/ProjectContext', () => ({
   useProjectContext: () => ({
     projects: [],
     loading: false,
     selectedProjectId: null,
     selectedProject: undefined,
-    setSelectedProjectId: vi.fn(),
-    createProject: vi.fn().mockResolvedValue(null),
-    updateProject: vi.fn().mockResolvedValue(true),
-    archiveProject: vi.fn().mockResolvedValue(true),
-    refetch: vi.fn().mockResolvedValue(undefined),
+    setSelectedProjectId: jest.fn(),
+    createProject: jest.fn().mockResolvedValue(null),
+    updateProject: jest.fn().mockResolvedValue(true),
+    archiveProject: jest.fn().mockResolvedValue(true),
+    refetch: jest.fn().mockResolvedValue(undefined),
   }),
   ProjectProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -29,31 +28,31 @@ afterEach(() => {
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
   })),
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+})) as any;
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+})) as any;
 
 // Suppress console errors in tests by default
 const originalError = console.error;

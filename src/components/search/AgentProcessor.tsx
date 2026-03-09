@@ -132,14 +132,14 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
         );
         if (!isMounted) return;
 
-        const agentOutput = {
+        const agentOutput: AgentOutput = {
           id: Date.now(),
           job_id: jobId,
           created_at: new Date().toISOString(),
-          terms,
-          compensation_analysis: compensationData,
-          enhanced_description: enhancerData,
-          job_summary: summaryData
+          terms: terms as AgentOutput['terms'],
+          compensation_analysis: compensationData as string,
+          enhanced_description: enhancerData as string,
+          job_summary: summaryData as string
         };
 
         setOutput(jobId, agentOutput);
@@ -147,7 +147,7 @@ export const AgentProcessor = ({ content, jobId, onComplete }: AgentProcessorPro
         
         // Persist to database first
         await persistToDatabase.mutateAsync({
-          terms,
+          terms: terms as AgentOutput['terms'],
           compensationData,
           enhancerData,
           summaryData

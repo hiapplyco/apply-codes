@@ -26,7 +26,7 @@ class DailySingleton {
       try {
         const existingFrame = await this.creationPromise;
         // If the frame exists and matches the room URL, return it
-        if (existingFrame && this.dailyCall && roomUrl === this.dailyCall.properties?.url) {
+        if (existingFrame && this.dailyCall && roomUrl === (this.dailyCall as any).properties?.url) {
           console.log("Returning existing frame for same room");
           return existingFrame;
         }
@@ -36,7 +36,7 @@ class DailySingleton {
     }
 
     // If we already have an instance with a different room URL, destroy it first
-    if (this.dailyCall && this.dailyCall.properties?.url !== roomUrl) {
+    if (this.dailyCall && (this.dailyCall as any).properties?.url !== roomUrl) {
       console.log("Destroying existing Daily instance for different room");
       try {
         await this.destroyCallFrame();

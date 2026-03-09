@@ -1,7 +1,8 @@
+'use client';
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -11,7 +12,7 @@ export function useJobEditor(jobId: string) {
   const [error, setError] = useState<any>(null);
   const [isSourceLoading, setIsSourceLoading] = useState(false);
   const [isPostLoading, setIsPostLoading] = useState(false);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -73,12 +74,7 @@ export function useJobEditor(jobId: string) {
       return;
     }
     
-    navigate('/sourcing', { 
-      state: { 
-        jobId,
-        autoRun: true
-      } 
-    });
+    router.push(`/sourcing?jobId=${jobId}&autoRun=true`);
   };
 
   const handleCreateLinkedInPost = async (analysisContent: string) => {
@@ -89,13 +85,7 @@ export function useJobEditor(jobId: string) {
       }
       
       // Process for LinkedIn post generation
-      navigate('/linkedin-post', { 
-        state: { 
-          content: analysisContent,
-          jobId,
-          autoRun: true
-        } 
-      });
+      router.push(`/linkedin-post?content=${encodeURIComponent(analysisContent)}&jobId=${jobId}&autoRun=true`);
     } catch (error) {
       console.error('Error creating LinkedIn post:', error);
       toast({

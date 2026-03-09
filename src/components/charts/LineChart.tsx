@@ -66,7 +66,7 @@ export const LineChart: React.FC<LineChartProps> = ({
               strokeWidth: 2,
               style: { cursor: onPointClick ? 'pointer' : 'default' }
             }}
-            onClick={onPointClick ? (data) => onPointClick({ name: data.payload.date, value: data.payload.value }) : undefined}
+            onClick={onPointClick ? (data: any) => onPointClick({ date: data.payload.date, value: data.payload.value }) : undefined}
           />
         </RechartsLineChart>
       </ResponsiveContainer>

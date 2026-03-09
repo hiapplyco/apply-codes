@@ -1,8 +1,9 @@
+'use client';
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Users, FileText, Loader2, Send } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
 
 interface JobEditorHeaderProps {
@@ -21,20 +22,15 @@ export function JobEditorHeader({
   isPostLoading,
   jobId
 }: JobEditorHeaderProps) {
-  const navigate = useNavigate();
-  
+  const router = useRouter();
+
   const handleNavigateBack = () => {
     // Navigate back to content creation page
-    navigate('/content-creation');
+    router.push('/content-creation');
   };
 
   const handleGoToSourcing = () => {
-    navigate('/sourcing', { 
-      state: { 
-        jobId,
-        autoRun: true
-      } 
-    });
+    router.push(`/sourcing?jobId=${jobId}&autoRun=true`);
   };
 
   const handlePublish = () => {
