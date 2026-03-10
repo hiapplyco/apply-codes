@@ -103,6 +103,7 @@ export function ToolConfirmationDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
+            {/* @ts-expect-error -- Lucide icon union widens to never under React 19 JSX */}
             <Icon className={cn('w-5 h-5', metadata?.color || 'text-yellow-500')} />
             Confirm Action: {tool.replace(/_/g, ' ')}
           </DialogTitle>

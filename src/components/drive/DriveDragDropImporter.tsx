@@ -75,7 +75,7 @@ export function DriveDragDropImporter({
   const isAuthenticated = !!currentAccount;
   const operations = useDriveOperations();
   const dropZoneRef = useRef<HTMLDivElement>(null);
-  const dragTimeoutRef = useRef<NodeJS.Timeout>();
+  const dragTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   // Check if Google Drive URL is valid
   const isValidDriveUrl = useCallback((url: string): boolean => {
