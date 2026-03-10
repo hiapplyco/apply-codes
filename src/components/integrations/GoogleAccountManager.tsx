@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle, Settings, Trash2, RefreshCw, Link as LinkIcon, Unlink } from 'lucide-react';
-import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
+import { GOOGLE_API_SCOPES } from '@/lib/google-scopes';
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 
 interface GoogleAccountManagerProps {

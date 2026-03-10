@@ -1,12 +1,34 @@
-import { GoogleAuth } from 'google-auth-library';
-import { google } from 'googleapis';
-
 /**
  * Google API Configuration and Client Management
- * 
- * This module provides centralized configuration and client creation for Google APIs
- * including Drive, Docs, and other Google services.
+ *
+ * NOTE: This module imports `googleapis` (Node.js only).
+ * For client-side code that only needs scopes, import from '@/lib/google-scopes' instead.
  */
+
+// Re-export scopes for backward compatibility
+export { GOOGLE_API_SCOPES } from './google-scopes';
+import { GOOGLE_API_SCOPES } from './google-scopes';
+
+// Lazy-import googleapis to avoid bundling in client code when tree-shaking fails.
+// These functions should only be called server-side or in test code.
+let _google: typeof import('googleapis').google | null = null;
+let _GoogleAuth: typeof import('google-auth-library').GoogleAuth | null = null;
+
+async function getGoogle() {
+  if (!_google) {
+    const mod = await import('googleapis');
+    _google = mod.google;
+  }
+  return _google;
+}
+
+async function getGoogleAuth() {
+  if (!_GoogleAuth) {
+    const mod = await import('google-auth-library');
+    _GoogleAuth = mod.GoogleAuth;
+  }
+  return _GoogleAuth;
+}
 
 // Environment variables validation
 const requiredEnvVars = [
@@ -22,37 +44,14 @@ const requiredEnvVars = [
 // Validate environment variables
 function validateEnvironmentVariables(): boolean {
   const missing = requiredEnvVars.filter(envVar => !process.env[envVar]);
-  
+
   if (missing.length > 0) {
     console.warn(`Missing required environment variables: ${missing.join(', ')}`);
     return false;
   }
-  
+
   return true;
 }
-
-// Google API scopes
-export const GOOGLE_API_SCOPES = {
-  DRIVE: {
-    FULL_ACCESS: 'https://www.googleapis.com/auth/drive',
-    READ_ONLY: 'https://www.googleapis.com/auth/drive.readonly',
-    FILE_ACCESS: 'https://www.googleapis.com/auth/drive.file',
-    METADATA: 'https://www.googleapis.com/auth/drive.metadata',
-  },
-  DOCS: {
-    FULL_ACCESS: 'https://www.googleapis.com/auth/documents',
-    READ_ONLY: 'https://www.googleapis.com/auth/documents.readonly',
-  },
-  SHEETS: {
-    FULL_ACCESS: 'https://www.googleapis.com/auth/spreadsheets',
-    READ_ONLY: 'https://www.googleapis.com/auth/spreadsheets.readonly',
-  },
-  GMAIL: {
-    FULL_ACCESS: 'https://www.googleapis.com/auth/gmail.modify',
-    READ_ONLY: 'https://www.googleapis.com/auth/gmail.readonly',
-    SEND: 'https://www.googleapis.com/auth/gmail.send',
-  },
-} as const;
 
 // Google OAuth2 client configuration
 export const getGoogleOAuth2Config = () => {
@@ -101,88 +100,77 @@ export const getServiceAccountConfig = () => {
   };
 };
 
-// Create Google Auth client
-export const createGoogleAuthClient = (scopes: string[] = []) => {
+// Create Google Auth client (server-side only)
+export const createGoogleAuthClient = async (scopes: string[] = []) => {
   if (!validateEnvironmentVariables()) {
     throw new Error('Google API environment variables are not properly configured');
   }
 
+  const GoogleAuthClass = await getGoogleAuth();
   const serviceAccountConfig = getServiceAccountConfig();
-  
-  return new GoogleAuth({
+
+  return new GoogleAuthClass({
     credentials: serviceAccountConfig,
     scopes,
   });
 };
 
-// Create Google Drive client
+// Create Google Drive client (server-side only)
 export const createGoogleDriveClient = async (accessToken?: string) => {
+  const google = await getGoogle();
+
   if (accessToken) {
-    // Use user's access token for client-side operations
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
-    
     return google.drive({ version: 'v3', auth });
   } else {
-    // Use service account for server-side operations
-    const auth = createGoogleAuthClient([
-      GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS,
-    ]);
-    
+    const { GOOGLE_API_SCOPES } = await import('./google-scopes');
+    const auth = await createGoogleAuthClient([GOOGLE_API_SCOPES.DRIVE.FULL_ACCESS]);
     return google.drive({ version: 'v3', auth });
   }
 };
 
-// Create Google Docs client
+// Create Google Docs client (server-side only)
 export const createGoogleDocsClient = async (accessToken?: string) => {
+  const google = await getGoogle();
+
   if (accessToken) {
-    // Use user's access token for client-side operations
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
-    
     return google.docs({ version: 'v1', auth });
   } else {
-    // Use service account for server-side operations
-    const auth = createGoogleAuthClient([
-      GOOGLE_API_SCOPES.DOCS.FULL_ACCESS,
-    ]);
-    
+    const { GOOGLE_API_SCOPES } = await import('./google-scopes');
+    const auth = await createGoogleAuthClient([GOOGLE_API_SCOPES.DOCS.FULL_ACCESS]);
     return google.docs({ version: 'v1', auth });
   }
 };
 
-// Create Google Sheets client
+// Create Google Sheets client (server-side only)
 export const createGoogleSheetsClient = async (accessToken?: string) => {
+  const google = await getGoogle();
+
   if (accessToken) {
-    // Use user's access token for client-side operations
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
-    
     return google.sheets({ version: 'v4', auth });
   } else {
-    // Use service account for server-side operations
-    const auth = createGoogleAuthClient([
-      GOOGLE_API_SCOPES.SHEETS.FULL_ACCESS,
-    ]);
-    
+    const { GOOGLE_API_SCOPES } = await import('./google-scopes');
+    const auth = await createGoogleAuthClient([GOOGLE_API_SCOPES.SHEETS.FULL_ACCESS]);
     return google.sheets({ version: 'v4', auth });
   }
 };
 
-// Create Gmail client
+// Create Gmail client (server-side only)
 export const createGmailClient = async (accessToken?: string) => {
+  const google = await getGoogle();
+
   if (accessToken) {
-    // Use user's access token for client-side operations
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
-    
     return google.gmail({ version: 'v1', auth });
   } else {
-    // Use service account for server-side operations
-    const auth = createGoogleAuthClient([
-      GOOGLE_API_SCOPES.GMAIL.FULL_ACCESS,
-    ]);
-    
+    const { GOOGLE_API_SCOPES } = await import('./google-scopes');
+    const auth = await createGoogleAuthClient([GOOGLE_API_SCOPES.GMAIL.FULL_ACCESS]);
     return google.gmail({ version: 'v1', auth });
   }
 };

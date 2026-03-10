@@ -1,5 +1,5 @@
 import { GoogleTokenManager } from '@/lib/google-token-manager';
-import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
+import { GOOGLE_API_SCOPES } from '@/lib/google-scopes';
 
 const mockCollection = jest.fn();
 const mockDoc = jest.fn();

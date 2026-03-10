@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
   // Set correct workspace root (parent dir has a lockfile)
   turbopack: {
     root: resolve(__dirname),
+    resolveAlias: {
+      // googleapis uses Node.js built-ins; stub them for client bundles
+      child_process: { browser: './src/lib/stubs/empty.ts' },
+      fs: { browser: './src/lib/stubs/empty.ts' },
+      http2: { browser: './src/lib/stubs/empty.ts' },
+      net: { browser: './src/lib/stubs/empty.ts' },
+      tls: { browser: './src/lib/stubs/empty.ts' },
+    },
   },
 };
 

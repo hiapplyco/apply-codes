@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
 import { toast } from 'sonner';
-import { GOOGLE_API_SCOPES } from '@/lib/google-api-config';
+import { GOOGLE_API_SCOPES } from '@/lib/google-scopes';
 import { auth, db } from '@/lib/firebase';
 import { functionBridge } from '@/lib/function-bridge';
 import {

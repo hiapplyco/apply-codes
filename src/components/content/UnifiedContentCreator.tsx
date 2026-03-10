@@ -1,20 +1,31 @@
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Search, Folder, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Folder, ChevronDown, ChevronUp, Upload, Download, Share2, Copy, ExternalLink, CheckCircle, AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, FileText, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { functionBridge } from "@/lib/function-bridge";
 import { JobEditorContent } from "@/components/jobs/editor/JobEditorContent";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardProjectContext } from '@/components/project/StandardProjectContext';
 import { ContentGenerationDialog } from "@/components/content/ContentGenerationDialog";
+import { GoogleDocsModal } from "./GoogleDocsModal";
 import { useProjectContext } from "@/context/ProjectContext";
+import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { advancedMarkdownToHtml } from "@/utils/markdownToHtml";
+
+// Lazy-load GoogleDriveFilePicker to avoid bundling googleapis (Node.js) at build time
+const GoogleDriveFilePicker = dynamic(
+  () => import("@/components/drive/GoogleDriveFilePicker").then(mod => ({ default: mod.GoogleDriveFilePicker })),
+  { ssr: false, loading: () => <div className="flex items-center justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> }
+);
 
 interface ContentType {
   content_type: string;
@@ -26,6 +37,8 @@ interface ContentType {
 interface GeneratedContent {
   content: string;
   markdown: string;
+  googleDocId?: string;
+  googleDriveUrl?: string;
 }
 
 export const UnifiedContentCreator = () => {
@@ -41,8 +54,13 @@ export const UnifiedContentCreator = () => {
   const [contentOptions, setContentOptions] = useState<ContentType[]>([]);
   const [isLoadingContentTypes, setIsLoadingContentTypes] = useState(true);
   const [showContext, setShowContext] = useState(false);
+  const [showGoogleDocsModal, setShowGoogleDocsModal] = useState(false);
+  const [showDriveFilePicker, setShowDriveFilePicker] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const { selectedProject } = useProjectContext();
+  const { currentAccount } = useGoogleAuth();
 
   // Load content types from public directory
   useEffect(() => {
@@ -153,32 +171,113 @@ export const UnifiedContentCreator = () => {
     setRawContent(newContent);
   };
 
+  const handleExportToGoogleDocs = async () => {
+    if (!generatedContent || !currentAccount) {
+      toast.error("Please generate content and connect a Google account first");
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const exportResult = await functionBridge.exportToGoogleDocs({
+        content: rawContent,
+        title: `${selectedContentType} - ${new Date().toLocaleDateString()}`,
+        accountId: currentAccount.id,
+      });
+      setGeneratedContent((prev) =>
+        prev ? { ...prev, googleDocId: exportResult.documentId, googleDriveUrl: exportResult.documentUrl } : null
+      );
+      toast.success("Content exported to Google Docs!");
+    } catch (error) {
+      console.error("Error exporting to Google Docs:", error);
+      toast.error("Failed to export to Google Docs");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportFromGoogleDocs = async (fileId: string, fileName: string) => {
+    if (!currentAccount) {
+      toast.error("Please connect a Google account first");
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const importResult = await functionBridge.importFromGoogleDocs({
+        fileId,
+        accountId: currentAccount.id,
+      });
+      const htmlContent = advancedMarkdownToHtml(importResult.content);
+      setGeneratedContent({
+        content: htmlContent,
+        markdown: importResult.content,
+        googleDocId: fileId,
+        googleDriveUrl: importResult.documentUrl,
+      });
+      setRawContent(htmlContent);
+      toast.success(`Imported "${fileName}" from Google Docs`);
+      setShowDriveFilePicker(false);
+    } catch (error) {
+      console.error("Error importing from Google Docs:", error);
+      toast.error("Failed to import from Google Docs");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const selectedOption = contentOptions.find((opt: ContentType) => opt.content_type === selectedContentType);
 
   return (
     <div className="space-y-4">
-      {/* Header with context toggle */}
+      {/* Header with context toggle and Google integration */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create Content</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Create Content</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Generate professional recruitment content with AI
           </p>
         </div>
-        <button
-          onClick={() => setShowContext(!showContext)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            selectedProject || contextContent
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Folder className="w-4 h-4" />
-          <span className="hidden sm:inline max-w-[120px] truncate">
-            {selectedProject?.name || (contextContent ? 'Context Added' : 'Add Context')}
-          </span>
-          {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Google Account Status */}
+          {currentAccount ? (
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Google Connected
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">
+              <AlertCircle className="w-3 h-3 mr-1" />
+              Google Not Connected
+            </Badge>
+          )}
+
+          {/* Import from Drive */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDriveFilePicker(true)}
+            disabled={!currentAccount}
+            className="text-xs"
+          >
+            <Download className="w-3.5 h-3.5 mr-1" />
+            Import
+          </Button>
+
+          {/* Context Toggle */}
+          <button
+            onClick={() => setShowContext(!showContext)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              selectedProject || contextContent
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <Folder className="w-4 h-4" />
+            <span className="hidden sm:inline max-w-[120px] truncate">
+              {selectedProject?.name || (contextContent ? 'Context Added' : 'Add Context')}
+            </span>
+            {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        </div>
       </div>
 
       {/* Collapsible Context Section */}
@@ -199,7 +298,7 @@ export const UnifiedContentCreator = () => {
       )}
 
       {/* Content Creation Form */}
-      <Card className="border border-gray-200 bg-white rounded-lg">
+      <Card className="border-0 shadow-sm">
           <CardContent className="p-6 space-y-6">
             {/* Content Type Dropdown */}
             <div className="space-y-2">
@@ -326,7 +425,7 @@ export const UnifiedContentCreator = () => {
             <Button
               onClick={handleGenerate}
               disabled={!selectedContentType || !userInput.trim() || isGenerating}
-              className="w-full bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               type="button"
             >
               {isGenerating ? (
@@ -346,14 +445,105 @@ export const UnifiedContentCreator = () => {
 
       {/* Generated Content Editor */}
       {generatedContent && (
-        <Card className="border border-gray-200 bg-white rounded-lg">
+        <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-900">
-              Generated {selectedContentType}
-            </CardTitle>
-            <CardDescription className="text-gray-500">
-              Edit and refine your content below
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Generated {selectedContentType}
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Edit and refine your content below
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Synced badge + link actions */}
+                {generatedContent.googleDriveUrl && (
+                  <>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Synced
+                    </Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedContent.googleDriveUrl!);
+                              toast.success("Link copied!");
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Copy Google Docs link</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => window.open(generatedContent.googleDriveUrl, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Open in Google Docs</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </>
+                )}
+
+                {/* Export button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportToGoogleDocs}
+                  disabled={isExporting || !currentAccount}
+                  className="text-xs"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5 mr-1" />
+                  )}
+                  Export
+                </Button>
+
+                {/* Advanced Google Docs modal */}
+                <Dialog open={showGoogleDocsModal} onOpenChange={setShowGoogleDocsModal}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!currentAccount}
+                      className="text-xs"
+                    >
+                      <Share2 className="w-3.5 h-3.5 mr-1" />
+                      Share
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Google Docs Integration</DialogTitle>
+                    </DialogHeader>
+                    <GoogleDocsModal
+                      content={rawContent}
+                      onExport={handleExportToGoogleDocs}
+                      onClose={() => setShowGoogleDocsModal(false)}
+                      isExporting={isExporting}
+                      currentDocUrl={generatedContent.googleDriveUrl}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="min-h-[400px]">
@@ -377,6 +567,31 @@ export const UnifiedContentCreator = () => {
         hasContext={!!(contextContent || selectedProject)}
         projectName={selectedProject?.name}
       />
+
+      {/* Google Drive File Picker */}
+      {showDriveFilePicker && (
+        <Dialog open={showDriveFilePicker} onOpenChange={setShowDriveFilePicker}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Import from Google Drive</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-y-auto">
+              <GoogleDriveFilePicker
+                open={showDriveFilePicker}
+                onOpenChange={setShowDriveFilePicker}
+                onFileSelect={(file: any) => handleImportFromGoogleDocs(file.id, file.name)}
+                allowedTypes={['application/vnd.google-apps.document'] as any}
+              />
+              {isImporting && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary mr-2" />
+                  <span className="text-sm text-muted-foreground">Importing document...</span>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
