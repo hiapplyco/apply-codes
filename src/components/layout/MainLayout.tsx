@@ -24,14 +24,22 @@ const MainLayoutComponent = ({ children }: MainLayoutProps) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.replace('/');
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
   // Define sidebar widths
   const sidebarOpenWidth = "20rem"; // 320px
   const sidebarClosedWidth = "5rem"; // 80px
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-background overflow-hidden">
