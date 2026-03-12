@@ -35,6 +35,7 @@ import {
 } from "firebase/firestore";
 import { normalizeTimestamp } from "@/lib/timestamp";
 import { formatDistanceToNow, startOfWeek } from "date-fns";
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour";
 
 interface RecentSearch {
   id: string;
@@ -193,6 +194,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4">
+      <OnboardingTour />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Welcome */}
         <div>
