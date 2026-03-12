@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
 
@@ -107,7 +108,7 @@ exports.adminGrantPro = functions.https.onCall(async (data, context) => {
  * HTTP endpoint version (for quick admin access)
  * Protected by a simple secret key
  */
-exports.grantProAccess = functions.https.onRequest(async (req, res) => {
+exports.grantProAccess = onRequest({ secrets: ["ADMIN_SECRET_KEY"] }, async (req, res) => {
   // CORS
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Headers', 'content-type, x-admin-key');

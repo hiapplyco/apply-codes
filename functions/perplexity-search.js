@@ -8,7 +8,7 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-exports.perplexitySearch = onCall({}, async (request) => {
+exports.perplexitySearch = onCall({ secrets: ["PERPLEXITY_API_KEY"] }, async (request) => {
   const { data, auth } = request;
 
   // Auth is optional for this function - proceed with or without
