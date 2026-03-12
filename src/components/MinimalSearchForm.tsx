@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -8,840 +8,151 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { PerplexityResult } from '@/components/perplexity/PerplexityResult';
-import { FirecrawlResult } from '@/components/firecrawl/FirecrawlResult';
-import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Plus, Link, Save, CheckCircle, Eye, EyeOff, X, FileText, Trash2, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, AlertCircle, User, Phone, Briefcase, Code, Download, CheckSquare, Square, ArrowUpDown, Filter, Send, Users, AlertTriangle } from 'lucide-react';
+import { Search, Sparkles, Copy, ExternalLink, Globe, Upload, Zap, Link, Eye, EyeOff, X, Lightbulb, MapPin, Grid3X3, List, Loader2, Mail, ArrowDown, ArrowUpDown, Filter, Download, CheckSquare, Square, Code, AlertTriangle, Users } from 'lucide-react';
 import { SourceSelector } from '@/components/search/SourceSelector';
-import { SourceBadge } from '@/components/search/SourceBadge';
 import { SourceTabs } from '@/components/search/SourceTabs';
 import { DEFAULT_SOURCES, type CandidateSource, type SourceSearchResult } from '@/types/candidate-search';
-import { ContainedLoading, ButtonLoading, InlineLoading } from '@/components/ui/contained-loading';
+import { ContainedLoading, ButtonLoading } from '@/components/ui/contained-loading';
 import { toast } from 'sonner';
-import { firestoreClient } from '@/lib/firebase-database-bridge';
-import { FirecrawlService } from '@/utils/FirecrawlService';
-import { DocumentProcessor } from '@/lib/modernPdfProcessor';
 import BooleanExplainer from '@/components/BooleanExplainer';
 import { functionBridge } from '@/lib/function-bridge';
 import { BooleanExplanation } from '@/types/boolean-explanation';
 import LocationModal from '@/components/LocationModal';
-import { ProjectLocationService } from '@/services/ProjectLocationService';
 import { useProjectContext } from '@/context/ProjectContext';
 import { BooleanGenerationAnimation } from '@/components/search/BooleanGenerationAnimation';
-import { trackBooleanGeneration, trackCandidateSearch, trackEvent, trackProfileEnrichment } from '@/lib/analytics';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { trackBooleanGeneration, trackCandidateSearch } from '@/lib/analytics';
 import { useUsageLimit } from '@/hooks/useUsageLimit';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useClarvidaUsageLimit } from '@/hooks/useClarvidaUsageLimit';
 import { useClarvidaSubscription } from '@/hooks/useClarvidaSubscription';
+import type { MinimalSearchFormProps, SearchResult } from '@/types/search-form';
 
-interface MinimalSearchFormProps {
-  userId: string | null;
-  selectedProjectId?: string | null;
-  /** When true, bypasses all subscription limits (for Clarvida enterprise users) */
-  isClarvidaMode?: boolean;
-  /** Pre-populated boolean search string from workflow pipeline */
-  initialBooleanString?: string;
-  /** Pre-populated job title from workflow pipeline */
-  initialJobTitle?: string;
-}
+// Extracted hooks
+import { useContextManagement } from '@/components/search/hooks/useContextManagement';
+import { useProfileActions } from '@/components/search/hooks/useProfileActions';
 
-interface SearchResult {
-  title: string;
-  link: string;
-  snippet: string;
-  displayLink: string;
-  name: string;
-  location: string;
-  [key: string]: any;
-}
-
-interface ContactInfo {
-  email: string;
-  phone?: string;
-  linkedin?: string;
-  work_email?: string;
-  personal_emails?: string[];
-  phone_numbers?: string[];
-  twitter_url?: string;
-  github_url?: string;
-}
-
-interface ContextItem {
-  id: string;
-  type: 'url_scrape' | 'file_upload' | 'perplexity_search' | 'perplexity' | 'manual_input' | 'location_input';
-  title: string;
-  content: string;
-  summary?: string;
-  source_url?: string;
-  file_name?: string;
-  file_type?: string;
-  created_at?: string | Date | { toDate?: () => Date; seconds?: number; nanoseconds?: number };
-  project_id?: string | null;
-  user_id?: string | null;
-  metadata?: Record<string, any>;
-  isExpanded?: boolean;
-  [key: string]: any;
-}
-
-// Helper function to extract location from LinkedIn snippet
-const extractLocationFromSnippet = (snippet: string): string | undefined => {
-  // Common location patterns in LinkedIn snippets
-  const locationPatterns = [
-    // "at Company in Location" or "at Company, Location"
-    /at\s+[^,]+(?:,\s*|\s+in\s+)([^•·|]+?)(?:\s*[•·|]|$)/i,
-    // "Location Area" or "Location Metropolitan Area"
-    /([^•·|]+?)\s*(?:Area|Metropolitan Area|Metro)(?:\s*[•·|]|$)/i,
-    // "City, State" or "City, Country"
-    /([A-Z][a-z]+,\s*[A-Z][a-z]+)(?:\s*[•·|]|$)/,
-    // "Location" followed by separator
-    /([^•·|]+?)(?:\s*[•·|]|$)/
-  ];
-
-  for (const pattern of locationPatterns) {
-    const match = snippet.match(pattern);
-    if (match && match[1]) {
-      const location = match[1].trim();
-      // Filter out common non-location phrases
-      const excludePatterns = [
-        /\b(experience|years|developer|engineer|manager|director|senior|junior|lead|head|chief|president|ceo|cto|cfo|vp|vice|consulting|solutions|services|technologies|technology|systems|software|data|analytics|marketing|sales|operations|product|design|strategy|business|corporate|global|international|remote|freelance|consultant|contractor|full.time|part.time|seeking|looking|available|linkedin|member|profile|summary|about|skills|education|university|college|degree|bachelor|master|phd|doctorate|certified|certification|award|achievement|honor|volunteer|charity|nonprofit|organization|company|corporation|inc|llc|ltd|co|group|team|department|division|unit|branch|office|headquarters|hq|location|based|working|work|job|career|professional|expert|specialist|analyst|coordinator|associate|assistant|intern|trainee|student|graduate|alumni|member|board|committee|council|advisory|founder|owner|partner|shareholder|investor|client|customer|contact|connect|network|follow|endorse|recommend|reference|testimonial|feedback|review|rating|score|rank|top|best|leading|premier|award.winning|recognized|featured|published|speaker|author|writer|blogger|contributor|editor|journalist|reporter|anchor|host|presenter|moderator|panelist|judge|mentor|coach|trainer|instructor|teacher|professor|lecturer|researcher|scientist|engineer|developer|programmer|coder|architect|designer|artist|creative|innovator|entrepreneur|startup|venture|capital|funding|investment|acquisition|merger|partnership|collaboration|alliance|joint|venture|project|initiative|program|campaign|launch|release|announcement|news|update|press|media|social|digital|online|web|mobile|app|platform|solution|product|service|tool|technology|software|hardware|system|network|cloud|data|analytics|intelligence|machine|learning|artificial|ai|automation|robotics|iot|blockchain|cryptocurrency|fintech|healthtech|biotech|cleantech|greentech|sustainability|environment|climate|energy|renewable|solar|wind|electric|battery|automotive|transportation|logistics|supply|chain|manufacturing|production|construction|real|estate|property|retail|ecommerce|marketplace|platform|saas|paas|iaas|b2b|b2c|b2g|enterprise|small|medium|large|fortune|public|private|government|federal|state|local|municipal|county|city|town|village|rural|urban|suburban|metro|region|area|zone|district|sector|industry|vertical|horizontal|niche|market|segment|demographic|audience|user|customer|client|consumer|buyer|seller|vendor|supplier|partner|distributor|reseller|retailer|wholesaler|manufacturer|producer|creator|maker|builder|developer|designer|consultant|advisor|expert|specialist|analyst|manager|director|executive|leader|founder|owner|operator|administrator|coordinator|supervisor|overseer|controller|auditor|inspector|evaluator|assessor|reviewer|approver|decision|maker|stakeholder|influencer|advocate|champion|evangelist|ambassador|representative|spokesperson|liaison|contact|point|person|individual|team|group|department|division|unit|branch|office|facility|site|location|address|phone|email|website|url|link|social|media|linkedin|twitter|facebook|instagram|youtube|github|portfolio|resume|cv|bio|profile|summary|about|description|overview|introduction|background|history|story|journey|path|career|experience|expertise|skills|knowledge|competency|capability|ability|talent|strength|qualification|credential|certification|license|degree|education|training|course|workshop|seminar|conference|event|meetup|networking|community|association|organization|society|club|group|forum|discussion|conversation|dialogue|exchange|interaction|engagement|participation|involvement|contribution|collaboration|cooperation|partnership|alliance|relationship|connection|network|contact|reference|recommendation|endorsement|testimonial|review|feedback|rating|score|evaluation|assessment|appraisal|performance|achievement|accomplishment|success|milestone|goal|objective|target|metric|kpi|roi|revenue|profit|growth|expansion|scale|size|volume|quantity|quality|standard|benchmark|best|practice|methodology|approach|strategy|tactic|technique|method|process|procedure|workflow|system|framework|model|structure|architecture|design|pattern|template|blueprint|plan|roadmap|timeline|schedule|deadline|milestone|phase|stage|step|task|activity|action|item|element|component|part|piece|section|chapter|module|unit|lesson|topic|subject|theme|category|type|kind|sort|variety|option|choice|alternative|solution|answer|response|reply|result|outcome|output|deliverable|artifact|document|report|analysis|study|research|investigation|survey|poll|questionnaire|interview|focus|group|usability|testing|quality|assurance|qa|qc|control|management|governance|compliance|regulation|policy|procedure|standard|guideline|rule|law|requirement|specification|criteria|condition|constraint|limitation|restriction|assumption|dependency|risk|issue|problem|challenge|obstacle|barrier|blocker|bottleneck|pain|point|gap|opportunity|potential|possibility|chance|probability|likelihood|certainty|uncertainty|ambiguity|clarity|transparency|visibility|accountability|responsibility|ownership|authority|power|influence|impact|effect|consequence|implication|significance|importance|priority|urgency|criticality|severity|magnitude|scale|scope|range|extent|depth|breadth|width|height|length|size|dimension|measurement|quantity|amount|number|count|total|sum|average|mean|median|mode|minimum|maximum|range|variance|deviation|distribution|frequency|rate|ratio|percentage|proportion|share|portion|fraction|segment|slice|part|piece|component|element|factor|variable|parameter|attribute|property|characteristic|feature|aspect|dimension|facet|angle|perspective|viewpoint|opinion|belief|attitude|sentiment|feeling|emotion|mood|tone|style|approach|manner|way|method|technique|strategy|tactic|plan|scheme|program|project|initiative|campaign|effort|endeavor|undertaking|venture|enterprise|business|operation|activity|function|role|responsibility|duty|task|job|assignment|mission|purpose|goal|objective|target|aim|intention|plan|strategy|vision|mission|values|culture|philosophy|principles|beliefs|ethics|morals|standards|guidelines|rules|policies|procedures|processes|systems|structures|frameworks|models|patterns|templates|blueprints|designs|architectures|solutions|products|services|offerings|portfolio|catalog|inventory|stock|supply|demand|market|competition|competitor|rival|alternative|substitute|replacement|upgrade|improvement|enhancement|optimization|refinement|innovation|creativity|originality|uniqueness|differentiation|advantage|benefit|value|utility|usefulness|relevance|applicability|suitability|appropriateness|fitness|match|alignment|compatibility|integration|interoperability|connectivity|communication|interaction|interface|api|protocol|standard|format|specification|documentation|manual|guide|tutorial|help|support|assistance|service|maintenance|repair|fix|solution|troubleshooting|debugging|testing|validation|verification|confirmation|assurance|guarantee|warranty|insurance|protection|security|safety|risk|management|mitigation|prevention|avoidance|reduction|minimization|elimination|control|monitoring|tracking|measurement|analysis|evaluation|assessment|audit|review|inspection|examination|investigation|research|study|survey|poll|questionnaire|interview|discussion|conversation|dialogue|meeting|conference|call|session|workshop|seminar|training|course|class|lesson|lecture|presentation|demonstration|show|exhibition|display|showcase|feature|highlight|emphasis|focus|attention|interest|curiosity|engagement|participation|involvement|contribution|input|feedback|comment|suggestion|recommendation|advice|guidance|direction|instruction|command|order|request|demand|requirement|need|want|desire|wish|hope|expectation|anticipation|prediction|forecast|projection|estimate|calculation|computation|analysis|evaluation|assessment|judgment|decision|choice|selection|option|alternative|solution|answer|response|reply|result|outcome|output|product|deliverable|artifact|document|file|record|data|information|knowledge|intelligence|insight|understanding|comprehension|awareness|recognition|realization|discovery|finding|conclusion|summary|synopsis|abstract|overview|introduction|background|context|setting|environment|situation|circumstance|condition|state|status|position|location|place|site|venue|facility|building|structure|construction|architecture|design|layout|plan|blueprint|diagram|chart|graph|table|list|menu|catalog|directory|index|reference|guide|manual|handbook|documentation|specification|standard|protocol|format|template|pattern|model|framework|system|platform|solution|tool|utility|application|software|program|code|script|function|method|procedure|process|workflow|pipeline|chain|sequence|series|set|collection|group|cluster|bundle|package|suite|kit|toolkit|library|repository|database|storage|archive|backup|copy|duplicate|version|revision|update|upgrade|improvement|enhancement|modification|change|alteration|adjustment|customization|configuration|setup|installation|deployment|implementation|execution|operation|function|performance|behavior|action|activity|process|task|job|work|effort|labor|service|duty|responsibility|obligation|commitment|promise|agreement|contract|deal|arrangement|partnership|collaboration|cooperation|alliance|relationship|connection|association|affiliation|membership|participation|involvement|engagement|interaction|communication|correspondence|exchange|dialogue|conversation|discussion|meeting|conference|call|session|event|occasion|gathering|assembly|convention|symposium|summit|forum|panel|debate|presentation|speech|talk|lecture|seminar|workshop|training|course|class|lesson|tutorial|demonstration|exhibition|show|display|performance|concert|festival|celebration|party|reception|dinner|lunch|breakfast|meal|food|drink|beverage|entertainment|recreation|leisure|hobby|interest|passion|enthusiasm|excitement|joy|happiness|satisfaction|pleasure|enjoyment|fun|amusement|humor|comedy|laughter|smile|cheer|celebration|success|achievement|accomplishment|victory|win|triumph|conquest|mastery|expertise|skill|talent|ability|capability|competence|proficiency|knowledge|understanding|wisdom|intelligence|insight|intuition|instinct|judgment|decision|choice|selection|preference|option|alternative|possibility|opportunity|chance|probability|likelihood|potential|capacity|power|strength|force|energy|vigor|vitality|health|wellness|fitness|condition|state|status|situation|circumstance|environment|context|setting|background|history|past|present|future|time|period|duration|length|span|interval|gap|break|pause|rest|stop|end|finish|completion|conclusion|result|outcome|consequence|effect|impact|influence|significance|importance|meaning|purpose|reason|cause|source|origin|beginning|start|initiation|launch|introduction|creation|development|growth|expansion|progress|advancement|improvement|enhancement|optimization|refinement|evolution|transformation|change|modification|alteration|adjustment|adaptation|customization|personalization|individualization|specialization|differentiation|distinction|uniqueness|originality|creativity|innovation|invention|discovery|breakthrough|achievement|success|victory|triumph|accomplishment|milestone|goal|objective|target|aim|purpose|mission|vision|dream|aspiration|ambition|desire|wish|hope|expectation|anticipation|prediction|forecast|projection|plan|strategy|approach|method|technique|procedure|process|system|framework|model|pattern|structure|organization|arrangement|configuration|setup|design|architecture|blueprint|template|format|standard|specification|protocol|rule|guideline|principle|policy|procedure|practice|habit|routine|custom|tradition|convention|norm|standard|benchmark|measure|metric|indicator|signal|sign|symptom|evidence|proof|demonstration|example|instance|case|scenario|situation|circumstance|condition|state|status|position|location|place|site|venue|destination|target|goal|objective|endpoint|finish|completion|conclusion|result|outcome|output|product|deliverable|artifact|creation|work|piece|item|object|thing|entity|element|component|part|section|segment|portion|share|fraction|percentage|proportion|ratio|rate|frequency|occurrence|instance|event|incident|episode|situation|circumstance|condition|state|status|phase|stage|step|level|degree|extent|amount|quantity|number|count|total|sum|aggregate|collection|group|set|series|sequence|chain|line|row|column|list|array|table|matrix|grid|network|web|structure|system|organization|entity|body|unit|division|department|section|branch|office|facility|site|location|address|contact|information|details|particulars|specifics|data|facts|figures|statistics|numbers|measurements|dimensions|size|scale|scope|range|extent|breadth|width|depth|height|length|distance|space|area|volume|capacity|limit|boundary|border|edge|margin|perimeter|circumference|diameter|radius|center|middle|core|heart|essence|substance|material|matter|content|subject|topic|theme|issue|problem|question|query|inquiry|investigation|research|study|analysis|examination|review|evaluation|assessment|appraisal|judgment|opinion|view|perspective|angle|approach|stance|position|attitude|sentiment|feeling|emotion|mood|tone|atmosphere|ambiance|environment|setting|context|background|situation|circumstance|condition|state|status|phase|stage|period|time|moment|instant|second|minute|hour|day|week|month|year|decade|century|millennium|era|age|epoch|generation|lifetime|lifespan|duration|length|span|interval|gap|break|pause|rest|stop|halt|interruption|suspension|delay|postponement|deferment|extension|prolongation|continuation|persistence|endurance|stamina|strength|power|force|energy|vigor|vitality|health|wellness|fitness|condition|shape|form|appearance|look|aspect|feature|characteristic|quality|property|attribute|trait|mark|sign|symbol|indicator|signal|clue|hint|suggestion|implication|meaning|significance|importance|relevance|value|worth|merit|benefit|advantage|profit|gain|return|reward|compensation|payment|salary|wage|income|earnings|revenue|profit|surplus|excess|abundance|plenty|wealth|richness|prosperity|success|achievement|accomplishment|victory|triumph|conquest|mastery|dominance|superiority|excellence|perfection|quality|standard|level|grade|rank|position|status|standing|reputation|image|brand|identity|character|personality|nature|essence|spirit|soul|heart|mind|brain|intelligence|wisdom|knowledge|understanding|comprehension|awareness|consciousness|realization|recognition|acknowledgment|acceptance|approval|agreement|consent|permission|authorization|license|permit|certificate|credential|qualification|degree|diploma|award|honor|prize|trophy|medal|recognition|appreciation|gratitude|thanks|acknowledgment|credit|praise|compliment|flattery|admiration|respect|esteem|regard|consideration|attention|interest|curiosity|fascination|attraction|appeal|charm|beauty|elegance|grace|style|fashion|trend|mode|manner|way|method|approach|technique|strategy|tactic|plan|scheme|program|project|initiative|campaign|effort|endeavor|undertaking|venture|enterprise|business|operation|activity|function|role|responsibility|duty|task|job|assignment|mission|purpose|goal|objective|target|aim|intention|plan|strategy|vision|mission|values|culture|philosophy|principles|beliefs|ethics|morals|standards|guidelines|rules|policies|procedures|processes|systems|structures|frameworks|models|patterns|templates|blueprints|designs|architectures|solutions|products|services|offerings|portfolio)/i
-      ];
-
-      if (excludePatterns.some(pattern => pattern.test(location))) {
-        continue;
-      }
-
-      // Clean up the location string
-      return location
-        .replace(/\s+/g, ' ')
-        .replace(/[•·|]/g, '')
-        .trim();
-    }
-  }
-
-  return undefined;
-};
+// Extracted components
+import { SearchResultCard } from '@/components/search/SearchResultCard';
+import { ContextItemCard } from '@/components/search/ContextItemCard';
+import { EmailTemplatesSection } from '@/components/search/EmailTemplatesSection';
 
 export default function MinimalSearchForm({ userId, selectedProjectId, isClarvidaMode = false, initialBooleanString, initialJobTitle }: MinimalSearchFormProps) {
-
-  // Get project context
   const { selectedProject } = useProjectContext();
 
-  // Use Clarvida hooks (unlimited) or standard hooks based on mode
+  // Usage limit hooks
   const standardUsageLimit = useUsageLimit();
   const clarvidaUsageLimit = useClarvidaUsageLimit();
   const standardSubscription = useSubscription();
   const clarvidaSubscription = useClarvidaSubscription();
+  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = isClarvidaMode ? clarvidaUsageLimit : standardUsageLimit;
+  const { incrementUsage } = isClarvidaMode ? clarvidaSubscription : standardSubscription;
 
-  // Select appropriate hooks based on mode
-  const { checkAndExecute, UsageLimitModalComponent, isLimitReached } = isClarvidaMode
-    ? clarvidaUsageLimit
-    : standardUsageLimit;
-  const { incrementUsage } = isClarvidaMode
-    ? clarvidaSubscription
-    : standardSubscription;
+  // Core input state (kept in parent - shared across hooks)
   const [jobDescription, setJobDescription] = useState('');
   const [jobTitle, setJobTitle] = useState(initialJobTitle || '');
   const [booleanString, setBooleanString] = useState(initialBooleanString || '');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
 
-  // Sync initial values from workflow pipeline when they change
-  useEffect(() => {
-    if (initialBooleanString) {
-      setBooleanString(initialBooleanString);
-    }
-  }, [initialBooleanString]);
+  // Sync initial values from workflow pipeline
+  useEffect(() => { if (initialBooleanString) setBooleanString(initialBooleanString); }, [initialBooleanString]);
+  useEffect(() => { if (initialJobTitle) setJobTitle(initialJobTitle); }, [initialJobTitle]);
 
-  useEffect(() => {
-    if (initialJobTitle) {
-      setJobTitle(initialJobTitle);
-    }
-  }, [initialJobTitle]);
+  // Search state
   const [searchPage, setSearchPage] = useState(1);
   const [totalSearchResults, setTotalSearchResults] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const resultsContainerRef = useRef<HTMLDivElement>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Default to grid view
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false); // Make AI analysis optional
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showBooleanAnimation, setShowBooleanAnimation] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());
-  const [expandedProfiles, setExpandedProfiles] = useState<Set<number>>(new Set());
-  const [analysisResults, setAnalysisResults] = useState<{ [key: number]: any }>({});
-  const [loadingAnalysis, setLoadingAnalysis] = useState<Set<number>>(new Set());
-  const [contactInfo, setContactInfo] = useState<{ [key: number]: ContactInfo }>({});
-  const [loadingContact, setLoadingContact] = useState<Set<number>>(new Set());
-  const [savedCandidates, setSavedCandidates] = useState<Set<number>>(new Set());
-  const [savingCandidates, setSavingCandidates] = useState<Set<number>>(new Set());
-
-  // Context management states
-  const [contextItems, setContextItems] = useState<ContextItem[]>([]);
-  const [loadingContext, setLoadingContext] = useState(false);
-
-  // Input method states
-  const [urlInput, setUrlInput] = useState('');
-  const [isScrapingUrl, setIsScrapingUrl] = useState(false);
-  const [isUploadingFile, setIsUploadingFile] = useState(false);
-  const [perplexityQuery, setPerplexityQuery] = useState('');
-  const [isSearchingPerplexity, setIsSearchingPerplexity] = useState(false);
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
-  const [showPerplexityDialog, setShowPerplexityDialog] = useState(false);
-  const [showLocationDialog, setShowLocationDialog] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [emailContext, setEmailContext] = useState('');
-  const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
-  const [isGeneratingEmails, setIsGeneratingEmails] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Multi-source search states
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [selectedSources, setSelectedSources] = useState<CandidateSource[]>(DEFAULT_SOURCES);
   const [activeSourceTab, setActiveSourceTab] = useState<CandidateSource | 'all'>('all');
   const [sourceResults, setSourceResults] = useState<SourceSearchResult[]>([]);
   const [sourcesFailed, setSourcesFailed] = useState<CandidateSource[]>([]);
-
-  // Filter/Sort states
   const [sortBy, setSortBy] = useState<'default' | 'score' | 'location'>('default');
   const [filterBy, setFilterBy] = useState<'all' | 'analyzed' | 'enriched' | 'not-analyzed'>('all');
 
-  // Batch operation states
-  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
-  const [isBatchEnriching, setIsBatchEnriching] = useState(false);
-  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
-
-  // Collapse states for progressive focus
+  // Boolean generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showBooleanAnimation, setShowBooleanAnimation] = useState(false);
   const [requirementsCollapsed, setRequirementsCollapsed] = useState(false);
   const [booleanCollapsed, setBooleanCollapsed] = useState(false);
 
-  // Boolean explanation states
+  // Boolean explanation state
   const [showExplanation, setShowExplanation] = useState(false);
   const [booleanExplanation, setBooleanExplanation] = useState<BooleanExplanation | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanationCollapsed, setExplanationCollapsed] = useState(false);
 
-  // Helper function to append content to job description
-  const appendToJobDescription = (newContent: string) => {
-    const separator = jobDescription.trim() ? '\n\n---\n\n' : '';
-    setJobDescription(prev => prev + separator + newContent);
-  };
+  // Context management hook
+  const ctx = useContextManagement({ userId, selectedProject, selectedProjectId });
 
-  // Firecrawl URL scraping
-  const handleUrlScrape = async () => {
-    if (!urlInput.trim()) {
-      toast.error('Please enter a URL');
-      return;
+  // Profile actions hook
+  const profile = useProfileActions({
+    searchResults,
+    jobDescription,
+    selectedProjectId,
+    userId,
+    booleanString,
+    checkAndExecute,
+    isLimitReached,
+    incrementUsage,
+  });
+
+  // Filtered & sorted results
+  const filteredResults = searchResults.map((result, index) => ({ result, index })).filter(({ result, index }) => {
+    if (activeSourceTab !== 'all' && (result as any).source !== activeSourceTab) return false;
+    if (filterBy === 'analyzed') return !!profile.analysisResults[index];
+    if (filterBy === 'enriched') return !!profile.contactInfo[index];
+    if (filterBy === 'not-analyzed') return !profile.analysisResults[index];
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'score') {
+      return (profile.analysisResults[b.index]?.match_score ?? -1) - (profile.analysisResults[a.index]?.match_score ?? -1);
     }
+    if (sortBy === 'location') return (a.result.location || '').localeCompare(b.result.location || '');
+    return 0;
+  });
 
-    // Check if URL is a LinkedIn URL
-    const isLinkedInUrl = urlInput.toLowerCase().includes('linkedin.com');
-
-    if (isLinkedInUrl) {
-      // Show sad emoji first
-      toast.error('😢 LinkedIn URLs are tricky to scrape...', {
-        description: 'LinkedIn has strong anti-scraping measures'
-      });
-
-      // Wait a moment, then show happy emoji with clever message
-      setTimeout(() => {
-        toast.success('😊 But that\'s exactly why we built this tool!', {
-          description: 'Use the search below to find and analyze LinkedIn profiles instead 👇'
-        });
-      }, 2000);
-
-      return;
-    }
-
-    setIsScrapingUrl(true);
-    try {
-      const result = await FirecrawlService.crawlWebsite(urlInput, {
-        context: 'sourcing',
-        saveToProject: false
-      });
-
-      if (result.success && result.data?.text) {
-        // Generate summary from content (first 200 chars, strip markdown)
-        const stripped = result.data.text
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links but keep text
-          .replace(/[#*_`~]/g, '') // Remove markdown formatting
-          .replace(/\n+/g, ' ') // Replace newlines with spaces
-          .trim();
-        const summary = stripped.substring(0, 200) + (stripped.length > 200 ? '...' : '');
-
-        // Extract hostname from URL (handle URLs without protocol)
-        let hostname = urlInput;
-        try {
-          const url = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
-          hostname = new URL(url).hostname;
-        } catch (e) {
-          // If URL parsing fails, use the input as-is
-          hostname = urlInput.replace(/^https?:\/\//, '').split('/')[0];
-        }
-
-        // Save to database (don't add to job description - keep visual only)
-        await saveContextItem({
-          type: 'url_scrape',
-          title: `Scraped: ${hostname}`,
-          content: result.data.text,
-          source_url: urlInput,
-          summary: summary,
-          metadata: {
-            url: urlInput,
-            success: true,
-            timestamp: new Date().toISOString()
-          }
-        });
-
-        setUrlInput('');
-        setShowUrlDialog(false);
-        toast.success('Website content added successfully!');
-      } else {
-        throw new Error(result.error || 'Failed to scrape website');
-      }
-    } catch (error) {
-      console.error('URL scraping failed:', error);
-
-      // Provide more specific error messages
-      let errorMessage = 'Failed to scrape website';
-      if (error instanceof Error) {
-        if (error.message.includes('timeout')) {
-          errorMessage = 'Website took too long to load. Try a different URL or try again later.';
-        } else if (error.message.includes('403') || error.message.includes('blocked')) {
-          errorMessage = 'Website blocked our scraper. Some sites prevent automated access.';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Page not found. Please check the URL and try again.';
-        } else if (error.message.includes('network') || error.message.includes('connection')) {
-          errorMessage = 'Network error. Check your connection and try again.';
-        }
-      }
-
-      toast.error(errorMessage, {
-        description: 'Try copying and pasting the content manually if scraping fails.'
-      });
-    } finally {
-      setIsScrapingUrl(false);
-    }
-  };
-
-  // Context management functions
-  const saveContextItem = useCallback(async (item: Omit<ContextItem, 'id' | 'created_at'>) => {
-    console.log('💾 saveContextItem called with:', {
-      item,
-      userId,
-      selectedProjectId: selectedProject?.id || selectedProjectId,
-      selectedProject: selectedProject?.name,
-      timestamp: new Date().toISOString()
-    });
-    try {
-      const insertResult = await firestoreClient
-        .from<ContextItem>('context_items')
-        .insert({
-          ...item,
-          user_id: userId,
-          project_id: selectedProject?.id || selectedProjectId || null,
-          created_at: new Date().toISOString()
-        });
-
-      if (insertResult.error) {
-        throw insertResult.error;
-      }
-
-      const inserted = (Array.isArray(insertResult.data) ? insertResult.data[0] : insertResult.data) as Partial<ContextItem>;
-
-      const newContextItem: ContextItem = {
-        id: '',
-        type: 'manual_input',
-        title: '',
-        content: '',
-        ...inserted,
-        isExpanded: false
-      };
-
-      console.log('Adding new context item to state:', newContextItem);
-      setContextItems(prev => {
-        const updated = [newContextItem, ...prev];
-        console.log('Updated context items:', updated);
-        return updated;
-      });
-      return newContextItem;
-    } catch (error) {
-      console.error('Error saving context item:', error);
-      toast.error('Could not save context. Please try again.');
-      return null;
-    }
-  }, [userId, selectedProject, selectedProjectId]);
-
-  // Location selection handler with stable reference
-  const handleLocationSelect = useCallback(async (location: {
-    formatted_address: string;
-    place_id: string;
-    geometry: any;
-    address_components: any[];
-  }) => {
-    console.log('🎯 MinimalSearchForm.handleLocationSelect called with:', location);
-    console.log('📋 Selected project:', selectedProject);
-    console.log('🗂️ Context items count:', contextItems.length);
-
-    // Prevent duplicate processing of the same location
-    // Prevent rapid duplicate selections
-    const currentTime = Date.now();
-    const lastSelectionKey = `location_${location.formatted_address}`;
-    const lastSelectionTime = sessionStorage.getItem(lastSelectionKey);
-
-    if (lastSelectionTime && currentTime - parseInt(lastSelectionTime) < 2000) {
-      console.log('🚫 Preventing duplicate location selection:', location.formatted_address);
-      return;
-    }
-
-    sessionStorage.setItem(lastSelectionKey, currentTime.toString());
-
-    // Clean up old entries after 5 seconds
-    setTimeout(() => {
-      sessionStorage.removeItem(lastSelectionKey);
-    }, 5000);
-
-    try {
-      // Show loading state
-      toast.loading('Adding location...', { id: 'location-add' });
-
-      if (!selectedProject) {
-        // Save without project association but warn user
-        console.warn('No project selected - saving location as general context');
-      }
-
-      // Check if this location already exists as a context item
-      const existingLocation = contextItems.find(item =>
-        item.type === 'manual_input' &&
-        item.title.includes(location.formatted_address)
-      );
-
-      if (existingLocation) {
-        console.log('🔄 Location already exists as context item:', existingLocation);
-        toast.success('Location already added to context', { id: 'location-add' });
-        return;
-      }
-
-      // Parse location components for better context
-      const parsedLocation = parseLocationComponents(location.address_components);
-      const locationString = generateLocationString(parsedLocation);
-
-      console.log('Parsed location:', parsedLocation);
-      console.log('Location string:', locationString);
-
-      // Save as context item for immediate use with location_input type
-      const contextItem = await saveContextItem({
-        type: 'manual_input',
-        title: `Location: ${location.formatted_address}`,
-        content: locationString,
-        summary: `Search location set to ${location.formatted_address}`,
-        metadata: {
-          formatted_address: location.formatted_address,
-          place_id: location.place_id,
-          geometry: location.geometry,
-          address_components: location.address_components,
-          parsedLocation,
-          selectedAt: new Date().toISOString(),
-          projectId: selectedProject?.id || null,
-          isLocationContext: true // Mark this as location context for easier filtering
-        }
-      });
-
-      console.log('🗺️ Location context item created:', {
-        id: contextItem?.id,
-        type: contextItem?.type,
-        title: contextItem?.title,
-        hasMetadata: !!contextItem?.metadata,
-        parsedLocation: contextItem?.metadata?.parsedLocation
-      });
-
-      console.log('Context item saved:', contextItem);
-
-      if (contextItem) {
-        toast.success(`Location "${location.formatted_address}" added to context`, { id: 'location-add' });
-      } else {
-        toast.error('Failed to save location', { id: 'location-add' });
-      }
-
-      // TODO: Add location to project using the new service once migration is applied
-      // const projectLocation = await ProjectLocationService.addLocationToProject({
-      //   project_id: selectedProject.id,
-      //   formatted_address: location.formatted_address,
-      //   place_id: location.place_id,
-      //   geometry: location.geometry,
-      //   address_components: location.address_components,
-      //   notes: `Added for targeted sourcing on ${new Date().toLocaleDateString()}`
-      // });
-
-      setShowLocationDialog(false);
-
-      // Success notification with project context
-      if (selectedProject) {
-        toast.success(
-          `Location "${location.formatted_address}" added to project "${selectedProject.name}"`,
-          {
-            id: 'location-add',
-            description: 'This location will be used for targeted boolean search generation'
-          }
-        );
-      } else {
-        toast.success(
-          `Location "${location.formatted_address}" added as general context`,
-          {
-            id: 'location-add',
-            description: 'Select a project to associate this location with a specific search'
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Location processing error:', error);
-      toast.error('Failed to add location to project', { id: 'location-add' });
-    }
-  }, [selectedProject, contextItems, saveContextItem]);
-
-  // Helper functions for location processing
-  const parseLocationComponents = (components: any[]) => {
-    const parsed: any = {};
-    components.forEach(component => {
-      const types = component.types;
-      if (types.includes('locality')) {
-        parsed.city = component.long_name;
-      } else if (types.includes('administrative_area_level_1')) {
-        parsed.state = component.long_name;
-        parsed.stateShort = component.short_name;
-      } else if (types.includes('administrative_area_level_2')) {
-        parsed.county = component.long_name;
-      } else if (types.includes('country')) {
-        parsed.country = component.long_name;
-        parsed.countryShort = component.short_name;
-      } else if (types.includes('postal_code')) {
-        parsed.zipCode = component.long_name;
-      }
-    });
-    return parsed;
-  };
-
-  const generateLocationString = (parsed: any) => {
-    const parts = [];
-    if (parsed.city) parts.push(parsed.city);
-    if (parsed.state) parts.push(parsed.state, parsed.stateShort);
-    if (parsed.county) parts.push(parsed.county);
-    if (parsed.zipCode) parts.push(parsed.zipCode);
-    return parts.join(', ');
-  };
-
-  // File upload with enhanced async processing
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    console.log('File upload triggered:', { file: file?.name, userId });
-
-    if (!file || !userId) {
-      console.error('Missing file or userId:', { hasFile: !!file, userId });
-      toast.error('Please select a file');
-      return;
-    }
-
-    // Validate file
-    const validation = DocumentProcessor.validateFile(file);
-    if (!validation.valid) {
-      toast.error(validation.error || 'Invalid file type');
-      return;
-    }
-
-    setIsUploadingFile(true);
-    try {
-      console.log('Processing file with DocumentProcessor:', {
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        userId: userId
-      });
-
-      const extractedText = await DocumentProcessor.processDocument({
-        file,
-        userId: userId || '',
-        onProgress: (status) => {
-          console.log('Processing status:', status);
-          // Enhanced UI feedback with file-type awareness
-          if (status.includes('timeout') || status.includes('failed')) {
-            toast.error(status, { duration: 4000 });
-          } else if (status.includes('complete')) {
-            if (file.name.toLowerCase().endsWith('.docx')) {
-              toast.success('✅ DOCX processed successfully with enhanced formatting!');
-            } else {
-              toast.success(status);
-            }
-          } else if (status.includes('🎯') || status.includes('DOCX')) {
-            toast.info('⚡ Processing DOCX with optimized engine for best results...', { duration: 3000 });
-          } else if (status.includes('📄') || status.includes('PDF')) {
-            toast.info('📄 Processing PDF with multi-worker fallback system...', { duration: 3000 });
-          } else if (status.includes('locally') || status.includes('Client')) {
-            toast.info('📄 Processing locally for faster results...', { duration: 2500 });
-          } else if (status.includes('Saving')) {
-            toast.info('💾 Saving processed document...', { duration: 1500 });
-          } else {
-            toast.info(status, { duration: 2000 }); // Show brief progress updates
-          }
-        },
-        onComplete: async (content) => {
-          // Save to database (don't add to job description - keep visual only)
-          await saveContextItem({
-            type: 'file_upload',
-            title: `Extracted from ${file.name}`,
-            content: content,
-            file_name: file.name,
-            file_type: file.type,
-            summary: content.substring(0, 200) + '...',
-            metadata: {
-              file_name: file.name,
-              file_type: file.type,
-              file_size: file.size,
-              success: true,
-              timestamp: new Date().toISOString(),
-              processing_method: 'client_side_with_server_fallback'
-            }
-          });
-
-          // Enhanced success message based on file type
-          if (file.name.toLowerCase().endsWith('.docx')) {
-            toast.success('🎯 DOCX content extracted with enhanced formatting preservation!');
-          } else if (file.name.toLowerCase().endsWith('.pdf')) {
-            toast.success('📄 PDF content extracted with optimized text recognition!');
-          } else {
-            toast.success('✅ File content extracted and added!');
-          }
-        },
-        onError: (error) => {
-          throw new Error(error);
-        }
-      });
-    } catch (error) {
-      console.error('File upload failed:', error);
-
-      // Provide more specific error messages for file uploads
-      let errorMessage = 'Failed to process file';
-      if (error instanceof Error) {
-        // Check for specific error messages from the function
-        if (error.message.includes('20MB') || error.message.includes('size')) {
-          errorMessage = 'File is too large. Please try a smaller file (under 20MB).';
-        } else if (error.message.includes('Unsupported file type') || error.message.includes('format')) {
-          errorMessage = 'Unsupported file format. Try PDF, DOC, DOCX, TXT, JPG, or PNG files.';
-        } else if (error.message.includes('API key') || error.message.includes('configured')) {
-          errorMessage = 'AI processing service unavailable. Please try again later.';
-        } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
-          errorMessage = 'File processing timed out. Please try a smaller file.';
-        } else if (error.message.includes('Gemini') || error.message.includes('Google AI') || error.message.includes('400')) {
-          // Special handling for DOCX files that fail due to Gemini API limitations
-          if (file && file.name.toLowerCase().endsWith('.docx')) {
-            errorMessage = 'DOCX processing temporarily unavailable. Please convert to PDF or try a different format.';
-          } else {
-            errorMessage = 'AI processing failed. Please try again or use a different file.';
-          }
-        } else if (error.message.includes('corrupt') || error.message.includes('invalid')) {
-          errorMessage = 'File appears corrupted or invalid. Try a different file.';
-        } else if (error.message !== 'Failed to process file') {
-          // Use the specific error message from the function if it's informative
-          errorMessage = error.message;
-        }
-      }
-
-      toast.error(errorMessage, {
-        description: file && file.name.toLowerCase().endsWith('.docx')
-          ? 'Try converting to PDF or use a different format for best results'
-          : 'Supported formats: PDF, TXT, JPG, PNG work best'
-      });
-    } finally {
-      setIsUploadingFile(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // Perplexity web search
-  const handlePerplexitySearch = async () => {
-    if (!perplexityQuery.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    setIsSearchingPerplexity(true);
-    try {
-      console.log('Sending Perplexity query:', perplexityQuery);
-
-      const data = await functionBridge.perplexitySearch({ query: perplexityQuery });
-      const error = null;
-
-      console.log('Perplexity response:', { data, error });
-
-      if (error) {
-        console.error('Cloud Function error:', error);
-        throw error;
-      }
-
-      if (data?.choices?.[0]?.message?.content) {
-        const searchContent = data.choices[0].message.content;
-
-        // Extract citations from Perplexity response
-        const citations = data.citations || [];
-
-        // Save to database (don't add to job description - keep visual only)
-        await saveContextItem({
-          type: 'perplexity',
-          title: `Search: ${perplexityQuery}`,
-          content: searchContent,
-          source_url: perplexityQuery, // Store query as source
-          summary: searchContent.length > 150 ? searchContent.substring(0, 150) + '...' : searchContent,
-          metadata: {
-            query: perplexityQuery,
-            citations: citations,
-            success: true,
-            timestamp: new Date().toISOString(),
-            response_data: data
-          }
-        });
-
-        setPerplexityQuery('');
-        setShowPerplexityDialog(false);
-        toast.success('Search results added successfully!');
-      } else {
-        throw new Error('No search results found');
-      }
-    } catch (error) {
-      console.error('Perplexity search failed:', error);
-
-      // Try to get the actual error message from the response
-      let errorMessage = 'Failed to search';
-      if (error && typeof error === 'object') {
-        if ('message' in error && error.message && typeof error.message === 'string') {
-          errorMessage = error.message;
-        }
-        // Log the full error for debugging
-        console.log('Full error object:', JSON.stringify(error, null, 2));
-      }
-
-      toast.error(errorMessage);
-    } finally {
-      setIsSearchingPerplexity(false);
-    }
-  };
-
+  // Boolean search generation
   const generateBooleanSearch = async () => {
-    // Require either custom instructions OR context items
-    if (!jobDescription.trim() && contextItems.length === 0) {
+    if (!jobDescription.trim() && ctx.contextItems.length === 0) {
       toast.error('Please add context items or enter custom instructions to generate a boolean search');
       return;
     }
-
     setIsGenerating(true);
     setShowBooleanAnimation(true);
     try {
-      // Prepare context items for the edge function
-      const contextData = contextItems.map(item => ({
-        type: item.type,
-        title: item.title,
-        content: item.content,
-        summary: item.summary,
-        source_url: item.source_url,
-        file_name: item.file_name,
-        metadata: item.metadata
+      const contextData = ctx.contextItems.map(item => ({
+        type: item.type, title: item.title, content: item.content,
+        summary: item.summary, source_url: item.source_url,
+        file_name: item.file_name, metadata: item.metadata
       }));
 
-      // Enhanced location data logging
-      const locationItems = contextItems.filter(item =>
-        item.type === 'manual_input' && item.title?.includes('Location:')
-      );
-
-      console.log('🎯 LOCATION DATA FLOW TRACE:');
-      console.log('1. Total context items:', contextItems.length);
-      console.log('2. Location items found:', locationItems.length);
-      console.log('3. Location items details:', locationItems.map(item => ({
-        id: item.id,
-        type: item.type,
-        title: item.title,
-        content: item.content?.substring(0, 100),
-        hasMetadata: !!item.metadata,
-        metadata: item.metadata
-      })));
-      console.log('4. Context data being sent to edge function:', contextData.map(item => ({
-        type: item.type,
-        title: item.title,
-        hasMetadata: !!item.metadata,
-        metadata: item.metadata
-      })));
-
-      // Extract location context from context items
-      const locationContext = contextItems
-        .filter(item =>
-          item.type === 'location_input' ||
-          (item.type === 'manual_input' && item.metadata?.isLocationContext) ||
-          (item.type === 'manual_input' && item.title?.includes('Location:'))
-        )
-        .map(item => item.metadata?.formatted_address || item.content)
-        .filter(Boolean);
-
-      // Prepare project context
       const projectContext = selectedProject ? {
-        id: selectedProject.id,
-        name: selectedProject.name,
-        description: selectedProject.description,
-        created_at: selectedProject.created_at
+        id: selectedProject.id, name: selectedProject.name,
+        description: selectedProject.description, created_at: selectedProject.created_at
       } : null;
 
-      console.log('Generating boolean search with FULL CONTEXT:', {
-        hasCustomInstructions: !!jobDescription.trim(),
-        hasJobTitle: !!jobTitle.trim(),
-        hasProjectContext: !!projectContext,
-        projectName: projectContext?.name,
-        contextItemsCount: contextItems.length,
-        locationItemsCount: locationItems.length,
-        locationContext: locationContext,
-        contextTypes: contextItems.map(item => item.type),
-        customInstructionsLength: jobDescription.length
-      });
-
-      // Use function bridge for Cloud Function calls
-      // Only send description if it has content (don't send empty string)
       const payload: any = {
         contextItems: contextData,
         jobTitle: jobTitle.trim() || undefined,
-        projectContext: projectContext,
-        userId: userId || undefined
+        projectContext, userId: userId || undefined
       };
-
-      // Only add description if it's not empty
-      if (jobDescription.trim()) {
-        payload.description = jobDescription.trim();
-      }
-
-      console.log('📤 Payload being sent to generateBooleanSearch:', {
-        hasDescription: !!payload.description,
-        descriptionLength: payload.description?.length || 0,
-        contextItemsCount: payload.contextItems?.length || 0,
-        hasJobTitle: !!payload.jobTitle,
-        hasProjectContext: !!payload.projectContext
-      });
+      if (jobDescription.trim()) payload.description = jobDescription.trim();
 
       const result = await functionBridge.generateBooleanSearch(payload);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to generate boolean search');
-      }
+      if (!result.success) throw new Error(result.error || 'Failed to generate boolean search');
 
       if (result.searchString) {
         setBooleanString(result.searchString);
-
-        // Collapse Requirements container to focus on Boolean section
         setRequirementsCollapsed(true);
-
-        // Enhanced success message based on what was used
-        if (jobDescription.trim() && contextItems.length > 0) {
-          toast.success(`Boolean search generated from custom instructions + ${contextItems.length} context item(s)!`);
-        } else if (contextItems.length > 0) {
-          toast.success(`Boolean search generated from ${contextItems.length} context item(s)!`);
+        if (jobDescription.trim() && ctx.contextItems.length > 0) {
+          toast.success(`Boolean search generated from custom instructions + ${ctx.contextItems.length} context item(s)!`);
+        } else if (ctx.contextItems.length > 0) {
+          toast.success(`Boolean search generated from ${ctx.contextItems.length} context item(s)!`);
         } else {
           toast.success('Boolean search generated from custom instructions!');
         }
-
-        // Track successful boolean generation
         trackBooleanGeneration(jobDescription, true);
       } else {
         throw new Error('No search string generated');
@@ -856,118 +167,76 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     }
   };
 
+  // Boolean explanation
   const handleExplainBoolean = async () => {
-    if (!booleanString.trim()) {
-      toast.error('Please generate a boolean search string first');
-      return;
-    }
-
+    if (!booleanString.trim()) { toast.error('Please generate a boolean search string first'); return; }
     setIsExplaining(true);
     try {
       const data = await functionBridge.explainBoolean({
-        booleanString: booleanString,
-        requirements: jobDescription.trim() || 'Boolean search explanation'
+        booleanString, requirements: jobDescription.trim() || 'Boolean search explanation'
       });
-      const error = null;
-
-      if (error) throw error;
-
       if (data) {
-        // Parse the response if it's a string
         const explanation = typeof data === 'string' ? JSON.parse(data) : data;
         setBooleanExplanation(explanation);
-        setExplanationCollapsed(false); // Expand the explanation section
+        setExplanationCollapsed(false);
         toast.success('Boolean search explained!');
-      } else {
-        throw new Error('No explanation generated');
-      }
+      } else throw new Error('No explanation generated');
     } catch (error) {
       console.error('Error explaining boolean search:', error);
       toast.error('Could not explain search query. Please try again.');
-    } finally {
-      setIsExplaining(false);
-    }
+    } finally { setIsExplaining(false); }
   };
 
+  // Candidate search
   const searchCandidates = async (page = 1) => {
-    if (!booleanString.trim()) {
-      toast.error('Please generate or enter a boolean search string');
-      return;
-    }
-
-    // Check usage limit only for new searches (page 1), not for loading more results
+    if (!booleanString.trim()) { toast.error('Please generate or enter a boolean search string'); return; }
     if (page === 1) {
-      if (isLimitReached('searches')) {
-        await checkAndExecute('searches', async () => null);
-        return;
-      }
+      if (isLimitReached('searches')) { await checkAndExecute('searches', async () => null); return; }
       setIsSearching(true);
       setActiveSourceTab('all');
-    } else {
-      setIsLoadingMore(true);
-    }
+    } else { setIsLoadingMore(true); }
 
     try {
-      // Extract location from context items if present
-      const locationContext = contextItems.find(item =>
+      const locationContext = ctx.contextItems.find(item =>
         item.type === 'manual_input' && item.metadata?.isLocationContext
       );
       const location = locationContext?.content || undefined;
 
       const response = await functionBridge.candidateSearch({
-        keywords: booleanString,
-        sources: selectedSources,
-        location,
-        page,
-        resultsPerSource: 10,
-        useAIGeneration: false, // Boolean already generated
+        keywords: booleanString, sources: selectedSources, location, page,
+        resultsPerSource: 10, useAIGeneration: false,
       });
-
-      if (!response?.success) {
-        throw new Error(response?.error || 'Search failed');
-      }
+      if (!response?.success) throw new Error(response?.error || 'Search failed');
 
       const { data } = response;
-      const total = data.metadata.totalFound;
-      setTotalSearchResults(total);
+      setTotalSearchResults(data.metadata.totalFound);
       setSearchPage(page);
       setSourceResults(data.sources);
       setSourcesFailed(data.metadata.sourcesFailed || []);
 
-      // Map CandidateResult[] to SearchResult[] for backward compatibility
       const mappedResults: SearchResult[] = data.merged.map((candidate: any) => ({
         title: `${candidate.name}${candidate.title ? ' | ' + candidate.title : ''}`,
         link: candidate.profileUrl,
         snippet: candidate.snippet,
         displayLink: candidate.profileUrl?.replace(/https?:\/\/(www\.)?/, '').split('/').slice(0, 2).join('/') || '',
-        name: candidate.name || '',
-        location: candidate.location || '',
-        source: candidate.source,
-        matchScore: candidate.matchScore,
-        skills: candidate.skills,
-        candidateName: candidate.name,
-        candidateTitle: candidate.title,
-        candidateCompany: candidate.company,
+        name: candidate.name || '', location: candidate.location || '',
+        source: candidate.source, matchScore: candidate.matchScore,
+        skills: candidate.skills, candidateName: candidate.name,
+        candidateTitle: candidate.title, candidateCompany: candidate.company,
       }));
 
       if (page === 1) {
         setSearchResults(mappedResults);
         setBooleanCollapsed(true);
-        const sourceInfo = data.metadata.sourcesSucceeded.length > 1
-          ? ` across ${data.metadata.sourcesSucceeded.length} sources`
-          : '';
-        toast.success(`Found ${total} results${sourceInfo}`);
+        const sourceInfo = data.metadata.sourcesSucceeded.length > 1 ? ` across ${data.metadata.sourcesSucceeded.length} sources` : '';
+        toast.success(`Found ${data.metadata.totalFound} results${sourceInfo}`);
         incrementUsage('searches').catch(err => console.error('Failed to increment search usage:', err));
-
-        if (data.metadata.sourcesFailed.length > 0) {
-          toast.warning(`Some sources failed: ${data.metadata.sourcesFailed.join(', ')}`);
-        }
+        if (data.metadata.sourcesFailed.length > 0) toast.warning(`Some sources failed: ${data.metadata.sourcesFailed.join(', ')}`);
       } else {
         setSearchResults(prev => [...prev, ...mappedResults]);
         toast.success(`Loaded ${mappedResults.length} more results`);
       }
 
-      // Track successful search
       trackCandidateSearch('serper_multi', mappedResults.length, {
         sources: selectedSources.join(','),
         sourcesSucceeded: data.metadata.sourcesSucceeded.join(','),
@@ -978,588 +247,20 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
     } catch (error) {
       console.error('Error searching:', error);
       toast.error('Search encountered an issue. Please try again.');
-    } finally {
-      setIsSearching(false);
-      setIsLoadingMore(false);
-    }
+    } finally { setIsSearching(false); setIsLoadingMore(false); }
   };
 
   const loadMoreResults = () => {
-    if (searchResults.length < totalSearchResults) {
-      searchCandidates(searchPage + 1);
-    }
+    if (searchResults.length < totalSearchResults) searchCandidates(searchPage + 1);
   };
-
-  const enrichProfile = async (profileUrl: string): Promise<ContactInfo | null> => {
-    try {
-      const data = await functionBridge.getContactInfo({ linkedin_url: profileUrl });
-      const error = null;
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error enriching profile:', error);
-      return null;
-    }
-  };
-
-  const toggleProfileSelection = (index: number) => {
-    const newSelected = new Set(selectedProfiles);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
-    }
-    setSelectedProfiles(newSelected);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedProfiles.size === searchResults.length) {
-      setSelectedProfiles(new Set());
-    } else {
-      setSelectedProfiles(new Set(searchResults.map((_, i) => i)));
-    }
-  };
-
-  const exportSelectedToCSV = () => {
-    const selected = searchResults.filter((_, i) => selectedProfiles.has(i));
-    if (selected.length === 0) {
-      toast.error('Select candidates to export');
-      return;
-    }
-
-    const headers = ['Name', 'Source', 'Title/Role', 'Company', 'Location', 'Profile URL', 'Snippet', 'Email', 'Phone'];
-    const rows = selected.map((r, idx) => {
-      const originalIdx = searchResults.indexOf(r);
-      const contact = contactInfo[originalIdx];
-      const name = (r as any).candidateName || r.title?.split(' | ')[0] || r.title?.split(' - ')[0] || r.title || '';
-      const role = (r as any).candidateTitle || r.title?.split(' | ')[1] || r.title?.split(' - ')[1] || '';
-      const company = (r as any).candidateCompany || '';
-      const location = r.location || extractLocationFromSnippet(r.snippet) || '';
-      const source = (r as any).source || 'linkedin';
-      return [
-        name,
-        source,
-        role,
-        company,
-        location,
-        r.link,
-        r.snippet?.replace(/"/g, '""').substring(0, 200) || '',
-        contact?.email || '',
-        contact?.phone || '',
-      ].map(field => `"${field}"`).join(',');
-    });
-
-    const csv = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `candidates-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success(`Exported ${selected.length} candidates to CSV`);
-  };
-
-  // Filtered & sorted results (derived state)
-  const filteredResults = searchResults.map((result, index) => ({ result, index })).filter(({ result, index }) => {
-    // Source tab filter
-    if (activeSourceTab !== 'all' && (result as any).source !== activeSourceTab) return false;
-    if (filterBy === 'analyzed') return !!analysisResults[index];
-    if (filterBy === 'enriched') return !!contactInfo[index];
-    if (filterBy === 'not-analyzed') return !analysisResults[index];
-    return true;
-  }).sort((a, b) => {
-    if (sortBy === 'score') {
-      const scoreA = analysisResults[a.index]?.match_score ?? -1;
-      const scoreB = analysisResults[b.index]?.match_score ?? -1;
-      return scoreB - scoreA;
-    }
-    if (sortBy === 'location') {
-      const locA = a.result.location || '';
-      const locB = b.result.location || '';
-      return locA.localeCompare(locB);
-    }
-    return 0;
-  });
-
-  // Batch analyze selected candidates
-  const batchAnalyze = async () => {
-    const selected = Array.from(selectedProfiles).filter(i => !analysisResults[i]);
-    if (selected.length === 0) {
-      toast.info('All selected candidates are already analyzed');
-      return;
-    }
-    if (!jobDescription.trim()) {
-      toast.error('Please enter a job description first');
-      return;
-    }
-
-    setIsBatchAnalyzing(true);
-    setBatchProgress({ done: 0, total: selected.length });
-
-    // Process in batches of 5 concurrent requests
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < selected.length; i += BATCH_SIZE) {
-      const batch = selected.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (idx) => {
-        try {
-          setLoadingAnalysis(prev => new Set([...prev, idx]));
-          const data = await functionBridge.analyzeCandidate({
-            candidate: {
-              name: searchResults[idx].title,
-              profile: searchResults[idx].snippet,
-              linkedin_url: searchResults[idx].link
-            },
-            requirements: jobDescription
-          });
-          setAnalysisResults(prev => ({ ...prev, [idx]: data }));
-        } catch (error) {
-          console.error(`Batch analysis failed for index ${idx}:`, error);
-        } finally {
-          setLoadingAnalysis(prev => { const s = new Set(prev); s.delete(idx); return s; });
-          setBatchProgress(prev => ({ ...prev, done: prev.done + 1 }));
-        }
-      }));
-    }
-
-    setIsBatchAnalyzing(false);
-    toast.success(`Analyzed ${selected.length} candidates`);
-  };
-
-  // Batch enrich selected candidates
-  const batchEnrich = async () => {
-    const selected = Array.from(selectedProfiles).filter(i => !contactInfo[i]);
-    if (selected.length === 0) {
-      toast.info('All selected candidates are already enriched');
-      return;
-    }
-
-    setIsBatchEnriching(true);
-    setBatchProgress({ done: 0, total: selected.length });
-
-    const BATCH_SIZE = 3; // Lower concurrency for rate-limited API
-    for (let i = 0; i < selected.length; i += BATCH_SIZE) {
-      const batch = selected.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (idx) => {
-        try {
-          setLoadingContact(prev => new Set([...prev, idx]));
-          const contactData = await enrichProfile(searchResults[idx].link);
-          if (contactData) {
-            setContactInfo(prev => ({ ...prev, [idx]: contactData }));
-            incrementUsage('candidates_enriched').catch(() => {});
-          }
-        } catch (error) {
-          console.error(`Batch enrichment failed for index ${idx}:`, error);
-        } finally {
-          setLoadingContact(prev => { const s = new Set(prev); s.delete(idx); return s; });
-          setBatchProgress(prev => ({ ...prev, done: prev.done + 1 }));
-        }
-      }));
-    }
-
-    setIsBatchEnriching(false);
-    toast.success(`Enriched ${selected.length} candidates`);
-  };
-
-  // Send outreach email for a candidate
-  const sendOutreach = async (candidateEmail: { candidate: string; subject: string; body: string; profileUrl: string }, emailIdx: number) => {
-    try {
-      const result = await functionBridge.sendOutreachEmail({
-        profileUrl: candidateEmail.profileUrl,
-        projectId: selectedProjectId || undefined,
-        customText: candidateEmail.body
-      });
-      toast.success(`Email sent to ${candidateEmail.candidate}`);
-      return result;
-    } catch (error) {
-      console.error('Send outreach failed:', error);
-      toast.error(`Failed to send email to ${candidateEmail.candidate}`);
-      throw error;
-    }
-  };
-
-  const toggleProfileExpansion = (index: number) => {
-    const newExpanded = new Set(expandedProfiles);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedProfiles(newExpanded);
-  };
-
-  const analyzeCandidate = async (candidate: SearchResult, index: number) => {
-    if (!jobDescription.trim()) {
-      toast.error('Please enter a job description first');
-      return;
-    }
-
-    setLoadingAnalysis(prev => new Set([...prev, index]));
-    try {
-      const data = await functionBridge.analyzeCandidate({
-        candidate: {
-          name: candidate.title,
-          profile: candidate.snippet,
-          linkedin_url: candidate.link
-        },
-        requirements: jobDescription
-      });
-      const error = null;
-
-      if (error) throw error;
-
-      setAnalysisResults(prev => ({ ...prev, [index]: data }));
-      toast.success('Candidate analyzed successfully!');
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      toast.error('Could not analyze candidate. Please try again.');
-    } finally {
-      setLoadingAnalysis(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
-    }
-  };
-
-  const getContactInfo = async (candidate: SearchResult, index: number) => {
-    // Check usage limit before enriching
-    if (isLimitReached('candidates_enriched')) {
-      await checkAndExecute('candidates_enriched', async () => null);
-      return;
-    }
-
-    setLoadingContact(prev => new Set([...prev, index]));
-    try {
-      const contactData = await enrichProfile(candidate.link);
-      if (contactData) {
-        setContactInfo(prev => ({ ...prev, [index]: contactData }));
-        toast.success('Contact information retrieved!');
-        // Increment enrichment usage count
-        incrementUsage('candidates_enriched').catch(err => console.error('Failed to increment enrichment usage:', err));
-        // Track successful enrichment
-        trackProfileEnrichment(candidate.link, true);
-        trackEvent('Profile Enrichment', {
-          source: 'search_results',
-          hasEmail: contactData.email ? 1 : 0,
-          hasPhone: contactData.phone ? 1 : 0
-        });
-      } else {
-        toast.info('No contact information available for this profile');
-        trackProfileEnrichment(candidate.link, false);
-      }
-    } catch (error) {
-      console.error('Contact enrichment failed:', error);
-      toast.error('Could not retrieve contact information. Please try again.');
-      trackProfileEnrichment(candidate.link, false);
-    } finally {
-      setLoadingContact(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
-    }
-  };
-
-  const saveCandidate = async (candidate: SearchResult, index: number) => {
-    console.log('Saving candidate:', { candidate, selectedProjectId, index });
-
-    if (!selectedProjectId) {
-      console.error('No project selected for saving candidate');
-      toast.error('Please select a project first');
-      return;
-    }
-
-    setSavingCandidates(prev => new Set([...prev, index]));
-    try {
-      // Extract candidate details from search result
-      const candidateData = {
-        user_id: userId, // Add the user_id field that might be missing
-        name: candidate.title.split(' - ')[0] || candidate.title, // Extract name from title
-        job_title: candidate.title.includes(' - ') ? candidate.title.split(' - ')[1] : '',
-        company: candidate.displayLink.includes('linkedin.com') ? '' : candidate.displayLink,
-        location: candidate.location || '',
-        linkedin_url: candidate.link,
-        profile_summary: candidate.snippet,
-        status: 'new' as const,
-        tags: ['sourced'] as string[],
-        enrichment_status: 'pending' as const
-      };
-
-      console.log('Candidate data to save:', candidateData);
-
-      // Save candidate to database
-      const insertCandidate = await firestoreClient
-        .from('saved_candidates')
-        .insert({
-          ...candidateData,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertCandidate.error) {
-        console.error('Error saving candidate:', insertCandidate.error);
-        throw insertCandidate.error;
-      }
-
-      const savedCandidate = (Array.isArray(insertCandidate.data)
-        ? insertCandidate.data[0]
-        : insertCandidate.data) as Record<string, any> | undefined;
-
-      console.log('Candidate save result:', savedCandidate);
-
-      // Add candidate to project if project is selected
-      if (savedCandidate && selectedProjectId) {
-        console.log('Adding candidate to project:', {
-          candidateId: savedCandidate.id,
-          projectId: selectedProjectId
-        });
-
-        const projectAssociation = await firestoreClient
-          .from('project_candidates')
-          .insert({
-            project_id: selectedProjectId,
-            candidate_id: savedCandidate.id,
-            created_at: new Date().toISOString()
-          });
-
-        if (projectAssociation.error) {
-          console.error('Error adding candidate to project:', projectAssociation.error);
-          throw projectAssociation.error;
-        }
-      }
-
-      // If we have contact info for this candidate, merge it
-      const contactData = contactInfo[index];
-      if (contactData && savedCandidate) {
-        const updateData: any = {};
-        if (contactData.email) updateData.work_email = contactData.email;
-        if (contactData.phone) updateData.mobile_phone = contactData.phone;
-        if (contactData.personal_emails) updateData.personal_emails = contactData.personal_emails;
-        if (contactData.phone_numbers) updateData.phone_numbers = contactData.phone_numbers;
-
-        if (Object.keys(updateData).length > 0) {
-          updateData.enrichment_status = 'completed';
-          await firestoreClient
-            .from('saved_candidates')
-            .update({
-              ...updateData,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', savedCandidate.id);
-        }
-      }
-
-      setSavedCandidates(prev => new Set([...prev, index]));
-      toast.success('Candidate saved successfully!');
-
-      // Store search in history with project context
-      if (booleanString) {
-        await firestoreClient
-          .from('search_history')
-          .insert({
-            search_query: booleanString,
-            boolean_query: booleanString,
-            platform: 'linkedin',
-            results_count: searchResults.length,
-            project_id: selectedProjectId,
-            created_at: new Date().toISOString()
-          });
-      }
-
-    } catch (error) {
-      console.error('Error saving candidate:', error);
-      toast.error('Could not save candidate. Please try again.');
-    } finally {
-      setSavingCandidates(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(index);
-        return newSet;
-      });
-    }
-  };
-
-  const toggleContextExpansion = (id: string) => {
-    setContextItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, isExpanded: !item.isExpanded } : item
-      )
-    );
-  };
-
-  const removeContextItem = async (id: string) => {
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      await deleteDoc(doc(db, 'context_items', id));
-
-      setContextItems(prev => prev.filter(item => item.id !== id));
-      toast.success('Context item removed');
-    } catch (error) {
-      console.error('Error removing context item:', error);
-      toast.error('Could not remove item. Please try again.');
-    }
-  };
-
-  const clearAllContextItems = async () => {
-    if (contextItems.length === 0) return;
-
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to clear all ${contextItems.length} context item${contextItems.length !== 1 ? 's' : ''}? This action cannot be undone.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      toast.loading('Clearing all context items...', { id: 'clear-all' });
-
-      const deleteResult = await firestoreClient
-        .from('context_items')
-        .delete()
-        .eq('user_id', userId)
-        .eq('project_id', selectedProject?.id || null);
-
-      if (deleteResult.error) {
-        throw deleteResult.error;
-      }
-
-      // Update local state
-      setContextItems([]);
-      toast.success('All context items cleared', { id: 'clear-all' });
-    } catch (error) {
-      console.error('Error clearing all context items:', error);
-      toast.error('Could not clear items. Please try again.', { id: 'clear-all' });
-    }
-  };
-
-  const loadContextItems = useCallback(async () => {
-    if (!userId) return;
-
-    setLoadingContext(true);
-    try {
-      let query = firestoreClient
-        .from<ContextItem>('context_items')
-        .select('*')
-        .eq('user_id', userId);
-
-      const projectId = selectedProject?.id || selectedProjectId;
-      console.log('Loading context items for:', { userId, projectId, selectedProject: selectedProject?.name });
-
-      const { data, error } = await query;
-
-      if (error) {
-        throw error;
-      }
-
-      const normalized = Array.isArray(data) ? data : data ? [data] : [];
-      const filtered = projectId
-        ? normalized.filter(item => item.project_id === projectId)
-        : normalized.filter(item => !item.project_id);
-
-      const sortByCreatedAtDesc = (items: ContextItem[]) => {
-        const getTimestamp = (value: any): number => {
-          if (!value) return 0;
-          if (value instanceof Date) return value.getTime();
-          if (typeof value === 'string') {
-            const parsed = new Date(value);
-            return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
-          }
-          if (typeof value === 'object') {
-            if ('toDate' in value && typeof value.toDate === 'function') {
-              return value.toDate().getTime();
-            }
-            if ('seconds' in value && typeof value.seconds === 'number') {
-              const millis = value.seconds * 1000;
-              const nanos = typeof value.nanoseconds === 'number' ? value.nanoseconds / 1_000_000 : 0;
-              return millis + nanos;
-            }
-          }
-          return 0;
-        };
-
-        return [...items].sort((a, b) => getTimestamp(b.created_at) - getTimestamp(a.created_at));
-      };
-
-      const sortedItems = sortByCreatedAtDesc(filtered);
-
-      console.log('Context items loaded:', sortedItems);
-      setContextItems(sortedItems.map(item => ({ ...item, isExpanded: false })));
-    } catch (error) {
-      console.error('Error loading context items:', error);
-    } finally {
-      setLoadingContext(false);
-    }
-  }, [userId, selectedProjectId, selectedProject?.id, selectedProject?.name]);
-
-  // Load context items when component mounts or project changes
-  useEffect(() => {
-    loadContextItems();
-  }, [userId, selectedProjectId, selectedProject?.id, loadContextItems]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
   };
 
-  const generateEmailTemplates = async () => {
-    const selectedResults = searchResults.filter((_, index) => selectedProfiles.has(index));
-
-    if (selectedResults.length === 0) {
-      toast.error('Please select some profiles first');
-      return;
-    }
-
-    if (!jobDescription.trim()) {
-      toast.error('Please enter a job description first');
-      return;
-    }
-
-    setIsGeneratingEmails(true);
-    try {
-      // Prepare candidates data for the edge function
-      const candidates = selectedResults.map(result => ({
-        name: result.title.split(' - ')[0] || result.title,
-        profileUrl: result.link,
-        snippet: result.snippet,
-        location: result.location
-      }));
-
-      const response = await functionBridge.generateEmailTemplates({
-        candidates,
-        jobDescription,
-        context: emailContext.trim() || undefined
-      });
-
-      if (response?.success && response?.emailTemplates) {
-        setGeneratedEmails(response.emailTemplates);
-        toast.success(`Generated ${response.emailTemplates.length} email template(s)!`);
-      } else {
-        throw new Error('No email templates generated');
-      }
-    } catch (error) {
-      console.error('Error generating email templates:', error);
-      toast.error('Could not generate email templates. Please try again.');
-    } finally {
-      setIsGeneratingEmails(false);
-    }
-  };
-
-  const openEmailDialog = () => {
-    const selectedResults = searchResults.filter((_, index) => selectedProfiles.has(index));
-    if (selectedResults.length === 0) {
-      toast.error('Please select some profiles first');
-      return;
-    }
-    setShowEmailDialog(true);
-  };
-
   return (
     <TooltipProvider>
-      {/* Usage Limit Modal */}
       <UsageLimitModalComponent />
       <div className="space-y-8 max-w-full mx-auto">
         {/* Step 1: Custom Instructions & Context */}
@@ -1573,18 +274,12 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
                       <Sparkles className="h-4 w-4 text-purple-600" />
                     </div>
                     <div>
-                      <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
-                        Custom Instructions & Context
-                      </h2>
+                      <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">Custom Instructions & Context</h2>
                       <p className="text-xs text-gray-500 mt-0.5">Add requirements and context to improve search accuracy</p>
                     </div>
                   </div>
                   <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
-                    {requirementsCollapsed ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
+                    {requirementsCollapsed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </div>
                 </div>
               </div>
@@ -1593,392 +288,120 @@ export default function MinimalSearchForm({ userId, selectedProjectId, isClarvid
               <div className="px-5 pb-5 pt-2 border-t border-gray-100">
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2 mb-5">
-                  {/* URL Scraper Button */}
-                  <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
+                  {/* URL Scraper */}
+                  <Dialog open={ctx.showUrlDialog} onOpenChange={ctx.setShowUrlDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="flex items-center gap-2 h-9 px-3.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-colors"
-                          >
-                            <Link className="w-3.5 h-3.5" />
-                            <span className="text-sm">Scrape</span>
+                          <Button variant="outline" className="flex items-center gap-2 h-9 px-3.5 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 rounded-lg transition-colors">
+                            <Link className="w-3.5 h-3.5" /><span className="text-sm">Scrape</span>
                           </Button>
                         </DialogTrigger>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Scrape any website URL with Firecrawl AI</p>
-                        <p className="text-xs text-gray-500 mt-1">Extract job descriptions, company info, or requirements from web pages</p>
-                      </TooltipContent>
+                      <TooltipContent><p>Scrape any website URL with Firecrawl AI</p></TooltipContent>
                     </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Scrape Website Content</DialogTitle>
-                        <DialogDescription>
-                          Enter a URL to scrape its content and add it to your job description. Note: LinkedIn URLs cannot be scraped due to their anti-bot protection.
-                        </DialogDescription>
+                        <DialogDescription>Enter a URL to scrape its content. Note: LinkedIn URLs cannot be scraped.</DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <Input
-                          placeholder="Enter website URL (LinkedIn URLs won't work)..."
-                          value={urlInput}
-                          onChange={(event) => setUrlInput(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              handleUrlScrape();
-                            }
-                          }}
-                        />
+                        <Input placeholder="Enter website URL..." value={ctx.urlInput} onChange={(e) => ctx.setUrlInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') ctx.handleUrlScrape(); }} />
                         <div className="flex gap-2">
-                          <Button
-                            onClick={handleUrlScrape}
-                            disabled={!urlInput.trim() || isScrapingUrl}
-                            className="flex-1"
-                          >
-                            <ButtonLoading
-                              isLoading={isScrapingUrl}
-                              loadingText="Scraping..."
-                            >
-                              <Globe className="w-4 h-4 mr-2" />
-                              Scrape & Add
-                            </ButtonLoading>
+                          <Button onClick={ctx.handleUrlScrape} disabled={!ctx.urlInput.trim() || ctx.isScrapingUrl} className="flex-1">
+                            <ButtonLoading isLoading={ctx.isScrapingUrl} loadingText="Scraping..."><Globe className="w-4 h-4 mr-2" />Scrape & Add</ButtonLoading>
                           </Button>
-                          <Button variant="outline" onClick={() => setShowUrlDialog(false)}>
-                            Cancel
-                          </Button>
+                          <Button variant="outline" onClick={() => ctx.setShowUrlDialog(false)}>Cancel</Button>
                         </div>
                       </div>
                     </DialogContent>
                   </Dialog>
 
-                  {/* File Upload Button */}
+                  {/* File Upload */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2 h-9 px-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 rounded-lg transition-colors disabled:opacity-50"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploadingFile}
-                      >
-                        <ButtonLoading isLoading={isUploadingFile}>
-                          <Upload className="w-3.5 h-3.5" />
-                          <span className="text-sm">Upload</span>
-                        </ButtonLoading>
+                      <Button variant="outline" className="flex items-center gap-2 h-9 px-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 rounded-lg transition-colors disabled:opacity-50" onClick={() => ctx.fileInputRef.current?.click()} disabled={ctx.isUploadingFile}>
+                        <ButtonLoading isLoading={ctx.isUploadingFile}><Upload className="w-3.5 h-3.5" /><span className="text-sm">Upload</span></ButtonLoading>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Upload and extract content locally</p>
-                      <p className="text-xs text-gray-500 mt-1">Supports PDF, DOCX, TXT, Excel, CSV, PPTX, and images</p>
-                    </TooltipContent>
+                    <TooltipContent><p>Upload and extract content locally</p></TooltipContent>
                   </Tooltip>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.csv,.pptx,.jpg,.jpeg,.png"
-                    onChange={handleFileUpload}
-                  />
+                  <input ref={ctx.fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.txt,.xlsx,.xls,.csv,.pptx,.jpg,.jpeg,.png" onChange={ctx.handleFileUpload} />
 
-                  {/* Perplexity Search Button */}
-                  <Dialog open={showPerplexityDialog} onOpenChange={setShowPerplexityDialog}>
+                  {/* Perplexity Search */}
+                  <Dialog open={ctx.showPerplexityDialog} onOpenChange={ctx.setShowPerplexityDialog}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="flex items-center gap-2 h-9 px-3.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-300 rounded-lg transition-colors"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span className="text-sm">Search</span>
+                          <Button variant="outline" className="flex items-center gap-2 h-9 px-3.5 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-300 rounded-lg transition-colors">
+                            <Sparkles className="w-3.5 h-3.5" /><span className="text-sm">Search</span>
                           </Button>
                         </DialogTrigger>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Search the web with Perplexity AI</p>
-                        <p className="text-xs text-gray-500 mt-1">Get real-time web search results and current market intelligence</p>
-                      </TooltipContent>
+                      <TooltipContent><p>Search the web with Perplexity AI</p></TooltipContent>
                     </Tooltip>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Perplexity Web Search</DialogTitle>
-                        <DialogDescription>
-                          Search the web with Perplexity AI and add results to your job description.
-                        </DialogDescription>
+                        <DialogDescription>Search the web with Perplexity AI and add results to your context.</DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
-                        <Input
-                          placeholder="Enter search query..."
-                          value={perplexityQuery}
-                          onChange={(event) => setPerplexityQuery(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              handlePerplexitySearch();
-                            }
-                          }}
-                        />
+                        <Input placeholder="Enter search query..." value={ctx.perplexityQuery} onChange={(e) => ctx.setPerplexityQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') ctx.handlePerplexitySearch(); }} />
                         <div className="flex gap-2">
-                          <Button
-                            onClick={handlePerplexitySearch}
-                            disabled={!perplexityQuery.trim() || isSearchingPerplexity}
-                            className="flex-1"
-                          >
-                            <ButtonLoading
-                              isLoading={isSearchingPerplexity}
-                              loadingText="Searching..."
-                            >
-                              <Zap className="w-4 h-4 mr-2" />
-                              Search & Add
-                            </ButtonLoading>
+                          <Button onClick={ctx.handlePerplexitySearch} disabled={!ctx.perplexityQuery.trim() || ctx.isSearchingPerplexity} className="flex-1">
+                            <ButtonLoading isLoading={ctx.isSearchingPerplexity} loadingText="Searching..."><Zap className="w-4 h-4 mr-2" />Search & Add</ButtonLoading>
                           </Button>
-                          <Button variant="outline" onClick={() => setShowPerplexityDialog(false)}>
-                            Cancel
-                          </Button>
+                          <Button variant="outline" onClick={() => ctx.setShowPerplexityDialog(false)}>Cancel</Button>
                         </div>
                       </div>
                     </DialogContent>
                   </Dialog>
 
-                  {/* Location Button */}
+                  {/* Location */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex items-center gap-2 h-9 px-3.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 rounded-lg transition-colors"
-                        onClick={() => setShowLocationDialog(true)}
-                      >
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="text-sm">Location</span>
+                      <Button variant="outline" className="flex items-center gap-2 h-9 px-3.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 rounded-lg transition-colors" onClick={() => ctx.setShowLocationDialog(true)}>
+                        <MapPin className="w-3.5 h-3.5" /><span className="text-sm">Location</span>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Add location context with Google Places</p>
-                      <p className="text-xs text-gray-500 mt-1">Set geographic preferences for targeted boolean search generation</p>
-                    </TooltipContent>
+                    <TooltipContent><p>Add location context with Google Places</p></TooltipContent>
                   </Tooltip>
                 </div>
 
-                {/* Job Title Input */}
+                {/* Job Title */}
                 <div className="space-y-1.5">
                   <label htmlFor="job-title" className="block text-sm font-medium text-gray-700">
                     Job Title <span className="text-gray-400 text-xs">(optional but recommended)</span>
                   </label>
-                  <Input
-                    id="job-title"
-                    type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="e.g., Senior Software Engineer, Product Manager, Data Scientist..."
-                  />
-                  <p className="text-xs text-gray-500">
-                    Providing a job title helps generate more accurate boolean search strings
-                  </p>
+                  <Input id="job-title" type="text" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g., Senior Software Engineer, Product Manager..." />
+                  <p className="text-xs text-gray-500">Providing a job title helps generate more accurate boolean search strings</p>
                 </div>
 
-                <Textarea
-                  value={jobDescription}
-                  onChange={(event) => setJobDescription(event.target.value)}
-                  placeholder="Enter custom instructions or requirements (optional)...
+                <Textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} placeholder="Enter custom instructions or requirements (optional)..." className="min-h-[100px] mb-4" />
 
-This area is for your specific search instructions, filtering criteria, or additional requirements. The embedded context items below will automatically be included when generating the boolean search."
-                  className="min-h-[100px] mb-4"
-                />
-
-                {/* Context Items - Enhanced Design */}
-                {contextItems.length > 0 && (
+                {/* Context Items Grid */}
+                {ctx.contextItems.length > 0 && (
                   <div className="mt-6">
-                    {/* Section Header */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Context</h3>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{contextItems.length}</Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{ctx.contextItems.length}</Badge>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={clearAllContextItems}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs h-8 px-3 border border-red-200 hover:border-red-300 transition-all"
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Clear All
+                      <Button variant="ghost" size="sm" onClick={ctx.clearAllContextItems} className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs h-8 px-3 border border-red-200 hover:border-red-300 transition-all">
+                        <X className="w-3 h-3 mr-1" />Clear All
                       </Button>
                     </div>
-
-                    {/* Context Cards Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                      {contextItems.map((item) => {
-                        // Determine card styling based on type
-                        const isPerplexity = item.type === 'perplexity' || item.type === 'perplexity_search';
-                        const isUrlScrape = item.type === 'url_scrape';
-                        const isFileUpload = item.type === 'file_upload';
-                        const isLocation = item.type === 'manual_input' && item.title?.includes('Location:');
-                        const isLocationInput = item.type === 'location_input';
-
-                        const cardColors = isPerplexity
-                          ? { icon: 'bg-purple-100 text-purple-600', border: 'border-gray-100' }
-                          : isUrlScrape
-                          ? { icon: 'bg-blue-100 text-blue-600', border: 'border-gray-100' }
-                          : isFileUpload
-                          ? { icon: 'bg-emerald-100 text-emerald-600', border: 'border-gray-100' }
-                          : (isLocation || isLocationInput)
-                          ? { icon: 'bg-amber-100 text-amber-600', border: 'border-gray-100' }
-                          : { icon: 'bg-gray-100 text-gray-600', border: 'border-gray-100' };
-
-                        const typeLabel = isPerplexity ? 'AI Research' : isUrlScrape ? 'Web Scrape' : isFileUpload ? 'Document' : (isLocation || isLocationInput) ? 'Location' : 'Note';
-
-                        return (
-                          <div
-                            key={item.id}
-                            className={`group relative overflow-hidden rounded-lg border ${cardColors.border} bg-white shadow-sm
-                              hover:shadow-md transition-all duration-200`}
-                          >
-                            <div className="p-3.5">
-                              {/* Header Row */}
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                  {/* Icon Badge */}
-                                  <div className={`flex items-center justify-center w-7 h-7 rounded-md ${cardColors.icon} flex-shrink-0`}>
-                                    {isUrlScrape && <Globe className="w-4 h-4" />}
-                                    {isFileUpload && <FileText className="w-4 h-4" />}
-                                    {isPerplexity && <Sparkles className="w-4 h-4" />}
-                                    {(isLocation || isLocationInput) && <MapPin className="w-4 h-4" />}
-                                    {!isUrlScrape && !isFileUpload && !isPerplexity && !isLocation && !isLocationInput && <FileText className="w-4 h-4" />}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <span className="text-xs font-bold text-gray-900 truncate block">
-                                      {item.title}
-                                    </span>
-                                    <span className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">{typeLabel}</span>
-                                  </div>
-                                </div>
-                                {/* Action Buttons */}
-                                <div className="flex gap-1 ml-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => toggleContextExpansion(item.id)}
-                                    className="text-gray-500 hover:text-gray-700 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                                    title={item.isExpanded ? 'Collapse' : 'Expand'}
-                                  >
-                                    {item.isExpanded ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                  </button>
-                                  <button
-                                    onClick={() => removeContextItem(item.id)}
-                                    className="text-gray-500 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 transition-colors"
-                                    title="Remove"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Preview text with gradient fade */}
-                              <div className="relative">
-                                <p className="text-xs text-gray-600 line-clamp-2 pr-4">
-                                  {(() => {
-                                    const previewText = item.summary || item.content;
-                                    if (isPerplexity) {
-                                      const stripped = previewText
-                                        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-                                        .replace(/[#*_`~]/g, '')
-                                        .replace(/\n+/g, ' ')
-                                        .trim();
-                                      return stripped.substring(0, 150) + (stripped.length > 150 ? '...' : '');
-                                    }
-                                    return previewText.substring(0, 120) + (previewText.length > 120 ? '...' : '');
-                                  })()}
-                                </p>
-                                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent" />
-                              </div>
-
-                              {/* Footer - Source info */}
-                              <div className="flex items-center justify-between text-[10px] text-gray-500 mt-3 pt-2 border-t border-gray-100">
-                                <span className="truncate max-w-[60%]">
-                                  {isUrlScrape && item.source_url && (() => {
-                                    try {
-                                      const url = item.source_url.startsWith('http') ? item.source_url : `https://${item.source_url}`;
-                                      return <span title={item.source_url} className="text-blue-600">{new URL(url).hostname}</span>;
-                                    } catch {
-                                      const hostname = item.source_url.replace(/^https?:\/\//, '').split('/')[0];
-                                      return <span title={item.source_url} className="text-blue-600">{hostname}</span>;
-                                    }
-                                  })()}
-                                  {isFileUpload && item.file_name && (
-                                    <span className="text-emerald-600">{item.file_name}</span>
-                                  )}
-                                  {isPerplexity && (
-                                    <span className="text-purple-600">Perplexity AI</span>
-                                  )}
-                                  {(isLocation || isLocationInput) && (
-                                    <span className="text-amber-600">Google Maps</span>
-                                  )}
-                                </span>
-                                <span className="text-gray-400">{new Date(item.created_at as string | number | Date).toLocaleDateString()}</span>
-                              </div>
-
-                              {/* Expanded content */}
-                              {item.isExpanded && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  {isPerplexity ? (
-                                    <div className="max-h-96 overflow-y-auto rounded-lg bg-white border p-2">
-                                      <PerplexityResult
-                                        content={item.content}
-                                        citations={item.metadata?.citations}
-                                        query={item.metadata?.query || item.title}
-                                        compact={false}
-                                        className="text-xs"
-                                      />
-                                    </div>
-                                  ) : isUrlScrape ? (
-                                    <div className="max-h-96 overflow-y-auto rounded-lg bg-white border p-2">
-                                      <FirecrawlResult
-                                        content={item.content}
-                                        sourceUrl={item.source_url}
-                                        compact={false}
-                                        className="text-xs"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <div className="max-h-32 overflow-y-auto text-xs text-gray-700 bg-white p-3 rounded-lg border">
-                                        {item.content}
-                                      </div>
-                                      {item.source_url && (
-                                        <a
-                                          href={item.source_url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-xs text-blue-500 hover:underline mt-2 inline-flex items-center gap-1"
-                                        >
-                                          View original source
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                          </svg>
-                                        </a>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {ctx.contextItems.map((item) => (
+                        <ContextItemCard key={item.id} item={item} onToggleExpansion={ctx.toggleContextExpansion} onRemove={ctx.removeContextItem} />
+                      ))}
                     </div>
                   </div>
                 )}
 
                 <div className="flex justify-end pt-4 border-t border-gray-100 mt-5">
-                  <Button
-                    onClick={generateBooleanSearch}
-                    disabled={(!jobDescription.trim() && contextItems.length === 0) || isGenerating}
-                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-5 py-2"
-                  >
-                    <ButtonLoading
-                      isLoading={isGenerating && !showBooleanAnimation}
-                      loadingText="Generating..."
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate Boolean Search
-                    </ButtonLoading>
+                  <Button onClick={generateBooleanSearch} disabled={(!jobDescription.trim() && ctx.contextItems.length === 0) || isGenerating} className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-5 py-2">
+                    <ButtonLoading isLoading={isGenerating && !showBooleanAnimation} loadingText="Generating..."><Sparkles className="w-4 h-4 mr-2" />Generate Boolean Search</ButtonLoading>
                   </Button>
                 </div>
               </div>
@@ -1994,22 +417,14 @@ This area is for your specific search instructions, filtering criteria, or addit
                 <div className="p-5 cursor-pointer group">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                        <Code className="h-4 w-4 text-purple-600" />
-                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><Code className="h-4 w-4 text-purple-600" /></div>
                       <div>
-                        <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">
-                          Boolean Search String
-                        </h2>
+                        <h2 className="text-base font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">Boolean Search String</h2>
                         <p className="text-xs text-gray-500 mt-0.5">Edit and refine your generated search query</p>
                       </div>
                     </div>
                     <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
-                      {booleanCollapsed ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
+                      {booleanCollapsed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </div>
                   </div>
                 </div>
@@ -2017,62 +432,23 @@ This area is for your specific search instructions, filtering criteria, or addit
               <CollapsibleContent>
                 <div className="px-5 pb-5 pt-2 border-t border-gray-100">
                   <div className="space-y-4">
-                    <Textarea
-                      value={booleanString}
-                      onChange={(event) => setBooleanString(event.target.value)}
-                      className="font-mono min-h-[120px] resize-y"
-                      placeholder="Generated Boolean search string will appear here..."
-                    />
+                    <Textarea value={booleanString} onChange={(e) => setBooleanString(e.target.value)} className="font-mono min-h-[120px] resize-y" placeholder="Generated Boolean search string will appear here..." />
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex gap-3">
-                        <Button
-                          onClick={() => copyToClipboard(booleanString)}
-                          variant="outline"
-                          className="hover:bg-purple-50 hover:border-purple-300 transition-all"
-                        >
-                          <Copy className="w-4 h-4 mr-2" />
-                          Copy
+                        <Button onClick={() => copyToClipboard(booleanString)} variant="outline" className="hover:bg-purple-50 hover:border-purple-300 transition-all">
+                          <Copy className="w-4 h-4 mr-2" />Copy
                         </Button>
-                        <Button
-                          onClick={handleExplainBoolean}
-                          variant="outline"
-                          disabled={isExplaining || !booleanString.trim()}
-                          className="hover:bg-purple-50 hover:border-purple-300 transition-all"
-                        >
-                          <ButtonLoading
-                            isLoading={isExplaining}
-                            loadingText="Analyzing..."
-                          >
-                            <Lightbulb className="w-4 h-4 mr-2" />
-                            <span className="hidden sm:inline">Explain This Search</span>
-                            <span className="sm:hidden">Explain</span>
-                          </ButtonLoading>
+                        <Button onClick={handleExplainBoolean} variant="outline" disabled={isExplaining || !booleanString.trim()} className="hover:bg-purple-50 hover:border-purple-300 transition-all">
+                          <ButtonLoading isLoading={isExplaining} loadingText="Analyzing..."><Lightbulb className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Explain This Search</span><span className="sm:hidden">Explain</span></ButtonLoading>
                         </Button>
                       </div>
-                      <Button
-                        onClick={() => searchCandidates()}
-                        disabled={isSearching}
-                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 sm:ml-auto"
-                      >
-                        <ButtonLoading
-                          isLoading={isSearching}
-                          loadingText="Searching..."
-                        >
-                          <Search className="w-4 h-4 mr-2" />
-                          <span className="hidden sm:inline">Search Candidates</span>
-                          <span className="sm:hidden">Search</span>
-                        </ButtonLoading>
+                      <Button onClick={() => searchCandidates()} disabled={isSearching} className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200 sm:ml-auto">
+                        <ButtonLoading isLoading={isSearching} loadingText="Searching..."><Search className="w-4 h-4 mr-2" /><span className="hidden sm:inline">Search Candidates</span><span className="sm:hidden">Search</span></ButtonLoading>
                       </Button>
                     </div>
-
-                    {/* Source Selection */}
                     <div className="border-t border-gray-100 pt-3">
                       <p className="text-xs text-gray-500 mb-2">Search sources:</p>
-                      <SourceSelector
-                        selectedSources={selectedSources}
-                        onSourcesChange={setSelectedSources}
-                        disabled={isSearching}
-                      />
+                      <SourceSelector selectedSources={selectedSources} onSourcesChange={setSelectedSources} disabled={isSearching} />
                     </div>
                   </div>
                 </div>
@@ -2088,53 +464,21 @@ This area is for your specific search instructions, filtering criteria, or addit
               <CollapsibleTrigger asChild>
                 <div className="p-6 cursor-pointer group">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <Lightbulb className="w-5 h-5 text-indigo-600" />
-                    </div>
+                    <div className="p-2 bg-indigo-100 rounded-lg"><Lightbulb className="w-5 h-5 text-indigo-600" /></div>
                     <div>
                       <h2 className="text-xl font-semibold text-indigo-900">Boolean Search Explanation</h2>
                       <p className="text-sm text-indigo-600">Understanding your search strategy</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowExplanation(true);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
-                      title="View in full screen"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setBooleanExplanation(null);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors"
-                      title="Remove explanation"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                    <div className="transition-transform duration-200">
-                      {explanationCollapsed ? (
-                        <Eye className="w-4 h-4 text-indigo-500" />
-                      ) : (
-                        <EyeOff className="w-4 h-4 text-indigo-500" />
-                      )}
-                    </div>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setShowExplanation(true); }} className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors" title="View in full screen"><ExternalLink className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setBooleanExplanation(null); }} className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 transition-colors" title="Remove explanation"><X className="w-4 h-4" /></Button>
+                    <div className="transition-transform duration-200">{explanationCollapsed ? <Eye className="w-4 h-4 text-indigo-500" /> : <EyeOff className="w-4 h-4 text-indigo-500" />}</div>
                   </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="transition-all duration-500 ease-in-out">
-                <div className="mt-2">
-                  <BooleanExplainer explanation={booleanExplanation} />
-                </div>
+                <div className="mt-2"><BooleanExplainer explanation={booleanExplanation} /></div>
               </CollapsibleContent>
             </Card>
           </Collapsible>
@@ -2142,709 +486,175 @@ This area is for your specific search instructions, filtering criteria, or addit
 
         {/* Search Results */}
         {(searchResults.length > 0 || isSearching) && (
-          <ContainedLoading
-            isLoading={isSearching}
-            loadingText={`Searching ${selectedSources.length} source${selectedSources.length > 1 ? 's' : ''}...`}
-            className="mb-6"
-          >
+          <ContainedLoading isLoading={isSearching} loadingText={`Searching ${selectedSources.length} source${selectedSources.length > 1 ? 's' : ''}...`} className="mb-6">
             <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200">
               <div className="p-6">
-                {/* Source failure warning */}
                 {sourcesFailed.length > 0 && (
                   <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                     <span>Some sources failed: {sourcesFailed.join(', ')}. Showing results from successful sources.</span>
                   </div>
                 )}
-
-                {/* Source Tabs */}
-                <SourceTabs
-                  sources={sourceResults}
-                  activeTab={activeSourceTab}
-                  onTabChange={setActiveSourceTab}
-                />
+                <SourceTabs sources={sourceResults} activeTab={activeSourceTab} onTabChange={setActiveSourceTab} />
 
                 <div className="flex flex-col gap-4 mb-6">
-                  {/* Row 1: Title + View Controls */}
                   <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <Search className="h-4 w-4 text-green-600" />
-                      </div>
+                      <div className="h-9 w-9 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0"><Search className="h-4 w-4 text-green-600" /></div>
                       <div>
-                        <h2 className="text-base font-semibold text-gray-900">
-                          Search Results ({filteredResults.length}{filteredResults.length !== searchResults.length ? ` of ${searchResults.length}` : ''})
-                        </h2>
+                        <h2 className="text-base font-semibold text-gray-900">Search Results ({filteredResults.length}{filteredResults.length !== searchResults.length ? ` of ${searchResults.length}` : ''})</h2>
                         <p className="text-xs text-gray-500 mt-0.5">Select profiles to enrich and save</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                      {/* AI Analysis Button */}
                       {!showAIAnalysis && (
-                        <Button
-                          onClick={() => setShowAIAnalysis(true)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
-                          size="sm"
-                        >
-                          <Sparkles className="w-4 h-4 mr-1 lg:mr-2" />
-                          <span className="hidden sm:inline">Analyze</span> AI ({searchResults.length})
+                        <Button onClick={() => setShowAIAnalysis(true)} className="bg-purple-600 hover:bg-purple-700 text-white" size="sm">
+                          <Sparkles className="w-4 h-4 mr-1 lg:mr-2" /><span className="hidden sm:inline">Analyze</span> AI ({searchResults.length})
                         </Button>
                       )}
-
-                      {/* View Mode Toggle */}
                       <div className="flex items-center border rounded-lg p-1">
-                        <Button
-                          variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('grid')}
-                          className="h-7 px-2"
-                        >
-                          <Grid3X3 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant={viewMode === 'list' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setViewMode('list')}
-                          className="h-7 px-2"
-                        >
-                          <List className="w-4 h-4" />
-                        </Button>
+                        <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className="h-7 px-2"><Grid3X3 className="w-4 h-4" /></Button>
+                        <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-7 px-2"><List className="w-4 h-4" /></Button>
                       </div>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleSelectAll}
-                        className="h-7 px-2 text-xs"
-                      >
-                        {selectedProfiles.size === searchResults.length ? (
-                          <><CheckSquare className="w-4 h-4 mr-1" /> Deselect All</>
-                        ) : (
-                          <><Square className="w-4 h-4 mr-1" /> Select All</>
-                        )}
+                      <Button variant="ghost" size="sm" onClick={profile.toggleSelectAll} className="h-7 px-2 text-xs">
+                        {profile.selectedProfiles.size === searchResults.length ? <><CheckSquare className="w-4 h-4 mr-1" /> Deselect All</> : <><Square className="w-4 h-4 mr-1" /> Select All</>}
                       </Button>
-                      <Badge variant="outline" className="whitespace-nowrap">{selectedProfiles.size} selected</Badge>
+                      <Badge variant="outline" className="whitespace-nowrap">{profile.selectedProfiles.size} selected</Badge>
                     </div>
                   </div>
 
-                  {/* Row 2: Filter/Sort + Batch Actions */}
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-t border-gray-100 pt-3">
-                    {/* Filter & Sort */}
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Filter className="w-3.5 h-3.5" />
-                        <select
-                          value={filterBy}
-                          onChange={(e) => setFilterBy(e.target.value as typeof filterBy)}
-                          className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500"
-                        >
-                          <option value="all">All Results</option>
-                          <option value="analyzed">Analyzed</option>
-                          <option value="not-analyzed">Not Analyzed</option>
-                          <option value="enriched">Has Contact</option>
+                        <select value={filterBy} onChange={(e) => setFilterBy(e.target.value as typeof filterBy)} className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500">
+                          <option value="all">All Results</option><option value="analyzed">Analyzed</option><option value="not-analyzed">Not Analyzed</option><option value="enriched">Has Contact</option>
                         </select>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <ArrowUpDown className="w-3.5 h-3.5" />
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                          className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500"
-                        >
-                          <option value="default">Default Order</option>
-                          <option value="score">Match Score</option>
-                          <option value="location">Location (A-Z)</option>
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="text-xs border rounded px-1.5 py-1 bg-white text-gray-700 focus:ring-1 focus:ring-purple-500">
+                          <option value="default">Default Order</option><option value="score">Match Score</option><option value="location">Location (A-Z)</option>
                         </select>
                       </div>
                     </div>
-
-                    {/* Batch Actions */}
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* Batch Analyze */}
-                      <Button
-                        onClick={batchAnalyze}
-                        disabled={selectedProfiles.size === 0 || isBatchAnalyzing}
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs whitespace-nowrap"
-                      >
-                        {isBatchAnalyzing ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {batchProgress.done}/{batchProgress.total}</>
-                        ) : (
-                          <><Sparkles className="w-3.5 h-3.5 mr-1" /> Analyze Selected</>
-                        )}
+                      <Button onClick={profile.batchAnalyze} disabled={profile.selectedProfiles.size === 0 || profile.isBatchAnalyzing} size="sm" variant="outline" className="h-7 px-2 text-xs whitespace-nowrap">
+                        {profile.isBatchAnalyzing ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {profile.batchProgress.done}/{profile.batchProgress.total}</> : <><Sparkles className="w-3.5 h-3.5 mr-1" /> Analyze Selected</>}
                       </Button>
-                      {/* Batch Enrich */}
-                      <Button
-                        onClick={batchEnrich}
-                        disabled={selectedProfiles.size === 0 || isBatchEnriching}
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs whitespace-nowrap"
-                      >
-                        {isBatchEnriching ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {batchProgress.done}/{batchProgress.total}</>
-                        ) : (
-                          <><Users className="w-3.5 h-3.5 mr-1" /> Enrich Selected</>
-                        )}
+                      <Button onClick={profile.batchEnrich} disabled={profile.selectedProfiles.size === 0 || profile.isBatchEnriching} size="sm" variant="outline" className="h-7 px-2 text-xs whitespace-nowrap">
+                        {profile.isBatchEnriching ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> {profile.batchProgress.done}/{profile.batchProgress.total}</> : <><Users className="w-3.5 h-3.5 mr-1" /> Enrich Selected</>}
                       </Button>
-                      {/* CSV Export */}
-                      <Button
-                        onClick={exportSelectedToCSV}
-                        disabled={selectedProfiles.size === 0}
-                        size="sm"
-                        variant="outline"
-                        className="h-7 px-2 text-xs whitespace-nowrap"
-                      >
-                        <Download className="w-3.5 h-3.5 mr-1" />
-                        <span className="hidden sm:inline">CSV</span>
-                      </Button>
-                      {/* Email Templates */}
-                      <Button
-                        onClick={openEmailDialog}
-                        disabled={selectedProfiles.size === 0}
-                        size="sm"
-                        className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 whitespace-nowrap"
-                      >
-                        <Mail className="w-3.5 h-3.5 mr-1" />
-                        <span className="hidden sm:inline">Email</span>
-                      </Button>
+                      <Button onClick={profile.exportSelectedToCSV} disabled={profile.selectedProfiles.size === 0} size="sm" variant="outline" className="h-7 px-2 text-xs whitespace-nowrap"><Download className="w-3.5 h-3.5 mr-1" /><span className="hidden sm:inline">CSV</span></Button>
+                      <Button onClick={profile.openEmailDialog} disabled={profile.selectedProfiles.size === 0} size="sm" className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 whitespace-nowrap"><Mail className="w-3.5 h-3.5 mr-1" /><span className="hidden sm:inline">Email</span></Button>
                     </div>
                   </div>
                 </div>
 
-                <div
-                  ref={resultsContainerRef}
-                  className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'}
-                  style={{ maxHeight: viewMode === 'grid' ? '800px' : 'none', overflowY: viewMode === 'grid' ? 'auto' : 'visible' }}
-                >
-                  {filteredResults.map(({ result, index }) => {
-                    const isExpanded = expandedProfiles.has(index);
-                    const analysis = analysisResults[index];
-                    const contact = contactInfo[index];
-                    const isSelected = selectedProfiles.has(index);
+                {/* Results Grid/List */}
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'} style={{ maxHeight: viewMode === 'grid' ? '800px' : 'none', overflowY: viewMode === 'grid' ? 'auto' : 'visible' }}>
+                  {filteredResults.map(({ result, index }) => (
+                    <SearchResultCard
+                      key={index}
+                      result={result}
+                      index={index}
+                      viewMode={viewMode}
+                      isSelected={profile.selectedProfiles.has(index)}
+                      analysis={profile.analysisResults[index]}
+                      contact={profile.contactInfo[index]}
+                      loadingAnalysis={profile.loadingAnalysis.has(index)}
+                      loadingContact={profile.loadingContact.has(index)}
+                      savedCandidate={profile.savedCandidates.has(index)}
+                      savingCandidate={profile.savingCandidates.has(index)}
+                      onToggleSelection={profile.toggleProfileSelection}
+                      onAnalyze={profile.analyzeCandidate}
+                      onGetContact={profile.getContactInfo}
+                      onSave={profile.saveCandidate}
+                      onEmail={(idx) => { if (!profile.selectedProfiles.has(idx)) profile.toggleProfileSelection(idx); setTimeout(() => profile.openEmailDialog(), 0); }}
+                    />
+                  ))}
 
-                    return (
-                      <div
-                        key={index}
-                        className={`
-                          group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl
-                          ${isSelected ? 'border-purple-500 ring-1 ring-purple-500 bg-purple-50/30' : 'border-gray-200 hover:border-purple-200'}
-                          ${viewMode === 'list' ? 'flex flex-col md:flex-row gap-6 p-6' : 'flex flex-col p-5 h-full'}
-                        `}
-                      >
-                        {/* Selection Checkbox - Absolute positioning for grid */}
-                        <div className="absolute top-4 right-4 z-10">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              toggleProfileSelection(index);
-                            }}
-                            className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer transition-all"
-                          />
-                        </div>
-
-                        {/* Main Content Area */}
-                        <div className={`flex-1 ${viewMode === 'list' ? 'min-w-0' : 'flex flex-col'}`}>
-                          {/* Header: Title & Role */}
-                          <div className="mb-3 pr-8">
-                            <h3 className="font-bold text-lg text-gray-900 leading-tight group-hover:text-purple-700 transition-colors">
-                              <a
-                                href={result.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline decoration-2 decoration-purple-200"
-                              >
-                                {result.title.split(' | ')[0] || result.title.split(' - ')[0] || result.title}
-                              </a>
-                            </h3>
-                            {(result.title.includes(' | ') || result.title.includes(' - ')) && (
-                              <p className="text-sm font-medium text-purple-600 mt-1">
-                                {result.title.split(' | ')[1] || result.title.split(' - ')[1]}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Location & Source */}
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-                            {(result as any).source && (
-                              <SourceBadge source={(result as any).source} size="sm" />
-                            )}
-                            {result.location && (
-                              <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
-                                <MapPin className="w-3 h-3" />
-                                {result.location}
-                              </span>
-                            )}
-                            {!((result as any).source) && (
-                              <span className="flex items-center gap-1">
-                                <Globe className="w-3 h-3" />
-                                {(() => { try { return new URL(result.link).hostname.replace('www.', ''); } catch { return result.displayLink; } })()}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Snippet */}
-                          <p className={`text-sm text-gray-600 leading-relaxed mb-4 ${viewMode === 'grid' ? 'line-clamp-4 flex-1' : ''}`}>
-                            {result.snippet}
-                          </p>
-
-                          {/* Skills Tags */}
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            {((result as any).skills?.length > 0
-                              ? (result as any).skills.slice(0, viewMode === 'grid' ? 4 : 8)
-                              : result.snippet.match(/\b(Python|JavaScript|React|Node|AWS|GCP|Azure|SQL|Docker|Kubernetes|Java|C\+\+|TypeScript|Machine Learning|AI|Data Science|Full Stack|Backend|Frontend|DevOps)\b/gi)?.slice(0, viewMode === 'grid' ? 4 : 8) || []
-                            ).map((skill: string, skillIndex: number) => (
-                              <Badge
-                                key={skillIndex}
-                                variant="secondary"
-                                className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-100 font-medium"
-                              >
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-
-                          {/* Action Bar */}
-                          <div className={`
-                            flex flex-wrap gap-2 pt-4 border-t border-gray-100 mt-auto
-                            ${viewMode === 'list' ? 'justify-start' : 'justify-between'}
-                          `}>
-                            {/* Analyze Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => analyzeCandidate(result, index)}
-                              disabled={loadingAnalysis.has(index)}
-                              className="h-8 text-xs font-medium text-gray-600 hover:text-purple-700 hover:bg-purple-50"
-                            >
-                              {loadingAnalysis.has(index) ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              ) : (
-                                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                              )}
-                              Analyze
-                            </Button>
-
-                            {/* Get Contact Info Button (Nymeria) */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => getContactInfo(result, index)}
-                              disabled={loadingContact.has(index) || !!contact}
-                              className={`h-8 text-xs font-medium ${contact
-                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                : 'text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'
-                                }`}
-                            >
-                              {loadingContact.has(index) ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              ) : contact ? (
-                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                              ) : (
-                                <User className="w-3.5 h-3.5 mr-1.5" />
-                              )}
-                              {contact ? 'Contact Found' : 'Get Contact'}
-                            </Button>
-
-                            {/* Email Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                // Select this profile specifically for email generation
-                                if (!selectedProfiles.has(index)) {
-                                  toggleProfileSelection(index);
-                                }
-                                setTimeout(() => openEmailDialog(), 0);
-                              }}
-                              className="h-8 text-xs font-medium text-gray-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              <Mail className="w-3.5 h-3.5 mr-1.5" />
-                              Email
-                            </Button>
-
-                            {/* Add to Global Project Button */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => saveCandidate(result, index)}
-                              disabled={savingCandidates.has(index) || savedCandidates.has(index)}
-                              className={`h-8 text-xs font-medium ${savedCandidates.has(index)
-                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                              {savingCandidates.has(index) ? (
-                                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                              ) : savedCandidates.has(index) ? (
-                                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                              ) : (
-                                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                              )}
-                              {savedCandidates.has(index) ? 'Saved' : 'Add to Project'}
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Contact Info Section */}
-                        {contact && (
-                          <div className={`
-                            bg-white border border-gray-100 rounded-xl p-4 shadow-sm
-                            ${viewMode === 'list' ? 'w-72 flex-shrink-0' : 'mt-4'}
-                          `}>
-                            <h4 className="font-semibold text-sm text-emerald-900 flex items-center gap-2 mb-3">
-                              <User className="w-4 h-4 text-emerald-600" />
-                              Contact Info
-                            </h4>
-                            <div className="space-y-2">
-                              {contact.email && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Mail className="w-3.5 h-3.5 text-gray-400" />
-                                  <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline truncate">
-                                    {contact.email}
-                                  </a>
-                                </div>
-                              )}
-                              {contact.work_email && contact.work_email !== contact.email && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-                                  <a href={`mailto:${contact.work_email}`} className="text-blue-600 hover:underline truncate">
-                                    {contact.work_email}
-                                  </a>
-                                </div>
-                              )}
-                              {contact.phone && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Phone className="w-3.5 h-3.5 text-gray-400" />
-                                  <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
-                                    {contact.phone}
-                                  </a>
-                                </div>
-                              )}
-                              {contact.twitter_url && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Globe className="w-3.5 h-3.5 text-gray-400" />
-                                  <a href={contact.twitter_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
-                                    Twitter
-                                  </a>
-                                </div>
-                              )}
-                              {contact.github_url && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Code className="w-3.5 h-3.5 text-gray-400" />
-                                  <a href={contact.github_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
-                                    GitHub
-                                  </a>
-                                </div>
-                              )}
-                              {!contact.email && !contact.phone && (
-                                <p className="text-xs text-gray-500 italic">No contact details found</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Analysis Results Overlay/Section */}
-                        {analysis && (
-                          <div className={`
-                            bg-white border border-gray-100 rounded-xl p-4 shadow-sm
-                            ${viewMode === 'list' ? 'w-80 flex-shrink-0' : 'mt-4'}
-                          `}>
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-semibold text-sm text-purple-900 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-purple-600" />
-                                AI Analysis
-                              </h4>
-                              {analysis.match_score && (
-                                <Badge className={`
-                                  ${analysis.match_score >= 80 ? 'bg-green-100 text-green-700 border-green-200' :
-                                    analysis.match_score >= 60 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                                      'bg-red-100 text-red-700 border-red-200'}
-                                `}>
-                                  {analysis.match_score}% Match
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div className="space-y-3">
-                              {analysis.strengths && analysis.strengths.length > 0 && (
-                                <div>
-                                  <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">Strengths</span>
-                                  <ul className="mt-1 space-y-1">
-                                    {analysis.strengths.slice(0, 2).map((strength: string, i: number) => (
-                                      <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
-                                        <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <span className="line-clamp-2">{strength}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-
-                              {analysis.concerns && analysis.concerns.length > 0 && (
-                                <div>
-                                  <span className="text-xs font-semibold text-red-700 uppercase tracking-wider">Concerns</span>
-                                  <ul className="mt-1 space-y-1">
-                                    {analysis.concerns.slice(0, 1).map((concern: string, i: number) => (
-                                      <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
-                                        <AlertCircle className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
-                                        <span className="line-clamp-2">{concern}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Load More Results */}
                   {searchResults.length < totalSearchResults && searchPage < 10 && (
                     <div className="col-span-full flex flex-col items-center gap-2 py-6">
-                      <p className="text-sm text-gray-500">
-                        Showing {searchResults.length} of {totalSearchResults} results
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={loadMoreResults}
-                        disabled={isLoadingMore}
-                        className="border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700"
-                      >
-                        {isLoadingMore ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Loading more...
-                          </>
-                        ) : (
-                          <>
-                            <ArrowDown className="w-4 h-4 mr-2" />
-                            Load 10 More Results
-                          </>
-                        )}
+                      <p className="text-sm text-gray-500">Showing {searchResults.length} of {totalSearchResults} results</p>
+                      <Button variant="outline" onClick={loadMoreResults} disabled={isLoadingMore} className="border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700">
+                        {isLoadingMore ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Loading more...</> : <><ArrowDown className="w-4 h-4 mr-2" />Load 10 More Results</>}
                       </Button>
                     </div>
                   )}
                 </div>
-
-              </div >
-            </Card >
-          </ContainedLoading >
+              </div>
+            </Card>
+          </ContainedLoading>
         )}
 
-        {
-          searchResults.length === 0 && booleanString && (
-            <Card className="p-6 border-0 shadow-sm">
-              <p className="text-center text-gray-500">
-                Click "Search Candidates" to find candidates
-              </p>
-            </Card>
-          )
-        }
+        {searchResults.length === 0 && booleanString && (
+          <Card className="p-6 border-0 shadow-sm">
+            <p className="text-center text-gray-500">Click "Search Candidates" to find candidates</p>
+          </Card>
+        )}
 
-        {/* AI Analysis Button - Moved to search results header */}
-
-        {/* Candidate Analysis Section */}
-        {
-          searchResults.length > 0 && showAIAnalysis && (
-            <div className="mt-6">
-              <CompactCandidateAnalysis
-                candidates={searchResults}
-                jobDescription={jobDescription}
-                onCandidateSelect={(candidate) => {
-                  const index = searchResults.findIndex(r => r.link === candidate.link);
-                  if (index !== -1) {
-                    toggleProfileExpansion(index);
-                  }
-                }}
-              />
-            </div>
-          )
-        }
+        {searchResults.length > 0 && showAIAnalysis && (
+          <div className="mt-6">
+            <CompactCandidateAnalysis
+              candidates={searchResults}
+              jobDescription={jobDescription}
+              onCandidateSelect={(candidate) => {
+                const index = searchResults.findIndex(r => r.link === candidate.link);
+                if (index !== -1) profile.toggleProfileExpansion(index);
+              }}
+            />
+          </div>
+        )}
 
         {/* Email Generation Dialog */}
-        <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <Dialog open={profile.showEmailDialog} onOpenChange={profile.setShowEmailDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Generate Email Templates</DialogTitle>
-              <DialogDescription>
-                Add context about the role, company culture, or specific requirements to personalize the email templates for the selected candidates.
-              </DialogDescription>
+              <DialogDescription>Add context to personalize the email templates for selected candidates.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Additional Context (Optional)
-                </label>
-                <Textarea
-                  placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML to join our core team. Competitive salary, equity, and remote-friendly culture..."
-                  value={emailContext}
-                  onChange={(e) => setEmailContext(e.target.value)}
-                  className="min-h-[120px]"
-                />
+                <label className="text-sm font-medium mb-2 block">Additional Context (Optional)</label>
+                <Textarea placeholder="e.g., We're a fast-growing startup looking for someone passionate about AI/ML..." value={profile.emailContext} onChange={(e) => profile.setEmailContext(e.target.value)} className="min-h-[120px]" />
               </div>
               <div className="flex gap-2">
-                <Button
-                  onClick={generateEmailTemplates}
-                  disabled={isGeneratingEmails}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
+                <Button onClick={profile.generateEmailTemplates} disabled={profile.isGeneratingEmails} className="flex-1 bg-green-600 hover:bg-green-700">
+                  <Sparkles className="w-4 h-4 mr-2" />{profile.isGeneratingEmails ? 'Generating...' : 'Generate Email Templates'}
                 </Button>
-                <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => profile.setShowEmailDialog(false)}>Cancel</Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
 
         {/* Generated Email Templates */}
-        {
-          generatedEmails.length > 0 && (
-            <Card className="p-6 border-0 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <Mail className="h-3.5 w-3.5 text-blue-600" />
-                  </div>
-                  Email Templates
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{generatedEmails.length}</Badge>
-                </h2>
-                <Button
-                  onClick={() => setGeneratedEmails([])}
-                  variant="outline"
-                  size="sm"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {generatedEmails.map((email, index) => (
-                  <div key={index} className="border rounded-lg bg-white">
-                    <div className="p-4 border-b bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-sm">📧 {email.candidateName}</h3>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => copyToClipboard(email.subject)}
-                          >
-                            Copy Subject
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => copyToClipboard(email.body)}
-                          >
-                            Copy Email
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 space-y-3">
-                      <div>
-                        <div className="text-xs font-medium text-gray-500 mb-1">Subject:</div>
-                        <div className="text-sm font-medium text-purple-600 bg-purple-50 p-2 rounded border">
-                          {email.subject}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs font-medium text-gray-500 mb-1">Email Body:</div>
-                        <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
-                          {email.body}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <a
-                          href={email.profileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline flex items-center"
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          View LinkedIn Profile
-                        </a>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 px-2 text-xs"
-                            onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`)}
-                          >
-                            <Copy className="w-3 h-3 mr-1" />
-                            Copy
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-6 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={() => sendOutreach({
-                              candidate: email.candidateName,
-                              subject: email.subject,
-                              body: email.body,
-                              profileUrl: email.profileUrl
-                            }, index)}
-                          >
-                            <Send className="w-3 h-3 mr-1" />
-                            Send
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )
-        }
+        {profile.generatedEmails.length > 0 && (
+          <EmailTemplatesSection
+            emails={profile.generatedEmails}
+            onClear={() => profile.setGeneratedEmails([])}
+            onCopyToClipboard={copyToClipboard}
+            onSendOutreach={profile.sendOutreach}
+          />
+        )}
 
         {/* Location Modal */}
-        <LocationModal
-          isOpen={showLocationDialog}
-          onClose={() => setShowLocationDialog(false)}
-          onLocationSelect={handleLocationSelect}
-        />
+        <LocationModal isOpen={ctx.showLocationDialog} onClose={() => ctx.setShowLocationDialog(false)} onLocationSelect={ctx.handleLocationSelect} />
 
         {/* Boolean Explanation Dialog */}
         <Dialog open={showExplanation} onOpenChange={setShowExplanation}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Boolean Search Explanation</DialogTitle>
-              <DialogDescription>
-                Understanding what your search will find and why
-              </DialogDescription>
+              <DialogDescription>Understanding what your search will find and why</DialogDescription>
             </DialogHeader>
-            {booleanExplanation && (
-              <BooleanExplainer
-                explanation={booleanExplanation}
-                onClose={() => setShowExplanation(false)}
-                variant="modal"
-              />
-            )}
+            {booleanExplanation && <BooleanExplainer explanation={booleanExplanation} onClose={() => setShowExplanation(false)} variant="modal" />}
           </DialogContent>
         </Dialog>
 
-        {/* Enhanced Boolean Generation Animation */}
-        <BooleanGenerationAnimation
-          isOpen={showBooleanAnimation}
-          onComplete={() => setShowBooleanAnimation(false)}
-          estimatedTimeMs={120000}
-        />
-      </div >
-    </TooltipProvider >
+        <BooleanGenerationAnimation isOpen={showBooleanAnimation} onComplete={() => setShowBooleanAnimation(false)} estimatedTimeMs={120000} />
+      </div>
+    </TooltipProvider>
   );
 }

@@ -84,8 +84,8 @@ async function verifyWebhookSignature(req) {
     const webhookSecret = process.env.SENDGRID_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
-      logger.warn('No webhook secret configured - skipping signature verification');
-      return true; // Allow requests when no secret is configured (for development)
+      logger.error('SENDGRID_WEBHOOK_SECRET not configured - rejecting request');
+      return false;
     }
 
     // Create the expected signature

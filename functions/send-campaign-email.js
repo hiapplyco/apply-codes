@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 const { getSendGridClient } = require('./utils/sendgrid');
 
 // Initialize admin if not already done
@@ -409,7 +410,7 @@ async function sendEmailBatch({
         last_name: subscriber.lastName,
         full_name: subscriber.fullName,
         email: subscriber.email,
-        unsubscribe_url: unsubscribeUrl || `https://hiapply.co/unsubscribe?email=${encodeURIComponent(subscriber.email)}&campaign=${campaignId}`,
+        unsubscribe_url: unsubscribeUrl || `https://hiapply.co/unsubscribe?email=${encodeURIComponent(subscriber.email)}&campaign=${campaignId}&token=${generateUnsubscribeToken(subscriber.email, campaignId)}`,
         ...subscriber.customFields
       };
 
@@ -691,6 +692,18 @@ exports.manageSubscriberList = functions
     }
   });
 
+/**
+ * Generate an HMAC token for unsubscribe links.
+ * Use this when building unsubscribe URLs in campaign emails.
+ */
+function generateUnsubscribeToken(email, campaignId) {
+  const secret = process.env.SENDGRID_WEBHOOK_SECRET || 'hiapply-unsubscribe-fallback';
+  return crypto.createHmac('sha256', secret)
+    .update(`${email}:${campaignId || 'global'}`)
+    .digest('hex')
+    .substring(0, 32);
+}
+
 // Helper function to handle unsubscribe requests
 exports.handleUnsubscribe = functions
   .https.onRequest(async (req, res) => {
@@ -705,12 +718,22 @@ exports.handleUnsubscribe = functions
     }
 
     try {
-      const { email, campaignId, listId } = req.method === 'GET' ? req.query : req.body;
+      const { email, campaignId, listId, token } = req.method === 'GET' ? req.query : req.body;
 
       if (!email) {
         return res.status(400).json({
           success: false,
           error: 'Email address is required'
+        });
+      }
+
+      // Verify HMAC token to prevent enumeration/abuse
+      const expectedToken = generateUnsubscribeToken(email, campaignId);
+      if (!token || token !== expectedToken) {
+        logger.warn(`Invalid unsubscribe token for ${email}`);
+        return res.status(403).json({
+          success: false,
+          error: 'Invalid or missing unsubscribe token'
         });
       }
 

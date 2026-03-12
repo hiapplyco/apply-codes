@@ -591,8 +591,12 @@ class FunctionBridge {
     return this.callCallable("getDailyKey", payload);
   }
 
-  async getGeminiKey(): Promise<{ secret: string }> {
-    return this.callCallable("getGeminiKey", {});
+  async generateGeminiImage(payload: { prompt: string; style?: string; aspectRatio?: string }): Promise<{ base64Data: string; mimeType: string }> {
+    return this.callCallable("generateGeminiImage", payload);
+  }
+
+  async summarizeMeeting(payload: { transcript: string }): Promise<{ summary: string }> {
+    return this.callCallable("summarizeMeeting", payload);
   }
 
   async exportToGoogleDocs(payload: any): Promise<any> {

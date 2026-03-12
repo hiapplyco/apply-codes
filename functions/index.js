@@ -102,7 +102,10 @@ exports.shareGoogleDoc = require('./share-google-doc').shareGoogleDoc;
 
 // ─── API Keys ────────────────────────────────────────────────────────────────
 exports.getDailyKey = require('./get-daily-key').getDailyKey;
-exports.getGeminiKey = require('./get-gemini-key').getGeminiKey;
+
+// ─── Server-side AI Proxies ─────────────────────────────────────────────────
+exports.generateGeminiImage = require('./generate-gemini-image').generateGeminiImage;
+exports.summarizeMeeting = require('./summarize-meeting').summarizeMeeting;
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 const adminModule = require('./admin-grant-pro');
@@ -110,7 +113,7 @@ exports.adminGrantPro = adminModule.adminGrantPro;
 exports.grantProAccess = adminModule.grantProAccess;
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
-exports.generateDashboardMetrics = require('./generate-dashboard-metrics').generateDashboardMetrics;
+// generateDashboardMetrics removed — uses dead Supabase client, not Firebase
 
 // ─── Clarvida ────────────────────────────────────────────────────────────────
 exports.generateClarvidaReport = require('./generate-clarvida-report').generateClarvidaReport;

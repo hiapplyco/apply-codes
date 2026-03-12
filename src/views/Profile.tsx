@@ -3,23 +3,7 @@
 import { useState, useEffect } from "react";
 import { useNewAuth } from "@/context/NewAuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { db } from "@/lib/firebase";
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  documentId
-} from "firebase/firestore";
-import { uploadAvatar } from "@/lib/firebase-storage";
-import {
-  User,
   Mail,
   Calendar,
   Search,
@@ -27,132 +11,42 @@ import {
   Users,
   Star,
   Activity,
-  Settings,
   LogOut,
   Edit3,
   Camera,
-  Clock,
-  Hash,
-  Briefcase,
-  Trash2,
-  MoreVertical,
-  Plus,
-  Filter,
-  ChevronRight,
-  CreditCard,
-  Crown,
-  Zap,
-  ExternalLink,
-  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { format, startOfWeek, startOfMonth, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useRouter } from 'next/navigation';
-import { normalizeTimestamp } from "@/lib/timestamp";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
 
-interface ProfileData {
-  full_name: string | null;
-  avatar_url: string | null;
-  phone_number: string | null;
-  created_at: string;
-  updated_at: string;
-}
+// Extracted hooks
+import { useProfileData } from '@/views/profile/useProfileData';
+import { useSearchHistory } from '@/views/profile/useSearchHistory';
+import { useProjects } from '@/views/profile/useProjects';
 
-interface UserStats {
-  totalSearches: number;
-  totalCandidatesSaved: number;
-  totalProjects: number;
-  favoriteSearches: number;
-  recentActivity: Array<{
-    id: string;
-    type: 'search' | 'save' | 'project';
-    description: string;
-    timestamp: string;
-  }>;
-  searchesThisWeek: number;
-  searchesThisMonth: number;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  icon: string;
-  candidates_count: number;
-  created_at: string;
-  updated_at: string;
-  is_archived: boolean;
-}
-
-interface SearchHistoryItem {
-  id: string;
-  search_query: string;
-  boolean_query: string;
-  platform: string;
-  results_count: number;
-  created_at: string;
-  is_favorite: boolean;
-  tags: string[];
-  project_id: string | null;
-  project?: Project;
-}
+// Extracted components
+import { SearchHistoryTab } from '@/views/profile/SearchHistoryTab';
+import { ProjectsTab } from '@/views/profile/ProjectsTab';
+import { SettingsTab } from '@/views/profile/SettingsTab';
+import { ProjectFormModal } from '@/views/profile/ProjectFormModal';
 
 export default function Profile() {
-  const { user, signOut, updateUser } = useNewAuth();
+  const { user, signOut } = useNewAuth();
   const router = useRouter();
   const { subscription, createPortalSession, loading: subscriptionLoading } = useSubscription();
-  const [openingPortal, setOpeningPortal] = useState(false);
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
+
+  // Extracted hooks
+  const profile = useProfileData(user?.uid);
+  const history = useSearchHistory(user?.uid);
+  const proj = useProjects(user?.uid);
+
   const [loading, setLoading] = useState(true);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingName, setEditingName] = useState("");
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // Search History states
-  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [showCreateProject, setShowCreateProject] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [newProject, setNewProject] = useState({
-    name: "",
-    description: "",
-    color: "#8B5CF6",
-    icon: "folder"
-  });
-
-  const projectIcons = [
-    { name: "folder", icon: Folder },
-    { name: "briefcase", icon: Briefcase },
-    { name: "users", icon: Users },
-  ];
-
-  const projectColors = [
-    "#8B5CF6", // Purple
-    "#D946EF", // Pink
-    "#10B981", // Green
-    "#F59E0B", // Orange
-    "#3B82F6", // Blue
-    "#EF4444", // Red
-  ];
 
   useEffect(() => {
     if (!user) return;
@@ -160,15 +54,12 @@ export default function Profile() {
     const loadAllData = async () => {
       setLoading(true);
       try {
-        // Run profile and projects fetch in parallel
         await Promise.all([
-          fetchProfileData(),
-          fetchProjects()
+          profile.fetchProfileData(),
+          proj.fetchProjects()
         ]);
-
-        // Fetch search history first, then compute stats from it (eliminates duplicate fetch)
-        const history = await fetchSearchHistory();
-        computeUserStats(history);
+        const historyData = await history.fetchSearchHistory();
+        history.computeUserStats(historyData);
       } finally {
         setLoading(false);
       }
@@ -177,433 +68,18 @@ export default function Profile() {
     loadAllData();
   }, [user]);
 
-  const fetchProfileData = async () => {
-    if (!user) return;
-
-    try {
-      if (!db) {
-        console.warn("[Profile] Firestore not initialized");
-        return;
-      }
-
-      const profileRef = doc(db, 'profiles', user.uid);
-      const profileSnap = await getDoc(profileRef);
-
-      if (!profileSnap.exists()) {
-        setProfileData(null);
-        setEditingName("");
-        return;
-      }
-
-      const data = profileSnap.data() as ProfileData;
-      const normalizedProfile: ProfileData = {
-        ...data,
-        created_at: normalizeTimestamp(data.created_at),
-        updated_at: normalizeTimestamp(data.updated_at)
-      };
-      setProfileData(normalizedProfile);
-      setEditingName(normalizedProfile.full_name || "");
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast.error("Failed to load profile data");
-    }
-  };
-
-  const computeUserStats = async (searchHistoryData: SearchHistoryItem[]) => {
-    if (!user) return;
-
-    try {
-      if (!db) {
-        console.warn("[Profile] Firestore not initialized");
-        return;
-      }
-
-      // Only fetch candidates and projects count (search history is already loaded)
-      const [candidatesSnapshot, projectsSnapshot] = await Promise.all([
-        getDocs(query(collection(db, 'saved_candidates'), where('user_id', '==', user.uid))),
-        getDocs(query(collection(db, 'projects'), where('user_id', '==', user.uid)))
-      ]);
-
-      const searchCount = searchHistoryData.length;
-      const favoritesCount = searchHistoryData.filter(search => search.is_favorite).length;
-
-      const weekStart = startOfWeek(new Date());
-      const monthStart = startOfMonth(new Date());
-
-      const weekIso = weekStart.toISOString();
-      const monthIso = monthStart.toISOString();
-
-      const weekSearches = searchHistoryData.filter(search => search.created_at >= weekIso).length;
-      const monthSearches = searchHistoryData.filter(search => search.created_at >= monthIso).length;
-
-      const recentActivity = [...searchHistoryData]
-        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-        .slice(0, 5)
-        .map(search => ({
-          id: search.id,
-          type: 'search' as const,
-          description: `Searched for "${search.search_query}"`,
-          timestamp: search.created_at
-        }));
-
-      setUserStats({
-        totalSearches: searchCount,
-        totalCandidatesSaved: candidatesSnapshot.size,
-        totalProjects: projectsSnapshot.size,
-        favoriteSearches: favoritesCount,
-        searchesThisWeek: weekSearches,
-        searchesThisMonth: monthSearches,
-        recentActivity
-      });
-    } catch (error) {
-      console.error('Error computing user stats:', error);
-      toast.error("Failed to load statistics");
-    }
-  };
-
-  const fetchSearchHistory = async (): Promise<SearchHistoryItem[]> => {
-    if (!user) return [];
-
-    try {
-      if (!db) {
-        console.warn("[Profile] Firestore not initialized");
-        return [];
-      }
-
-      const historyQuery = query(
-        collection(db, 'search_history'),
-        where('user_id', '==', user.uid),
-        orderBy('created_at', 'desc')
-      );
-
-      const snapshot = await getDocs(historyQuery);
-
-      // Collect all unique project_ids for batch fetching
-      const projectIds = new Set<string>();
-      const historyDocs = snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as any;
-        if (data.project_id) {
-          projectIds.add(data.project_id);
-        }
-        return {
-          docId: docSnap.id,
-          data
-        };
-      });
-
-      // Batch fetch all projects at once (instead of N+1 queries)
-      const projectMap = new Map<string, Project>();
-      const projectIdArray = Array.from(projectIds);
-
-      if (projectIdArray.length > 0) {
-        // Firestore IN query supports up to 30 items
-        const BATCH_SIZE = 30;
-        for (let i = 0; i < projectIdArray.length; i += BATCH_SIZE) {
-          const batchIds = projectIdArray.slice(i, i + BATCH_SIZE);
-          const projectsQuery = query(
-            collection(db, 'projects'),
-            where(documentId(), 'in', batchIds)
-          );
-          const projectsSnapshot = await getDocs(projectsQuery);
-
-          projectsSnapshot.docs.forEach(projectSnap => {
-            const projectData = projectSnap.data() as Project;
-            projectMap.set(projectSnap.id, {
-              ...projectData,
-              id: projectSnap.id,
-              created_at: normalizeTimestamp(projectData.created_at),
-              updated_at: normalizeTimestamp(projectData.updated_at)
-            });
-          });
-        }
-      }
-
-      // Map history items with their projects
-      const history = historyDocs.map(({ docId, data }) => ({
-        ...(data as SearchHistoryItem),
-        id: docId,
-        created_at: normalizeTimestamp(data.created_at),
-        project: data.project_id ? projectMap.get(data.project_id) : undefined
-      } as SearchHistoryItem));
-
-      setSearchHistory(history);
-      return history;
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-      toast.error("Failed to load search history");
-      return [];
-    }
-  };
-
-  const fetchProjects = async () => {
-    if (!user) return;
-
-    try {
-      if (!db) {
-        console.warn("[Profile] Firestore not initialized");
-        return;
-      }
-
-      const projectsQuery = query(
-        collection(db, 'projects'),
-        where('user_id', '==', user.uid),
-        orderBy('created_at', 'desc')
-      );
-
-      const snapshot = await getDocs(projectsQuery);
-      const loadedProjects = snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as Project;
-        return {
-          ...data,
-          id: docSnap.id,
-          created_at: normalizeTimestamp(data.created_at),
-          updated_at: normalizeTimestamp(data.updated_at)
-        };
-      });
-
-      setProjects(loadedProjects);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      toast.error("Failed to load projects");
-    }
-  };
-
-  const handleUpdateProfile = async () => {
-    if (!user || !profileData) return;
-
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const profileRef = doc(db, 'profiles', user.uid);
-      await updateDoc(profileRef, {
-        full_name: editingName,
-        updated_at: new Date().toISOString()
-      });
-
-      setProfileData({ ...profileData, full_name: editingName });
-      setEditModalOpen(false);
-      toast.success("Profile updated successfully");
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error("Failed to update profile");
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !user) return;
-
-    const file = e.target.files[0];
-
-    // Validate file type and size
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please upload a valid image file (JPEG, PNG, GIF, or WebP)");
-      return;
-    }
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      toast.error("Image size must be less than 5MB");
-      return;
-    }
-
-    setUploadingAvatar(true);
-
-    try {
-      // Upload to Firebase Storage with progress tracking
-      const avatarUrl = await uploadAvatar(user.uid, file, (progress) => {
-        // Optional: You could show upload progress here
-        console.log(`Upload progress: ${progress}%`);
-      });
-
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const profileRef = doc(db, 'profiles', user.uid);
-      await updateDoc(profileRef, {
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString()
-      });
-
-      if (profileData) {
-        setProfileData({ ...profileData, avatar_url: avatarUrl });
-      }
-
-      toast.success("Avatar updated successfully");
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-
-      // Provide more specific error messages
-      let errorMessage = "Failed to upload avatar";
-      if (error instanceof Error) {
-        if (error.message.includes('not authenticated')) {
-          errorMessage = "Please sign in again to upload an avatar";
-        } else if (error.message.includes('quota exceeded')) {
-          errorMessage = "Storage quota exceeded. Please try again later";
-        } else if (error.message.includes('unauthorized')) {
-          errorMessage = "You don't have permission to upload files";
-        } else if (error.message.includes('invalid format')) {
-          errorMessage = "Invalid image format. Please use JPEG, PNG, GIF, or WebP";
-        }
-      }
-
-      toast.error(errorMessage);
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
-  const toggleFavorite = async (searchId: string, currentStatus: boolean) => {
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const searchRef = doc(db, 'search_history', searchId);
-      await updateDoc(searchRef, {
-        is_favorite: !currentStatus,
-        updated_at: new Date().toISOString()
-      });
-
-      fetchSearchHistory();
-      toast.success(currentStatus ? "Removed from favorites" : "Added to favorites");
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      toast.error("Failed to update favorite status");
-    }
-  };
-
-  const deleteSearch = async (searchId: string) => {
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      await deleteDoc(doc(db, 'search_history', searchId));
-
-      fetchSearchHistory();
-      toast.success("Search deleted successfully");
-    } catch (error) {
-      console.error('Error deleting search:', error);
-      toast.error("Failed to delete search");
-    }
-  };
-
-  const createProject = async () => {
-    if (!user) return;
-
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      await addDoc(collection(db, 'projects'), {
-        ...newProject,
-        user_id: user.uid,
-        is_archived: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-
-      fetchProjects();
-      setShowCreateProject(false);
-      setNewProject({ name: "", description: "", color: "#8B5CF6", icon: "folder" });
-      toast.success("Project created successfully");
-    } catch (error) {
-      console.error('Error creating project:', error);
-      toast.error("Failed to create project");
-    }
-  };
-
-  const updateProject = async () => {
-    if (!editingProject) return;
-
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const projectRef = doc(db, 'projects', editingProject.id);
-      await updateDoc(projectRef, {
-        name: editingProject.name,
-        description: editingProject.description,
-        color: editingProject.color,
-        icon: editingProject.icon,
-        updated_at: new Date().toISOString()
-      });
-
-      fetchProjects();
-      setEditingProject(null);
-      toast.success("Project updated successfully");
-    } catch (error) {
-      console.error('Error updating project:', error);
-      toast.error("Failed to update project");
-    }
-  };
-
-  const archiveProject = async (projectId: string) => {
-    try {
-      if (!db) {
-        throw new Error('Firestore not initialized');
-      }
-
-      const projectRef = doc(db, 'projects', projectId);
-      await updateDoc(projectRef, {
-        is_archived: true,
-        updated_at: new Date().toISOString()
-      });
-
-      fetchProjects();
-      toast.success("Project archived successfully");
-    } catch (error) {
-      console.error('Error archiving project:', error);
-      toast.error("Failed to archive project");
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut();
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error("Failed to sign out");
     }
   };
 
-  const handleManageSubscription = async () => {
-    setOpeningPortal(true);
-    try {
-      const result = await createPortalSession();
-      if (result?.url) {
-        window.location.href = result.url;
-      }
-    } catch (error) {
-      console.error('Error opening billing portal:', error);
-      toast.error("Failed to open billing portal");
-    } finally {
-      setOpeningPortal(false);
-    }
-  };
-
-  const getTierBadge = () => {
-    if (!subscription) return null;
-    const tierConfig = {
-      free_trial: { label: 'Free Trial', color: 'bg-info/10 text-info', icon: Clock },
-      pro: { label: 'Pro', color: 'bg-primary/10 text-primary', icon: Crown },
-      enterprise: { label: 'Enterprise', color: 'bg-warning/10 text-warning', icon: Zap },
-    };
-    const config = tierConfig[subscription.tier] || tierConfig.free_trial;
-    const Icon = config.icon;
-    return (
-      <Badge className={`${config.color} border-0 font-semibold`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
+  const getInitials = (name: string | null | undefined, email: string) => {
+    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    return email[0].toUpperCase();
   };
 
   if (loading) {
@@ -614,35 +90,18 @@ export default function Profile() {
     );
   }
 
-  const getInitials = (name: string | null | undefined, email: string) => {
-    if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase();
-    }
-    return email[0].toUpperCase();
-  };
-
-  const getProjectIcon = (iconName: string) => {
-    const icon = projectIcons.find(i => i.name === iconName);
-    const IconComponent = icon ? icon.icon : Folder;
-    return IconComponent;
-  };
-
-  const favoriteSearches = searchHistory.filter(s => s.is_favorite);
-  const activeProjects = projects.filter(p => !p.is_archived);
-
   return (
     <div className="container mx-auto py-8 px-4 space-y-8 max-w-7xl">
       {/* Profile Header */}
       <Card>
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col gap-6">
-            {/* Avatar and Info Row */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <div className="relative flex-shrink-0">
                 <Avatar className="h-24 w-24 border-2 border-border">
-                  <AvatarImage src={profileData?.avatar_url || undefined} />
+                  <AvatarImage src={profile.profileData?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                    {getInitials(profileData?.full_name, user?.email || '')}
+                    {getInitials(profile.profileData?.full_name, user?.email || '')}
                   </AvatarFallback>
                 </Avatar>
                 <label className="absolute -bottom-2 -right-2 cursor-pointer">
@@ -650,11 +109,11 @@ export default function Profile() {
                     type="file"
                     className="hidden"
                     accept="image/*"
-                    onChange={handleAvatarUpload}
-                    disabled={uploadingAvatar}
+                    onChange={profile.handleAvatarUpload}
+                    disabled={profile.uploadingAvatar}
                   />
                   <div className="bg-primary text-primary-foreground p-2 rounded-full hover:bg-primary/90 transition-colors">
-                    {uploadingAvatar ? (
+                    {profile.uploadingAvatar ? (
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                     ) : (
                       <Camera className="h-4 w-4" />
@@ -665,7 +124,7 @@ export default function Profile() {
 
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
-                  {profileData?.full_name || 'Unnamed User'}
+                  {profile.profileData?.full_name || 'Unnamed User'}
                 </h1>
                 <p className="text-muted-foreground flex items-center gap-2 mt-1 text-sm sm:text-base">
                   <Mail className="h-4 w-4 flex-shrink-0" />
@@ -673,26 +132,17 @@ export default function Profile() {
                 </p>
                 <p className="text-muted-foreground flex items-center gap-2 mt-1 text-sm">
                   <Calendar className="h-4 w-4 flex-shrink-0" />
-                  Member since {profileData && format(new Date(profileData.created_at), 'MMMM yyyy')}
+                  Member since {profile.profileData && format(new Date(profile.profileData.created_at), 'MMMM yyyy')}
                 </p>
               </div>
             </div>
 
-            {/* Action Buttons Row */}
             <div className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setEditModalOpen(true)}
-                className="transition-all"
-              >
+              <Button variant="outline" onClick={() => profile.setEditModalOpen(true)}>
                 <Edit3 className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleSignOut}
-                className="transition-all"
-              >
+              <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
@@ -703,53 +153,10 @@ export default function Profile() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Searches</p>
-                <p className="text-2xl font-bold text-primary">{userStats?.totalSearches || 0}</p>
-              </div>
-              <Search className="h-8 w-8 text-primary opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Saved Candidates</p>
-                <p className="text-2xl font-bold text-success">{userStats?.totalCandidatesSaved || 0}</p>
-              </div>
-              <Users className="h-8 w-8 text-success opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Projects</p>
-                <p className="text-2xl font-bold text-warning">{userStats?.totalProjects || 0}</p>
-              </div>
-              <Folder className="h-8 w-8 text-warning opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">This Month</p>
-                <p className="text-2xl font-bold text-info">{userStats?.searchesThisMonth || 0}</p>
-              </div>
-              <Activity className="h-8 w-8 text-info opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard label="Total Searches" value={history.userStats?.totalSearches || 0} icon={Search} color="primary" />
+        <StatCard label="Saved Candidates" value={history.userStats?.totalCandidatesSaved || 0} icon={Users} color="success" />
+        <StatCard label="Active Projects" value={history.userStats?.totalProjects || 0} icon={Folder} color="warning" />
+        <StatCard label="This Month" value={history.userStats?.searchesThisMonth || 0} icon={Activity} color="info" />
       </div>
 
       {/* Main Content Tabs */}
@@ -776,11 +183,11 @@ export default function Profile() {
               <CardDescription>Your latest actions and searches</CardDescription>
             </CardHeader>
             <CardContent>
-              {userStats?.recentActivity.length === 0 ? (
+              {history.userStats?.recentActivity.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">No recent activity</p>
               ) : (
                 <div className="space-y-4">
-                  {userStats?.recentActivity.map((activity) => (
+                  {history.userStats?.recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
                       <div className="flex items-center gap-3">
                         {activity.type === 'search' && <Search className="h-5 w-5 text-primary" />}
@@ -802,380 +209,33 @@ export default function Profile() {
         </TabsContent>
 
         <TabsContent value="searches" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Search History</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-1" />
-                Filter
-              </Button>
-            </div>
-          </div>
-
-          {/* Favorite Searches */}
-          {favoriteSearches.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  Favorite Searches
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {favoriteSearches.map((search) => (
-                    <div key={search.id} className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium">{search.search_query}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Hash className="h-3 w-3" />
-                            {search.platform}
-                          </span>
-                          <span>{search.results_count} results</span>
-                          <span>{format(new Date(search.created_at), 'MMM d, yyyy')}</span>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/sourcing?search=${encodeURIComponent(search.boolean_query)}`)}>
-                            <Search className="h-4 w-4 mr-2" />
-                            Re-run Search
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleFavorite(search.id, true)}>
-                            <Star className="h-4 w-4 mr-2" />
-                            Remove from Favorites
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => deleteSearch(search.id)} className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* All Searches */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Searches</CardTitle>
-              <CardDescription>Your complete search history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {searchHistory.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No searches yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {searchHistory.map((search) => (
-                    <div key={search.id} className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium">{search.search_query}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Hash className="h-3 w-3" />
-                            {search.platform}
-                          </span>
-                          <span>{search.results_count} results</span>
-                          <span>{format(new Date(search.created_at), 'MMM d, yyyy')}</span>
-                          {search.project && (
-                            <Badge
-                              variant="secondary"
-                              style={{ backgroundColor: search.project.color + '20', color: search.project.color }}
-                            >
-                              {search.project.name}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/sourcing?search=${encodeURIComponent(search.boolean_query)}`)}>
-                            <Search className="h-4 w-4 mr-2" />
-                            Re-run Search
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleFavorite(search.id, search.is_favorite)}>
-                            <Star className="h-4 w-4 mr-2" />
-                            {search.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => deleteSearch(search.id)} className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <SearchHistoryTab
+            searchHistory={history.searchHistory}
+            toggleFavorite={history.toggleFavorite}
+            deleteSearch={history.deleteSearch}
+          />
         </TabsContent>
 
         <TabsContent value="projects" className="space-y-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Projects</h2>
-            <Button
-              onClick={() => setShowCreateProject(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeProjects.map((project) => {
-              const IconComponent = getProjectIcon(project.icon);
-              return (
-                <Card
-                  key={project.id}
-                  className="transition-all cursor-pointer"
-                  onClick={() => router.push(`/projects/${project.id}`)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div
-                        className="p-3 rounded-lg"
-                        style={{ backgroundColor: project.color + '20' }}
-                      >
-                        <IconComponent className="h-6 w-6" style={{ color: project.color }} />
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingProject(project);
-                          }}>
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            archiveProject(project.id);
-                          }}>
-                            <Folder className="h-4 w-4 mr-2" />
-                            Archive
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{project.name}</h3>
-                    <p className="text-muted-foreground text-sm mb-4">{project.description}</p>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{project.candidates_count} candidates</span>
-                      <span>{format(new Date(project.created_at), 'MMM d')}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <ProjectsTab
+            activeProjects={proj.activeProjects}
+            onCreateNew={() => proj.setShowCreateProject(true)}
+            onEdit={(project) => proj.setEditingProject(project)}
+            onArchive={proj.archiveProject}
+          />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
-          {/* Subscription Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Subscription
-                  </CardTitle>
-                  <CardDescription>Manage your subscription and billing</CardDescription>
-                </div>
-                {getTierBadge()}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {subscriptionLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : subscription ? (
-                <>
-                  {/* Current Plan Info */}
-                  <div className="bg-muted rounded-lg p-4 border-2 border-border">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          {subscription.tier === 'free_trial' ? 'Free Trial' :
-                           subscription.tier === 'pro' ? 'Pro Plan' : 'Enterprise Plan'}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {subscription.status === 'trialing' && subscription.timeRemaining && (
-                            <>
-                              {subscription.timeRemaining.days > 0
-                                ? `${subscription.timeRemaining.days} days remaining`
-                                : subscription.timeRemaining.hours > 0
-                                ? `${subscription.timeRemaining.hours} hours remaining`
-                                : 'Trial expires soon'}
-                            </>
-                          )}
-                          {subscription.status === 'active' && 'Active subscription'}
-                          {subscription.status === 'past_due' && 'Payment past due'}
-                          {subscription.status === 'canceled' && 'Subscription cancelled'}
-                          {subscription.status === 'expired' && 'Subscription expired'}
-                        </p>
-                      </div>
-                      {subscription.tier === 'free_trial' && (
-                        <Button
-                          onClick={() => router.push('/pricing')}
-                        >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Upgrade to Pro
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Trial Warning Banner */}
-                    {subscription.status === 'trialing' && subscription.timeRemaining && subscription.timeRemaining.days <= 3 && (
-                      <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3 mt-4">
-                        <p className="text-amber-800 text-sm font-medium">
-                          Your trial ends {subscription.timeRemaining.days === 0
-                            ? 'today'
-                            : `in ${subscription.timeRemaining.days} day${subscription.timeRemaining.days !== 1 ? 's' : ''}`}.
-                          Upgrade now to keep your access!
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Payment Failed Banner */}
-                    {subscription.status === 'past_due' && (
-                      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 mt-4">
-                        <p className="text-red-800 text-sm font-medium">
-                          Your payment failed. Please update your payment method to continue using Pro features.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Usage Meters */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Usage This Period</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm text-muted-foreground">Searches</span>
-                          <span className="text-sm font-medium">
-                            {subscription.usage.searches} / {subscription.limits.searches ?? 'Unlimited'}
-                          </span>
-                        </div>
-                        <Progress
-                          value={subscription.limits.searches
-                            ? (subscription.usage.searches / subscription.limits.searches) * 100
-                            : 0}
-                          className="h-2"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm text-muted-foreground">Contact Enrichments</span>
-                          <span className="text-sm font-medium">
-                            {subscription.usage.candidatesEnriched} / {subscription.limits.candidatesEnriched ?? 'Unlimited'}
-                          </span>
-                        </div>
-                        <Progress
-                          value={subscription.limits.candidatesEnriched
-                            ? (subscription.usage.candidatesEnriched / subscription.limits.candidatesEnriched) * 100
-                            : 0}
-                          className="h-2"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="text-sm text-muted-foreground">AI Calls</span>
-                          <span className="text-sm font-medium">
-                            {subscription.usage.aiCalls} / {subscription.limits.aiCalls ?? 'Unlimited'}
-                          </span>
-                        </div>
-                        <Progress
-                          value={subscription.limits.aiCalls
-                            ? (subscription.usage.aiCalls / subscription.limits.aiCalls) * 100
-                            : 0}
-                          className="h-2"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Manage Subscription Button */}
-                  {subscription.tier !== 'free_trial' && (
-                    <div className="pt-4 border-t">
-                      <Button
-                        onClick={handleManageSubscription}
-                        disabled={openingPortal}
-                        variant="outline"
-                      >
-                        {openingPortal ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                        )}
-                        Manage Subscription
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Update payment method, view invoices, or cancel subscription
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No subscription found</p>
-                  <Button
-                    onClick={() => router.push('/pricing')}
-                  >
-                    View Plans
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Account Settings Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>Manage your account preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Danger Zone</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Once you delete your account, there is no going back. Please be certain.
-                </p>
-                <Button variant="destructive">
-                  Delete Account
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <SettingsTab
+            subscription={subscription}
+            subscriptionLoading={subscriptionLoading}
+            createPortalSession={createPortalSession}
+          />
         </TabsContent>
       </Tabs>
 
       {/* Edit Profile Modal */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+      <Dialog open={profile.editModalOpen} onOpenChange={profile.setEditModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
@@ -1185,21 +245,16 @@ export default function Profile() {
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                             />
+                value={profile.editingName}
+                onChange={(e) => profile.setEditingName(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => profile.setEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleUpdateProfile}
-            >
+            <Button onClick={profile.handleUpdateProfile}>
               Save Changes
             </Button>
           </DialogFooter>
@@ -1207,168 +262,42 @@ export default function Profile() {
       </Dialog>
 
       {/* Create Project Modal */}
-      <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-            <DialogDescription>
-              Organize your candidates and searches into projects
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name</Label>
-              <Input
-                id="project-name"
-                value={newProject.name}
-                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                               placeholder="e.g., Q1 Engineering Hiring"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="project-description">Description</Label>
-              <Textarea
-                id="project-description"
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                               placeholder="Brief description of this project..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <div className="flex gap-2">
-                {projectIcons.map(({ name, icon: Icon }) => (
-                  <Button
-                    key={name}
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setNewProject({ ...newProject, icon: name })}
-                    className={`p-3 rounded-lg ${newProject.icon === name
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border'
-                      }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="flex gap-2">
-                {projectColors.map((color) => (
-                  <Button
-                    key={color}
-                    type="button"
-                    variant="outline"
-                    onClick={() => setNewProject({ ...newProject, color })}
-                    className={`w-10 h-10 rounded-lg p-0 ${newProject.color === color
-                        ? 'border-foreground scale-110'
-                        : 'border-border'
-                      }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateProject(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createProject}
-              disabled={!newProject.name}
-            >
-              Create Project
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProjectFormModal
+        mode="create"
+        open={proj.showCreateProject}
+        onOpenChange={proj.setShowCreateProject}
+        project={proj.newProject}
+        onProjectChange={(updates) => proj.setNewProject({ ...proj.newProject, ...updates })}
+        onSubmit={proj.createProject}
+      />
 
       {/* Edit Project Modal */}
-      {editingProject && (
-        <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Project</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-project-name">Project Name</Label>
-                <Input
-                  id="edit-project-name"
-                  value={editingProject.name}
-                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-project-description">Description</Label>
-                <Textarea
-                  id="edit-project-description"
-                  value={editingProject.description}
-                  onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
-                                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Icon</Label>
-                <div className="flex gap-2">
-                  {projectIcons.map(({ name, icon: Icon }) => (
-                    <Button
-                      key={name}
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setEditingProject({ ...editingProject, icon: name })}
-                      className={`p-3 rounded-lg ${editingProject.icon === name
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border'
-                        }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <div className="flex gap-2">
-                  {projectColors.map((color) => (
-                    <Button
-                      key={color}
-                      type="button"
-                      variant="outline"
-                      onClick={() => setEditingProject({ ...editingProject, color })}
-                      className={`w-10 h-10 rounded-lg p-0 ${editingProject.color === color
-                          ? 'border-foreground scale-110'
-                          : 'border-border'
-                        }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setEditingProject(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={updateProject}
-              >
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {proj.editingProject && (
+        <ProjectFormModal
+          mode="edit"
+          open={!!proj.editingProject}
+          onOpenChange={() => proj.setEditingProject(null)}
+          project={proj.editingProject}
+          onProjectChange={(updates) => proj.setEditingProject({ ...proj.editingProject!, ...updates })}
+          onSubmit={proj.updateProject}
+        />
       )}
     </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: React.ComponentType<{ className?: string }>; color: string }) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className={`text-2xl font-bold text-${color}`}>{value}</p>
+          </div>
+          <Icon className={`h-8 w-8 text-${color} opacity-20`} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

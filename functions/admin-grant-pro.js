@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const { onRequest } = require('firebase-functions/v2/https');
 const { logger } = require("firebase-functions/v2");
 const admin = require('firebase-admin');
+const { getCorsHeaders, handlePreflight, verifyAuth } = require('./utils/auth-cors');
 
 // Initialize admin if not already done
 if (!admin.apps.length) {
@@ -109,16 +110,32 @@ exports.adminGrantPro = functions.https.onCall(async (data, context) => {
  * Protected by a simple secret key
  */
 exports.grantProAccess = onRequest({ secrets: ["ADMIN_SECRET_KEY"] }, async (req, res) => {
-  // CORS
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Headers', 'content-type, x-admin-key');
+  // Origin-checked CORS (no wildcard)
+  if (handlePreflight(req, res)) return;
+  res.set(getCorsHeaders(req.headers.origin));
 
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
+  // Require Firebase Auth + admin email
+  let authResult;
+  try {
+    authResult = await verifyAuth(req);
+  } catch (err) {
+    res.status(401).json({ error: 'Authentication required' });
     return;
   }
 
-  // Simple admin key protection (set this in Firebase config)
+  const callerEmail = authResult.token?.email;
+  const adminEmails = [
+    'james@hiapply.co',
+    'jamesschlauch@gmail.com',
+    'james@hiapply.com'
+  ];
+
+  if (!callerEmail || !adminEmails.includes(callerEmail)) {
+    res.status(403).json({ error: 'Only admins can grant Pro access' });
+    return;
+  }
+
+  // Additional admin key check
   const adminKey = process.env.ADMIN_SECRET_KEY;
   if (!adminKey) {
     res.status(500).json({ error: 'Admin key not configured' });

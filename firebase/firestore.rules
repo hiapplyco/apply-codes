@@ -198,11 +198,10 @@ service cloud.firestore {
         resource.data.user_id == request.auth.uid;
     }
 
-    // User subscription details - users can only access their own subscription info
+    // User subscription details - read-only from client, writes only via Admin SDK (server-side)
     match /user_subscription_details/{userId} {
       allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow create, update: if isAuthenticated() && request.auth.uid == userId;
-      allow delete: if false; // Subscription details should not be deleted by users
+      allow create, update, delete: if false; // All writes via Admin SDK (Stripe webhook, adminGrantPro)
     }
 
     // Searches - users can access their own search results

@@ -1,6 +1,5 @@
 import { auth, db } from "@/lib/firebase";
 import { functionBridge } from "@/lib/function-bridge";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { toast } from "sonner";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
@@ -16,24 +15,8 @@ interface MeetingData {
 export const MeetingDataManager = (projectId?: string | null) => {
   const generateMeetingSummary = async (transcriptText: string) => {
     try {
-      const { secret: geminiApiKey } = await functionBridge.getGeminiKey();
-      if (!geminiApiKey) {
-        throw new Error('GEMINI_API_KEY not found');
-      }
-
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
-
-      const prompt = `Please provide a concise summary of this meeting transcript, highlighting:
-      - Key discussion points
-      - Important decisions made
-      - Action items or next steps
-      - Overall meeting outcome
-      
-      Transcript: ${transcriptText}`;
-
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      const result = await functionBridge.summarizeMeeting({ transcript: transcriptText });
+      return result.summary;
     } catch (error) {
       console.error('Error generating meeting summary:', error);
       return null;

@@ -5,7 +5,6 @@
  * Models: gemini-2.5-flash-image (nano banana), gemini-3-pro-image-preview (nano banana pro)
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from './firebase';
 import { functionBridge } from './function-bridge';
@@ -29,36 +28,9 @@ interface GeneratedImage {
   storagePath?: string;
 }
 
-// Singleton instance for Gemini client
-let geminiClient: GoogleGenerativeAI | null = null;
-
 /**
- * Initialize or get the Gemini client with the API key from Firebase
- */
-async function getGeminiClient(): Promise<GoogleGenerativeAI> {
-  if (geminiClient) {
-    return geminiClient;
-  }
-
-  try {
-    const keyResponse = await functionBridge.getGeminiKey();
-    if (!keyResponse?.secret) {
-      throw new Error('Failed to retrieve Gemini API key');
-    }
-
-    geminiClient = new GoogleGenerativeAI(keyResponse.secret);
-    return geminiClient;
-  } catch (error) {
-    console.error('[gemini-image] Failed to initialize Gemini client:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate an image using Gemini's nano-banana-pro model
- *
- * @param config - Image generation configuration
- * @returns Promise<GeneratedImage> - Base64 encoded image data
+ * Generate an image using the server-side Gemini image generation function.
+ * The API key never leaves the server.
  */
 export async function generateImage(config: ImageGenerationConfig): Promise<GeneratedImage> {
   const { prompt, aspectRatio = '16:9', style = 'corporate' } = config;
@@ -66,47 +38,17 @@ export async function generateImage(config: ImageGenerationConfig): Promise<Gene
   console.log('[gemini-image] Generating image with prompt:', prompt.substring(0, 100) + '...');
 
   try {
-    const client = await getGeminiClient();
-
-    // Use gemini-2.5-flash-image for image generation (nano banana)
-    const model = client.getGenerativeModel({
-      model: 'gemini-2.5-flash-preview-05-20',
-      generationConfig: {
-        // @ts-expect-error - responseModalities is a valid config option for image generation
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
+    const result = await functionBridge.generateGeminiImage({
+      prompt,
+      style,
+      aspectRatio,
     });
 
-    // Enhance prompt with style guidance for professional recruitment images
-    const enhancedPrompt = buildEnhancedPrompt(prompt, style, aspectRatio);
-
-    const result = await model.generateContent(enhancedPrompt);
-    const response = result.response;
-
-    // Extract image from response
-    const candidates = response.candidates;
-    if (!candidates || candidates.length === 0) {
-      throw new Error('No candidates in response');
-    }
-
-    const parts = candidates[0].content?.parts;
-    if (!parts || parts.length === 0) {
-      throw new Error('No parts in response');
-    }
-
-    // Find the image part
-    for (const part of parts) {
-      if ('inlineData' in part && part.inlineData) {
-        const { data, mimeType } = part.inlineData;
-        return {
-          base64Data: data,
-          mimeType: mimeType || 'image/png',
-          dataUrl: `data:${mimeType || 'image/png'};base64,${data}`,
-        };
-      }
-    }
-
-    throw new Error('No image data found in response');
+    return {
+      base64Data: result.base64Data,
+      mimeType: result.mimeType || 'image/png',
+      dataUrl: `data:${result.mimeType || 'image/png'};base64,${result.base64Data}`,
+    };
   } catch (error) {
     console.error('[gemini-image] Image generation failed:', error);
     throw error;
@@ -132,32 +74,6 @@ export async function generateLinkedInImage(jobContext: {
     aspectRatio: '16:9', // LinkedIn optimal aspect ratio
     style: 'corporate',
   });
-}
-
-/**
- * Build an enhanced prompt with style guidance
- */
-function buildEnhancedPrompt(
-  basePrompt: string,
-  style: string,
-  aspectRatio: string
-): string {
-  const styleGuides: Record<string, string> = {
-    photorealistic: 'photorealistic, high-quality photography, natural lighting, professional',
-    illustration: 'modern illustration style, clean lines, vibrant colors',
-    corporate: 'professional corporate photography, clean modern office environment, warm lighting, diverse workplace',
-    modern: 'modern minimalist design, clean aesthetic, professional',
-  };
-
-  const aspectGuides: Record<string, string> = {
-    '16:9': 'landscape orientation, wide composition',
-    '1:1': 'square composition',
-    '9:16': 'portrait orientation, vertical composition',
-    '4:3': 'classic landscape ratio',
-    '3:4': 'classic portrait ratio',
-  };
-
-  return `${basePrompt}. Style: ${styleGuides[style] || styleGuides.corporate}. ${aspectGuides[aspectRatio] || ''} Do not include any text, words, or letters in the image.`;
 }
 
 /**
