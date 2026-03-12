@@ -38,7 +38,7 @@ interface InterviewQuestionsMockupProps {
 }
 
 // Category configuration
-const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; color: string; bgColor: string }> = {
+const CATEGORY_CONFIG: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; bgColor: string }> = {
   'Technical': { icon: Target, color: 'text-blue-600', bgColor: 'bg-blue-100' },
   'Behavioral': { icon: Users, color: 'text-green-600', bgColor: 'bg-green-100' },
   'Cultural': { icon: Lightbulb, color: 'text-purple-600', bgColor: 'bg-purple-100' },

@@ -16,7 +16,7 @@ import {
 interface ToolItem {
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   path: string;
   image: string;
 }

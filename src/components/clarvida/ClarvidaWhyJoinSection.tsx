@@ -4,7 +4,7 @@ import { Zap, Target, Brain } from 'lucide-react';
 interface FeatureItem {
   title: string;
   description: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   gradient: string;
 }
 

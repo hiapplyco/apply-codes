@@ -16,7 +16,7 @@ import { ContextItemsDisplayProps, ContextItem } from './types';
 import { cn } from '@/lib/utils';
 
 // Icon mapping for context item types
-const ITEM_ICONS: Record<ContextItem['type'], React.ElementType> = {
+const ITEM_ICONS: Record<ContextItem['type'], React.ComponentType<{ className?: string }>> = {
   file_upload: FileText,
   url_scrape: Link2,
   perplexity_search: Sparkles,

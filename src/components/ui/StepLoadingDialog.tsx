@@ -5,7 +5,7 @@ import { Loader2, CheckCircle, X, Sparkles, FileText, Search, Globe, Brain, Zap,
 import { cn } from '@/lib/utils';
 
 export interface LoadingStep {
-  icon?: React.ElementType;
+  icon?: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
 }
@@ -26,7 +26,7 @@ export interface StepLoadingDialogProps {
 }
 
 // Default icon mapping based on step titles
-const getDefaultIcon = (title: string): React.ElementType => {
+const getDefaultIcon = (title: string): React.ComponentType<{ className?: string }> => {
   const lowerTitle = title.toLowerCase();
   if (lowerTitle.includes('search') || lowerTitle.includes('finding')) return Search;
   if (lowerTitle.includes('analyz') || lowerTitle.includes('process')) return Brain;
