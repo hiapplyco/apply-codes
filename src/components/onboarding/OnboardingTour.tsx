@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Heart,
-  Search,
+  Zap,
+  Target,
   Send,
-  Video,
+  Rocket,
   X,
   ArrowRight,
   ArrowLeft,
@@ -27,38 +27,38 @@ interface OnboardingStep {
 
 const steps: OnboardingStep[] = [
   {
-    title: 'Welcome to Apply',
-    subtitle: 'Fighting Brain Waste',
+    title: 'Skip the Noise. Find the People.',
+    subtitle: 'Welcome to Apply',
     description:
-      'Every year, millions of skilled professionals — veterans, immigrants, military spouses — are overlooked by traditional hiring. Their talent goes to waste. Apply exists to change that, giving recruiters AI-powered tools to find the people others miss.',
-    icon: Heart,
-    color: 'text-rose-600',
-    bgGradient: 'from-rose-50 to-orange-50',
+      'The big job platforms got bloated. Paywalls, sponsored profiles, the same recycled candidates everyone else is fighting over. You deserve better. Apply cuts straight to the source — real talent, found faster, without the algorithm tax.',
+    icon: Zap,
+    color: 'text-amber-600',
+    bgGradient: 'from-amber-50 to-orange-50',
   },
   {
-    title: 'Search Smarter',
-    subtitle: 'AI-Powered Candidate Discovery',
+    title: 'Search Like a Recruiter Who Has Places to Be',
+    subtitle: 'AI-Powered Sourcing',
     description:
-      'Describe who you\'re looking for in plain English. Apply generates Boolean search queries and finds candidates across Google, LinkedIn, and more — instantly surfacing talent that traditional searches miss.',
-    icon: Search,
+      'Describe your ideal candidate in plain English. We generate precision Boolean queries and search across the open web — surfacing people that bloated platforms buried under pay-to-play rankings. No more page 47. No more "upgrade to see this profile."',
+    icon: Target,
     color: 'text-purple-600',
     bgGradient: 'from-purple-50 to-indigo-50',
   },
   {
-    title: 'Reach & Engage',
-    subtitle: 'Contact, Outreach & Job Posts',
+    title: 'Make Contact. Skip the Middleman.',
+    subtitle: 'Outreach & Engagement',
     description:
-      'Find verified emails and phone numbers, send personalized outreach, and create AI-optimized job postings — all from one place. Every touchpoint is designed to connect you with the right candidates.',
+      'Find verified emails and phone numbers, craft personalized outreach, and post AI-optimized job descriptions. No credits to buy. No subscriptions on top of subscriptions. Just a direct line to the people you actually want to hire.',
     icon: Send,
     color: 'text-blue-600',
     bgGradient: 'from-blue-50 to-cyan-50',
   },
   {
-    title: 'Interview & Hire',
-    subtitle: 'AI Coaching & Video Calls',
+    title: 'Close Fast. The Good Ones Don\'t Wait.',
+    subtitle: 'Interviews & Hiring',
     description:
-      'Prep with AI-generated interview questions, run video interviews with real-time guidance, and close candidates faster. From first search to signed offer — Apply is with you every step.',
-    icon: Video,
+      'Prep with AI-generated interview questions, run video calls with real-time coaching, and move fast enough to actually land your top pick. From first search to signed offer — let\'s go.',
+    icon: Rocket,
     color: 'text-emerald-600',
     bgGradient: 'from-emerald-50 to-teal-50',
   },
